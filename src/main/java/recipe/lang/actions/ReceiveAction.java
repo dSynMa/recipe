@@ -1,6 +1,5 @@
 package recipe.lang.actions;
 
-import recipe.lang.agents.AgentBehaviour;
 import recipe.lang.conditions.Condition;
 
 public class ReceiveAction implements Action {
