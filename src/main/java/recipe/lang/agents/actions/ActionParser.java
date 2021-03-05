@@ -1,4 +1,4 @@
-package recipe.lang.actions;
+package recipe.lang.agents.actions;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;

@@ -1,6 +1,6 @@
 package recipe.lang.agents;
 
-public class Sequence implements Agent {
+public class Sequence extends Agent {
     public Agent a;
     public Agent b;
 

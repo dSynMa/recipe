@@ -1,8 +1,8 @@
-package recipe.lang.actions;
+package recipe.lang.agents.actions;
 
 import recipe.lang.conditions.Condition;
 
-public class SendAction implements Action {
+public class SendAction extends Action {
     public Condition psi;
     public String channel;
     public String message;

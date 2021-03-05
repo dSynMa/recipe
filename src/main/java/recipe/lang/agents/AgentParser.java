@@ -4,9 +4,8 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
-import org.w3c.dom.CDATASection;
-import recipe.lang.actions.ActionParser;
-import recipe.lang.actions.SendAction;
+import recipe.lang.agents.actions.ActionParser;
+import recipe.lang.agents.actions.SendAction;
 import recipe.lang.conditions.Condition;
 import recipe.lang.conditions.ConditionParser;
 

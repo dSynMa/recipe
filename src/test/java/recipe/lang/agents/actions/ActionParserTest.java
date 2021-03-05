@@ -1,4 +1,4 @@
-package recipe.lang.actions;
+package recipe.lang.agents.actions;
 
 import org.junit.Test;
 

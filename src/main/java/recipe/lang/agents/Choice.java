@@ -1,6 +1,6 @@
 package recipe.lang.agents;
 
-public class Choice implements Agent {
+public class Choice extends Agent {
     public Agent a;
     public Agent b;
 

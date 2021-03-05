@@ -2,7 +2,7 @@ package recipe.lang.agents;
 
 import recipe.lang.conditions.Condition;
 
-public class Guarded implements Agent {
+public class Guarded extends Agent {
     public Condition guard;
     public Agent a;
 
