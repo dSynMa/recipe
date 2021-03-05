@@ -1,16 +1,15 @@
 package recipe.lang;
 
 import org.petitparser.parser.Parser;
-import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
 import org.petitparser.parser.combinators.SettableParser;
-import recipe.lang.actions.ActionParser;
+import recipe.lang.agents.actions.ActionParser;
 import recipe.lang.agents.*;
 import recipe.lang.conditions.*;
 
 import java.util.List;
 
-public class ProcessParser {
+public class ProcessDefinitionParser {
     Parser parser;
     ConditionParser conditionParser;
     ActionParser actionParser;
@@ -26,14 +25,14 @@ public class ProcessParser {
         return start.accept(s);
     }
 
-    public ProcessParser(){
+    public ProcessDefinitionParser(){
         conditionParser = new ConditionParser();
         actionParser = new ActionParser(conditionParser);
         agentParser = new AgentParser(conditionParser, actionParser);
         parser = createParser(agentParser);
     }
 
-    public ProcessParser(AgentParser agentParser){
+    public ProcessDefinitionParser(AgentParser agentParser){
         this.agentParser = agentParser;
         parser = createParser(agentParser);
     }
@@ -46,7 +45,7 @@ public class ProcessParser {
                     .seq(StringParser.of(".").trim())
                     .seq(agent))
                         .map((List<Object> values) -> {
-                            return new Process((Agent) values.get(2));
+                            return new ProcessDefinition((Agent) values.get(2));
                         })
                );
         return parser;
