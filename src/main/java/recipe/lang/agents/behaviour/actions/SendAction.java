@@ -1,6 +1,6 @@
-package recipe.lang.agents.actions;
+package recipe.lang.agents.behaviour.actions;
 
-import recipe.lang.conditions.Condition;
+import recipe.lang.agents.behaviour.actions.conditions.Condition;
 
 public class SendAction extends Action {
     public Condition psi;

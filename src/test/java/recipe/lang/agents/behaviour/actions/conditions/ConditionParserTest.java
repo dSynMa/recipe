@@ -1,4 +1,4 @@
-package recipe.lang.conditions;
+package recipe.lang.agents.behaviour.actions.conditions;
 
 import org.junit.Test;
 

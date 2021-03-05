@@ -3,9 +3,10 @@ package recipe.lang;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
 import org.petitparser.parser.combinators.SettableParser;
-import recipe.lang.agents.actions.ActionParser;
-import recipe.lang.agents.*;
-import recipe.lang.conditions.*;
+import recipe.lang.agents.behaviour.Agent;
+import recipe.lang.agents.behaviour.AgentParser;
+import recipe.lang.agents.behaviour.actions.ActionParser;
+import recipe.lang.agents.behaviour.actions.conditions.*;
 
 import java.util.List;
 

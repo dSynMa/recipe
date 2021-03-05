@@ -1,4 +1,4 @@
-package recipe.lang.agents;
+package recipe.lang.agents.behaviour;
 
 public class Choice extends Agent {
     public Agent a;

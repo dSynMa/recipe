@@ -1,11 +1,11 @@
-package recipe.lang.agents.actions;
+package recipe.lang.agents.behaviour.actions;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.conditions.Condition;
-import recipe.lang.conditions.ConditionParser;
+import recipe.lang.agents.behaviour.actions.conditions.Condition;
+import recipe.lang.agents.behaviour.actions.conditions.ConditionParser;
 
 import java.util.List;
 

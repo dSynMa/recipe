@@ -1,4 +1,4 @@
-package recipe.lang.conditions;
+package recipe.lang.agents.behaviour.actions.conditions;
 
 public class Atom implements Condition{
     public String a;
