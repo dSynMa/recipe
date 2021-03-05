@@ -51,15 +51,15 @@ public class AgentParser {
 
         parser.set((basic.seq(StringParser.of("+").trim()).seq(parser))
                 .map((List<Object> values) -> {
-                    return new Choice((Agent) values.get(0), (Agent) values.get(2));
+                    return new Choice((AgentBehaviour) values.get(0), (AgentBehaviour) values.get(2));
                 })
                 .or(basic.seq(StringParser.of(";").trim()).seq(parser)
                         .map((List<Object> values) -> {
-                            return new Sequence((Agent) values.get(0), (Agent) values.get(2));
+                            return new Sequence((AgentBehaviour) values.get(0), (AgentBehaviour) values.get(2));
                         }))
                 .or((StringParser.of("<").trim().seq(condition).seq(StringParser.of(">").trim())).seq(parser)
                         .map((List<Object> values) -> {
-                            return new Guarded((Condition) values.get(1), (Agent) values.get(3));
+                            return new Guarded((Condition) values.get(1), (AgentBehaviour) values.get(3));
                         }))
                 .or(basic.seq(parser)
                         .map((List<Object> values) -> {

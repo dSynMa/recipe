@@ -1,10 +1,10 @@
 package recipe.lang.agents.behaviour;
 
-public class Sequence extends Agent {
-    public Agent a;
-    public Agent b;
+public class Sequence extends AgentBehaviour {
+    public AgentBehaviour a;
+    public AgentBehaviour b;
 
-    public Sequence(Agent a, Agent b) {
+    public Sequence(AgentBehaviour a, AgentBehaviour b) {
         this.a = a;
         this.b = b;
     }

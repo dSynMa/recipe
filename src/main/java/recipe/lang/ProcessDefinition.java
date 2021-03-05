@@ -1,11 +1,11 @@
 package recipe.lang;
 
-import recipe.lang.agents.behaviour.Agent;
+import recipe.lang.agents.behaviour.AgentBehaviour;
 
 public class ProcessDefinition {
-    Agent agent;
+    AgentBehaviour agentBehaviour;
 
-    public ProcessDefinition(Agent agent){
-        this.agent = agent;
+    public ProcessDefinition(AgentBehaviour agentBehaviour){
+        this.agentBehaviour = agentBehaviour;
     }
 }

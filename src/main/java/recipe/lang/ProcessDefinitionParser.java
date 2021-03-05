@@ -3,7 +3,7 @@ package recipe.lang;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
 import org.petitparser.parser.combinators.SettableParser;
-import recipe.lang.agents.behaviour.Agent;
+import recipe.lang.agents.behaviour.AgentBehaviour;
 import recipe.lang.agents.behaviour.AgentParser;
 import recipe.lang.agents.behaviour.actions.ActionParser;
 import recipe.lang.agents.behaviour.actions.conditions.*;
@@ -46,7 +46,7 @@ public class ProcessDefinitionParser {
                     .seq(StringParser.of(".").trim())
                     .seq(agent))
                         .map((List<Object> values) -> {
-                            return new ProcessDefinition((Agent) values.get(2));
+                            return new ProcessDefinition((AgentBehaviour) values.get(2));
                         })
                );
         return parser;
