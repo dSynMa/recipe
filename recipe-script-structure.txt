@@ -1,0 +1,27 @@
+channels: a,b,c
+message structure: int d1, bool d2
+communication variables: int f, bool g 
+(NOTE: all local states are a superset of this, modulo the relabelling function)
+
+
+guard g(a : int) := ....
+
+agent B
+    local: 
+        b : Int := 0  
+        c : Int := 0  
+    relabel:
+        f <- c
+        g <- b != 0
+    behaviour: (<b == 0> c! (my.f = f) (d1 := b + 1, d2 := false)[b++])
+
+agent A
+    local: 
+        a : Int := 0
+    relabel:
+        f <- a
+        g <- a == 0
+    behaviour: B + (a == 0 ? c ....)
+
+
+system: A + B
