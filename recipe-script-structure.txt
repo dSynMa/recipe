@@ -24,4 +24,4 @@ agent A
     behaviour: B + (a == 0 ? c ....)
 
 
-system: A + B
+system: A | B
