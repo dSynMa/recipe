@@ -13,6 +13,7 @@ public class ConditionParserTest {
     {
         ConditionParser conditionParser = new ConditionParser();
 
+        assertTrue( conditionParser.parse("cond") );
         assertTrue( conditionParser.parse("!cond") );
         assertTrue( conditionParser.parse("! cond") );
         assertTrue( conditionParser.parse("!(cond)") );
