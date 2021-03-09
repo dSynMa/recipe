@@ -1,7 +1,7 @@
 package recipe.lang.agents;
 
-import jdk.internal.vm.compiler.collections.Pair;
 import recipe.lang.agents.behaviour.AgentBehaviour;
+import recipe.lang.agents.behaviour.Pair;
 
 import java.util.function.Function;
 
@@ -25,6 +25,6 @@ public class Agent<CV, LocalState> {
     }
 
     public Object valueOf(CV cv){
-        return relabelling.apply(Pair.create(local, cv));
+        return relabelling.apply(new Pair(local, cv));
     }
 }
