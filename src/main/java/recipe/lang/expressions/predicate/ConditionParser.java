@@ -12,9 +12,18 @@ import static org.petitparser.parser.primitive.CharacterParser.word;
 
 public class ConditionParser{
     Parser parser;
+    static ConditionParser staticParser;
 
     public Parser getParser(){
         return parser;
+    }
+
+    public static Parser getStaticParser(){
+        if(staticParser == null){
+            staticParser = new ConditionParser();
+        }
+
+        return staticParser.getParser();
     }
 
     public boolean parse(String s){
