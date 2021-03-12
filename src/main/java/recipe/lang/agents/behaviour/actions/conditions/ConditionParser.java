@@ -25,7 +25,7 @@ public class ConditionParser extends RecipeParser {
         setParser(createParser());
     }
 
-    private Parser createParser(){
+    private static Parser createParser(){
         SettableParser parser = SettableParser.undefined();
         SettableParser bracketedCondition = SettableParser.undefined();
 

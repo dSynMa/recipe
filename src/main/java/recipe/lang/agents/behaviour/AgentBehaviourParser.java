@@ -12,22 +12,17 @@ import recipe.lang.agents.behaviour.actions.conditions.ConditionParser;
 import java.util.List;
 
 public class AgentBehaviourParser extends RecipeParser{
-    private ConditionParser conditionParser;
-    private ActionParser actionParser;
 
     public AgentBehaviourParser(){
-        conditionParser = new ConditionParser();
-        actionParser = new ActionParser(conditionParser);
-        parser = createParser(conditionParser, actionParser);
+        ConditionParser conditionParser = new ConditionParser();
+        parser = createParser(conditionParser, new ActionParser(conditionParser));
     }
 
     public AgentBehaviourParser(ConditionParser conditionParser, ActionParser actionParser){
-        this.conditionParser = conditionParser;
-        this.actionParser = actionParser;
-        parser = createParser(this.conditionParser, this.actionParser);
+        parser = createParser(conditionParser, actionParser);
     }
 
-    private Parser createParser(ConditionParser conditionParser, ActionParser actionParser){
+    private static Parser createParser(ConditionParser conditionParser, ActionParser actionParser){
         SettableParser parser = SettableParser.undefined();
         SettableParser basic = SettableParser.undefined();
         Parser condition = conditionParser.getParser();

@@ -14,23 +14,20 @@ import java.util.List;
 import static org.petitparser.parser.primitive.CharacterParser.word;
 
 public class ActionParser extends RecipeParser {
-    private ConditionParser conditionParser;
 
     public ActionParser(){
-        this.conditionParser = new ConditionParser();
-        setParser(createParser(this.conditionParser));
+        setParser(createParser(new ConditionParser()));
     }
 
     public ActionParser(ConditionParser conditionParser){
-        this.conditionParser = conditionParser;
-        setParser(createParser(this.conditionParser));
+        setParser(createParser(conditionParser));
     }
 
-    private Parser createParser(ConditionParser conditionParser){
+    private static Parser createParser(ConditionParser conditionParser){
         SettableParser parser = SettableParser.undefined();
 
         Parser channelParser = (word().plus().trim()).flatten();
-        Parser condition = this.conditionParser.getParser();
+        Parser condition = conditionParser.getParser();
 
         Parser delimetedCondition = (CharacterParser.of('<').trim())
                             .seq(condition)
