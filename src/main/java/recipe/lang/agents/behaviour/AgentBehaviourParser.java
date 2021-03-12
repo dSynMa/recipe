@@ -11,7 +11,7 @@ import recipe.lang.expressions.predicate.ConditionParser;
 
 import java.util.List;
 
-public class AgentParser {
+public class AgentBehaviourParser {
     Parser parser;
     private ConditionParser conditionParser;
     private ActionParser actionParser;
@@ -26,13 +26,13 @@ public class AgentParser {
         return start.accept(s);
     }
 
-    public AgentParser(){
+    public AgentBehaviourParser(){
         conditionParser = new ConditionParser();
         actionParser = new ActionParser(conditionParser);
         parser = createParser(conditionParser, actionParser);
     }
 
-    public AgentParser(ConditionParser conditionParser, ActionParser actionParser){
+    public AgentBehaviourParser(ConditionParser conditionParser, ActionParser actionParser){
         this.conditionParser = conditionParser;
         this.actionParser = actionParser;
         parser = createParser(this.conditionParser, this.actionParser);
