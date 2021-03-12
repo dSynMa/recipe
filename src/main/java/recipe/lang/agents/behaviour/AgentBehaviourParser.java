@@ -11,20 +11,9 @@ import recipe.lang.expressions.predicate.ConditionParser;
 
 import java.util.List;
 
-public class AgentBehaviourParser {
-    Parser parser;
+public class AgentBehaviourParser extends RecipeParser{
     private ConditionParser conditionParser;
     private ActionParser actionParser;
-
-    public Parser getParser(){
-        return parser;
-    }
-
-    public boolean parse(String s){
-        Parser start = parser.end();
-
-        return start.accept(s);
-    }
 
     public AgentBehaviourParser(){
         conditionParser = new ConditionParser();
