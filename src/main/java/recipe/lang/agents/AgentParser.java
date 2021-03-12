@@ -16,21 +16,19 @@ import static org.petitparser.parser.primitive.CharacterParser.word;
 import java.util.List;
 
 public class AgentParser extends RecipeParser {
-    private AgentBehaviourParser agentBehaviourParser;
 
     public AgentParser(){
         ConditionParser conditionParser = new ConditionParser();
         ActionParser actionParser = new ActionParser(conditionParser);
-        agentBehaviourParser = new AgentBehaviourParser(conditionParser, actionParser);
+        AgentBehaviourParser agentBehaviourParser = new AgentBehaviourParser(conditionParser, actionParser);
         setParser(createParser(agentBehaviourParser));
     }
 
     public AgentParser(AgentBehaviourParser agentBehaviourParser){
-        this.agentBehaviourParser = agentBehaviourParser;
-        setParser(createParser(this.agentBehaviourParser));
+        setParser(createParser(agentBehaviourParser));
     }
 
-    private Parser createParser(AgentBehaviourParser agentBehaviourParser){
+    private static Parser createParser(AgentBehaviourParser agentBehaviourParser){
         SettableParser parser = SettableParser.undefined();
         SettableParser basic = SettableParser.undefined();
         Parser agentBehaviour = agentBehaviourParser.getParser();

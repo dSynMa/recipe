@@ -36,7 +36,7 @@ public class ConditionParser{
         parser = createParser();
     }
 
-    private Parser createParser(){
+    private static Parser createParser(){
         SettableParser parser = SettableParser.undefined();
         SettableParser bracketedCondition = SettableParser.undefined();
 
