@@ -6,6 +6,7 @@ import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.CharacterParser.*;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.agents.behaviour.AgentBehaviourParser;
+import recipe.lang.agents.behaviour.RecipeParser;
 import recipe.lang.agents.behaviour.actions.ActionParser;
 import recipe.lang.agents.behaviour.actions.SendAction;
 import recipe.lang.agents.behaviour.actions.conditions.Condition;
@@ -14,30 +15,19 @@ import static org.petitparser.parser.primitive.CharacterParser.word;
 
 import java.util.List;
 
-public class AgentParser {
-    Parser parser;
+public class AgentParser extends RecipeParser {
     private AgentBehaviourParser agentBehaviourParser;
-
-    public Parser getParser(){
-        return parser;
-    }
-
-    public boolean parse(String s){
-        Parser start = parser.end();
-
-        return start.accept(s);
-    }
 
     public AgentParser(){
         ConditionParser conditionParser = new ConditionParser();
         ActionParser actionParser = new ActionParser(conditionParser);
         agentBehaviourParser = new AgentBehaviourParser(conditionParser, actionParser);
-        parser = createParser(agentBehaviourParser);
+        setParser(createParser(agentBehaviourParser));
     }
 
     public AgentParser(AgentBehaviourParser agentBehaviourParser){
         this.agentBehaviourParser = agentBehaviourParser;
-        parser = createParser(this.agentBehaviourParser);
+        setParser(createParser(this.agentBehaviourParser));
     }
 
     private Parser createParser(AgentBehaviourParser agentBehaviourParser){

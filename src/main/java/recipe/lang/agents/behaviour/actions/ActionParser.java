@@ -5,6 +5,7 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
+import recipe.lang.agents.behaviour.RecipeParser;
 import recipe.lang.agents.behaviour.actions.conditions.Condition;
 import recipe.lang.agents.behaviour.actions.conditions.ConditionParser;
 
@@ -12,33 +13,17 @@ import java.util.List;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
 
-public class ActionParser {
-
-    Parser parser;
+public class ActionParser extends RecipeParser {
     private ConditionParser conditionParser;
-
-    public Parser getParser(){
-        return parser;
-    }
-
-    public boolean parse(String s){
-        Parser start = parser.end();
-        Result r = start.parse(s);
-        if(r.isFailure()) {
-            System.out.println(r.getMessage());
-        }
-
-        return r.isSuccess();
-    }
 
     public ActionParser(){
         this.conditionParser = new ConditionParser();
-        parser = createParser(this.conditionParser);
+        setParser(createParser(this.conditionParser));
     }
 
     public ActionParser(ConditionParser conditionParser){
         this.conditionParser = conditionParser;
-        parser = createParser(this.conditionParser);
+        setParser(createParser(this.conditionParser));
     }
 
     private Parser createParser(ConditionParser conditionParser){

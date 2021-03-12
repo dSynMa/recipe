@@ -4,18 +4,14 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
+import recipe.lang.agents.behaviour.RecipeParser;
 
 import java.util.List;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
 
-public class ConditionParser{
-    Parser parser;
+public class ConditionParser extends RecipeParser {
     static ConditionParser staticParser;
-
-    public Parser getParser(){
-        return parser;
-    }
 
     public static Parser getStaticParser(){
         if(staticParser == null){
@@ -25,14 +21,8 @@ public class ConditionParser{
         return staticParser.getParser();
     }
 
-    public boolean parse(String s){
-        Parser start = parser.end();
-
-        return start.accept(s);
-    }
-
     public ConditionParser(){
-        parser = createParser();
+        setParser(createParser());
     }
 
     private Parser createParser(){
