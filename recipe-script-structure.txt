@@ -1,4 +1,5 @@
-channels: a,b,c
+channels: c, c1
+//multicast?? broadcast??
 message-structure: int d1, bool d2
 communication-variables: int f, bool g
 
@@ -22,7 +23,10 @@ agent A
     relabel:
         f <- a
         g <- a == 0
-    repeat: (a == 0 ? c ....) + p(a,b)
+    receive-guard:
+        a < 5 -> c
+        a > 3 -> c1
+    repeat: (<a == 0> c? [b := d1]) + p(a,b)
 
 
 system: A | B
