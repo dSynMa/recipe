@@ -5,7 +5,7 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.conditions.Condition;
+import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.conditions.ConditionParser;
 
 import java.util.List;

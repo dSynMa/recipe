@@ -1,6 +1,6 @@
 package recipe.lang.actions;
 
-import recipe.lang.conditions.Condition;
+import recipe.lang.expressions.predicate.Condition;
 
 public class ReceiveAction extends Action {
     public Condition psi;

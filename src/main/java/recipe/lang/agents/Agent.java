@@ -7,9 +7,12 @@ import java.util.Set;
 import java.util.function.Function;
 
 import recipe.lang.actions.Action;
-import recipe.lang.conditions.And;
-import recipe.lang.conditions.Condition;
-import recipe.lang.conditions.HasValue;
+import recipe.lang.exception.AttributeNotInStoreException;
+import recipe.lang.expressions.StringValue;
+import recipe.lang.expressions.StringVariable;
+import recipe.lang.expressions.predicate.And;
+import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.expressions.predicate.IsEqualTo;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.store.Attribute;
 import recipe.lang.store.Store;
@@ -17,7 +20,11 @@ import recipe.lang.utils.Pair;
 
 public class Agent {
     private String name;
+    //TODO ensure that store variables and CV do not intersect, important for purposes of closure
     private Store store;
+    private HashMap<String, Attribute<?>> CV;
+    //TODO ensure that output store is a refinement of input store
+    private Function<Pair<Store, HashMap<String, Attribute<?>>>, Store> relabel;
     private Set<String> states;  //control flow
 
     private HashMap<String, Set<Transition>> stateToOutgoingTransitions;
@@ -25,8 +32,6 @@ public class Agent {
     private Set<Transition> sendTransitions;
     private Set<Transition> receiveTransitions;
     private Set<Action> actions;
-    private HashMap<String, Attribute<?>> CV;
-    private Function<Pair<Store, HashMap<String, Attribute<?>>>, Store> relabel;
     private String currentState;
     private Condition receiveGuard;
     private Condition initialCondition;
@@ -45,7 +50,7 @@ public class Agent {
         this.receiveTransitions = new HashSet<>(receiveTransitions);
         this.actions = new HashSet<>(actions);
         this.currentState = currentState;
-        this.receiveGuard=receiveGuard;
+        this.receiveGuard = receiveGuard;
     }
 
     public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<Action> actions,
@@ -181,8 +186,8 @@ public class Agent {
         this.initialCondition = initialCondition;
     }
 
-    public boolean isListening(String channel, String state) throws AttributeTypeException {
-        Condition concrete = receiveGuard.close(store);
+    public boolean isListening(String channel, String state) throws AttributeTypeException, AttributeNotInStoreException {
+        Condition concrete = receiveGuard.close(store, getCV().keySet());
         Store newstore = new Store();
 
         newstore.setValue(new Attribute<>("channel", String.class), channel);
@@ -192,15 +197,15 @@ public class Agent {
 
 
     //try
-    public static void main(String[] arg) throws AttributeTypeException {
+    public static void main(String[] arg) throws AttributeTypeException, AttributeNotInStoreException {
 
         Store newstore =new Store();
         newstore.setValue(new Attribute<>("channel", String.class), "c");
         newstore.setValue(new Attribute<>("state", String.class), "pending");
-        Condition cc =new And(new HasValue(new Attribute<>("channel", String.class), "c"),
-        new HasValue(new Attribute<>("state", String.class), "ending"));
+        Condition cc =new And(new IsEqualTo(new StringVariable("channel"), new StringValue("c")),
+        new IsEqualTo(new StringVariable("state"), new StringValue("ending")));
         
-        boolean y=cc.isSatisfiedBy(newstore);
+        boolean y = cc.isSatisfiedBy(newstore);
         System.out.println(y);
     }
 }

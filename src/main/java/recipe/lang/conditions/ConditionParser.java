@@ -4,6 +4,7 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
+import recipe.lang.expressions.predicate.*;
 
 import java.util.List;
 
@@ -51,7 +52,7 @@ public class ConditionParser{
                         }))
                 .or(word().plus().flatten()
                         .map((String value) -> {
-                            return new HasValue(value);
+                            return new IsEqualTo(value);
                         }))
         );
 

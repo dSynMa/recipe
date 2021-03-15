@@ -3,7 +3,8 @@ package recipe.lang.store;
 import java.util.HashMap;
 import java.util.Map;
 
-import recipe.lang.conditions.Condition;
+import recipe.lang.exception.AttributeNotInStoreException;
+import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.exception.AttributeTypeException;
 
 public class Store {
@@ -92,11 +93,11 @@ public class Store {
 		return data.toString();
 	}
 
-	public  boolean satisfy( Condition p ) throws AttributeTypeException {
+	public  boolean satisfy( Condition p ) throws AttributeTypeException, AttributeNotInStoreException {
 		return p.isSatisfiedBy( this );
 	}
 	
-	public  boolean waitUntil( Condition p ) throws AttributeTypeException, InterruptedException {
+	public  boolean waitUntil( Condition p ) throws AttributeTypeException, InterruptedException, AttributeNotInStoreException {
 		while (!p.isSatisfiedBy(this)) {
 		}
 		return true;

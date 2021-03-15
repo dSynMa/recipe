@@ -1,7 +1,7 @@
 package recipe.lang.actions;
 
 
-import recipe.lang.conditions.Condition;
+import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.store.Store;
 
