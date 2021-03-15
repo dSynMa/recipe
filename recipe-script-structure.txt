@@ -1,10 +1,10 @@
 channels: a,b,c
-message structure: int d1, bool d2
-communication variables: int f, bool g 
-(NOTE: all local states are a superset of this, modulo the relabelling function)
+message-structure: int d1, bool d2
+communication-variables: int f, bool g
 
+guard h(a : int) := a > 9
 
-guard g(a : int) := ....
+process p(b: Int, c: Int) := (<b == 0> c! (my.f == f) (d1 := b + 1, d2 := false)[b++])
 
 agent B
     local: 
@@ -13,15 +13,16 @@ agent B
     relabel:
         f <- c
         g <- b != 0
-    behaviour: (<b == 0> c! (my.f = f) (d1 := b + 1, d2 := false)[b++])
+    repeat: p(b,c) + (<b == 1> c! h(b) (d1 := b + 2, d2 := true)[b++])
 
 agent A
     local: 
         a : Int := 0
+        b : Int := 0
     relabel:
         f <- a
         g <- a == 0
-    behaviour: B + (a == 0 ? c ....)
+    repeat: (a == 0 ? c ....) + p(a,b)
 
 
 system: A | B
