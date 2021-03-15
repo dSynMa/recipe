@@ -20,6 +20,7 @@ public class HasValue extends Condition {
 		this.attribute = attribute.getName();
 		this.value = value;
 	}
+
 	@Override
 	public boolean isSatisfiedBy(Store store) throws AttributeTypeException {
 		Attribute<?> a = store.getAttribute(attribute);

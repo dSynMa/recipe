@@ -19,8 +19,11 @@ public class Agent {
     private String name;
     private Store store;
     private Set<String> states;  //control flow
+
+    private HashMap<String, Set<Transition>> stateToOutgoingTransitions;
+
     private Set<Transition> sendTransitions;
-    private Set<Transition> recieveTransitions;
+    private Set<Transition> receiveTransitions;
     private Set<Action> actions;
     private HashMap<String, Attribute<?>> CV;
     private Function<Pair<Store, HashMap<String, Attribute<?>>>, Store> relabel;
@@ -33,25 +36,25 @@ public class Agent {
 
     }
 
-    public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> recieveTransitions, Set<Action> actions,
-            String currentState, Condition receiveGuard) {
+    public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<Action> actions,
+                 String currentState, Condition receiveGuard) {
         this.name = name;
         this.store = store;
         this.states = new HashSet<>(states);
         this.sendTransitions = new HashSet<>(sendTransitions);
-        this.recieveTransitions = new HashSet<>(recieveTransitions);
+        this.receiveTransitions = new HashSet<>(receiveTransitions);
         this.actions = new HashSet<>(actions);
         this.currentState = currentState;
         this.receiveGuard=receiveGuard;
     }
 
-    public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> recieveTransitions, Set<Action> actions,
-            Function<Pair<Store, HashMap<String, Attribute<?>>>, Store> relabel, String currentState) {
+    public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<Action> actions,
+                 Function<Pair<Store, HashMap<String, Attribute<?>>>, Store> relabel, String currentState) {
         this.name = name;
         this.store = store;
         this.states = new HashSet<>(states);
         this.sendTransitions = new HashSet<>(sendTransitions);
-        this.recieveTransitions = new HashSet<>(recieveTransitions);
+        this.receiveTransitions = new HashSet<>(receiveTransitions);
         this.actions = new HashSet<>(actions);
         this.relabel = relabel;
         this.currentState = currentState;
@@ -162,12 +165,12 @@ public class Agent {
         this.sendTransitions = sendTransitions;
     }
 
-    public Set<Transition> getRecieveTransitions() {
-        return recieveTransitions;
+    public Set<Transition> getReceiveTransitions() {
+        return receiveTransitions;
     }
 
-    public void setRecieveTransitions(Set<Transition> recieveTransitions) {
-        this.recieveTransitions = recieveTransitions;
+    public void setReceiveTransitions(Set<Transition> receiveTransitions) {
+        this.receiveTransitions = receiveTransitions;
     }
 
     public Condition getInitialCondition() {
@@ -177,9 +180,10 @@ public class Agent {
     public void setInitialCondition(Condition initialCondition) {
         this.initialCondition = initialCondition;
     }
+
     public boolean isListening(String channel, String state) throws AttributeTypeException {
         Condition concrete = receiveGuard.close(store);
-        Store newstore =new Store();
+        Store newstore = new Store();
 
         newstore.setValue(new Attribute<>("channel", String.class), channel);
         newstore.setValue(new Attribute<>("state", String.class), state);
