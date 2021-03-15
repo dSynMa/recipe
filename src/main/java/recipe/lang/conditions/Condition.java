@@ -3,6 +3,7 @@ package recipe.lang.conditions;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.store.Store;
 
+//TODO add exception wrong type and non-existing variables
 public abstract class Condition {
 
 	public enum PredicateType {
