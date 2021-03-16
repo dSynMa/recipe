@@ -1,8 +1,7 @@
-package recipe.lang.agents.behaviour.actions.conditions;
+package recipe.lang.expressions.predicate;
 
 import org.junit.Test;
-
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class ConditionParserTest {
     /**
