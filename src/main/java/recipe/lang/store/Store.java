@@ -85,11 +85,8 @@ public class Store {
 		if (!attributes.get(attribute).isValidValue(value)) {
 			throw new AttributeTypeException();
 		}
-		if (safeAddAttribute(attributes.get(attribute))) {
-			data.put(attribute, value);
-		} else {
-			throw new AttributeTypeException();
-		}
+
+		data.put(attribute, value);
 	}
 
 	@Override
