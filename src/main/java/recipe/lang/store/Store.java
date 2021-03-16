@@ -12,7 +12,6 @@ public class Store {
 
 	private HashMap<String, Attribute<?>> attributes;
 
-	
 	public Map<String, Attribute<?>> getAttributes() {
 		return attributes;
 	}
@@ -27,7 +26,7 @@ public class Store {
 		this.attributes = new HashMap<>();
 	}
 
-	protected boolean isConsistent(Attribute<?> attribute) {
+	protected boolean safeAddAttribute(Attribute<?> attribute) {
 		Attribute<?> old = attributes.get(attribute.getName());
 		if (old == null) {
 			attributes.put(attribute.getName(), attribute);
@@ -49,17 +48,18 @@ public class Store {
 	
 	public Object getValue(String attribute) {
 		Object o = data.get(attribute);
-		if (o!=null) {
+		if (o != null) {
 			return o;
 		}
 		return null;
-		
 	}
 
-	
-	public Attribute<?> getAttribute(String n) {
-		return attributes.get(n);
+	public Attribute<?> getAttribute(String n) throws AttributeNotInStoreException {
+		if(!attributes.containsKey(n)){
+			throw new AttributeNotInStoreException();
+		}
 
+		return attributes.get(n);
 	}
 
 	public  void setValue(Attribute<?> attribute, Object value)  throws AttributeTypeException {
@@ -70,18 +70,22 @@ public class Store {
 		if (!attribute.isValidValue(value)) {
 			throw new AttributeTypeException();
 		}
-		if (isConsistent(attribute)) {
+		if (safeAddAttribute(attribute)) {
 			data.put(attribute.getName(), value);
 		} else {
 			throw new AttributeTypeException();
 		}
 	}
 
-	public void setValue(String attribute, Object value) throws AttributeTypeException {
+	public void setValue(String attribute, Object value) throws AttributeTypeException, AttributeNotInStoreException {
+		if(!attributes.containsKey(attribute)){
+			throw new AttributeNotInStoreException();
+		}
+
 		if (!attributes.get(attribute).isValidValue(value)) {
 			throw new AttributeTypeException();
 		}
-		if (isConsistent(attributes.get(attribute))) {
+		if (safeAddAttribute(attributes.get(attribute))) {
 			data.put(attribute, value);
 		} else {
 			throw new AttributeTypeException();
@@ -93,17 +97,45 @@ public class Store {
 		return data.toString();
 	}
 
-	public  boolean satisfy( Condition p ) throws AttributeTypeException, AttributeNotInStoreException {
+	@Override
+	public boolean equals(Object other){
+		if(other.getClass().equals(Store.class)){
+			Store otherStore = (Store) other;
+			if(data.keySet().size() == otherStore.data.keySet().size()) {
+				for (String key : data.keySet()) {
+					if(!otherStore.data.containsKey(key) ||
+							!otherStore.data.get(key).equals(data.get(key))){
+						return false;
+					}
+				}
+
+				if(attributes.keySet().size() == otherStore.attributes.keySet().size()) {
+					for (String key : attributes.keySet()) {
+						if(!otherStore.attributes.containsKey(key) ||
+								!otherStore.attributes.get(key).equals(attributes.get(key))){
+							return false;
+						}
+					}
+
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	public boolean satisfy( Condition p ) throws AttributeTypeException, AttributeNotInStoreException {
 		return p.isSatisfiedBy( this );
 	}
 	
-	public  boolean waitUntil( Condition p ) throws AttributeTypeException, InterruptedException, AttributeNotInStoreException {
+	public boolean waitUntil( Condition p ) throws AttributeTypeException, InterruptedException, AttributeNotInStoreException {
 		while (!p.isSatisfiedBy(this)) {
 		}
 		return true;
 	}
 
-	public  void update(Store update) throws AttributeTypeException {
+	public void update(Store update) throws AttributeTypeException {
 		for (Attribute<?> a : update.attributes.values()) {
 			_setValue(a, update.getValue(a));
 		}
