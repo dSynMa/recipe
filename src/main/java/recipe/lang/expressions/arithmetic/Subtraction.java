@@ -32,7 +32,7 @@ public class Subtraction extends ArithmeticExpression{
     }
 
     @Override
-    public ArithmeticExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException {
+    public ArithmeticExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
         return new Subtraction(lhs.close(store, CV), rhs.close(store, CV));
     }
 }

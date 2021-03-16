@@ -66,7 +66,7 @@ public class Not extends Condition {
 		Condition closure = arg.close(store, CV);
 		if (closure.equals(Condition.FALSE)) {
 			return Condition.TRUE;
-		} else if(!closure.getClass().equals(Value.class)){
+		} else if(!closure.getClass().equals(BooleanValue.class)){
 			return new Not(closure);
 		} else{
 			return Condition.FALSE;

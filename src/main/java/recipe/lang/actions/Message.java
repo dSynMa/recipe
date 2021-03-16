@@ -1,6 +1,7 @@
 package recipe.lang.actions;
 
 
+import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.store.Store;
@@ -23,7 +24,7 @@ public class Message {
 	public boolean isAReceiverFor(Store store) {
 		try {
 			return predicate.isSatisfiedBy(store);
-		} catch (AttributeTypeException e) {
+		} catch (AttributeTypeException | AttributeNotInStoreException e) {
 			return false;
 		}
 	}

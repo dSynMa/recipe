@@ -1,4 +1,4 @@
-package recipe.lang.conditions;
+package recipe.lang.expressions.predicate;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
@@ -52,7 +52,7 @@ public class ConditionParser{
                         }))
                 .or(word().plus().flatten()
                         .map((String value) -> {
-                            return new IsEqualTo(value);
+                            return null;//new IsEqualTo(value);
                         }))
         );
 

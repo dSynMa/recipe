@@ -2,7 +2,7 @@ package recipe.lang.expressions.predicate;
 
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.predicate.NumberValue;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.store.Store;
 
@@ -56,31 +56,27 @@ public class IsLessOrEqualThan extends Condition {
 
 	@Override
 	public BooleanValue valueIn(Store store) throws AttributeTypeException, AttributeNotInStoreException {
-		Expression lhsValue = lhs.valueIn(store);
-		Expression rhsValue = rhs.valueIn(store);
+		NumberValue lhsValue = lhs.valueIn(store);
+		NumberValue rhsValue = rhs.valueIn(store);
 
-		try {
-			Number lhsNo = (Number) ((Value) lhsValue).value;
-			Number rhsNo = (Number) ((Value) rhsValue).value;
+		Number lhsNo = lhsValue.value;
+		Number rhsNo = rhsValue.value;
 
-			if(0 <= new BigDecimal(lhsNo.toString()).compareTo(new BigDecimal(rhsNo.toString()))) {
-				return Condition.TRUE;
-			} else {
-				return Condition.FALSE;
-			}
-		} catch (Exception e){
-			throw new AttributeTypeException();
+		if(0 <= new BigDecimal(lhsNo.toString()).compareTo(new BigDecimal(rhsNo.toString()))) {
+			return Condition.TRUE;
+		} else {
+			return Condition.FALSE;
 		}
 	}
 
 	@Override
-	public Condition close(Store store, Set<String> CV) throws AttributeNotInStoreException {
+	public Condition close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
 		ArithmeticExpression lhsObject = lhs.close(store, CV);
 		ArithmeticExpression rhsObject = rhs.close(store, CV);
 		if (lhsObject.equals(rhsObject)) {
 			return Condition.TRUE;
-		} else if(!lhsObject.getClass().equals(Value.class) ||
-				!rhsObject.getClass().equals(Value.class)){
+		} else if(!lhsObject.getClass().equals(NumberValue.class) ||
+				!rhsObject.getClass().equals(NumberValue.class)){
 			return new IsLessOrEqualThan(lhsObject, rhsObject);
 		} else{
 			return Condition.FALSE;

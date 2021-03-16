@@ -1,6 +1,7 @@
 package recipe.lang.agents.behaviour;
 
-import recipe.lang.agents.behaviour.actions.conditions.Condition;
+
+import recipe.lang.expressions.predicate.Condition;
 
 public class Guarded extends AgentBehaviour {
     public Condition guard;

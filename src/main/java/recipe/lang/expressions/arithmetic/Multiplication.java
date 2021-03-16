@@ -28,7 +28,7 @@ public class Multiplication extends ArithmeticExpression{
     }
 
     @Override
-    public ArithmeticExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException {
+    public ArithmeticExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
         return new Multiplication(lhs.close(store, CV), rhs.close(store, CV));
     }
 }

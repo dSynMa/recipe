@@ -5,8 +5,8 @@ import org.petitparser.parser.primitive.StringParser;
 import org.petitparser.parser.combinators.SettableParser;
 import recipe.lang.agents.behaviour.AgentBehaviour;
 import recipe.lang.agents.behaviour.AgentParser;
-import recipe.lang.agents.behaviour.actions.ActionParser;
-import recipe.lang.agents.behaviour.actions.conditions.*;
+import recipe.lang.actions.ActionParser;
+import recipe.lang.expressions.predicate.ConditionParser;
 
 import java.util.List;
 

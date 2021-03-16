@@ -7,7 +7,7 @@ import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.actions.ActionParser;
 import recipe.lang.actions.SendAction;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.conditions.ConditionParser;
+import recipe.lang.expressions.predicate.ConditionParser;
 
 import java.util.List;
 
