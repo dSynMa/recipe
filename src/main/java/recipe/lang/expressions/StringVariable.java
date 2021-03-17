@@ -35,4 +35,14 @@ public class StringVariable extends Expression {
             return this;
         }
     }
+
+    @Override
+    public boolean equals(Object o){
+        return name.equals(o);
+    }
+
+    @Override
+    public String toString(){
+        return name;
+    }
 }

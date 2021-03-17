@@ -14,12 +14,27 @@ public class StringValue extends Expression {
         this.value = value;
     }
 
+    @Override
     public StringValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException{
         return this;
     }
 
+    @Override
     public Expression close(Store store, Set<String> CV) throws AttributeNotInStoreException{
         return this;
     }
 
+    @Override
+    public boolean equals(Object o){
+        if(o.getClass().equals(StringValue.class)){
+            return value.equals(((StringValue) o).value);
+        }
+
+        return false;
+    }
+
+    @Override
+    public String toString(){
+        return value;
+    }
 }
