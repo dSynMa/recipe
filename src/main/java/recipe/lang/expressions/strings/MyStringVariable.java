@@ -2,12 +2,11 @@ package recipe.lang.expressions.strings;
 
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.expressions.Expression;
 import recipe.lang.store.Store;
 
 import java.util.Set;
 
-public class MyStringVariable extends Expression {
+public class MyStringVariable extends StringExpression {
     String name;
 
     public MyStringVariable(String name) {
@@ -27,7 +26,7 @@ public class MyStringVariable extends Expression {
     }
 
     @Override
-    public Expression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
+    public StringExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
         if (CV.contains(name)) {
             return this.valueIn(store);
         } else {

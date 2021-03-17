@@ -2,12 +2,11 @@ package recipe.lang.expressions.strings;
 
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.expressions.Expression;
 import recipe.lang.store.Store;
 
 import java.util.Set;
 
-public class StringValue extends Expression {
+public class StringValue extends StringExpression {
     public String value;
 
     public StringValue(String value){
@@ -20,7 +19,7 @@ public class StringValue extends Expression {
     }
 
     @Override
-    public Expression close(Store store, Set<String> CV) throws AttributeNotInStoreException{
+    public StringExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException{
         return this;
     }
 
