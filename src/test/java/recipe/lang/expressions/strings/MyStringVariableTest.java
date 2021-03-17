@@ -1,9 +1,11 @@
-package recipe.lang.expressions;
+package recipe.lang.expressions.strings;
 
 import org.junit.Before;
 import org.junit.Test;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.expressions.strings.MyStringVariable;
+import recipe.lang.expressions.strings.StringValue;
 import recipe.lang.store.Attribute;
 import recipe.lang.store.Store;
 
@@ -14,22 +16,20 @@ import java.util.Set;
 
 import static org.junit.Assert.*;
 
-public class StringVariableTest {
+public class MyStringVariableTest {
     Store emptyStore;
     Store store;
     Store store1;
     Attribute attribute;
-    String attributeVal;
 
     @Before
     public void setUp() {
         attribute = new Attribute<>("v", String.class);
-        attributeVal = "val";
 
         emptyStore = new Store();
 
         Map<String, Object> data = new HashMap<>();
-        data.put("v", attributeVal);
+        data.put("v", "val");
         Map<String, Attribute<?>> attributes = new HashMap<>();
         attributes.put("v", attribute);
         store = new Store(data, attributes);
@@ -47,48 +47,62 @@ public class StringVariableTest {
     @Test
     public void correctValueReturned() throws AttributeTypeException, AttributeNotInStoreException {
         store.setValue("v", "example");
-        StringVariable stringVariable = new StringVariable("v");
-        StringValue value = stringVariable.valueIn(store);
+        MyStringVariable myStringVariable = new MyStringVariable("v");
+        StringValue value = myStringVariable.valueIn(store);
         assertTrue(value.value.equals("example"));
     }
 
     @Test(expected=AttributeTypeException.class)
     public void valueInWrongTypeValueReturned() throws AttributeTypeException, AttributeNotInStoreException {
         store.setValue("v", 8);
-        StringVariable stringVariable = new StringVariable("v");
-        stringVariable.valueIn(store);
+        MyStringVariable myStringVariable = new MyStringVariable("v");
+        myStringVariable.valueIn(store);
     }
 
     @Test(expected=AttributeNotInStoreException.class)
     public void valueInNotInStoreExceptionThrown() throws AttributeTypeException, AttributeNotInStoreException {
-        StringVariable stringVariable = new StringVariable("vv");
-        stringVariable.valueIn(store);
-    }
-
-    @Test(expected=AttributeNotInStoreException.class)
-    public void varNotInCVAndNotAttribute() throws AttributeTypeException, AttributeNotInStoreException {
-        StringVariable stringVariable = new StringVariable("x");
-        Set<String> CV = new HashSet<>();
-
-        stringVariable.close(store, CV);
+        MyStringVariable myStringVariable = new MyStringVariable("vv");
+        myStringVariable.valueIn(store);
     }
 
     @Test
-    public void varNotInCVAndAttribute() throws AttributeTypeException, AttributeNotInStoreException {
-        StringVariable stringVariable = new StringVariable("v");
+    public void closeInCV() throws AttributeTypeException, AttributeNotInStoreException {
+        MyStringVariable myStringVariable = new MyStringVariable("v");
+        Set<String> CV = new HashSet<>();
+        CV.add("v");
+
+        Object closure = myStringVariable.close(store, CV);
+
+        assertTrue(closure.getClass().equals(StringValue.class));
+
+        assertTrue(((StringValue) myStringVariable.close(store, CV)).value.equals("val"));
+    }
+
+    @Test
+    public void closeNotInCV() throws AttributeTypeException, AttributeNotInStoreException {
+        MyStringVariable myStringVariable = new MyStringVariable("v");
         Set<String> CV = new HashSet<>();
 
-        Expression closure = stringVariable.close(store, CV);
-        StringValue val = new StringValue(attributeVal);
+        Object closure = myStringVariable.close(store, CV);
 
-        assertEquals(val, closure);
+        assertTrue(closure.getClass().equals(MyStringVariable.class));
     }
 
     @Test(expected=AttributeTypeException.class)
     public void closeNotInCVAttributeTypeException() throws AttributeTypeException, AttributeNotInStoreException {
-        StringVariable stringVariable = new StringVariable("v");
+        MyStringVariable myStringVariable = new MyStringVariable("v");
         Set<String> CV = new HashSet<>();
+        CV.add("v");
 
-        stringVariable.close(store1, CV);
+        myStringVariable.close(store1, CV);
+    }
+
+    @Test(expected=AttributeNotInStoreException.class)
+    public void closeNotInCVAttributeNotInStoreException() throws AttributeTypeException, AttributeNotInStoreException {
+        MyStringVariable myStringVariable = new MyStringVariable("vv");
+        Set<String> CV = new HashSet<>();
+        CV.add("vv");
+
+        myStringVariable.close(store1, CV);
     }
 }

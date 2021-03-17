@@ -1,17 +1,16 @@
-package recipe.lang.expressions;
+package recipe.lang.expressions.strings;
 
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.expressions.arithmetic.ArithmeticExpression;
-import recipe.lang.expressions.predicate.NumberValue;
+import recipe.lang.expressions.Expression;
 import recipe.lang.store.Store;
 
 import java.util.Set;
 
-public class StringVariable extends Expression {
+public class MyStringVariable extends Expression {
     String name;
 
-    public StringVariable(String name) {
+    public MyStringVariable(String name) {
         this.name = name;
     }
 
@@ -29,20 +28,10 @@ public class StringVariable extends Expression {
 
     @Override
     public Expression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
-        if (!CV.contains(name)) {
+        if (CV.contains(name)) {
             return this.valueIn(store);
         } else {
             return this;
         }
-    }
-
-    @Override
-    public boolean equals(Object o){
-        return name.equals(o);
-    }
-
-    @Override
-    public String toString(){
-        return name;
     }
 }

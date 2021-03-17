@@ -1,8 +1,8 @@
-package recipe.lang.expressions;
+package recipe.lang.expressions.strings;
 
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.expressions.arithmetic.ArithmeticExpression;
+import recipe.lang.expressions.Expression;
 import recipe.lang.store.Store;
 
 import java.util.Set;
