@@ -7,9 +7,11 @@ import recipe.lang.store.Store;
 import java.util.Set;
 
 public class BooleanValue extends Condition{
+    Boolean value;
 
     public BooleanValue(Boolean val){
         super(val ? PredicateType.TRUE : PredicateType.FALSE);
+        value = val;
     }
 
     public BooleanValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException{
