@@ -69,10 +69,10 @@ public class BooleanVariableTest {
 
     @Test(expected=AttributeNotInStoreException.class)
     public void varNotInCVAndNotAttribute() throws AttributeTypeException, AttributeNotInStoreException {
-        BooleanVariable stringVariable = new BooleanVariable("x");
+        BooleanVariable booleanVariable = new BooleanVariable("x");
         Set<String> CV = new HashSet<>();
 
-        stringVariable.close(store, CV);
+        booleanVariable.close(store, CV);
     }
 
     @Test
