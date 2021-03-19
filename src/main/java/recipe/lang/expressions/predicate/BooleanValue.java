@@ -22,4 +22,17 @@ public class BooleanValue extends Condition{
         return this;
     }
 
+    @Override
+    public boolean equals(Object o){
+        if(o.getClass().equals(BooleanValue.class)){
+            return this.value.equals(((BooleanValue) o).value);
+        }
+
+        return false;
+    }
+
+    @Override
+    public String toString(){
+        return value.toString();
+    }
 }
