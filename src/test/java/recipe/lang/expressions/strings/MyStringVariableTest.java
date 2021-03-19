@@ -4,8 +4,6 @@ import org.junit.Before;
 import org.junit.Test;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.expressions.strings.MyStringVariable;
-import recipe.lang.expressions.strings.StringValue;
 import recipe.lang.store.Attribute;
 import recipe.lang.store.Store;
 
@@ -19,7 +17,7 @@ import static org.junit.Assert.*;
 public class MyStringVariableTest {
     Store emptyStore;
     Store store;
-    Store store1;
+    Store mismatchingTypeStore;
     Attribute attribute;
 
     @Before
@@ -40,7 +38,7 @@ public class MyStringVariableTest {
         Attribute attribute1 = new Attribute<>("v", Integer.class);
 
         attributes1.put("v", attribute1);
-        store1 = new Store(data1, attributes1);
+        mismatchingTypeStore = new Store(data1, attributes1);
 
     }
 
@@ -94,7 +92,7 @@ public class MyStringVariableTest {
         Set<String> CV = new HashSet<>();
         CV.add("v");
 
-        myStringVariable.close(store1, CV);
+        myStringVariable.close(mismatchingTypeStore, CV);
     }
 
     @Test(expected=AttributeNotInStoreException.class)
@@ -103,6 +101,6 @@ public class MyStringVariableTest {
         Set<String> CV = new HashSet<>();
         CV.add("vv");
 
-        myStringVariable.close(store1, CV);
+        myStringVariable.close(mismatchingTypeStore, CV);
     }
 }
