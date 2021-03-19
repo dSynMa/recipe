@@ -7,6 +7,10 @@ import recipe.lang.store.Store;
 import java.util.Set;
 
 public class BooleanValue extends Condition{
+    public Boolean getValue() {
+        return value;
+    }
+
     Boolean value;
 
     public BooleanValue(Boolean val){
