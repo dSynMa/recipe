@@ -1,9 +1,9 @@
-package recipe.lang.actions;
+package recipe.lang.process;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class ActionParserTest {
+public class BasicProcessParserTest {
     /**
      * Rigorous Test :-)
      */

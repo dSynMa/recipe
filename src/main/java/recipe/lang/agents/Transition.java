@@ -1,19 +1,19 @@
 package recipe.lang.agents;
 
-import recipe.lang.actions.Action;
+import recipe.lang.process.BasicProcess;
 
 public class Transition {
     // three attributes of transition: source,action,destination
     private String agent;
     private String source;
     private String destination;
-    private Action action;
+    private BasicProcess action;
 
     public Transition() {
       
     }
 
-    public Transition(String agent, String source, String destination, Action action) {
+    public Transition(String agent, String source, String destination, BasicProcess action) {
         this.agent=agent;
         this.source = source;
         this.destination = destination;
@@ -36,11 +36,11 @@ public class Transition {
         this.destination = destination;
     }
 
-    public Action getAction() {
+    public BasicProcess getAction() {
         return action;
     }
 
-    public void setAction(Action action) {
+    public void setAction(BasicProcess action) {
         this.action = action;
     }
 
