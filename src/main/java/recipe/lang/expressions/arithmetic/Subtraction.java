@@ -2,7 +2,7 @@ package recipe.lang.expressions.arithmetic;
 
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.expressions.predicate.NumberValue;
+import recipe.lang.expressions.arithmetic.NumberValue;
 import recipe.lang.store.Store;
 
 import java.math.BigDecimal;

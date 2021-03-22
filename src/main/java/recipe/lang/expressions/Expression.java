@@ -6,7 +6,7 @@ import recipe.lang.store.Store;
 
 import java.util.Set;
 
-public abstract class Expression {
-    public abstract Expression valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
-    public abstract Expression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
+public interface Expression {
+    Expression valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
+    Expression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
 }

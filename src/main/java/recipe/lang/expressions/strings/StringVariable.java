@@ -2,11 +2,13 @@ package recipe.lang.expressions.strings;
 
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
 
 import java.util.Set;
 
-public class StringVariable extends StringExpression {
+public class StringVariable extends StringExpression implements TypedVariable {
     String name;
 
     public StringVariable(String name) {
@@ -42,5 +44,15 @@ public class StringVariable extends StringExpression {
     @Override
     public String toString(){
         return name;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public Boolean isValidValue(TypedValue val) {
+        return val.getClass().equals(StringValue.class);
     }
 }

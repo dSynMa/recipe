@@ -1,13 +1,14 @@
-package recipe.lang.expressions.predicate;
+package recipe.lang.expressions.arithmetic;
 
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.store.Store;
 
 import java.util.Set;
 
-public class NumberValue extends ArithmeticExpression {
+public class NumberValue extends ArithmeticExpression implements TypedValue {
     public Number value;
 
     public NumberValue(Number value){
@@ -22,4 +23,8 @@ public class NumberValue extends ArithmeticExpression {
         return this;
     }
 
+    @Override
+    public Number getValue() {
+        return value;
+    }
 }

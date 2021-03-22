@@ -2,14 +2,13 @@ package recipe.lang.expressions.arithmetic;
 
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.expressions.predicate.BooleanValue;
-import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.NumberValue;
+import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
 
 import java.util.Set;
 
-public class NumberVariable extends ArithmeticExpression {
+public class NumberVariable extends ArithmeticExpression implements TypedVariable {
     String name;
 
     public NumberVariable(String name) {
@@ -35,5 +34,15 @@ public class NumberVariable extends ArithmeticExpression {
         } else {
             return this;
         }
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public Boolean isValidValue(TypedValue val) {
+        return val.getClass().equals(NumberValue.class);
     }
 }

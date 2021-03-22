@@ -4,7 +4,7 @@ import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.predicate.BooleanValue;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.NumberValue;
+import recipe.lang.expressions.arithmetic.NumberValue;
 import recipe.lang.store.Store;
 
 import java.util.Set;

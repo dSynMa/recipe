@@ -52,7 +52,7 @@ public class ConditionParser{
                         }))
                 .or(word().plus().flatten()
                         .map((String value) -> {
-                            return null;//new IsEqualTo(value);
+                            return null;
                         }))
         );
 

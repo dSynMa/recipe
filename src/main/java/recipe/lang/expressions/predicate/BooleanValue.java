@@ -2,11 +2,12 @@ package recipe.lang.expressions.predicate;
 
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.store.Store;
 
 import java.util.Set;
 
-public class BooleanValue extends Condition{
+public class BooleanValue extends Condition implements TypedValue {
     public Boolean getValue() {
         return value;
     }
