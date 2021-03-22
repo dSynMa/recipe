@@ -4,7 +4,10 @@ import org.junit.Before;
 import org.junit.Test;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.store.Attribute;
+import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.arithmetic.NumberValue;
+import recipe.lang.expressions.arithmetic.NumberVariable;
 import recipe.lang.store.Store;
 
 import java.util.HashMap;
@@ -18,24 +21,24 @@ public class MyStringVariableTest {
     Store emptyStore;
     Store store;
     Store mismatchingTypeStore;
-    Attribute attribute;
+    TypedVariable attribute;
 
     @Before
     public void setUp() {
-        attribute = new Attribute<>("v", String.class);
+        attribute = new StringVariable("v");
 
         emptyStore = new Store();
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("v", "val");
-        Map<String, Attribute<?>> attributes = new HashMap<>();
+        Map<String, TypedValue> data = new HashMap<>();
+        data.put("v", new StringValue("val"));
+        Map<String, TypedVariable> attributes = new HashMap<>();
         attributes.put("v", attribute);
         store = new Store(data, attributes);
 
-        Map<String, Object> data1 = new HashMap<>();
-        data1.put("v", 6);
-        Map<String, Attribute<?>> attributes1 = new HashMap<>();
-        Attribute attribute1 = new Attribute<>("v", Integer.class);
+        Map<String, TypedValue> data1 = new HashMap<>();
+        data1.put("v", new NumberValue(6));
+        Map<String, TypedVariable> attributes1 = new HashMap<>();
+        TypedVariable attribute1 = new NumberVariable("v");
 
         attributes1.put("v", attribute1);
         mismatchingTypeStore = new Store(data1, attributes1);
@@ -44,7 +47,7 @@ public class MyStringVariableTest {
 
     @Test
     public void correctValueReturned() throws AttributeTypeException, AttributeNotInStoreException {
-        store.setValue("v", "example");
+        store.setValue("v", new StringValue("example"));
         MyStringVariable myStringVariable = new MyStringVariable("v");
         StringValue value = myStringVariable.valueIn(store);
         assertTrue(value.value.equals("example"));
@@ -52,7 +55,7 @@ public class MyStringVariableTest {
 
     @Test(expected=AttributeTypeException.class)
     public void valueInWrongTypeValueReturned() throws AttributeTypeException, AttributeNotInStoreException {
-        store.setValue("v", 8);
+        store.setValue("v", new NumberValue(8));
         MyStringVariable myStringVariable = new MyStringVariable("v");
         myStringVariable.valueIn(store);
     }
@@ -73,7 +76,7 @@ public class MyStringVariableTest {
 
         assertTrue(closure.getClass().equals(StringValue.class));
 
-        assertTrue(((StringValue) myStringVariable.close(store, CV)).value.equals("val"));
+        assertTrue(((StringValue) myStringVariable.close(store, CV)).getValue().equals("val"));
     }
 
     @Test

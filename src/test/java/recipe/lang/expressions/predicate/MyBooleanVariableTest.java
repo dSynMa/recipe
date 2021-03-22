@@ -4,7 +4,10 @@ import org.junit.Before;
 import org.junit.Test;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.store.Attribute;
+import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.arithmetic.NumberValue;
+import recipe.lang.expressions.arithmetic.NumberVariable;
 import recipe.lang.store.Store;
 
 import java.util.HashMap;
@@ -18,24 +21,24 @@ public class MyBooleanVariableTest {
     Store emptyStore;
     Store store;
     Store mismatchingTypeStore;
-    Attribute attribute;
+    TypedVariable attribute;
 
     @Before
     public void setUp() {
-        attribute = new Attribute<>("v", Boolean.class);
+        attribute = new BooleanVariable("v");
 
         emptyStore = new Store();
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("v", true);
-        Map<String, Attribute<?>> attributes = new HashMap<>();
+        Map<String, TypedValue> data = new HashMap<>();
+        data.put("v", new BooleanValue(true));
+        Map<String, TypedVariable> attributes = new HashMap<>();
         attributes.put("v", attribute);
         store = new Store(data, attributes);
 
-        Map<String, Object> data1 = new HashMap<>();
-        data1.put("v", 6);
-        Map<String, Attribute<?>> attributes1 = new HashMap<>();
-        Attribute attribute1 = new Attribute<>("v", Integer.class);
+        Map<String, TypedValue> data1 = new HashMap<>();
+        data1.put("v", new NumberValue(6));
+        Map<String, TypedVariable> attributes1 = new HashMap<>();
+        TypedVariable attribute1 = new NumberVariable("v");
 
         attributes1.put("v", attribute1);
         mismatchingTypeStore = new Store(data1, attributes1);
@@ -44,7 +47,7 @@ public class MyBooleanVariableTest {
 
     @Test
     public void correctValueReturned() throws AttributeTypeException, AttributeNotInStoreException {
-        store.setValue("v", false);
+        store.setValue("v", new BooleanValue(false));
         MyBooleanVariable myBooleanVariable = new MyBooleanVariable("v");
         BooleanValue value = myBooleanVariable.valueIn(store);
         assertEquals(false, value.value);
@@ -52,7 +55,7 @@ public class MyBooleanVariableTest {
 
     @Test(expected=AttributeTypeException.class)
     public void valueInWrongTypeValueReturned() throws AttributeTypeException, AttributeNotInStoreException {
-        store.setValue("v", 8);
+        store.setValue("v", new NumberValue(8));
         MyBooleanVariable myBooleanVariable = new MyBooleanVariable("v");
         myBooleanVariable.valueIn(store);
     }

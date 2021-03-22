@@ -3,7 +3,6 @@ package recipe.lang.expressions.predicate;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.Expression;
-import recipe.lang.store.Attribute;
 import recipe.lang.store.Store;
 
 import java.util.Set;

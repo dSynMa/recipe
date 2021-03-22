@@ -4,14 +4,12 @@ import org.junit.Before;
 import org.junit.Test;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.expressions.Expression;
-import recipe.lang.store.Attribute;
+import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -22,14 +20,14 @@ public class StringValueTest {
 
     @Before
     public void setUp() {
-        Attribute attribute = new Attribute<>("v", String.class);
-        String attributeVal = "val";
+        TypedVariable attribute = new StringVariable("v");
+        StringValue attributeVal = new StringValue("val");
 
         emptyStore = new Store();
 
-        Map<String, Object> data = new HashMap<>();
+        Map<String, TypedValue> data = new HashMap<>();
         data.put("v", attributeVal);
-        Map<String, Attribute<?>> attributes = new HashMap<>();
+        Map<String, TypedVariable> attributes = new HashMap<>();
         attributes.put("v", attribute);
         store = new Store(data, attributes);
     }

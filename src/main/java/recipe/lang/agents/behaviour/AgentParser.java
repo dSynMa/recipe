@@ -4,8 +4,8 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.actions.ActionParser;
-import recipe.lang.actions.SendAction;
+import recipe.lang.process.ActionParser;
+import recipe.lang.process.SendBasicProcess;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.ConditionParser;
 
@@ -46,7 +46,7 @@ public class AgentParser {
 
         basic.set((CharacterParser.of('(').trim()).seq(action).seq((CharacterParser.of(')').trim()))
                 .map((List<Object> values) -> {
-                    return (SendAction) values.get(0);
+                    return (SendBasicProcess) values.get(0);
                 }));
 
         parser.set((basic.seq(StringParser.of("+").trim()).seq(parser))
@@ -63,7 +63,7 @@ public class AgentParser {
                         }))
                 .or(basic.seq(parser)
                         .map((List<Object> values) -> {
-                            return (SendAction) values.get(0);
+                            return (SendBasicProcess) values.get(0);
                         }))
                 .or(action));
         return parser;

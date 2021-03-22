@@ -4,6 +4,11 @@ import org.junit.Before;
 import org.junit.Test;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.arithmetic.NumberValue;
+import recipe.lang.expressions.strings.StringValue;
+import recipe.lang.expressions.strings.StringVariable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -13,15 +18,15 @@ import static org.junit.Assert.*;
 public class StoreTest {
     Store emptyStore;
     Store store;
-    Attribute attribute;
+    TypedVariable attribute;
 
     @Before
     public void setUp() {
-        attribute = new Attribute<>("v", String.class);
+        attribute = new StringVariable( "v");
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("v", "val");
-        Map<String, Attribute<?>> attributes = new HashMap<>();
+        Map<String, TypedValue> data = new HashMap<>();
+        data.put("v", new StringValue("val"));
+        Map<String, TypedVariable> attributes = new HashMap<>();
         attributes.put("v", attribute);
         store = new Store(data, attributes);
         emptyStore = new Store();
@@ -47,7 +52,7 @@ public class StoreTest {
     public void safeAddAttribute() {
         assertTrue(emptyStore.safeAddAttribute(attribute));
 
-        Attribute attribute2 = new Attribute<>("v", Integer.class);
+        TypedVariable attribute2 = new StringVariable("v");
         assertFalse(store.safeAddAttribute(attribute2));
     }
 
@@ -59,18 +64,18 @@ public class StoreTest {
 
     @Test
     public void setValue() throws AttributeTypeException, AttributeNotInStoreException {
-        store.setValue("v", "bbbb");
-        assertTrue(store.getValue("v").equals("bbbb"));
+        store.setValue("v", new StringValue("bbbb"));
+        assertTrue(store.getValue("v").equals(new StringValue("bbbb")));
     }
 
     @Test(expected=AttributeTypeException.class)
     public void setValueAttributeTypeException() throws AttributeTypeException, AttributeNotInStoreException {
-        store.setValue("v", 6);
+        store.setValue("v", new NumberValue(6));
     }
 
     @Test(expected=AttributeNotInStoreException.class)
     public void setValueAttributeNotInStoreException() throws AttributeTypeException, AttributeNotInStoreException {
-        store.setValue("vv", "bbbb");
+        store.setValue("vv", new StringValue("bbbb"));
     }
 
     @Test

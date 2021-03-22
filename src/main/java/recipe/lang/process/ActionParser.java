@@ -1,4 +1,4 @@
-package recipe.lang.actions;
+package recipe.lang.process;
 
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
@@ -90,7 +90,9 @@ public class ActionParser {
                     Condition guard = (Condition) values.get(3);
                     String message = (String) values.get(5);
                     String update = (String) values.get(8);
-                    SendAction action = new SendAction(psi, channel, message, update, guard);
+//                    SendBasicProcess action = new SendBasicProcess(psi, channel, message, update, guard);
+                    //TODO
+                    BasicProcess action = null;
                     return action;
                 })
         );
@@ -113,7 +115,9 @@ public class ActionParser {
                     String channel = (String) values.get(1);
                     String message = (String) values.get(4);
                     String update = (String) values.get(7);
-                    ReceiveAction action = new ReceiveAction(psi, channel, message, update);
+//                    ReceiveBasicProcess action = new ReceiveBasicProcess(psi, channel, message, update);
+                    //TODO
+                    BasicProcess action = null;
                     return action;
                 }));
 

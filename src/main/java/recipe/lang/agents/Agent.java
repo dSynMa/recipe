@@ -6,15 +6,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-import recipe.lang.actions.Action;
+import recipe.lang.expressions.channels.ChannelValue;
+import recipe.lang.expressions.channels.ChannelVariable;
+import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
+import recipe.lang.process.BasicProcess;
 import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.expressions.StringValue;
-import recipe.lang.expressions.StringVariable;
+import recipe.lang.expressions.strings.StringValue;
+import recipe.lang.expressions.strings.StringVariable;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.IsEqualTo;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.store.Attribute;
 import recipe.lang.store.Store;
 import recipe.lang.utils.Pair;
 
@@ -22,16 +25,16 @@ public class Agent {
     private String name;
     //TODO ensure that store variables and CV do not intersect, important for purposes of closure
     private Store store;
-    private HashMap<String, Attribute<?>> CV;
+    private HashMap<String, TypedVariable> CV;
     //TODO ensure that output store is a refinement of input store
-    private Function<Pair<Store, HashMap<String, Attribute<?>>>, Store> relabel;
+    private Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel;
     private Set<String> states;  //control flow
 
     private HashMap<String, Set<Transition>> stateToOutgoingTransitions;
 
     private Set<Transition> sendTransitions;
     private Set<Transition> receiveTransitions;
-    private Set<Action> actions;
+    private Set<BasicProcess> actions;
     private String currentState;
     private Condition receiveGuard;
     private Condition initialCondition;
@@ -41,7 +44,7 @@ public class Agent {
 
     }
 
-    public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<Action> actions,
+    public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<BasicProcess> actions,
                  String currentState, Condition receiveGuard) {
         this.name = name;
         this.store = store;
@@ -53,8 +56,8 @@ public class Agent {
         this.receiveGuard = receiveGuard;
     }
 
-    public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<Action> actions,
-                 Function<Pair<Store, HashMap<String, Attribute<?>>>, Store> relabel, String currentState) {
+    public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<BasicProcess> actions,
+                 Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel, String currentState) {
         this.name = name;
         this.store = store;
         this.states = new HashSet<>(states);
@@ -69,11 +72,11 @@ public class Agent {
         return this.name;
     }
 
-    public <T> T getValue(Attribute<T> attribute) throws AttributeTypeException {
+    public TypedValue getValue(TypedVariable attribute) throws AttributeTypeException {
         return store.getValue(attribute);
     }
 
-    public <T> void setValue(Attribute<T> attribute, T value) throws AttributeTypeException {
+    public void setValue(TypedVariable attribute, TypedValue value) throws AttributeTypeException {
         store.setValue(attribute, value);
     }
 
@@ -90,20 +93,18 @@ public class Agent {
         return name + ":" + store.toString();
     }
 
-    public <T> void storeUpdate(Map<Attribute<?>, Object> update) throws AttributeTypeException {
+    public void storeUpdate(Map<TypedVariable, TypedValue> update) throws AttributeTypeException {
         if (update != null) {
-            for (Attribute<?> att : update.keySet()) {
+            for (TypedVariable att : update.keySet()) {
                 store.setValue(att, update.get(att));
             }
         }
 
     }
 
-    public Attribute<?> getAttribute(String name) {
+    public TypedVariable getAttribute(String name) throws AttributeNotInStoreException {
         return store.getAttribute(name);
     }
-
-   
 
     public Set<String> getStates() {
         return states;
@@ -113,11 +114,11 @@ public class Agent {
         this.states = states;
     }
 
-    public Set<Action> getActions() {
+    public Set<BasicProcess> getActions() {
         return actions;
     }
 
-    public void setActions(Set<Action> actions) {
+    public void setActions(Set<BasicProcess> actions) {
         this.actions = actions;
     }
 
@@ -125,24 +126,24 @@ public class Agent {
         this.name = name;
     }
 
-    public HashMap<String, Attribute<?>> getCV() {
+    public HashMap<String, TypedVariable> getCV() {
         return CV;
     }
 
-    public void setCV(HashMap<String, Attribute<?>> cV) {
+    public void setCV(HashMap<String, TypedVariable> cV) {
         CV = cV;
     }
 
-    public Function<Pair<Store, HashMap<String, Attribute<?>>>, Store> getrelabel() {
+    public Function<Pair<Store, HashMap<String, TypedVariable>>, Store> getrelabel() {
         return relabel;
     }
 
-    public void setrelabel(Function<Pair<Store, HashMap<String, Attribute<?>>>, Store> relabel) {
+    public void setrelabel(Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel) {
         this.relabel = relabel;
     }
 
     public Store relabel() {
-        Pair<Store, HashMap<String, Attribute<?>>> pair = new Pair<>(store, CV);
+        Pair<Store, HashMap<String, TypedVariable>> pair = new Pair<>(store, CV);
         return relabel.apply(pair);
     }
 
@@ -190,8 +191,8 @@ public class Agent {
         Condition concrete = receiveGuard.close(store, getCV().keySet());
         Store newstore = new Store();
 
-        newstore.setValue(new Attribute<>("channel", String.class), channel);
-        newstore.setValue(new Attribute<>("state", String.class), state);
+        newstore.setValue(new ChannelVariable("channel"), new ChannelValue(channel));
+        newstore.setValue(new StringVariable("state"), new StringValue(state));
         return concrete.isSatisfiedBy(newstore);
     }
 
@@ -200,8 +201,8 @@ public class Agent {
     public static void main(String[] arg) throws AttributeTypeException, AttributeNotInStoreException {
 
         Store newstore =new Store();
-        newstore.setValue(new Attribute<>("channel", String.class), "c");
-        newstore.setValue(new Attribute<>("state", String.class), "pending");
+        newstore.setValue(new ChannelVariable("channel"), new ChannelValue("c"));
+        newstore.setValue(new StringVariable("state"), new StringValue("pending"));
         Condition cc =new And(new IsEqualTo(new StringVariable("channel"), new StringValue("c")),
         new IsEqualTo(new StringVariable("state"), new StringValue("ending")));
         

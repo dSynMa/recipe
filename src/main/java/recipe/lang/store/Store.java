@@ -4,19 +4,21 @@ import java.util.HashMap;
 import java.util.Map;
 
 import recipe.lang.exception.AttributeNotInStoreException;
+import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.exception.AttributeTypeException;
 
 public class Store {
-    private HashMap<String, Object> data;
+    private HashMap<String, TypedValue> data;
 
-	private HashMap<String, Attribute<?>> attributes;
+	private HashMap<String, TypedVariable> attributes;
 
-	public Map<String, Attribute<?>> getAttributes() {
+	public Map<String, TypedVariable> getAttributes() {
 		return attributes;
 	}
 
-	public Store(Map<String, Object> data, Map<String, Attribute<?>> attributes) {
+	public Store(Map<String, TypedValue> data, Map<String, TypedVariable> attributes) {
 		this.data = new HashMap<>(data);
 		this.attributes = new HashMap<>(attributes);
 	}
@@ -26,8 +28,8 @@ public class Store {
 		this.attributes = new HashMap<>();
 	}
 
-	protected boolean safeAddAttribute(Attribute<?> attribute) {
-		Attribute<?> old = attributes.get(attribute.getName());
+	protected boolean safeAddAttribute(TypedVariable attribute) {
+		TypedVariable old = attributes.get(attribute.getName());
 		if (old == null) {
 			attributes.put(attribute.getName(), attribute);
 			return true;
@@ -35,13 +37,13 @@ public class Store {
 		return old.equals(attribute);
 	}
 
-	public  <T> T getValue(Attribute<T> attribute) throws AttributeTypeException {
-		Object o = data.get(attribute.getName());
+	public TypedValue getValue(TypedVariable attribute) throws AttributeTypeException {
+		TypedValue o = data.get(attribute.getName());
 		if (o == null) {
 			return null;
 		}
-		if (attribute.check(o)) {
-			return attribute.castTo(o);
+		if (attribute.isValidValue(o)) {
+			return o;
 		}
 		throw new AttributeTypeException();
 	}
@@ -54,7 +56,7 @@ public class Store {
 		return null;
 	}
 
-	public Attribute<?> getAttribute(String n) throws AttributeNotInStoreException {
+	public TypedVariable getAttribute(String n) throws AttributeNotInStoreException {
 		if(!attributes.containsKey(n)){
 			throw new AttributeNotInStoreException();
 		}
@@ -62,11 +64,11 @@ public class Store {
 		return attributes.get(n);
 	}
 
-	public  void setValue(Attribute<?> attribute, Object value)  throws AttributeTypeException {
+	public  void setValue(TypedVariable attribute, TypedValue value)  throws AttributeTypeException {
 		_setValue( attribute , value );
 	}
 	
-	private void _setValue(Attribute<?> attribute, Object value) throws AttributeTypeException {
+	private void _setValue(TypedVariable attribute, TypedValue value) throws AttributeTypeException {
 		if (!attribute.isValidValue(value)) {
 			throw new AttributeTypeException();
 		}
@@ -77,7 +79,7 @@ public class Store {
 		}
 	}
 
-	public void setValue(String attribute, Object value) throws AttributeTypeException, AttributeNotInStoreException {
+	public void setValue(String attribute, TypedValue value) throws AttributeTypeException, AttributeNotInStoreException {
 		if(!attributes.containsKey(attribute)){
 			throw new AttributeNotInStoreException();
 		}
@@ -133,7 +135,7 @@ public class Store {
 	}
 
 	public void update(Store update) throws AttributeTypeException {
-		for (Attribute<?> a : update.attributes.values()) {
+		for (TypedVariable a : update.attributes.values()) {
 			_setValue(a, update.getValue(a));
 		}
 	}
