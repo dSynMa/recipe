@@ -5,11 +5,14 @@ import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.arithmetic.NumberVariable;
 import recipe.lang.expressions.strings.StringExpression;
 import recipe.lang.expressions.strings.StringValue;
 import recipe.lang.store.Store;
 
 import java.util.Set;
+
+import static org.petitparser.parser.primitive.CharacterParser.word;
 
 public class ChannelVariable extends ChannelExpression implements TypedVariable {
     String name;
@@ -57,5 +60,11 @@ public class ChannelVariable extends ChannelExpression implements TypedVariable 
     @Override
     public Boolean isValidValue(TypedValue val) {
         return val.getClass().equals(ChannelValue.class);
+    }
+
+    public static org.petitparser.parser.Parser parser(){
+        org.petitparser.parser.Parser parser = word().plus().flatten().map((String value) -> new ChannelVariable(value));
+
+        return parser;
     }
 }
