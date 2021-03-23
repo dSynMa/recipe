@@ -1,12 +1,17 @@
 package recipe.lang.expressions.arithmetic;
 
+import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
 
+import java.util.List;
 import java.util.Set;
+
+import static org.petitparser.parser.primitive.CharacterParser.digit;
+import static org.petitparser.parser.primitive.CharacterParser.word;
 
 public class NumberVariable extends ArithmeticExpression implements TypedVariable {
     String name;
@@ -42,7 +47,18 @@ public class NumberVariable extends ArithmeticExpression implements TypedVariabl
     }
 
     @Override
+    public String toString(){
+        return name;
+    }
+
+    @Override
     public Boolean isValidValue(TypedValue val) {
         return val.getClass().equals(NumberValue.class);
+    }
+
+    public static org.petitparser.parser.Parser parser(){
+        org.petitparser.parser.Parser parser = word().plus().flatten().map((String value) -> new NumberVariable(value));
+
+        return parser;
     }
 }

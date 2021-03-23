@@ -1,5 +1,6 @@
 package recipe.lang.expressions.arithmetic;
 
+import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.predicate.BooleanValue;
@@ -7,7 +8,10 @@ import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.arithmetic.NumberValue;
 import recipe.lang.store.Store;
 
+import java.util.List;
 import java.util.Set;
+
+import static org.petitparser.parser.primitive.CharacterParser.word;
 
 public class MyNumberVariable extends ArithmeticExpression {
     String name;
@@ -35,5 +39,16 @@ public class MyNumberVariable extends ArithmeticExpression {
         } else {
             return this;
         }
+    }
+
+    @Override
+    public String toString(){
+        return "my." + name;
+    }
+
+    public static org.petitparser.parser.Parser parser(){
+        org.petitparser.parser.Parser parser = StringParser.of("my.").seq(word().plus().flatten()).map((String value) -> new MyNumberVariable(value));
+
+        return parser;
     }
 }
