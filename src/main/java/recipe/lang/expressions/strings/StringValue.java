@@ -1,11 +1,15 @@
 package recipe.lang.expressions.strings;
 
+import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.store.Store;
 
+import java.util.List;
 import java.util.Set;
+
+import static org.petitparser.parser.primitive.CharacterParser.word;
 
 public class StringValue extends StringExpression implements TypedValue {
     @Override
@@ -40,6 +44,13 @@ public class StringValue extends StringExpression implements TypedValue {
 
     @Override
     public String toString(){
-        return value;
+        return "\"" + value + "\"";
+    }
+
+    public static org.petitparser.parser.Parser parser(){
+        org.petitparser.parser.Parser parser = StringParser.of("\"").seq(word().plus().flatten()).seq(StringParser.of("\""))
+                .map((List<Object> values) -> new StringVariable((String) values.get(1)));
+
+        return parser;
     }
 }

@@ -8,6 +8,8 @@ import recipe.lang.store.Store;
 
 import java.util.Set;
 
+import static org.petitparser.parser.primitive.CharacterParser.word;
+
 public class StringVariable extends StringExpression implements TypedVariable {
     String name;
 
@@ -54,5 +56,11 @@ public class StringVariable extends StringExpression implements TypedVariable {
     @Override
     public Boolean isValidValue(TypedValue val) {
         return val.getClass().equals(StringValue.class);
+    }
+
+    public static org.petitparser.parser.Parser parser(){
+        org.petitparser.parser.Parser parser = word().plus().flatten().map((String value) -> new StringVariable(value));
+
+        return parser;
     }
 }
