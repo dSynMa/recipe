@@ -33,9 +33,7 @@ public abstract class ArithmeticExpression implements Expression {
                 .or(variable)
                 .or(myVariable));
 
-        bracketed.set((CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')')).map((List<Object> values) -> values.get(1)))
-                .or(NumberValue.parser())
-                .or(NumberVariable.parser()));
+        bracketed.set((CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')')).map((List<Object> values) -> values.get(1))));
 
 
         return parser;

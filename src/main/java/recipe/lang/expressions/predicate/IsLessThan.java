@@ -1,5 +1,7 @@
 package recipe.lang.expressions.predicate;
 
+import org.petitparser.parser.Parser;
+import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
@@ -7,6 +9,7 @@ import recipe.lang.expressions.arithmetic.NumberValue;
 import recipe.lang.store.Store;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Set;
 
 public class IsLessThan extends Condition {
@@ -51,7 +54,7 @@ public class IsLessThan extends Condition {
 
 	@Override
 	public String toString() {
-		return lhs + ">=" + rhs.toString();
+		return lhs + "<" + rhs.toString();
 	}
 
 	@Override
@@ -83,4 +86,15 @@ public class IsLessThan extends Condition {
 		}
 	}
 
+	public static org.petitparser.parser.Parser parser(Parser arithmeticExpression) {
+		org.petitparser.parser.Parser parser =
+				(arithmeticExpression)
+						.seq(CharacterParser.of('<').trim())
+						.seq(arithmeticExpression)
+						.map((List<Object> values) -> {
+							return new IsLessThan((ArithmeticExpression) values.get(0), (ArithmeticExpression) values.get(2));
+						});
+
+		return parser;
+	}
 }

@@ -1,10 +1,14 @@
 package recipe.lang.expressions.predicate;
 
+import org.petitparser.parser.Parser;
+import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.store.Store;
 
+import java.util.List;
 import java.util.Set;
 
 public class IsEqualTo extends Condition {
@@ -70,7 +74,17 @@ public class IsEqualTo extends Condition {
 			return Condition.FALSE;
 		}
 	}
-	
 
+	public static org.petitparser.parser.Parser parser(Parser arithmeticExpression) {
+		org.petitparser.parser.Parser parser =
+				(arithmeticExpression)
+						.seq(StringParser.of("==").trim())
+						.seq(arithmeticExpression)
+						.map((List<Object> values) -> {
+							return new IsEqualTo((ArithmeticExpression) values.get(0), (ArithmeticExpression) values.get(2));
+						});
+
+		return parser;
+	}
 }
 

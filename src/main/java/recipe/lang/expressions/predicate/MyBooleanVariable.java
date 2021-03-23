@@ -6,6 +6,8 @@ import recipe.lang.store.Store;
 
 import java.util.Set;
 
+import static org.petitparser.parser.primitive.CharacterParser.word;
+
 public class MyBooleanVariable extends Condition{
     String name;
 
@@ -33,5 +35,16 @@ public class MyBooleanVariable extends Condition{
         } else {
             return this;
         }
+    }
+
+    @Override
+    public String toString(){
+        return "my." + name;
+    }
+
+    public static org.petitparser.parser.Parser parser(){
+        org.petitparser.parser.Parser parser = word().plus().flatten().map((String value) -> new MyBooleanVariable(value));
+
+        return parser;
     }
 }

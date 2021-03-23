@@ -4,10 +4,13 @@ import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.arithmetic.NumberVariable;
 import recipe.lang.expressions.strings.StringValue;
 import recipe.lang.store.Store;
 
 import java.util.Set;
+
+import static org.petitparser.parser.primitive.CharacterParser.word;
 
 public class BooleanVariable extends Condition implements TypedVariable {
     String name;
@@ -46,5 +49,17 @@ public class BooleanVariable extends Condition implements TypedVariable {
     @Override
     public Boolean isValidValue(TypedValue val) {
         return val.getClass().equals(BooleanValue.class);
+    }
+
+
+    @Override
+    public String toString(){
+        return name;
+    }
+
+    public static org.petitparser.parser.Parser parser(){
+        org.petitparser.parser.Parser parser = word().plus().flatten().map((String value) -> new BooleanVariable(value));
+
+        return parser;
     }
 }

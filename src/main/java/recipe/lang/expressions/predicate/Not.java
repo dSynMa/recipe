@@ -1,10 +1,13 @@
 package recipe.lang.expressions.predicate;
 
+import org.petitparser.parser.Parser;
+import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.store.Store;
 
+import java.util.List;
 import java.util.Set;
 
 public class Not extends Condition {
@@ -71,5 +74,21 @@ public class Not extends Condition {
 		} else{
 			return Condition.FALSE;
 		}
+	}
+
+
+	public static org.petitparser.parser.Parser parser(Parser bracketedCondition) {
+		org.petitparser.parser.Parser value = BooleanValue.parser();
+		org.petitparser.parser.Parser variable = BooleanVariable.parser();
+		org.petitparser.parser.Parser myVariable = MyBooleanVariable.parser();
+
+		org.petitparser.parser.Parser parser =
+				CharacterParser.of('!').trim()
+						.seq((value.or(variable).or(myVariable).or(bracketedCondition)))
+						.map((List<Object> values) -> {
+							return new Not((Condition) values.get(1));
+						});
+
+		return parser;
 	}
 }

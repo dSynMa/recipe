@@ -1,11 +1,17 @@
 package recipe.lang.expressions.predicate;
 
+import org.petitparser.parser.primitive.CharacterParser;
+import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.arithmetic.NumberValue;
 import recipe.lang.store.Store;
 
+import java.util.List;
 import java.util.Set;
+
+import static org.petitparser.parser.primitive.CharacterParser.digit;
 
 public class BooleanValue extends Condition implements TypedValue {
     public Boolean getValue() {
@@ -39,5 +45,13 @@ public class BooleanValue extends Condition implements TypedValue {
     @Override
     public String toString(){
         return value.toString();
+    }
+
+    public static org.petitparser.parser.Parser parser(){
+        org.petitparser.parser.Parser parser =
+                (StringParser.of("true").map((String value) -> new BooleanValue(true)))
+                .or(StringParser.of("false").map((String value) -> new BooleanValue(false)));
+
+        return parser;
     }
 }
