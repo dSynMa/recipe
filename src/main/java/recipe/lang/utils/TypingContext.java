@@ -25,6 +25,19 @@ public class TypingContext {
         typeVars = new HashMap<>();
     }
 
+    public TypingContext(Map<String, Expression> varType){
+        this.varType = varType;
+        this.typeVars = new HashMap<>();
+        for(String name : varType.keySet()){
+            Class<? extends Expression> type = varType.get(name).getClass();
+            if(!typeVars.containsKey(type)){
+                typeVars.put(type, new HashSet<>());
+            }
+
+            typeVars.get(type).add(name);
+        }
+    }
+
     public TypingContext(Map<String, Expression> varType, Map<Class<? extends Expression>, Set<String>> typeVars){
         this.varType = varType;
         this.typeVars = typeVars;
