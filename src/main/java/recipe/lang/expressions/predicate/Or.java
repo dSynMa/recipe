@@ -83,15 +83,11 @@ public class Or extends Condition {
 		}
 	}
 
-	public static org.petitparser.parser.Parser parser(Parser bracketedCondition) {
-		org.petitparser.parser.Parser value = BooleanValue.parser();
-		org.petitparser.parser.Parser variable = BooleanVariable.parser();
-		org.petitparser.parser.Parser myVariable = MyBooleanVariable.parser();
-
+	public static org.petitparser.parser.Parser parser(Parser basicCondition) {
 		org.petitparser.parser.Parser parser =
-				(value.or(variable).or(myVariable).or(bracketedCondition))
+				(basicCondition)
 						.seq(CharacterParser.of('|').trim())
-						.seq((value.or(variable).or(myVariable).or(bracketedCondition)))
+						.seq(basicCondition)
 						.map((List<Object> values) -> {
 							return new Or((Condition) values.get(0), (Condition) values.get(2));
 						});

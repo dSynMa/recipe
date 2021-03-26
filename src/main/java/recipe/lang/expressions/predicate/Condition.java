@@ -9,6 +9,7 @@ import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.arithmetic.*;
 import recipe.lang.expressions.strings.StringExpression;
 import recipe.lang.store.Store;
+import recipe.lang.utils.TypingContext;
 
 import java.util.List;
 import java.util.Set;
@@ -59,8 +60,8 @@ public abstract class Condition implements Expression {
 	public abstract BooleanValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
 	public abstract Condition close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
 
-	public static Parser typeParser(){
-		return Condition.parser(ArithmeticExpression.typeParser());
+	public static Parser typeParser(TypingContext context){
+		return Condition.parser(ArithmeticExpression.typeParser(context));
 	}
 
 	public static org.petitparser.parser.Parser parser(org.petitparser.parser.Parser arithmeticExpression) {
@@ -87,11 +88,12 @@ public abstract class Condition implements Expression {
 				.or(isGreaterThan)
 				.or(bracketed));
 
-		bracketed.set((CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')')).map((List<Object> values) -> values.get(1)))
-				.or(not)
-				.or(value)
+		bracketed.set(value
 				.or(variable)
-				.or(myVariable));
+				.or(myVariable)
+				.or(not)
+				.or(CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')')).map((List<Object> values) -> values.get(1)))
+				);
 
 
 		return parser;
