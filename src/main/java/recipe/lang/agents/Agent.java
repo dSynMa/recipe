@@ -215,7 +215,7 @@ public class Agent {
         System.out.println(y);
     }
 
-    private static org.petitparser.parser.Parser parser(TypingContext messageContext,
+    public static org.petitparser.parser.Parser parser(TypingContext messageContext,
                                                               TypingContext communicationContext,
                                                               TypingContext channelContext){
         SettableParser parser = SettableParser.undefined();
@@ -246,6 +246,7 @@ public class Agent {
                     .seq(Parsing.labelledParser("receive-guard", receiveGuard.apply(localContext.get())))
                     .seq(Parsing.labelledParser("repeat", process.apply(localContext.get())))
                 .map((List<Object> values) -> {
+                    //TODO
                     return null;
                 }));
 
