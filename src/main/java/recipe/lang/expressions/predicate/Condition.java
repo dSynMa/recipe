@@ -67,10 +67,10 @@ public abstract class Condition implements Expression {
 	public static org.petitparser.parser.Parser parser(TypingContext context) {
 		org.petitparser.parser.Parser arithmeticExpression = ArithmeticExpression.typeParser(context);
 		SettableParser parser = SettableParser.undefined();
-		SettableParser bracketed = SettableParser.undefined();
-		org.petitparser.parser.Parser and = And.parser(bracketed);
-		org.petitparser.parser.Parser or = Or.parser(bracketed);
-		org.petitparser.parser.Parser not = Not.parser(bracketed);
+		SettableParser basic = SettableParser.undefined();
+		org.petitparser.parser.Parser and = And.parser(basic);
+		org.petitparser.parser.Parser or = Or.parser(basic);
+		org.petitparser.parser.Parser not = Not.parser(basic);
 		org.petitparser.parser.Parser isEqualTo = IsEqualTo.parser(arithmeticExpression);
 		org.petitparser.parser.Parser isLessThan = IsLessThan.parser(arithmeticExpression);
 		org.petitparser.parser.Parser isLessOrEqualThan = IsLessOrEqualThan.parser(arithmeticExpression);
@@ -87,13 +87,14 @@ public abstract class Condition implements Expression {
 				.or(isLessOrEqualThan)
 				.or(isGreaterOrEqualThan)
 				.or(isGreaterThan)
-				.or(bracketed));
+				.or(basic));
 
-		bracketed.set(value
+		basic.set(value
 				.or(variable)
 				.or(myVariable)
 				.or(not)
-				.or(CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')')).map((List<Object> values) -> values.get(1)))
+				.or(CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')'))
+						.map((List<Object> values) -> values.get(1)))
 				);
 
 
