@@ -34,10 +34,12 @@ public class ConditionTest {
     public void parserSuccess() {
         TypingContext context = new TypingContext();
         context.set("cond", new BooleanVariable("cond"));
-        Parser parser = Condition.parser(new TypingContext()).end();
+        Parser parser = Condition.parser(context).end();
         Result r = parser.parse("cond");
         assert r.isSuccess();
         r = parser.parse("cond");
+        assert r.isSuccess();
+        r = parser.parse("(cond)");
         assert r.isSuccess();
         r = parser.parse("!cond");
         assert r.isSuccess();
@@ -69,8 +71,12 @@ public class ConditionTest {
 
     @Test
     public void parserFailure() {
+        TypingContext context = new TypingContext();
+        context.set("cond", new BooleanVariable("cond"));
         Parser parser = Condition.parser(new TypingContext()).end();
-        Result r = parser.parse("!cond!");
+        Result r = parser.parse("!condd");
+        assert r.isFailure();
+        r = parser.parse("!cond!");
         assert r.isFailure();
         r = parser.parse("!(cond & !cond");
         assert r.isFailure();
