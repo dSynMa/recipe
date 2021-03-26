@@ -1,16 +1,17 @@
 package recipe.lang.agents;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import org.petitparser.parser.Parser;
+import org.petitparser.parser.combinators.SettableParser;
+import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.expressions.channels.ChannelValue;
 import recipe.lang.expressions.channels.ChannelVariable;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.process.BasicProcess;
+import recipe.lang.process.Process;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.expressions.strings.StringValue;
 import recipe.lang.expressions.strings.StringVariable;
@@ -20,6 +21,10 @@ import recipe.lang.expressions.predicate.IsEqualTo;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.store.Store;
 import recipe.lang.utils.Pair;
+import recipe.lang.utils.Parsing;
+import recipe.lang.utils.TypingContext;
+
+import static org.petitparser.parser.primitive.CharacterParser.word;
 
 public class Agent {
     private String name;
@@ -34,7 +39,7 @@ public class Agent {
 
     private Set<Transition> sendTransitions;
     private Set<Transition> receiveTransitions;
-    private Set<BasicProcess> actions;
+    private Set<Process> actions;
     private String currentState;
     private Condition receiveGuard;
     private Condition initialCondition;
@@ -44,7 +49,7 @@ public class Agent {
 
     }
 
-    public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<BasicProcess> actions,
+    public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<Process> actions,
                  String currentState, Condition receiveGuard) {
         this.name = name;
         this.store = store;
@@ -56,7 +61,7 @@ public class Agent {
         this.receiveGuard = receiveGuard;
     }
 
-    public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<BasicProcess> actions,
+    public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<Process> actions,
                  Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel, String currentState) {
         this.name = name;
         this.store = store;
@@ -114,11 +119,11 @@ public class Agent {
         this.states = states;
     }
 
-    public Set<BasicProcess> getActions() {
+    public Set<Process> getActions() {
         return actions;
     }
 
-    public void setActions(Set<BasicProcess> actions) {
+    public void setActions(Set<Process> actions) {
         this.actions = actions;
     }
 
@@ -208,5 +213,42 @@ public class Agent {
         
         boolean y = cc.isSatisfiedBy(newstore);
         System.out.println(y);
+    }
+
+    private static org.petitparser.parser.Parser parser(TypingContext messageContext,
+                                                              TypingContext communicationContext,
+                                                              TypingContext channelContext){
+        SettableParser parser = SettableParser.undefined();
+        Function<TypingContext, Parser> process = (TypingContext localContext) -> Process.parser(messageContext, localContext, communicationContext, channelContext);
+
+        Function<TypingContext, Parser> relabeling = (TypingContext localContext) -> (Parsing.expressionParser(communicationContext).trim()
+                .seq(StringParser.of("<-").trim())
+                .seq(Parsing.expressionParser(localContext)))
+                .flatten();
+
+        Function<TypingContext, Parser> receiveGuard = (TypingContext localContext) -> (Condition.parser(localContext).trim()
+                .seq(StringParser.of("->").trim())
+                .seq(Parsing.expressionParser(channelContext)))
+                .flatten();
+
+        Parser name = word().plus().trim();
+
+        AtomicReference<TypingContext> localContext = new AtomicReference<>();
+
+        parser.set(StringParser.of("agent").trim()
+                    .seq(name)
+                    .seq(Parsing.labelledParser("local", Parsing.typedAssignmentList())
+                            .map((Map values) -> {
+                                localContext.set(new TypingContext(values));
+                                return values;
+                            }))
+                    .seq(Parsing.labelledParser("relabel", relabeling.apply(localContext.get())))
+                    .seq(Parsing.labelledParser("receive-guard", receiveGuard.apply(localContext.get())))
+                    .seq(Parsing.labelledParser("repeat", process.apply(localContext.get())))
+                .map((List<Object> values) -> {
+                    return null;
+                }));
+
+        return parser;
     }
 }
