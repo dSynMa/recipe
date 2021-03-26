@@ -1,5 +1,6 @@
 package recipe.lang.expressions.predicate;
 
+import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.store.Store;
@@ -43,7 +44,7 @@ public class MyBooleanVariable extends Condition{
     }
 
     public static org.petitparser.parser.Parser parser(){
-        org.petitparser.parser.Parser parser = word().plus().flatten().map((String value) -> new MyBooleanVariable(value));
+        org.petitparser.parser.Parser parser = (StringParser.of("my.").seq(word().plus())).flatten().map((String value) -> new MyBooleanVariable(value));
 
         return parser;
     }
