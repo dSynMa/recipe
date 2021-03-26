@@ -23,10 +23,10 @@ public abstract class ArithmeticExpression implements Expression {
 
     public static org.petitparser.parser.Parser parser() {
         SettableParser parser = SettableParser.undefined();
-        SettableParser bracketed = SettableParser.undefined();
-        org.petitparser.parser.Parser addition = Addition.parser(bracketed);
-        org.petitparser.parser.Parser multiplication = Multiplication.parser(bracketed);
-        org.petitparser.parser.Parser subtraction = Subtraction.parser(bracketed);
+        SettableParser basic = SettableParser.undefined();
+        org.petitparser.parser.Parser addition = Addition.parser(basic);
+        org.petitparser.parser.Parser multiplication = Multiplication.parser(basic);
+        org.petitparser.parser.Parser subtraction = Subtraction.parser(basic);
         org.petitparser.parser.Parser value = NumberValue.parser();
         org.petitparser.parser.Parser variable = NumberVariable.parser();
         org.petitparser.parser.Parser myVariable = MyNumberVariable.parser();
@@ -34,12 +34,17 @@ public abstract class ArithmeticExpression implements Expression {
         parser.set(addition
                 .or(multiplication)
                 .or(subtraction)
-                .or(bracketed)
+                .or(basic)
                 .or(value)
                 .or(variable)
                 .or(myVariable));
 
-        bracketed.set((CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')')).map((List<Object> values) -> values.get(1))));
+        basic.set(value
+                .or(variable)
+                .or(myVariable)
+                .or((CharacterParser.of('(').trim()
+                        .seq(parser)
+                        .seq(CharacterParser.of(')'))).map((List<Object> values) -> values.get(1))));
 
         return parser;
     }

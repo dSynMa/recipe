@@ -44,15 +44,11 @@ public class Subtraction extends ArithmeticExpression{
         return "(" + lhs.toString() + "-" + rhs.toString() + ")";
     }
 
-    public static org.petitparser.parser.Parser parser(Parser bracketedArithmeticExpression) {
-        org.petitparser.parser.Parser value = NumberValue.parser();
-        org.petitparser.parser.Parser variable = NumberVariable.parser();
-        org.petitparser.parser.Parser myVariable = MyNumberVariable.parser();
-
+    public static org.petitparser.parser.Parser parser(Parser basicArithmeticExpression) {
         org.petitparser.parser.Parser parser =
-                (value.or(variable).or(myVariable).or(bracketedArithmeticExpression))
+                (basicArithmeticExpression)
                         .seq(CharacterParser.of('-').trim())
-                        .seq((value.or(variable).or(myVariable).or(bracketedArithmeticExpression)))
+                        .seq(basicArithmeticExpression)
                         .map((List<Object> values) -> {
                             return new Subtraction((ArithmeticExpression) values.get(0), (ArithmeticExpression) values.get(2));
                         });
