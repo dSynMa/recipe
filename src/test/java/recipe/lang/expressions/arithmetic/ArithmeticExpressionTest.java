@@ -11,8 +11,14 @@ public class ArithmeticExpressionTest {
 
     @Test
     public void parser() {
-        Parser parser = ArithmeticExpression.parser(new TypingContext()).end();
+        TypingContext context = new TypingContext();
+        context.set("v", new NumberVariable("v"));
+        Parser parser = ArithmeticExpression.parser(context).end();
         Result r = parser.parse("6 + (9*9)");
+        assert r.isSuccess();
+        r = parser.parse("v");
+        assert r.isSuccess();
+        r = parser.parse("6");
         assert r.isSuccess();
         r = parser.parse("6 - (9*9)");
         assert r.isSuccess();
