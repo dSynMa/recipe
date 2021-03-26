@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Set;
 
 //TODO add exception wrong type and non-existing variables
-public abstract class Condition extends Expression {
+public abstract class Condition implements Expression {
 
 	public enum PredicateType {
 		FALSE, TRUE, ISEQUAL, ISGTR, ISGEQ, ISLEQ, ISLES, AND, OR, NOT, VAR

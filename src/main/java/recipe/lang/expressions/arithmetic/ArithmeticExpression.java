@@ -13,7 +13,7 @@ import recipe.lang.utils.TypingContext;
 import java.util.List;
 import java.util.Set;
 
-public abstract class ArithmeticExpression extends Expression {
+public abstract class ArithmeticExpression implements Expression {
     public abstract NumberValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
 
     public abstract ArithmeticExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
