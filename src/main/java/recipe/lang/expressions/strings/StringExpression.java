@@ -1,5 +1,6 @@
 package recipe.lang.expressions.strings;
 
+import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
@@ -16,9 +17,12 @@ public abstract class StringExpression implements Expression {
     public abstract StringValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
     public abstract StringExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
 
+    public Parser typeParser(){
+        return StringExpression.parser();
+    }
 
-    public static org.petitparser.parser.Parser parser(){
-        org.petitparser.parser.Parser parser = MyStringVariable.parser().or(StringVariable.parser()).or(StringValue.parser());
+    public static Parser parser(){
+        Parser parser = MyStringVariable.parser().or(StringVariable.parser()).or(StringValue.parser());
 
         return parser;
     }

@@ -1,11 +1,13 @@
 package recipe.lang.expressions.predicate;
 
+import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.arithmetic.*;
+import recipe.lang.expressions.strings.StringExpression;
 import recipe.lang.store.Store;
 
 import java.util.List;
@@ -56,6 +58,10 @@ public abstract class Condition implements Expression {
 
 	public abstract BooleanValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
 	public abstract Condition close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
+
+	public static Parser typeParser(){
+		return Condition.parser(ArithmeticExpression.typeParser());
+	}
 
 	public static org.petitparser.parser.Parser parser(org.petitparser.parser.Parser arithmeticExpression) {
 		SettableParser parser = SettableParser.undefined();

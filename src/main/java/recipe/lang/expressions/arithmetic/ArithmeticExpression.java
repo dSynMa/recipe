@@ -1,10 +1,12 @@
 package recipe.lang.expressions.arithmetic;
 
+import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.store.Store;
 
 import java.util.List;
@@ -14,6 +16,10 @@ public abstract class ArithmeticExpression implements Expression {
     public abstract NumberValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
 
     public abstract ArithmeticExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
+
+    public static Parser typeParser(){
+        return ArithmeticExpression.parser();
+    }
 
     public static org.petitparser.parser.Parser parser() {
         SettableParser parser = SettableParser.undefined();
@@ -34,7 +40,6 @@ public abstract class ArithmeticExpression implements Expression {
                 .or(myVariable));
 
         bracketed.set((CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')')).map((List<Object> values) -> values.get(1))));
-
 
         return parser;
     }
