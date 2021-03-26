@@ -15,4 +15,11 @@ import java.util.Set;
 public abstract class Expression {
     public abstract Expression valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
     public abstract Expression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
+
+    public static Parser parser(TypingContext context){
+        return ArithmeticExpression.parser(context)
+                .or(Condition.parser(context))
+                .or(ChannelExpression.parser(context))
+                .or(StringExpression.parser(context));
+    }
 }
