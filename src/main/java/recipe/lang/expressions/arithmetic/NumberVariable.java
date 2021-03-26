@@ -5,6 +5,7 @@ import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.predicate.BooleanVariable;
 import recipe.lang.store.Store;
 
 import java.util.List;
@@ -49,6 +50,11 @@ public class NumberVariable extends ArithmeticExpression implements TypedVariabl
     @Override
     public String toString(){
         return name;
+    }
+
+    @Override
+    public boolean equals(Object o){
+        return o.getClass().equals(NumberVariable.class) && name.equals(o);
     }
 
     @Override

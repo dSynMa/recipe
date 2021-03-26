@@ -6,6 +6,7 @@ import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.NumberVariable;
 import recipe.lang.expressions.strings.StringValue;
+import recipe.lang.expressions.strings.StringVariable;
 import recipe.lang.store.Store;
 
 import java.util.Set;
@@ -55,6 +56,11 @@ public class BooleanVariable extends Condition implements TypedVariable {
     @Override
     public String toString(){
         return name;
+    }
+
+    @Override
+    public boolean equals(Object o){
+        return o.getClass().equals(BooleanVariable.class) && name.equals(o);
     }
 
     public static org.petitparser.parser.Parser parser(){

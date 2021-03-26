@@ -40,7 +40,7 @@ public class StringVariable extends StringExpression implements TypedVariable {
 
     @Override
     public boolean equals(Object o){
-        return name.equals(o);
+        return o.getClass().equals(StringVariable.class) && name.equals(o);
     }
 
     @Override

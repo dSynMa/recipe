@@ -6,6 +6,7 @@ import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.NumberVariable;
+import recipe.lang.expressions.predicate.BooleanVariable;
 import recipe.lang.expressions.strings.StringExpression;
 import recipe.lang.expressions.strings.StringValue;
 import recipe.lang.store.Store;
@@ -44,7 +45,7 @@ public class ChannelVariable extends ChannelExpression implements TypedVariable 
 
     @Override
     public boolean equals(Object o){
-        return name.equals(o);
+        return o.getClass().equals(ChannelVariable.class) && name.equals(o);
     }
 
     @Override
@@ -63,7 +64,7 @@ public class ChannelVariable extends ChannelExpression implements TypedVariable 
     }
 
     public static org.petitparser.parser.Parser parser(){
-        org.petitparser.parser.Parser parser = word().plus().flatten().map((String value) -> new ChannelVariable(value));
+        org.petitparser.parser.Parser parser = word().plus().flatten().map((String value) -> new NumberVariable(value));
 
         return parser;
     }
