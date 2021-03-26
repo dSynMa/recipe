@@ -2,11 +2,8 @@ package recipe.lang.expressions.predicate;
 
 import org.junit.Test;
 import org.petitparser.context.Result;
-import recipe.lang.Parser;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.utils.TypingContext;
-
-import static org.junit.Assert.*;
 
 public class IsLessThanTest {
 
