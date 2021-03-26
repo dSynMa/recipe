@@ -7,6 +7,7 @@ import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.store.Store;
+import recipe.lang.utils.TypingContext;
 
 import java.util.Set;
 
@@ -16,12 +17,12 @@ public abstract class ChannelExpression implements Expression {
     public abstract ChannelValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
     public abstract ChannelExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
 
-    public static Parser typeParser(){
-        return ChannelExpression.parser();
+    public static Parser typeParser(TypingContext context){
+        return ChannelExpression.parser(context);
     }
 
-    public static org.petitparser.parser.Parser parser(){
-        org.petitparser.parser.Parser parser = ChannelVariable.parser().or(ChannelValue.parser());
+    public static org.petitparser.parser.Parser parser(TypingContext context){
+        org.petitparser.parser.Parser parser = ChannelVariable.parser(context).or(ChannelValue.parser(context));
 
         return parser;
     }

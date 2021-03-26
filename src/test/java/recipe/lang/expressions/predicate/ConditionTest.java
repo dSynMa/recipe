@@ -4,6 +4,7 @@ import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
+import recipe.lang.utils.TypingContext;
 
 import static org.junit.Assert.*;
 
@@ -31,7 +32,9 @@ public class ConditionTest {
 
     @Test
     public void parserSuccess() {
-        Parser parser = Condition.parser(ArithmeticExpression.parser()).end();
+        TypingContext context = new TypingContext();
+        context.set("cond", new BooleanVariable("cond"));
+        Parser parser = Condition.parser(new TypingContext()).end();
         Result r = parser.parse("cond");
         assert r.isSuccess();
         r = parser.parse("cond");
@@ -66,7 +69,7 @@ public class ConditionTest {
 
     @Test
     public void parserFailure() {
-        Parser parser = Condition.parser(ArithmeticExpression.parser()).end();
+        Parser parser = Condition.parser(new TypingContext()).end();
         Result r = parser.parse("!cond!");
         assert r.isFailure();
         r = parser.parse("!(cond & !cond");

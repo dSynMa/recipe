@@ -8,7 +8,10 @@ import recipe.lang.expressions.arithmetic.NumberVariable;
 import recipe.lang.expressions.strings.StringValue;
 import recipe.lang.expressions.strings.StringVariable;
 import recipe.lang.store.Store;
+import recipe.lang.utils.Parsing;
+import recipe.lang.utils.TypingContext;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
@@ -63,9 +66,7 @@ public class BooleanVariable extends Condition implements TypedVariable {
         return o.getClass().equals(BooleanVariable.class) && name.equals(o);
     }
 
-    public static org.petitparser.parser.Parser parser(){
-        org.petitparser.parser.Parser parser = word().plus().flatten().map((String value) -> new BooleanVariable(value));
-
-        return parser;
+    public static org.petitparser.parser.Parser parser(TypingContext context){
+        return Parsing.disjunctiveWordParser(context.get(BooleanVariable.class), (String name) -> new BooleanVariable(name));
     }
 }

@@ -61,10 +61,11 @@ public abstract class Condition implements Expression {
 	public abstract Condition close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
 
 	public static Parser typeParser(TypingContext context){
-		return Condition.parser(ArithmeticExpression.typeParser(context));
+		return Condition.parser(context);
 	}
 
-	public static org.petitparser.parser.Parser parser(org.petitparser.parser.Parser arithmeticExpression) {
+	public static org.petitparser.parser.Parser parser(TypingContext context) {
+		org.petitparser.parser.Parser arithmeticExpression = ArithmeticExpression.typeParser(context);
 		SettableParser parser = SettableParser.undefined();
 		SettableParser bracketed = SettableParser.undefined();
 		org.petitparser.parser.Parser and = And.parser(bracketed);
@@ -76,7 +77,7 @@ public abstract class Condition implements Expression {
 		org.petitparser.parser.Parser isGreaterOrEqualThan = IsGreaterOrEqualThan.parser(arithmeticExpression);
 		org.petitparser.parser.Parser isGreaterThan = IsGreaterThan.parser(arithmeticExpression);
 		org.petitparser.parser.Parser value = BooleanValue.parser();
-		org.petitparser.parser.Parser variable = BooleanVariable.parser();
+		org.petitparser.parser.Parser variable = BooleanVariable.parser(context);
 		org.petitparser.parser.Parser myVariable = MyBooleanVariable.parser();
 
 		parser.set(and

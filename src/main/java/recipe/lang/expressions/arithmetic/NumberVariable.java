@@ -6,7 +6,10 @@ import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.BooleanVariable;
+import recipe.lang.expressions.strings.StringVariable;
 import recipe.lang.store.Store;
+import recipe.lang.utils.Parsing;
+import recipe.lang.utils.TypingContext;
 
 import java.util.List;
 import java.util.Set;
@@ -62,9 +65,7 @@ public class NumberVariable extends ArithmeticExpression implements TypedVariabl
         return val.getClass().equals(NumberValue.class);
     }
 
-    public static org.petitparser.parser.Parser parser(){
-        org.petitparser.parser.Parser parser = word().plus().flatten().map((String value) -> new NumberVariable(value));
-
-        return parser;
+    public static org.petitparser.parser.Parser parser(TypingContext context){
+        return Parsing.disjunctiveWordParser(context.get(NumberVariable.class), (String name) -> new NumberVariable(name));
     }
 }

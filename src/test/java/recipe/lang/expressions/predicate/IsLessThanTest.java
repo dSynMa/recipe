@@ -4,6 +4,7 @@ import org.junit.Test;
 import org.petitparser.context.Result;
 import recipe.lang.Parser;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
+import recipe.lang.utils.TypingContext;
 
 import static org.junit.Assert.*;
 
@@ -31,7 +32,7 @@ public class IsLessThanTest {
 
     @Test
     public void parser() {
-        org.petitparser.parser.Parser parser = IsLessThan.parser(ArithmeticExpression.parser());
+        org.petitparser.parser.Parser parser = IsLessThan.parser(ArithmeticExpression.parser(new TypingContext()));
         Result r = parser.parse("6 < 7");
         assert r.isSuccess();
     }

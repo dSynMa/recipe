@@ -10,7 +10,11 @@ import recipe.lang.expressions.predicate.BooleanVariable;
 import recipe.lang.expressions.strings.StringExpression;
 import recipe.lang.expressions.strings.StringValue;
 import recipe.lang.store.Store;
+import recipe.lang.utils.Parsing;
+import recipe.lang.utils.TypingContext;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
@@ -63,9 +67,7 @@ public class ChannelVariable extends ChannelExpression implements TypedVariable 
         return val.getClass().equals(ChannelValue.class);
     }
 
-    public static org.petitparser.parser.Parser parser(){
-        org.petitparser.parser.Parser parser = word().plus().flatten().map((String value) -> new NumberVariable(value));
-
-        return parser;
+    public static org.petitparser.parser.Parser parser(TypingContext context){
+        return Parsing.disjunctiveWordParser(context.get(ChannelVariable.class), (String name) -> new ChannelVariable(name));
     }
 }

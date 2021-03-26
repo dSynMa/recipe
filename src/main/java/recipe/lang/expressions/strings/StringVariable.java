@@ -4,8 +4,12 @@ import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.channels.ChannelVariable;
 import recipe.lang.store.Store;
+import recipe.lang.utils.Parsing;
+import recipe.lang.utils.TypingContext;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
@@ -58,9 +62,7 @@ public class StringVariable extends StringExpression implements TypedVariable {
         return val.getClass().equals(StringValue.class);
     }
 
-    public static org.petitparser.parser.Parser parser(){
-        org.petitparser.parser.Parser parser = word().plus().flatten().map((String value) -> new StringVariable(value));
-
-        return parser;
+    public static org.petitparser.parser.Parser parser(TypingContext context){
+        return Parsing.disjunctiveWordParser(context.get(StringVariable.class), (String name) -> new StringVariable(name));
     }
 }
