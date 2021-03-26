@@ -13,7 +13,7 @@ import java.util.Set;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
 
-public abstract class ChannelExpression implements Expression {
+public abstract class ChannelExpression extends Expression {
     public abstract ChannelValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
     public abstract ChannelExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
 
