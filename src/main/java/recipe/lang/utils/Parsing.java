@@ -161,19 +161,21 @@ public class Parsing {
                     return new Pair(new ChannelVariable((String) values.get(0)), values.get(4));
                 });
 
-        org.petitparser.parser.Parser typedVariable = numberVarParser.or(boolVarParser).or(stringVarParser).or(channelVarParser);
-        org.petitparser.parser.Parser typedVariableList = (typedVariable.separatedBy(CharacterParser.of(',').trim()))
+        org.petitparser.parser.Parser typedVariableAssignment = numberVarParser.or(boolVarParser).or(stringVarParser).or(channelVarParser);
+        org.petitparser.parser.Parser typedVariableAssignmentList = (typedVariableAssignment.separatedBy(CharacterParser.of(',').trim()))
                 .map((List<Object> values) -> {
-                    List<Object> delimitedTypedVariables = values;
+                    List<Object> delimitedTypedVariablesAssignment = values;
                     Map<String, TypedVariable> typedVariables = new HashMap<>();
-                    for (int i = 0; i < delimitedTypedVariables.size(); i += 2) {
-                        TypedVariable typedVar = (TypedVariable) delimitedTypedVariables.get(i);
-                        typedVariables.put(typedVar.getName(), typedVar);
+                    Map<String, Expression> typedVariableValues = new HashMap<>();
+                    for (int i = 0; i < delimitedTypedVariablesAssignment.size(); i += 2) {
+                        Pair<TypedVariable, Expression> varVal = ((Pair<TypedVariable, Expression>) delimitedTypedVariablesAssignment.get(i));
+                        typedVariables.put(varVal.getLeft().getName(), varVal.getLeft());
+                        typedVariableValues.put(varVal.getLeft().getName(), varVal.getRight());
                     }
-                    return typedVariables;
+                    return new Pair(typedVariables, typedVariableValues);
                 });
 
-        return typedVariableList;
+        return typedVariableAssignmentList;
     }
 
     public static Parser guardDefinitionList(){
