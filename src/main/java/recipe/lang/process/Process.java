@@ -3,11 +3,17 @@ package recipe.lang.process;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
+import recipe.lang.agents.Transition;
 import recipe.lang.utils.TypingContext;
 
 import java.util.List;
+import java.util.Set;
 
 public abstract class Process {
+
+    protected static int stateSeed = 0;
+    public abstract Set<Transition> asTransitionSystem(String start, String end);
+
     public static Parser parser(TypingContext messageContext,
                                 TypingContext localContext,
                                 TypingContext communicationContext,

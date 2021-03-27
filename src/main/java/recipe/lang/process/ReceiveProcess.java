@@ -2,14 +2,17 @@ package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
+import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.channels.ChannelExpression;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ReceiveProcess extends Process {
     public Condition psi;
@@ -24,6 +27,13 @@ public class ReceiveProcess extends Process {
 
     public String toString() {
         return "<" + psi.toString() + ">" + channel + "?" + "[" + update + "]";
+    }
+
+    public Set<Transition> asTransitionSystem(String start, String end){
+        Set<Transition> ts = new HashSet<>();
+        ts.add(new Transition(start, end, this));
+
+        return ts;
     }
 
     public static Parser parser(TypingContext messageContext,

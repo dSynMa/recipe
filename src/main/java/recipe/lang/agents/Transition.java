@@ -13,6 +13,12 @@ public class Transition {
       
     }
 
+    public Transition(String source, String destination, Process action) {
+        this.source = source;
+        this.destination = destination;
+        this.action = action;
+    }
+
     public Transition(String agent, String source, String destination, Process action) {
         this.agent=agent;
         this.source = source;
