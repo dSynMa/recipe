@@ -3,8 +3,10 @@ package recipe.lang.utils;
 import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
+import recipe.lang.expressions.arithmetic.NumberVariable;
 import recipe.lang.expressions.channels.ChannelValue;
 import recipe.lang.expressions.channels.ChannelVariable;
+import recipe.lang.expressions.predicate.BooleanVariable;
 
 import static org.junit.Assert.*;
 
@@ -91,5 +93,23 @@ public class ParsingTest {
 
     @Test
     public void conditionalFail() {
+    }
+
+    @Test
+    public void relabellingParser() {
+        String script = "\trelabel:\n" +
+                "\t\tf <- 1\n" +
+                "\t\tg <- b != 0";
+
+        TypingContext localContext = new TypingContext();
+        localContext.set("b", new NumberVariable("b"));
+
+        TypingContext communicativeContext = new TypingContext();
+        communicativeContext.set("f", new NumberVariable("f"));
+        communicativeContext.set("g", new BooleanVariable("g"));
+
+        Parser parser = Parsing.relabellingParser(localContext, communicativeContext).end();
+        Result r = parser.parse(script);
+        assert r.isSuccess();
     }
 }

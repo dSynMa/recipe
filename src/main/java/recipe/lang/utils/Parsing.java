@@ -166,7 +166,6 @@ public class Parsing {
         org.petitparser.parser.Parser typedVariableAssignmentList = (typedVariableAssignment.delimitedBy(CharacterParser.of('\n')))
                 .map((List<Object> values) -> {
                     List<Object> delimitedTypedVariablesAssignment = values;
-                    delimitedTypedVariablesAssignment.removeIf(r -> r.equals('\n'));
                     Map<String, TypedVariable> typedVariables = new HashMap<>();
                     Map<String, Expression> typedVariableValues = new HashMap<>();
                     for (int i = 0; i < delimitedTypedVariablesAssignment.size(); i += 2) {
@@ -222,7 +221,12 @@ public class Parsing {
         return StringParser.of(label).trim()
                 .seq(CharacterParser.of(':').trim())
                 .seq(parser)
-                .map((List<Object> values) -> values.get(2));
+                .map((List<Object> values) -> {
+                    List result = (List) values.get(2);
+                    result.removeIf(r -> r.equals('\n'));
+//                    result.forEach(t -> ((String) t).trim());
+                    return result;
+                });
     }
 
     public static Parser conditionalFail(Boolean yes){
@@ -231,5 +235,12 @@ public class Parsing {
         } else{
             return StringParser.of("");
         }
+    }
+
+    public static Parser relabellingParser(TypingContext localContext, TypingContext communicationContext){
+        return labelledParser("relabel", (Parsing.expressionParser(communicationContext).trim()
+                .seq(StringParser.of("<-").trim())
+                .seq(Parsing.expressionParser(localContext)).flatten().delimitedBy(CharacterParser.of('\n'))
+                ));
     }
 }
