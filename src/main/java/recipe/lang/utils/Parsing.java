@@ -19,6 +19,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import static org.petitparser.parser.primitive.CharacterParser.none;
 import static org.petitparser.parser.primitive.CharacterParser.word;
 
 public class Parsing {
@@ -221,5 +222,13 @@ public class Parsing {
                 .seq(CharacterParser.of(':').trim())
                 .seq(parser)
                 .map((List<Object> values) -> values.get(2));
+    }
+
+    public static Parser conditionalFail(Boolean yes){
+        if(yes){
+            return StringParser.of("").not();
+        } else{
+            return StringParser.of("");
+        }
     }
 }
