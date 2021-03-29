@@ -25,19 +25,19 @@ public class StringVariableTest {
     TypedValue attributeVal;
 
     @Before
-    public void setUp() {
+    public void setUp() throws AttributeTypeException, AttributeNotInStoreException {
         attribute = new StringVariable("v");
         attributeVal = new StringValue("val");
 
         emptyStore = new Store();
 
-        Map<String, TypedValue> data = new HashMap<>();
+        Map<String, Expression> data = new HashMap<>();
         data.put("v", attributeVal);
         Map<String, TypedVariable> attributes = new HashMap<>();
         attributes.put("v", attribute);
         store = new Store(data, attributes);
 
-        Map<String, TypedValue> data1 = new HashMap<>();
+        Map<String, Expression> data1 = new HashMap<>();
         data1.put("v", new NumberValue(6));
         Map<String, TypedVariable> attributes1 = new HashMap<>();
         TypedVariable attribute1 = new StringVariable("v");

@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.Test;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
@@ -19,13 +20,13 @@ public class StringValueTest {
     Store store;
 
     @Before
-    public void setUp() {
+    public void setUp() throws AttributeTypeException, AttributeNotInStoreException {
         TypedVariable attribute = new StringVariable("v");
         StringValue attributeVal = new StringValue("val");
 
         emptyStore = new Store();
 
-        Map<String, TypedValue> data = new HashMap<>();
+        Map<String, Expression> data = new HashMap<>();
         data.put("v", attributeVal);
         Map<String, TypedVariable> attributes = new HashMap<>();
         attributes.put("v", attribute);

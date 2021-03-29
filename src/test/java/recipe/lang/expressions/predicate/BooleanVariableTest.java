@@ -35,13 +35,13 @@ public class BooleanVariableTest {
         emptyStore = new Store();
         booleanVariable = new BooleanVariable("v");
 
-        Map<String, TypedValue> data = new HashMap<>();
+        Map<String, Expression> data = new HashMap<>();
         data.put("v", attributeVal);
         Map<String, TypedVariable> attributes = new HashMap<>();
         attributes.put("v", attribute);
         store = new Store(data, attributes);
 
-        Map<String, TypedValue> data1 = new HashMap<>();
+        Map<String, Expression> data1 = new HashMap<>();
         data1.put("v", new NumberValue(6));
         Map<String, TypedVariable> attributes1 = new HashMap<>();
         TypedVariable attribute1 = new NumberVariable("v");

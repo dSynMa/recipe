@@ -7,6 +7,6 @@ import recipe.lang.store.Store;
 import java.util.Set;
 
 public interface Expression {
-    Expression valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
+    TypedValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
     Expression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
 }
