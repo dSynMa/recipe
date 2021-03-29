@@ -38,7 +38,6 @@ public class System{
         return agents;
     }
 
-
     public System(Set<String> channels, Map<String, TypedVariable> messageStructure, Map<String, TypedVariable> communicationVariables, Set<Agent> agents) {
         this.channels = channels;
         this.messageStructure = messageStructure;
