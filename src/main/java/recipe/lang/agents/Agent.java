@@ -238,11 +238,13 @@ public class Agent {
         Parser name = word().plus().trim();
 
         AtomicReference<String> error = new AtomicReference<>("");
-        AtomicReference<TypingContext> localContext = new AtomicReference<>();
+        AtomicReference<TypingContext> localContext = new AtomicReference<>(new TypingContext());
+
+        TypingContext channelValueContext = channelContext.getSubContext(ChannelValue.class);
 
         parser.set(StringParser.of("agent").trim()
                     .seq(name)
-                    .seq(Parsing.labelledParser("local", Parsing.typedAssignmentList())
+                    .seq(Parsing.labelledParser("local", Parsing.typedAssignmentList(channelValueContext))
                             .mapWithSideEffects((Pair<Map, Map> values) -> {
                                 localContext.set(new TypingContext(values.getRight()));
                                 return values;
@@ -297,7 +299,9 @@ public class Agent {
                     return null;
                 })
                 .seq(Parsing.conditionalFail(!error.equals("")))
-                    .map((List<Object> values) -> values.get(0)));
+                    .map((List<Object> values) -> {
+                        return values.get(0);
+                    }));
 
         return parser;
     }

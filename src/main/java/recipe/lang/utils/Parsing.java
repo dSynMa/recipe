@@ -124,7 +124,7 @@ public class Parsing {
         return typedVariableList;
     }
 
-    public static Parser typedAssignmentList(){
+    public static Parser typedAssignmentList(TypingContext channelValueContext){
         org.petitparser.parser.Parser stringParser = (word().plus()).flatten().trim();
 
         org.petitparser.parser.Parser numberVarParser = stringParser
@@ -157,7 +157,7 @@ public class Parsing {
                 .seq(CharacterParser.of(':').trim())
                 .seq(StringParser.of("channel").trim())
                 .seq(StringParser.of(":=").trim())
-                .seq(expressionParser(new TypingContext()))
+                .seq(expressionParser(channelValueContext))
                 .map((List<Object> values) -> {
                     return new Pair(new ChannelVariable((String) values.get(0)), values.get(4));
                 });
