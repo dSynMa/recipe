@@ -56,7 +56,7 @@ public class Parsing {
 
 
     public static org.petitparser.parser.Parser assignmentListParser(TypingContext variableContext,
-                                                                 TypingContext expressionContext) {
+                                                                     TypingContext expressionContext) {
         Parser assignment =
                 variableParser(variableContext)
                         .seq(StringParser.of(":=").trim())
@@ -68,14 +68,14 @@ public class Parsing {
         Parser assignmentList =
                 assignment
                         .delimitedBy(CharacterParser.of(',').trim())
-                .map((List<Pair> values) -> {
-                    HashMap<String, Expression> map = new HashMap();
-                    for(Pair<String, Expression> pair : values){
-                        map.put(pair.getLeft(), pair.getRight());
-                    }
+                        .map((List<Pair> values) -> {
+                            HashMap<String, Expression> map = new HashMap();
+                            for(Pair<String, Expression> pair : values){
+                                map.put(pair.getLeft(), pair.getRight());
+                            }
 
-                    return map;
-                });
+                            return map;
+                        });
 
         return assignmentList;
     }
@@ -163,9 +163,10 @@ public class Parsing {
                 });
 
         org.petitparser.parser.Parser typedVariableAssignment = numberVarParser.or(boolVarParser).or(stringVarParser).or(channelVarParser);
-        org.petitparser.parser.Parser typedVariableAssignmentList = (typedVariableAssignment.separatedBy(CharacterParser.of(',').trim()))
+        org.petitparser.parser.Parser typedVariableAssignmentList = (typedVariableAssignment.delimitedBy(CharacterParser.of('\n')))
                 .map((List<Object> values) -> {
                     List<Object> delimitedTypedVariablesAssignment = values;
+                    delimitedTypedVariablesAssignment.removeIf(r -> r.equals('\n'));
                     Map<String, TypedVariable> typedVariables = new HashMap<>();
                     Map<String, Expression> typedVariableValues = new HashMap<>();
                     for (int i = 0; i < delimitedTypedVariablesAssignment.size(); i += 2) {
