@@ -18,7 +18,7 @@ import java.util.Set;
 public abstract class Condition implements Expression {
 
 	public enum PredicateType {
-		FALSE, TRUE, ISEQUAL, ISGTR, ISGEQ, ISLEQ, ISLES, AND, OR, NOT, VAR
+		FALSE, TRUE, ISEQUAL, ISNOTEQUAL, ISGTR, ISGEQ, ISLEQ, ISLES, AND, OR, NOT, VAR
 	}
 
 	public static final BooleanValue TRUE = new BooleanValue(true);
@@ -72,6 +72,7 @@ public abstract class Condition implements Expression {
 		org.petitparser.parser.Parser or = Or.parser(basic);
 		org.petitparser.parser.Parser not = Not.parser(basic);
 		org.petitparser.parser.Parser isEqualTo = IsEqualTo.parser(arithmeticExpression);
+		org.petitparser.parser.Parser isNotEqualTo = IsNotEqualTo.parser(arithmeticExpression);
 		org.petitparser.parser.Parser isLessThan = IsLessThan.parser(arithmeticExpression);
 		org.petitparser.parser.Parser isLessOrEqualThan = IsLessOrEqualThan.parser(arithmeticExpression);
 		org.petitparser.parser.Parser isGreaterOrEqualThan = IsGreaterOrEqualThan.parser(arithmeticExpression);
@@ -83,6 +84,7 @@ public abstract class Condition implements Expression {
 		parser.set(and
 				.or(or)
 				.or(isEqualTo)
+				.or(isNotEqualTo)
 				.or(isLessThan)
 				.or(isLessOrEqualThan)
 				.or(isGreaterOrEqualThan)
