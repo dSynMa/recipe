@@ -1,7 +1,6 @@
 package recipe.lang.utils;
 
 import recipe.lang.expressions.Expression;
-import recipe.lang.expressions.TypedVariable;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,14 +42,14 @@ public class TypingContext {
         this.typeVars = typeVars;
     }
 
-    public void set(String name, TypedVariable typedVariable){
-        varType.put(name, typedVariable);
+    public void set(String name, Expression typedExpression){
+        varType.put(name, typedExpression);
 
-        if(!typeVars.containsKey(typedVariable.getClass())){
-            typeVars.put(typedVariable.getClass(), new HashSet<>());
+        if(!typeVars.containsKey(typedExpression.getClass())){
+            typeVars.put(typedExpression.getClass(), new HashSet<>());
         }
 
-        typeVars.get(typedVariable.getClass()).add(name);
+        typeVars.get(typedExpression.getClass()).add(name);
     }
 
     public Expression get(String name){
