@@ -62,6 +62,16 @@ public class TypingContext {
         else return new HashSet<>();
     }
 
+    public TypingContext getSubContext(Class<? extends Expression> type){
+        Set<String> vals = get(type);
+        TypingContext context = new TypingContext();
+        for(String val : vals){
+            context.set(val, varType.get(val));
+        }
+
+        return context;
+    }
+
     public static TypingContext union(TypingContext context1, TypingContext context2){
         Map<String, Expression> varType1 = context1.getVarType();
         Map<String, Expression> varType2 = context2.getVarType();
