@@ -22,7 +22,11 @@ public abstract class ChannelExpression implements Expression {
     }
 
     public static org.petitparser.parser.Parser parser(TypingContext context){
-        org.petitparser.parser.Parser parser = ChannelVariable.parser(context).or(ChannelValue.parser(context));
+        TypingContext withBroadcast = new TypingContext();
+        withBroadcast.setAll(context);
+        withBroadcast.set("*", new ChannelValue("*"));
+
+        org.petitparser.parser.Parser parser = ChannelVariable.parser(withBroadcast).or(ChannelValue.parser(withBroadcast));
 
         return parser;
     }
