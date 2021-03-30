@@ -37,7 +37,7 @@ public class Parsing {
         }
 
         //TODO the below line is not working as expected
-        parser = (parser).seq(CharacterParser.whitespace().or(eof())).map((List<Object> values) -> {
+        parser = (parser).seq(CharacterParser.word().not()).map((List<Object> values) -> {
             return transformation.apply((String) values.get(0));
         });
 
