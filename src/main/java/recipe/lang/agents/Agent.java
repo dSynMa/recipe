@@ -23,6 +23,7 @@ import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
 import recipe.lang.store.Store;
+import recipe.lang.utils.LazyParser;
 import recipe.lang.utils.Pair;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
@@ -222,18 +223,7 @@ public class Agent {
                                                               TypingContext communicationContext,
                                                               TypingContext channelContext){
         SettableParser parser = SettableParser.undefined();
-        Function<TypingContext, Parser> process = (TypingContext localContext) -> Process.parser(messageContext, localContext, communicationContext, channelContext);
-
-        Function<TypingContext, Parser> relabeling = (TypingContext localContext) -> (Parsing.expressionParser(communicationContext).trim()
-                .seq(StringParser.of("<-").trim())
-                .seq(Parsing.expressionParser(localContext)))
-                .flatten();
-
-        TypingContext channelKeyword = new TypingContext();
-        channelKeyword.set("channel", new ChannelVariable("channel"));
-        TypingContext receiveGuardContext = TypingContext.union(channelContext, channelKeyword);
-        Function<TypingContext, Parser> receiveGuard = (TypingContext localContext) ->
-                Condition.parser(TypingContext.union(receiveGuardContext, localContext)).trim();
+        Function<TypingContext, Parser> process = (TypingContext localContext) -> Parsing.labelledParser("repeat", Process.parser(messageContext, localContext, communicationContext, channelContext));
 
         Parser name = word().plus().trim();
 
@@ -246,12 +236,12 @@ public class Agent {
                     .seq(name)
                     .seq(Parsing.labelledParser("local", Parsing.typedAssignmentList(channelValueContext))
                             .mapWithSideEffects((Pair<Map, Map> values) -> {
-                                localContext.set(new TypingContext(values.getRight()));
+                                localContext.get().setAll(new TypingContext(values.getLeft()));
                                 return values;
                             }))
-                    .seq(Parsing.labelledParser("relabel", relabeling.apply(localContext.get()).plus()))
-                    .seq(Parsing.labelledParser("receive-guard", receiveGuard.apply(localContext.get()).plus()))
-                    .seq(Parsing.labelledParser("repeat", process.apply(localContext.get())))
+                    .seq(new LazyParser<>(((TypingContext localContext1) -> Parsing.relabellingParser(localContext1, communicationContext)), localContext.get()))
+                    .seq(new LazyParser<>(((TypingContext localContext1) -> Parsing.receiveGuardParser(localContext1, channelContext)), localContext.get()))
+                    .seq(new LazyParser(process, localContext.get()))
                 .map((List<Object> values) -> {
                     //TODO
                     String agentName = (String) values.get(1);
