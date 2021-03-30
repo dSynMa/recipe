@@ -18,7 +18,7 @@ public abstract class StringExpression implements Expression {
     public abstract StringValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
     public abstract StringExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
 
-    public Parser typeParser(TypingContext context){
+    public static Parser typeParser(TypingContext context){
         return StringExpression.parser(context);
     }
 
