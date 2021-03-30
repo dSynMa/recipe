@@ -52,6 +52,12 @@ public class TypingContext {
         typeVars.get(typedExpression.getClass()).add(name);
     }
 
+    public void setAll(TypingContext context){
+        varType.putAll(context.varType);
+
+        typeVars.putAll(context.typeVars);
+    }
+
     public Expression get(String name){
         return varType.get(name);
     }
