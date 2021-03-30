@@ -4,6 +4,7 @@ import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
+import recipe.lang.expressions.arithmetic.NumberVariable;
 import recipe.lang.utils.TypingContext;
 
 import static org.junit.Assert.*;
@@ -34,6 +35,7 @@ public class ConditionTest {
     public void parserSuccess() {
         TypingContext context = new TypingContext();
         context.set("cond", new BooleanVariable("cond"));
+        context.set("b", new NumberVariable("b"));
         Parser parser = Condition.parser(context).end();
         Result r = parser.parse("cond");
         assert r.isSuccess();
@@ -44,6 +46,14 @@ public class ConditionTest {
         r = parser.parse("!cond");
         assert r.isSuccess();
         r = parser.parse("! cond");
+        assert r.isSuccess();
+        r = parser.parse("b == 3");
+        assert r.isSuccess();
+        r = parser.parse("!(b > 3)");
+        assert r.isSuccess();
+        r = parser.parse("!(b > 3) & cond");
+        assert r.isSuccess();
+        r = parser.parse("b > 3 & cond");
         assert r.isSuccess();
         r = parser.parse("!(cond)");
         assert r.isSuccess();
@@ -73,8 +83,11 @@ public class ConditionTest {
     public void parserFailure() {
         TypingContext context = new TypingContext();
         context.set("cond", new BooleanVariable("cond"));
+        context.set("b", new NumberVariable("b"));
         Parser parser = Condition.parser(new TypingContext()).end();
         Result r = parser.parse("!condd");
+        assert r.isFailure();
+        r = parser.parse("!b > 3");
         assert r.isFailure();
         r = parser.parse("!cond!");
         assert r.isFailure();
