@@ -44,6 +44,9 @@ public class TypingContext {
 
     public void set(String name, Expression typedExpression){
         varType.put(name, typedExpression);
+        if(typedExpression == null){
+            System.out.println("");
+        }
 
         if(!typeVars.containsKey(typedExpression.getClass())){
             typeVars.put(typedExpression.getClass(), new HashSet<>());

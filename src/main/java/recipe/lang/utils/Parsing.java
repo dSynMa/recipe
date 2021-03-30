@@ -76,9 +76,11 @@ public class Parsing {
         Parser assignmentList =
                 assignment
                         .delimitedBy(CharacterParser.of(',').trim())
-                        .map((List<Pair> values) -> {
+                        .map((List<Object> values) -> {
                             HashMap<String, Expression> map = new HashMap();
-                            for(Pair<String, Expression> pair : values){
+                            for(Object v : values){
+                                if(v.getClass().equals(Character.class)) continue;
+                                Pair<String, Expression> pair = (Pair<String, Expression>) v;
                                 map.put(pair.getLeft(), pair.getRight());
                             }
 
