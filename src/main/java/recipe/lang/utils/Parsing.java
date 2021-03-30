@@ -222,10 +222,9 @@ public class Parsing {
                 .seq(CharacterParser.of(':').trim())
                 .seq(parser)
                 .map((List<Object> values) -> {
-                    List result = (List) values.get(2);
-                    result.removeIf(r -> r.equals('\n'));
-//                    result.forEach(t -> ((String) t).trim());
-                    return result;
+//                    List result = (List) values.get(2);
+//                    result.removeIf(r -> r.equals('\n'));
+                    return values.get(2);
                 });
     }
 
@@ -240,7 +239,27 @@ public class Parsing {
     public static Parser relabellingParser(TypingContext localContext, TypingContext communicationContext){
         return labelledParser("relabel", (Parsing.expressionParser(communicationContext).trim()
                 .seq(StringParser.of("<-").trim())
-                .seq(Parsing.expressionParser(localContext)).flatten().delimitedBy(CharacterParser.of('\n'))
-                ));
+                .seq(Parsing.expressionParser(localContext)).delimitedBy(CharacterParser.of('\n'))
+                )).map((List<Object> values) -> {
+                    values.removeIf(v -> v.equals('\n'));
+                    Map<TypedVariable, Expression> relabellingMap = new HashMap<>();
+                    for(Object relabelObj : values){
+                        List relabel = (List) relabelObj;
+                        relabellingMap.put((TypedVariable) relabel.get(0), (Expression) relabel.get(2));
+                    }
+                    return values;
+                });
+    }
+
+    public static Parser receiveGuardParser(TypingContext localContext, TypingContext channelContext){
+        TypingContext channelKeyword = new TypingContext();
+        channelKeyword.set("channel", new ChannelVariable("channel"));
+
+        TypingContext receiveGuardContext = TypingContext.union(channelContext, TypingContext.union(channelKeyword, localContext));
+        return labelledParser("receive-guard", Condition.parser(receiveGuardContext).trim())
+                .map((List<Object> values) -> {
+                    values.removeIf(v -> v.equals('\n'));
+                    return values;
+                });
     }
 }
