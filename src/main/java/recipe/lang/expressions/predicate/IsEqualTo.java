@@ -75,13 +75,13 @@ public class IsEqualTo extends Condition {
 		}
 	}
 
-	public static org.petitparser.parser.Parser parser(Parser arithmeticExpression) {
+	public static org.petitparser.parser.Parser parser(Parser expression) {
 		org.petitparser.parser.Parser parser =
-				(arithmeticExpression)
+				(expression)
 						.seq(StringParser.of("==").trim())
-						.seq(arithmeticExpression)
+						.seq(expression)
 						.map((List<Object> values) -> {
-							return new IsEqualTo((ArithmeticExpression) values.get(0), (ArithmeticExpression) values.get(2));
+							return new IsEqualTo((Expression) values.get(0), (Expression) values.get(2));
 						});
 
 		return parser;

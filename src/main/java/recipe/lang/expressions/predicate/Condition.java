@@ -7,8 +7,10 @@ import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.arithmetic.*;
+import recipe.lang.expressions.channels.ChannelExpression;
 import recipe.lang.expressions.strings.StringExpression;
 import recipe.lang.store.Store;
+import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
 import java.util.List;
@@ -66,39 +68,51 @@ public abstract class Condition implements Expression {
 
 	public static org.petitparser.parser.Parser parser(TypingContext context) {
 		org.petitparser.parser.Parser arithmeticExpression = ArithmeticExpression.typeParser(context);
+		org.petitparser.parser.Parser channelExpression = ChannelExpression.typeParser(context);
+		org.petitparser.parser.Parser stringExpression = StringExpression.typeParser(context);
+
 		SettableParser parser = SettableParser.undefined();
 		SettableParser basic = SettableParser.undefined();
+
+		SettableParser expression = SettableParser.undefined();
+		expression.set((arithmeticExpression).or(channelExpression).or(stringExpression));
+
 		org.petitparser.parser.Parser and = And.parser(basic);
 		org.petitparser.parser.Parser or = Or.parser(basic);
 		org.petitparser.parser.Parser not = Not.parser(basic);
-		org.petitparser.parser.Parser isEqualTo = IsEqualTo.parser(arithmeticExpression);
-		org.petitparser.parser.Parser isNotEqualTo = IsNotEqualTo.parser(arithmeticExpression);
+
+		org.petitparser.parser.Parser isEqualTo = IsEqualTo.parser(expression);
+		org.petitparser.parser.Parser isNotEqualTo = IsNotEqualTo.parser(expression);
+
 		org.petitparser.parser.Parser isLessThan = IsLessThan.parser(arithmeticExpression);
 		org.petitparser.parser.Parser isLessOrEqualThan = IsLessOrEqualThan.parser(arithmeticExpression);
 		org.petitparser.parser.Parser isGreaterOrEqualThan = IsGreaterOrEqualThan.parser(arithmeticExpression);
 		org.petitparser.parser.Parser isGreaterThan = IsGreaterThan.parser(arithmeticExpression);
+
+		org.petitparser.parser.Parser arithmeticComparators =
+				isEqualTo
+				.or(isNotEqualTo)
+				.or(isLessThan)
+				.or(isLessOrEqualThan)
+				.or(isGreaterOrEqualThan)
+				.or(isGreaterThan);
+
 		org.petitparser.parser.Parser value = BooleanValue.parser();
 		org.petitparser.parser.Parser variable = BooleanVariable.parser(context);
 		org.petitparser.parser.Parser myVariable = MyBooleanVariable.parser();
 
 		parser.set(and
 				.or(or)
-				.or(isEqualTo)
-				.or(isNotEqualTo)
-				.or(isLessThan)
-				.or(isLessOrEqualThan)
-				.or(isGreaterOrEqualThan)
-				.or(isGreaterThan)
 				.or(basic));
 
 		basic.set(value
 				.or(variable)
 				.or(myVariable)
 				.or(not)
+				.or(arithmeticComparators)
 				.or(CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')'))
 						.map((List<Object> values) -> values.get(1)))
 				);
-
 
 		return parser;
 	}

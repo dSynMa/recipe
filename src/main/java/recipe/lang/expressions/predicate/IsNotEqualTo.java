@@ -76,13 +76,13 @@ public class IsNotEqualTo extends Condition {
 		}
 	}
 
-	public static Parser parser(Parser arithmeticExpression) {
+	public static Parser parser(Parser expression) {
 		Parser parser =
-				(arithmeticExpression)
+				(expression)
 						.seq(StringParser.of("!=").trim())
-						.seq(arithmeticExpression)
+						.seq(expression)
 						.map((List<Object> values) -> {
-							return new IsNotEqualTo((ArithmeticExpression) values.get(0), (ArithmeticExpression) values.get(2));
+							return new IsNotEqualTo((Expression) values.get(0), (Expression) values.get(2));
 						});
 
 		return parser;
