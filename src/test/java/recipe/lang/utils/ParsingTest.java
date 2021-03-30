@@ -4,9 +4,11 @@ import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
 import recipe.lang.expressions.arithmetic.NumberVariable;
+import recipe.lang.expressions.channels.ChannelExpression;
 import recipe.lang.expressions.channels.ChannelValue;
 import recipe.lang.expressions.channels.ChannelVariable;
 import recipe.lang.expressions.predicate.BooleanVariable;
+import recipe.lang.expressions.predicate.IsEqualTo;
 
 import static org.junit.Assert.*;
 
@@ -110,6 +112,63 @@ public class ParsingTest {
 
         Parser parser = Parsing.relabellingParser(localContext, communicativeContext).end();
         Result r = parser.parse(script);
+        assert r.isSuccess();
+    }
+
+    @Test
+    public void receiveGuardParser1() {
+        String script = "receive-guard:\n" +
+        "true";
+
+        TypingContext localContext = new TypingContext();
+        localContext.set("b", new NumberVariable("b"));
+        localContext.set("c", new NumberVariable("c"));
+
+        TypingContext channelContext = new TypingContext();
+        channelContext.set("A", new ChannelValue("A"));
+        channelContext.set("*", new ChannelValue("*"));
+
+        Parser parser = Parsing.receiveGuardParser(localContext, channelContext).end();
+        Result r = parser.parse(script);
+        System.out.println(r.getPosition() + " " + r.getMessage());
+        assert r.isSuccess();
+    }
+
+    @Test
+    public void receiveGuardParser2() {
+        String script = "receive-guard:\n" +
+        "true & 1 == 0";
+
+        TypingContext localContext = new TypingContext();
+        localContext.set("b", new NumberVariable("b"));
+        localContext.set("c", new NumberVariable("c"));
+
+        TypingContext channelContext = new TypingContext();
+        channelContext.set("A", new ChannelValue("A"));
+        channelContext.set("*", new ChannelValue("*"));
+
+        Parser parser = Parsing.receiveGuardParser(localContext, channelContext).end();
+        Result r = parser.parse(script);
+        System.out.println(r.getPosition() + " " + r.getMessage());
+        assert r.isSuccess();
+    }
+
+    @Test
+    public void receiveGuardParser3() {
+        String script = "receive-guard: channel == A";
+
+        TypingContext localContext = new TypingContext();
+        localContext.set("b", new NumberVariable("b"));
+        localContext.set("c", new NumberVariable("c"));
+
+        TypingContext channelContext = new TypingContext();
+        channelContext.set("A", new ChannelValue("A"));
+        channelContext.set("*", new ChannelValue("*"));
+        channelContext.set("channel", new ChannelVariable("channel"));
+
+        Parser parser = Parsing.receiveGuardParser(localContext, channelContext).end();
+        Result r = parser.parse(script);
+        System.out.println(r.getPosition() + " " + r.getMessage());
         assert r.isSuccess();
     }
 }
