@@ -19,8 +19,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
-import static org.petitparser.parser.primitive.CharacterParser.none;
-import static org.petitparser.parser.primitive.CharacterParser.word;
+import static org.petitparser.parser.primitive.CharacterParser.*;
 
 public class Parsing {
     public static org.petitparser.parser.Parser disjunctiveWordParser(Set<String> allowed, Function<String, Expression> transformation) {
@@ -32,12 +31,21 @@ public class Parsing {
             return StringParser.of("").not();
         }
 
-        org.petitparser.parser.Parser parser = StringParser.of(allowed.get(0)).map(transformation);
+        org.petitparser.parser.Parser parser = StringParser.of(allowed.get(0));
         for (int i = 1; i < allowed.size(); i++) {
-            parser = parser.or(StringParser.of(allowed.get(i)).map(transformation));
+            parser = parser.or(StringParser.of(allowed.get(i)));
         }
 
+        //TODO the below line is not working as expected
+        parser = (parser).seq(CharacterParser.whitespace().or(eof())).map((List<Object> values) -> {
+            return transformation.apply((String) values.get(0));
+        });
+
         return parser;
+    }
+
+    public static Parser eof(){
+        return any().not();
     }
 
     public static org.petitparser.parser.Parser expressionParser(TypingContext context) {
@@ -220,10 +228,8 @@ public class Parsing {
     public static Parser labelledParser(String label, Parser parser){
         return StringParser.of(label).trim()
                 .seq(CharacterParser.of(':').trim())
-                .seq(parser)
+                .seq(parser.trim())
                 .map((List<Object> values) -> {
-//                    List result = (List) values.get(2);
-//                    result.removeIf(r -> r.equals('\n'));
                     return values.get(2);
                 });
     }
@@ -252,14 +258,12 @@ public class Parsing {
     }
 
     public static Parser receiveGuardParser(TypingContext localContext, TypingContext channelContext){
-        TypingContext channelKeyword = new TypingContext();
-        channelKeyword.set("channel", new ChannelVariable("channel"));
+        TypingContext receiveGuardContext = TypingContext.union(channelContext, localContext);
+        receiveGuardContext.set("channel", new ChannelVariable("channel"));
 
-        TypingContext receiveGuardContext = TypingContext.union(channelContext, TypingContext.union(channelKeyword, localContext));
-        return labelledParser("receive-guard", Condition.parser(receiveGuardContext).trim())
-                .map((List<Object> values) -> {
-                    values.removeIf(v -> v.equals('\n'));
-                    return values;
+        return labelledParser("receive-guard", Condition.parser(receiveGuardContext))
+                .map((Condition cond) -> {
+                    return cond;
                 });
     }
 }
