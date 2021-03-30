@@ -5,6 +5,8 @@ import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.expressions.arithmetic.NumberVariable;
+import recipe.lang.expressions.channels.ChannelValue;
+import recipe.lang.expressions.channels.ChannelVariable;
 import recipe.lang.utils.TypingContext;
 
 import static org.junit.Assert.*;
@@ -34,8 +36,12 @@ public class ConditionTest {
     @Test
     public void parserSuccess() {
         TypingContext context = new TypingContext();
+
         context.set("cond", new BooleanVariable("cond"));
         context.set("b", new NumberVariable("b"));
+        context.set("channel", new ChannelVariable("channel"));
+        context.set("A", new ChannelValue("A"));
+
         Parser parser = Condition.parser(context).end();
         Result r = parser.parse("cond");
         assert r.isSuccess();
@@ -48,6 +54,12 @@ public class ConditionTest {
         r = parser.parse("! cond");
         assert r.isSuccess();
         r = parser.parse("b == 3");
+        assert r.isSuccess();
+        r = parser.parse("(b == 3)");
+        assert r.isSuccess();
+        r = parser.parse("(channel == A)");
+        assert r.isSuccess();
+        r = parser.parse("channel == A");
         assert r.isSuccess();
         r = parser.parse("!(b > 3)");
         assert r.isSuccess();
