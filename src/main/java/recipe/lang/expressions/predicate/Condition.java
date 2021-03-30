@@ -89,7 +89,7 @@ public abstract class Condition implements Expression {
 		org.petitparser.parser.Parser isGreaterOrEqualThan = IsGreaterOrEqualThan.parser(arithmeticExpression);
 		org.petitparser.parser.Parser isGreaterThan = IsGreaterThan.parser(arithmeticExpression);
 
-		org.petitparser.parser.Parser arithmeticComparators =
+		org.petitparser.parser.Parser comparators =
 				isEqualTo
 				.or(isNotEqualTo)
 				.or(isLessThan)
@@ -109,7 +109,7 @@ public abstract class Condition implements Expression {
 				.or(variable)
 				.or(myVariable)
 				.or(not)
-				.or(arithmeticComparators)
+				.or(comparators)
 				.or(CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')'))
 						.map((List<Object> values) -> values.get(1)))
 				);
