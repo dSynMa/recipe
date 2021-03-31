@@ -15,7 +15,8 @@ public class ProcessTest {
     @Test
     public void parser() {
         TypingContext messageContext = new TypingContext();
-        messageContext.set("m", new NumberVariable("v"));
+        messageContext.set("m1", new NumberVariable("m1"));
+        messageContext.set("m2", new NumberVariable("m2"));
 
         TypingContext localContext = new TypingContext();
         localContext.set("v", new NumberVariable("v"));
@@ -28,7 +29,9 @@ public class ProcessTest {
 
         Parser parser = Process.parser(messageContext, localContext, communicationContext, channelContext);
 
-        Result r = parser.parse("<v == 5> c!g(m := 1)[v := 6]");
+        Result r = parser.parse("<v == 5> c!g (m1 := 1, m2 := 2)[v := 6]");
+        assert r.isSuccess();
+        r = parser.parse("<v == 5> c!g (m1 := 1)[v := 6]");
         assert r.isSuccess();
     }
 }
