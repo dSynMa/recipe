@@ -5,40 +5,40 @@ import recipe.lang.process.Process;
 public class Transition {
     // three attributes of transition: source,action,destination
     private String agent;
-    private String source;
-    private String destination;
+    private State source;
+    private State destination;
     private Process action;
 
     public Transition() {
       
     }
 
-    public Transition(String source, String destination, Process action) {
+    public Transition(State source, State destination, Process action) {
         this.source = source;
         this.destination = destination;
         this.action = action;
     }
 
-    public Transition(String agent, String source, String destination, Process action) {
+    public Transition(String agent, State source, State destination, Process action) {
         this.agent=agent;
         this.source = source;
         this.destination = destination;
         this.action = action;
     }
 
-    public String getSource() {
+    public State getSource() {
         return source;
     }
 
-    public void setSource(String source) {
+    public void setSource(State source) {
         this.source = source;
     }
 
-    public String getDestination() {
+    public State getDestination() {
         return destination;
     }
 
-    public void setDestination(String destination) {
+    public void setDestination(State destination) {
         this.destination = destination;
     }
 

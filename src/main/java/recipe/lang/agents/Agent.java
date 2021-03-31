@@ -7,6 +7,7 @@ import java.util.function.Function;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.StringParser;
+import recipe.lang.exception.CompositionWithSameAgentNameException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.channels.ChannelValue;
 import recipe.lang.expressions.channels.ChannelVariable;
@@ -37,24 +38,24 @@ public class Agent {
     private HashMap<String, TypedVariable> CV;
     //TODO ensure that output store is a refinement of input store
     private Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel;
-    private Set<String> states;  //control flow
+    private Set<State> states;  //control flow
 
     private HashMap<String, Set<Transition>> stateToOutgoingTransitions;
 
     private Set<Transition> sendTransitions;
     private Set<Transition> receiveTransitions;
     private Set<Process> actions;
-    private String currentState;
+    private State currentState;
     private Condition receiveGuard;
     private Condition initialCondition;
 
     public Agent(String name) {
-        this(name, new Store(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new String(), Condition.FALSE);
+        this(name, new Store(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(new String()), Condition.FALSE);
 
     }
 
-    public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<Process> actions,
-                 String currentState, Condition receiveGuard) {
+    public Agent(String name, Store store, Set<State> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<Process> actions,
+                 State currentState, Condition receiveGuard) {
         this.name = name;
         this.store = store;
         this.states = new HashSet<>(states);
@@ -65,8 +66,8 @@ public class Agent {
         this.receiveGuard = receiveGuard;
     }
 
-    public Agent(String name, Store store, Set<String> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<Process> actions,
-                 Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel, String currentState) {
+    public Agent(String name, Store store, Set<State> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<Process> actions,
+                 Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel, State currentState) {
         this.name = name;
         this.store = store;
         this.states = new HashSet<>(states);
@@ -115,11 +116,11 @@ public class Agent {
         return store.getAttribute(name);
     }
 
-    public Set<String> getStates() {
+    public Set<State> getStates() {
         return states;
     }
 
-    public void setStates(Set<String> states) {
+    public void setStates(Set<State> states) {
         this.states = states;
     }
 
@@ -156,11 +157,11 @@ public class Agent {
         return relabel.apply(pair);
     }
 
-    public String getCurrentState() {
+    public State getCurrentState() {
         return currentState;
     }
 
-    public void setCurrentState(String currentState) {
+    public void setCurrentState(State currentState) {
         this.currentState = currentState;
     }
 
@@ -253,8 +254,8 @@ public class Agent {
                         Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(3);
                         Condition receiveGuardCondition = (Condition) values.get(4);
                         Process repeat = (Process) values.get(5);
-                        String startState = "start";
-                        Set<Transition> transitions = repeat.asTransitionSystem(startState, "end");
+                        State startState = new State("start");
+                        Set<Transition> transitions = repeat.asTransitionSystem(startState, new State("end"));
                         Set<Transition> sendTransitions = new HashSet<>();
                         Set<Transition> receiveTransitions = new HashSet<>();
                         Set<Process> actions = new HashSet<>();
@@ -267,7 +268,7 @@ public class Agent {
 
                             actions.add(t.getAction());
                         });
-                        Set<String> states = new HashSet<>();
+                        Set<State> states = new HashSet<>();
                         for(Transition t : transitions){
                             states.add(t.getSource());
                             states.add(t.getDestination());
@@ -294,5 +295,50 @@ public class Agent {
                     }));
 
         return parser;
+    }
+
+    public static Agent composition(Agent agent1, Agent agent2) throws AttributeTypeException, AttributeNotInStoreException, CompositionWithSameAgentNameException {
+        if(agent1.getName().equals(agent2.getName())){
+            throw new CompositionWithSameAgentNameException();
+        }
+
+        Agent composition = null;
+
+        String name = agent1.name + " || " + agent2.name;
+
+        Store store = agent1.getStore().copyWithRenaming(s -> agent1.name + "." + s);
+        store.update(agent2.getStore().copyWithRenaming(s -> agent2.name + "." + s));
+
+        Set<String> states = new HashSet<>();
+        agent1.states.forEach(s -> states.add(agent1.name + "." + s));
+        agent2.states.forEach(s -> states.add(agent2.name + "." + s));
+
+        String currentState = "(" + agent1.name + "." + agent1.currentState + ", " + agent2.name + "." + agent2.currentState + ")";
+
+        Set<String> current = new HashSet<>();
+        current.add(currentState);
+
+        Set<String> alreadyDone = new HashSet<>();
+
+        while (current.size() != 0){
+            Set<String> newCurrent = new HashSet<>();
+
+            for (Transition t1 : agent1.sendTransitions){
+                for(Transition t2 : agent2.receiveTransitions){
+
+                }
+            }
+
+            alreadyDone.addAll(current);
+            current = newCurrent;
+            current.removeAll(alreadyDone);
+        }
+
+        Set<Transition> sendTransitions;
+        Set<Transition> receiveTransitions;
+        Set<Process> actions;
+        Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel;
+
+        return composition;
     }
 }

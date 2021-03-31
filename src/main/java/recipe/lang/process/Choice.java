@@ -2,6 +2,7 @@ package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
+import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 
 import java.util.Collection;
@@ -17,7 +18,7 @@ public class Choice extends Process{
         this.b = b;
     }
 
-    public Set<Transition> asTransitionSystem(String start, String end){
+    public Set<Transition> asTransitionSystem(State start, State end){
         Set<Transition> ts = a.asTransitionSystem(start, end);
         ts.addAll(this.b.asTransitionSystem(start, end));
 

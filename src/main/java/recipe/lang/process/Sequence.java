@@ -2,6 +2,7 @@ package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
+import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 
 import java.util.List;
@@ -16,8 +17,8 @@ public class Sequence extends Process{
         this.b = b;
     }
 
-    public Set<Transition> asTransitionSystem(String start, String end){
-        String intermediate = stateSeed + "";
+    public Set<Transition> asTransitionSystem(State start, State end){
+        State intermediate = new State(stateSeed + "");
         stateSeed++;
         Set<Transition> ts = a.asTransitionSystem(start, intermediate);
         ts.addAll(this.b.asTransitionSystem(intermediate, end));

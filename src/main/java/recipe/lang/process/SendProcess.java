@@ -2,6 +2,7 @@ package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
+import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.channels.ChannelExpression;
@@ -36,7 +37,7 @@ public class SendProcess extends Process {
         return "<" + psi.toString() + ">" + channel + "!" + "(" + guard.toString() + ")" + "(" + message + ")[" + update + "]";
     }
 
-    public Set<Transition> asTransitionSystem(String start, String end){
+    public Set<Transition> asTransitionSystem(State start, State end){
         Set<Transition> ts = new HashSet<>();
         ts.add(new Transition(start, end, this));
 
