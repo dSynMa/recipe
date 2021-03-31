@@ -254,7 +254,7 @@ public class Parsing {
                         List relabel = (List) relabelObj;
                         relabellingMap.put((TypedVariable) relabel.get(0), (Expression) relabel.get(2));
                     }
-                    return values;
+                    return relabellingMap;
                 });
     }
 
