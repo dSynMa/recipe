@@ -6,4 +6,8 @@ public class State<T> {
     public State(T label){
         this.label = label;
     }
+
+    public T getLabel(){
+        return label;
+    }
 }
