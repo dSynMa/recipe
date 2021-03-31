@@ -56,7 +56,7 @@ public class TypingContext {
     }
 
     public void setAll(TypingContext context){
-        for(Map.Entry<String, Expression> en : varType.entrySet()){
+        for(Map.Entry<String, Expression> en : context.varType.entrySet()){
             set(en.getKey(), en.getValue());
         }
     }

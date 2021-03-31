@@ -30,6 +30,11 @@ public class ChannelValue extends ChannelExpression implements TypedValue {
         return value;
     }
 
+    @Override
+    public boolean equals(Object o){
+        return o.getClass().equals(ChannelValue.class) && ((ChannelValue) o).value.equals(value);
+    }
+
     public static org.petitparser.parser.Parser parser(TypingContext context){
         return Parsing.disjunctiveWordParser(context.get(ChannelValue.class), (String name) -> new ChannelValue(name));
     }
