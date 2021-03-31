@@ -78,7 +78,7 @@ public class IsEqualTo extends Condition {
 	public static org.petitparser.parser.Parser parser(Parser expression) {
 		org.petitparser.parser.Parser parser =
 				(expression)
-						.seq(StringParser.of("==").trim())
+						.seq(StringParser.of("=").seq(StringParser.of("=").optional()).trim())
 						.seq(expression)
 						.map((List<Object> values) -> {
 							return new IsEqualTo((Expression) values.get(0), (Expression) values.get(2));

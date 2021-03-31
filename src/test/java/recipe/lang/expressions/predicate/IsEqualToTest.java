@@ -38,4 +38,26 @@ public class IsEqualToTest {
         Result r = parser.parse(script);
         assert r.isSuccess();
     }
+
+    @Test
+    public void parser1() {
+        String script = "channel = A";
+
+        TypingContext context = new TypingContext();
+
+        context.set("channel", new ChannelVariable("channel"));
+        context.set("A", new ChannelValue("A"));
+
+        org.petitparser.parser.Parser arithmeticExpression = ArithmeticExpression.typeParser(context);
+        org.petitparser.parser.Parser channelExpression = ChannelExpression.typeParser(context);
+        org.petitparser.parser.Parser stringExpression = StringExpression.typeParser(context);
+
+        SettableParser expression = SettableParser.undefined();
+        expression.set((arithmeticExpression).or(channelExpression).or(stringExpression));
+
+
+        Parser parser = IsEqualTo.parser(expression).end();
+        Result r = parser.parse(script);
+        assert r.isSuccess();
+    }
 }
