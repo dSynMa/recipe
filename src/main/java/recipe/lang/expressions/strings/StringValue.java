@@ -3,11 +3,15 @@ package recipe.lang.expressions.strings;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
 
@@ -52,5 +56,10 @@ public class StringValue extends StringExpression implements TypedValue {
                 .map((List<Object> values) -> new StringVariable((String) values.get(1)));
 
         return parser;
+    }
+
+    @Override
+    public StringExpression relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+        return this;
     }
 }

@@ -2,9 +2,12 @@ package recipe.lang.expressions.predicate;
 
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.NumberVariable;
+import recipe.lang.expressions.strings.StringExpression;
 import recipe.lang.expressions.strings.StringValue;
 import recipe.lang.expressions.strings.StringVariable;
 import recipe.lang.store.Store;
@@ -13,6 +16,7 @@ import recipe.lang.utils.TypingContext;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
 
@@ -67,5 +71,15 @@ public class BooleanVariable extends Condition implements TypedVariable {
 
     public static org.petitparser.parser.Parser parser(TypingContext context){
         return Parsing.disjunctiveWordParser(context.get(BooleanVariable.class), (String name) -> new BooleanVariable(name));
+    }
+
+    @Override
+    public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+        Expression result = relabelling.apply(this);
+        if(!Condition.class.isAssignableFrom(result.getClass())){
+            throw new RelabellingTypeException();
+        } else{
+            return (Condition) relabelling.apply( this);
+        }
     }
 }

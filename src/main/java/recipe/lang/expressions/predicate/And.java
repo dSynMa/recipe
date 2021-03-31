@@ -4,12 +4,15 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.*;
 import recipe.lang.store.Store;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 public class And extends Condition {
 
@@ -94,5 +97,10 @@ public class And extends Condition {
 						});
 
 		return parser;
+	}
+
+	@Override
+	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+		return new And(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
 	}
 }

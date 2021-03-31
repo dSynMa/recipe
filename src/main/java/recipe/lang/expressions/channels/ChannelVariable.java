@@ -2,11 +2,14 @@ package recipe.lang.expressions.channels;
 
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.expressions.arithmetic.NumberVariable;
 import recipe.lang.expressions.predicate.BooleanVariable;
+import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.strings.StringExpression;
 import recipe.lang.expressions.strings.StringValue;
 import recipe.lang.store.Store;
@@ -16,6 +19,7 @@ import recipe.lang.utils.TypingContext;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
 
@@ -70,4 +74,15 @@ public class ChannelVariable extends ChannelExpression implements TypedVariable 
     public static org.petitparser.parser.Parser parser(TypingContext context){
         return Parsing.disjunctiveWordParser(context.get(ChannelVariable.class), (String name) -> new ChannelVariable(name));
     }
+
+    @Override
+    public ChannelExpression relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+        Expression result = relabelling.apply(this);
+        if(!ChannelExpression.class.isAssignableFrom(result.getClass())){
+            throw new RelabellingTypeException();
+        } else{
+            return (ChannelExpression) relabelling.apply( this);
+        }
+    }
+
 }

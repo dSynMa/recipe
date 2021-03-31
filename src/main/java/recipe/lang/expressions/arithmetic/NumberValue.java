@@ -4,12 +4,15 @@ import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.store.Store;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 import static org.petitparser.parser.primitive.CharacterParser.digit;
 
@@ -25,6 +28,11 @@ public class NumberValue extends ArithmeticExpression implements TypedValue {
     }
 
     public ArithmeticExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException{
+        return this;
+    }
+
+    @Override
+    public ArithmeticExpression relabel(Function<TypedVariable, Expression> relabelling) {
         return this;
     }
 

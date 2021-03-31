@@ -5,12 +5,15 @@ import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.NumberValue;
 import recipe.lang.store.Store;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 public class Addition extends ArithmeticExpression{
     ArithmeticExpression lhs;
@@ -34,6 +37,11 @@ public class Addition extends ArithmeticExpression{
     @Override
     public ArithmeticExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
         return new Addition(lhs.close(store, CV), rhs.close(store, CV));
+    }
+
+    @Override
+    public ArithmeticExpression relabel(Function<TypedVariable, Expression> relabelling) {
+        return new Addition(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
     }
 
     @Override

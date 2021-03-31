@@ -3,13 +3,16 @@ package recipe.lang.expressions.channels;
 import org.petitparser.parser.Parser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.store.Store;
 import recipe.lang.utils.TypingContext;
 
 import java.util.Set;
+import java.util.function.Function;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
 
@@ -30,4 +33,7 @@ public abstract class ChannelExpression implements Expression {
 
         return parser;
     }
+
+    public abstract ChannelExpression relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException;
+
 }

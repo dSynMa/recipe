@@ -2,13 +2,17 @@ package recipe.lang.expressions.channels;
 
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 public class ChannelValue extends ChannelExpression implements TypedValue {
     public String value;
@@ -37,5 +41,10 @@ public class ChannelValue extends ChannelExpression implements TypedValue {
 
     public static org.petitparser.parser.Parser parser(TypingContext context){
         return Parsing.disjunctiveWordParser(context.get(ChannelValue.class), (String name) -> new ChannelValue(name));
+    }
+
+    @Override
+    public ChannelExpression relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+        return this;
     }
 }

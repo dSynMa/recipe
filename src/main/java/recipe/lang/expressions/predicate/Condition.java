@@ -5,7 +5,9 @@ import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.*;
 import recipe.lang.expressions.channels.ChannelExpression;
 import recipe.lang.expressions.strings.StringExpression;
@@ -15,6 +17,7 @@ import recipe.lang.utils.TypingContext;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 //TODO add exception wrong type and non-existing variables
 public abstract class Condition implements Expression {
@@ -114,4 +117,6 @@ public abstract class Condition implements Expression {
 
 		return parser;
 	}
+
+	public abstract Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException;
 }

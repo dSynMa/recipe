@@ -5,13 +5,16 @@ import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.store.Store;
 import recipe.lang.utils.TypingContext;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 public abstract class ArithmeticExpression implements Expression {
     public abstract NumberValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
@@ -46,4 +49,7 @@ public abstract class ArithmeticExpression implements Expression {
 
         return parser;
     }
+
+    @Override
+    public abstract ArithmeticExpression relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException;
 }
