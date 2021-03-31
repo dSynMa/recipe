@@ -55,7 +55,6 @@ public class BooleanVariable extends Condition implements TypedVariable {
         return val.getClass().equals(BooleanValue.class);
     }
 
-
     @Override
     public String toString(){
         return name;
