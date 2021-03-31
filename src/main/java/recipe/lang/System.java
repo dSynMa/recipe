@@ -5,12 +5,14 @@ import org.petitparser.parser.combinators.SettableParser;
 import recipe.lang.agents.Agent;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.channels.ChannelValue;
+import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.utils.LazyParser;
 import recipe.lang.utils.Pair;
+import recipe.lang.utils.Triple;
 import recipe.lang.utils.TypingContext;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static recipe.lang.utils.Parsing.*;
@@ -48,40 +50,47 @@ public class System{
     public static Parser parser(){
         SettableParser parser = SettableParser.undefined();
 
-        AtomicReference<TypingContext> channelContext = new AtomicReference<>();
-        AtomicReference<TypingContext> messageContext = new AtomicReference<>();
-        AtomicReference<TypingContext> communicationContext = new AtomicReference<>();
-        AtomicReference<TypingContext> guardDefinitionsContext = new AtomicReference<>();
+        AtomicReference<TypingContext> channelContext = new AtomicReference<>(new TypingContext());
+        AtomicReference<TypingContext> messageContext = new AtomicReference<>(new TypingContext());
+        AtomicReference<TypingContext> communicationContext = new AtomicReference<>(new TypingContext());
+        AtomicReference<Pair> guardDefinitionsContext = new AtomicReference<>();
 
         parser.set((labelledParser("channels", channelValues())
-                        .map((Map<String, Expression> values) -> {
-                            channelContext.set(new TypingContext(values));
+                        .map((List<ChannelValue> values) -> {
+                            for(ChannelValue v : values){
+                                channelContext.get().set(v.getValue(), v);
+                            }
                             return values;
                         }))
                 .seq(labelledParser("message-structure", typedVariableList())
                         .map((Map<String, Expression> values) -> {
-                            messageContext.set(new TypingContext(values));
+                            messageContext.get().setAll(new TypingContext(values));
                             return values;
                         }))
                 .seq(labelledParser("communication-variables", typedVariableList())
                         .map((Map<String, Expression> values) -> {
-                            communicationContext.set(new TypingContext(values));
+                            communicationContext.get().setAll(new TypingContext(values));
                             return values;
                         }))
                 .seq(guardDefinitionList()
-                        .map((Map<String, Expression> values) -> {
-                            guardDefinitionsContext.set(new TypingContext(values));
+                        .map((Pair values) -> {
+                            guardDefinitionsContext.set(values);
                             return values;
                         }))
-                .seq(Agent.parser(messageContext.get(), communicationContext.get(), channelContext.get()))
+                .seq(new LazyParser<>(
+                        (Triple<TypingContext, TypingContext, TypingContext> msgCmncChnContext) ->
+                                Agent.parser(msgCmncChnContext.getLeft(),
+                                        msgCmncChnContext.getMiddle(),
+                                        msgCmncChnContext.getRight()).plus(),
+                        new Triple(messageContext.get(), communicationContext.get(), channelContext.get())))
                 .map((List<Object> values) -> {
                     //TODO collect context (channels, message structue, communication vars)
-                    Set<String> channels = (Set<String>) values.get(0);
+                    Set<String> channels = new HashSet<>((List<String>) values.get(0));
                     Map<String, TypedVariable> messageStructure = (Map<String, TypedVariable>) values.get(1);
                     Map<String, TypedVariable> communicationVariables = (Map<String, TypedVariable>) values.get(2);
-                    Map<String, Pair> guardDefinitions = (Map<String, Pair>) values.get(3);
+                    Pair guardDefinitions = (Pair) values.get(3);
 
-                    Set<Agent> agents = (Set<Agent>) values.get(3);
+                    Set<Agent> agents = new HashSet<>((List<Agent>) values.get(4));
 
                     return new System(channels, messageStructure, communicationVariables, agents);
                 })
