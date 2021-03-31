@@ -5,6 +5,7 @@ import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.channels.ChannelExpression;
+import recipe.lang.expressions.channels.ChannelVariable;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
@@ -40,6 +41,7 @@ public class ReceiveProcess extends Process {
                                 TypingContext localContext,
                                 TypingContext channelContext){
         TypingContext localAndChannelContext = TypingContext.union(localContext, channelContext);
+        TypingContext channelContextWithLocalChannelVars = TypingContext.union(localContext.getSubContext(ChannelVariable.class), channelContext);
 
         Parser localGuard = Condition.typeParser(localAndChannelContext);
 
@@ -55,7 +57,7 @@ public class ReceiveProcess extends Process {
 
         Parser parser =
                 delimetedCondition
-                        .seq(ChannelExpression.parser(channelContext))
+                        .seq(ChannelExpression.parser(channelContextWithLocalChannelVars))
                         .seq(CharacterParser.of('?'))
                         .seq((CharacterParser.of('[').trim()))
                         .seq(localAssignment)
