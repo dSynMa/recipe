@@ -90,41 +90,58 @@ public class Parsing {
         return assignmentList;
     }
 
+    public static Parser numberType(){
+        return StringParser.of("integer")
+                .or(StringParser.of("Integer"))
+                .or(StringParser.of("Int"))
+                .or(StringParser.of("int"));
+    }
+
+    public static Parser stringType(){
+        return StringParser.of("string")
+                .or(StringParser.of("String"));
+    }
+
+    public static Parser booleanType(){
+        return StringParser.of("boolean")
+                .or(StringParser.of("Boolean"))
+                .or(StringParser.of("bool"))
+                .or(StringParser.of("Bool"));
+    }
+
+    public static Parser channelType(){
+        return StringParser.of("channel")
+                .or(StringParser.of("Channel"))
+                .or(StringParser.of("chan"))
+                .or(StringParser.of("Chan"));
+    }
+
     public static Parser typedVariableList(){
         org.petitparser.parser.Parser stringParser = word().plus().seq(CharacterParser.word().not()).flatten().trim();
 
         org.petitparser.parser.Parser numberVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
-                .seq(StringParser.of("integer")
-                        .or(StringParser.of("Integer"))
-                        .or(StringParser.of("Int"))
-                        .or(StringParser.of("int")).trim())
+                .seq(numberType()).trim()
                 .map((List<Object> values) -> {
                     return new NumberVariable((String) values.get(0));
                 });
 
         org.petitparser.parser.Parser stringVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
-                .seq(StringParser.of("string")
-                        .or(StringParser.of("String")).trim())
+                .seq(stringType().trim())
                 .map((List<Object> values) -> {
                     return new StringVariable((String) values.get(0));
                 });
+
         org.petitparser.parser.Parser boolVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
-                .seq(StringParser.of("boolean")
-                        .or(StringParser.of("Boolean"))
-                        .or(StringParser.of("bool"))
-                        .or(StringParser.of("Bool")).trim())
+                .seq(booleanType().trim())
                 .map((List<Object> values) -> {
                     return new BooleanVariable((String) values.get(0));
                 });
         org.petitparser.parser.Parser channelVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
-                .seq(StringParser.of("channel")
-                        .or(StringParser.of("Channel"))
-                        .or(StringParser.of("chan"))
-                        .or(StringParser.of("Chan")).trim())
+                .seq(channelType().trim())
                 .map((List<Object> values) -> {
                     return new ChannelVariable((String) values.get(0));
                 });
@@ -149,7 +166,7 @@ public class Parsing {
 
         org.petitparser.parser.Parser numberVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
-                .seq(StringParser.of("int").trim())
+                .seq(numberType().trim())
                 .seq(StringParser.of(":=").trim())
                 .seq(ArithmeticExpression.typeParser(new TypingContext()))
                 .map((List<Object> values) -> {
@@ -158,7 +175,7 @@ public class Parsing {
 
         org.petitparser.parser.Parser stringVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
-                .seq(StringParser.of("string").trim())
+                .seq(stringType().trim())
                 .seq(StringParser.of(":=").trim())
                 .seq(StringExpression.typeParser(new TypingContext()))
                 .map((List<Object> values) -> {
@@ -166,7 +183,7 @@ public class Parsing {
                 });
         org.petitparser.parser.Parser boolVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
-                .seq(StringParser.of("bool").trim())
+                .seq(booleanType().trim())
                 .seq(StringParser.of(":=").trim())
                 .seq(Condition.typeParser(channelValueContext))
                 .map((List<Object> values) -> {
@@ -175,7 +192,7 @@ public class Parsing {
 
         org.petitparser.parser.Parser channelVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
-                .seq(StringParser.of("channel").trim())
+                .seq(channelType().trim())
                 .seq(StringParser.of(":=").trim())
                 .seq(ChannelExpression.typeParser(channelValueContext))
                 .map((List<Object> values) -> {
