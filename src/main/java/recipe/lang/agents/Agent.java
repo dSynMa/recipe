@@ -225,7 +225,7 @@ public class Agent {
         SettableParser parser = SettableParser.undefined();
         Function<TypingContext, Parser> process = (TypingContext localContext) -> Parsing.labelledParser("repeat", Process.parser(messageContext, localContext, communicationContext, channelContext));
 
-        Parser name = word().plus().trim();
+        Parser name = word().plus().trim().flatten();
 
         AtomicReference<String> error = new AtomicReference<>("");
         AtomicReference<TypingContext> localContext = new AtomicReference<>(new TypingContext());
@@ -239,9 +239,9 @@ public class Agent {
                                 localContext.get().setAll(new TypingContext(values.getLeft()));
                                 return values;
                             }))
-                    .seq(new LazyParser<>(((TypingContext localContext1) -> Parsing.relabellingParser(localContext1, communicationContext)), localContext.get()))
+                    .seq(new LazyParser<>(((TypingContext localContext1) -> Parsing.relabellingParser(localContext1, communicationContext)), localContext.get()).trim())
                     .seq(new LazyParser<>(((TypingContext localContext1) -> Parsing.receiveGuardParser(localContext1, channelContext)), localContext.get()))
-                    .seq(new LazyParser(process, localContext.get()))
+                    .seq(new LazyParser(process, localContext.get()).trim())
                 .map((List<Object> values) -> {
                     //TODO
                     String agentName = (String) values.get(1);
@@ -250,7 +250,7 @@ public class Agent {
                     Store store = null;
                     try {
                         store = new Store(localValues, localVars);
-                        TypingContext relabel = (TypingContext) values.get(3);
+                        Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(3);
                         Condition receiveGuardCondition = (Condition) values.get(4);
                         Process repeat = (Process) values.get(5);
                         String startState = "start";
@@ -288,7 +288,7 @@ public class Agent {
 
                     return null;
                 })
-                .seq(Parsing.conditionalFail(!error.equals("")))
+                .seq(Parsing.conditionalFail(!error.get().equals("")))
                     .map((List<Object> values) -> {
                         return values.get(0);
                     }));
