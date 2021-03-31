@@ -67,10 +67,38 @@ public class ParsingTest {
     }
 
     @Test
-    public void typedAssignmentList() {
+    public void typedAssignmentList0() {
+        String script = "c : channel := A";
+
+        TypingContext channelContext = new TypingContext();
+        channelContext.set("A", new ChannelValue("A"));
+
+        Parser parser = Parsing.typedAssignmentList(channelContext).end();
+
+        Result r = parser.parse(script);
+        assert r.isSuccess();
+    }
+
+    @Test
+    public void typedAssignmentList1() {
         String script =
                 "b : int := 0\n" +
                         "\t\tchVar : channel := A";
+
+        TypingContext channelContext = new TypingContext();
+        channelContext.set("A", new ChannelValue("A"));
+
+        Parser parser = Parsing.typedAssignmentList(channelContext).end();
+
+        Result r = parser.parse(script);
+        assert r.isSuccess();
+    }
+
+    @Test
+    public void typedAssignmentList2() {
+        String script =
+                "b : int := 0\n" +
+                        "\t\tb : int := 0";
 
         TypingContext channelContext = new TypingContext();
         channelContext.set("A", new ChannelValue("A"));
@@ -155,7 +183,7 @@ public class ParsingTest {
 
     @Test
     public void receiveGuardParser3() {
-        String script = "receive-guard: channel == A";
+        String script = "receive-guard:\n (channel == A)";
 
         TypingContext localContext = new TypingContext();
         localContext.set("b", new NumberVariable("b"));
@@ -165,6 +193,27 @@ public class ParsingTest {
         channelContext.set("A", new ChannelValue("A"));
         channelContext.set("*", new ChannelValue("*"));
         channelContext.set("channel", new ChannelVariable("channel"));
+
+        Parser parser = Parsing.receiveGuardParser(localContext, channelContext).end();
+        Result r = parser.parse(script);
+        System.out.println(r.getPosition() + " " + r.getMessage());
+        assert r.isSuccess();
+    }
+
+    @Test
+    public void receiveGuardParser4() {
+        String script = "receive-guard:\n" +
+                    "\t\t((b < 5) & channel == A))";
+
+        TypingContext localContext = new TypingContext();
+        localContext.set("b", new NumberVariable("b"));
+        localContext.set("c", new NumberVariable("c"));
+
+        TypingContext channelContext = new TypingContext();
+        channelContext.set("A", new ChannelValue("A"));
+        channelContext.set("*", new ChannelValue("*"));
+        channelContext.set("channel", new ChannelVariable("channel"));
+        channelContext.set("chVar", new ChannelVariable("chVar"));
 
         Parser parser = Parsing.receiveGuardParser(localContext, channelContext).end();
         Result r = parser.parse(script);

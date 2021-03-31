@@ -36,7 +36,6 @@ public class Parsing {
             parser = parser.or(StringParser.of(allowed.get(i)));
         }
 
-        //TODO the below line is not working as expected
         parser = (parser).seq(CharacterParser.word().not()).map((List<Object> values) -> {
             return transformation.apply((String) values.get(0));
         });
@@ -91,7 +90,7 @@ public class Parsing {
     }
 
     public static Parser typedVariableList(){
-        org.petitparser.parser.Parser stringParser = (word().plus()).flatten().trim();
+        org.petitparser.parser.Parser stringParser = word().plus().seq(CharacterParser.word().not()).flatten().trim();
 
         org.petitparser.parser.Parser numberVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
@@ -135,13 +134,13 @@ public class Parsing {
     }
 
     public static Parser typedAssignmentList(TypingContext channelValueContext){
-        org.petitparser.parser.Parser stringParser = (word().plus()).flatten().trim();
+        org.petitparser.parser.Parser stringParser = (word().plus().seq(CharacterParser.word().not())).flatten().trim();
 
         org.petitparser.parser.Parser numberVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
                 .seq(StringParser.of("int").trim())
                 .seq(StringParser.of(":=").trim())
-                .seq(expressionParser(new TypingContext()))
+                .seq(ArithmeticExpression.typeParser(new TypingContext()))
                 .map((List<Object> values) -> {
                     return new Pair(new NumberVariable((String) values.get(0)), values.get(4));
                 });
@@ -150,7 +149,7 @@ public class Parsing {
                 .seq(CharacterParser.of(':').trim())
                 .seq(StringParser.of("string").trim())
                 .seq(StringParser.of(":=").trim())
-                .seq(expressionParser(new TypingContext()))
+                .seq(StringExpression.typeParser(new TypingContext()))
                 .map((List<Object> values) -> {
                     return new Pair(new StringVariable((String) values.get(0)), values.get(4));
                 });
@@ -158,7 +157,7 @@ public class Parsing {
                 .seq(CharacterParser.of(':').trim())
                 .seq(StringParser.of("bool").trim())
                 .seq(StringParser.of(":=").trim())
-                .seq(expressionParser(new TypingContext()))
+                .seq(Condition.typeParser(channelValueContext))
                 .map((List<Object> values) -> {
                     return new Pair(new BooleanVariable((String) values.get(0)), values.get(4));
                 });
@@ -167,7 +166,7 @@ public class Parsing {
                 .seq(CharacterParser.of(':').trim())
                 .seq(StringParser.of("channel").trim())
                 .seq(StringParser.of(":=").trim())
-                .seq(expressionParser(channelValueContext))
+                .seq(ChannelExpression.typeParser(channelValueContext))
                 .map((List<Object> values) -> {
                     return new Pair(new ChannelVariable((String) values.get(0)), values.get(4));
                 });
