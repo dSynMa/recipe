@@ -23,7 +23,7 @@ public abstract class StringExpression implements Expression {
     }
 
     public static Parser parser(TypingContext context){
-        Parser parser = MyStringVariable.parser().or(StringVariable.parser(context)).or(StringValue.parser());
+        Parser parser = StringVariable.parser(context).or(StringValue.parser());
 
         return parser;
     }

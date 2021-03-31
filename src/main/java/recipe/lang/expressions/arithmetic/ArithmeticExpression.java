@@ -30,19 +30,16 @@ public abstract class ArithmeticExpression implements Expression {
         org.petitparser.parser.Parser subtraction = Subtraction.parser(basic);
         org.petitparser.parser.Parser value = NumberValue.parser();
         org.petitparser.parser.Parser variable = NumberVariable.parser(context);
-        org.petitparser.parser.Parser myVariable = MyNumberVariable.parser();
 
         parser.set(addition
                 .or(multiplication)
                 .or(subtraction)
                 .or(basic)
                 .or(value)
-                .or(variable)
-                .or(myVariable));
+                .or(variable));
 
         basic.set(value
                 .or(variable)
-                .or(myVariable)
                 .or((CharacterParser.of('(').trim()
                         .seq(parser)
                         .seq(CharacterParser.of(')'))).map((List<Object> values) -> values.get(1))));

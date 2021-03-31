@@ -99,7 +99,6 @@ public abstract class Condition implements Expression {
 
 		org.petitparser.parser.Parser value = BooleanValue.parser();
 		org.petitparser.parser.Parser variable = BooleanVariable.parser(context);
-		org.petitparser.parser.Parser myVariable = MyBooleanVariable.parser();
 
 		parser.set(and
 				.or(or)
@@ -107,7 +106,6 @@ public abstract class Condition implements Expression {
 
 		basic.set(value
 				.or(variable)
-				.or(myVariable)
 				.or(not)
 				.or(comparators)
 				.or(CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')'))

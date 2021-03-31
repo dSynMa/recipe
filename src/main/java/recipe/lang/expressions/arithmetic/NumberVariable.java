@@ -46,11 +46,6 @@ public class NumberVariable extends ArithmeticExpression implements TypedVariabl
     }
 
     @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
     public String toString(){
         return name;
     }
@@ -58,6 +53,11 @@ public class NumberVariable extends ArithmeticExpression implements TypedVariabl
     @Override
     public boolean equals(Object o){
         return o.getClass().equals(NumberVariable.class) && name.equals(o);
+    }
+
+    @Override
+    public String getName() {
+        return name;
     }
 
     @Override
