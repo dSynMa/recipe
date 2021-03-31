@@ -86,7 +86,7 @@ public class Or extends Condition {
 	public static org.petitparser.parser.Parser parser(Parser basicCondition) {
 		org.petitparser.parser.Parser parser =
 				(basicCondition)
-						.seq(CharacterParser.of('|').trim())
+						.seq(CharacterParser.of('|').seq(CharacterParser.of('|').optional()).trim())
 						.seq(basicCondition)
 						.map((List<Object> values) -> {
 							return new Or((Condition) values.get(0), (Condition) values.get(2));
