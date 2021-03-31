@@ -64,7 +64,7 @@ public class ParsingTest {
 
     @Test
     public void testTypedVariableList() {
-        String script = "c : channel, cc : Chan, b : int, c : Int";
+        String script = "c : channel, cc : Chan, k : bool, kk : Boolean, K : Bool, KK : boolean, b : int, c : Int, d : Integer, dd : integer";
 
         Parser parser = Parsing.typedVariableList().end();
 
