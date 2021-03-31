@@ -64,6 +64,12 @@ public class ParsingTest {
 
     @Test
     public void testTypedVariableList() {
+        String script = "c : channel, cc : Chan, b : int, c : Int";
+
+        Parser parser = Parsing.typedVariableList().end();
+
+        Result r = parser.parse(script);
+        assert r.isSuccess();
     }
 
     @Test

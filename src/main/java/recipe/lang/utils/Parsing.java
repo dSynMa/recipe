@@ -4,6 +4,7 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.expressions.arithmetic.NumberVariable;
@@ -94,26 +95,36 @@ public class Parsing {
 
         org.petitparser.parser.Parser numberVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
-                .seq(StringParser.of("int").trim())
+                .seq(StringParser.of("integer")
+                        .or(StringParser.of("Integer"))
+                        .or(StringParser.of("Int"))
+                        .or(StringParser.of("int")).trim())
                 .map((List<Object> values) -> {
                     return new NumberVariable((String) values.get(0));
                 });
 
         org.petitparser.parser.Parser stringVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
-                .seq(StringParser.of("string").trim())
+                .seq(StringParser.of("string")
+                        .or(StringParser.of("String")).trim())
                 .map((List<Object> values) -> {
                     return new StringVariable((String) values.get(0));
                 });
         org.petitparser.parser.Parser boolVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
-                .seq(StringParser.of("bool").trim())
+                .seq(StringParser.of("boolean")
+                        .or(StringParser.of("Boolean"))
+                        .or(StringParser.of("bool"))
+                        .or(StringParser.of("Bool")).trim())
                 .map((List<Object> values) -> {
                     return new BooleanVariable((String) values.get(0));
                 });
         org.petitparser.parser.Parser channelVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
-                .seq(StringParser.of("channel").trim())
+                .seq(StringParser.of("channel")
+                        .or(StringParser.of("Channel"))
+                        .or(StringParser.of("chan"))
+                        .or(StringParser.of("Chan")).trim())
                 .map((List<Object> values) -> {
                     return new ChannelVariable((String) values.get(0));
                 });
@@ -189,39 +200,49 @@ public class Parsing {
     }
 
     public static Parser guardDefinitionList(){
-        AtomicReference<TypingContext> typedVariableList = new AtomicReference<>();
+        AtomicReference<TypingContext> typedVariableList = new AtomicReference<>(new TypingContext());
         org.petitparser.parser.Parser guardDefinitionParser = StringParser.of("guard").trim()
-                .seq(word().plus().trim())
+                .seq(word().plus().trim().flatten())
                 .seq(CharacterParser.of('(').trim())
                 .seq(typedVariableList()
-                        .map((Map<String, Expression> value) -> {
-                            typedVariableList.set(new TypingContext(value));
+                        .mapWithSideEffects((Map<String, Expression> value) -> {
+                            typedVariableList.get().setAll(new TypingContext(value));
                             return value;
                         }))
                 .seq(CharacterParser.of(')').trim())
                 .seq(StringParser.of(":=").trim())
-                .seq(Condition.parser(typedVariableList.get()))
+                .seq(new LazyParser<>((TypingContext context) -> Condition.parser(context), typedVariableList.get()))
                 .map((List<Object> values) -> {
                     return new HashMap.SimpleEntry<>(values.get(1), new Pair(values.get(3), values.get(6)));
                 });
 
-        org.petitparser.parser.Parser guardDefinitionListParser = guardDefinitionParser.separatedBy(CharacterParser.of('\n'))
+        org.petitparser.parser.Parser guardDefinitionListParser = guardDefinitionParser.separatedBy(CharacterParser.of('\n').plus())
                 .map((List<Object> values) -> {
+                    Map<String, Map<String, Expression>> guardsParams = new HashMap();
                     Map<String, Condition> guards = new HashMap();
                     for(Object v : values){
                         HashMap.SimpleEntry entry = (HashMap.SimpleEntry) v;
-                        guards.put((String) entry.getKey(), (Condition) entry.getValue());
+                        guardsParams.put((String) entry.getKey(), (Map<String, Expression>) ((Pair) entry.getValue()).getLeft());
+                        guards.put((String) entry.getKey(), (Condition) ((Pair) entry.getValue()).getRight());
                     }
-                    return guards;
+                    return new Pair(guardsParams, guards);
                 });
 
         return guardDefinitionListParser;
     }
 
     public static Parser channelValues(){
-        Parser parser = (word().plus()
-                .seq(StringParser.of(" ").trim()).flatten()
-                .map((String value) -> new ChannelValue(value))).plus();
+        Parser parser = word().plus().flatten().delimitedBy(CharacterParser.of(' ').plus().or(CharacterParser.of(',')))
+                .map((List<Object> values) -> {
+                    List<ChannelValue> vals = new ArrayList<>();
+
+                    for(Object v : values){
+                        if(!v.getClass().equals(Character.class)){
+                            vals.add(new ChannelValue((String) v));
+                        }
+                    }
+                    return vals;
+                });
 
         return parser;
     }
