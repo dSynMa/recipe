@@ -59,6 +59,12 @@ public class ConditionTest {
         assert r.isSuccess();
         r = parser.parse("(channel == A)");
         assert r.isSuccess();
+        r = parser.parse("(channel == A) | (A == channel)");
+        assert r.isSuccess();
+        r = parser.parse("(b > 3 & channel == A) | (b < 5 & channel == A)");
+        assert r.isSuccess();
+        r = parser.parse("(channel == A) | false");
+        assert r.isSuccess();
         r = parser.parse("channel == A");
         assert r.isSuccess();
         r = parser.parse("!(b > 3)");
