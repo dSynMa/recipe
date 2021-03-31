@@ -2,14 +2,18 @@ package recipe.lang.store;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.arithmetic.NumberVariable;
+import recipe.lang.expressions.channels.ChannelVariable;
+import recipe.lang.expressions.predicate.BooleanVariable;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.utils.TypingContext;
+import recipe.lang.expressions.strings.StringVariable;
 
 public class Store {
     private HashMap<String, TypedValue> data;
@@ -55,8 +59,8 @@ public class Store {
 		throw new AttributeTypeException();
 	}
 	
-	public Object getValue(String attribute) {
-		Object o = data.get(attribute);
+	public TypedValue getValue(String attribute) {
+		TypedValue o = data.get(attribute);
 		if (o != null) {
 			return o;
 		}
@@ -145,5 +149,26 @@ public class Store {
 		for (TypedVariable a : update.attributes.values()) {
 			_setValue(a, update.getValue(a));
 		}
+	}
+
+	public Store copyWithRenaming(Function<String, String> renaming) throws AttributeTypeException, AttributeNotInStoreException {
+		Store store = new Store();
+
+		for(TypedVariable v : this.attributes.values()){
+			String newName = renaming.apply(v.getName());
+			if(v.getClass().equals(BooleanVariable.class)){
+				store.safeAddAttribute(new BooleanVariable(newName));
+			} else if(v.getClass().equals(StringVariable.class)){
+				store.safeAddAttribute(new StringVariable(newName));
+			} else if(v.getClass().equals(ChannelVariable.class)){
+				store.safeAddAttribute(new ChannelVariable(newName));
+			} else if(v.getClass().equals(NumberVariable.class)){
+				store.safeAddAttribute(new NumberVariable(newName));
+			}
+
+			store.setValue(newName, (TypedValue) this.getValue(newName));
+		}
+
+		return store;
 	}
 }
