@@ -4,6 +4,7 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
+import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.NumberValue;
@@ -43,7 +44,7 @@ public class Subtraction extends ArithmeticExpression{
     }
 
     @Override
-    public ArithmeticExpression relabel(Function<TypedVariable, Expression> relabelling) {
+    public ArithmeticExpression relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
         return new Subtraction(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
     }
 
