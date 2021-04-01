@@ -23,6 +23,7 @@ public abstract class Process {
         SettableParser basic = SettableParser.undefined();
         Parser choice = Choice.parser(basic);
         Parser sequence = Sequence.parser(basic);
+        Parser iterative = Iterative.parser(basic);
         Parser receiveProcess = ReceiveProcess.parser(messageContext, localContext, channelContext);
         Parser sendProcess = SendProcess.parser(messageContext, localContext, communicationContext, channelContext);
 
