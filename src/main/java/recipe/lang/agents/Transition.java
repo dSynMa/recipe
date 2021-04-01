@@ -2,6 +2,9 @@ package recipe.lang.agents;
 
 import recipe.lang.process.Process;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public class Transition {
     // three attributes of transition: source,action,destination
     private String agent;
@@ -100,4 +103,43 @@ public class Transition {
         this.agent = agent;
     }
 
+    public static Set<Transition> getTransitionsFrom(Set<Transition> transitions, State state){
+        Set<Transition> fromState = new HashSet<>();
+        for(Transition t : transitions){
+            if(t.getSource().equals(state)){
+                fromState.add(t);
+            }
+        }
+
+        return fromState;
+    }
+
+    public static Set<Transition> copyAndChangeSourceTo(Set<Transition> transitions, State state){
+        Set<Transition> fromState = new HashSet<>();
+        for(Transition t : transitions){
+            new Transition(t.agent, state, t.getDestination(), t.getAction());
+        }
+
+        return fromState;
+    }
+
+    public static Set<Transition> getTransitionsTo(Set<Transition> transitions, State state){
+        Set<Transition> fromState = new HashSet<>();
+        for(Transition t : transitions){
+            if(t.getDestination().equals(state)){
+                fromState.add(t);
+            }
+        }
+
+        return fromState;
+    }
+
+    public static Set<Transition> copyAndChangeDestinationTo(Set<Transition> transitions, State state){
+        Set<Transition> fromState = new HashSet<>();
+        for(Transition t : transitions){
+            new Transition(t.agent, t.getSource(), state, t.getAction());
+        }
+
+        return fromState;
+    }
 }

@@ -4,7 +4,10 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
+import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.expressions.predicate.Not;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -12,14 +15,43 @@ public class Iterative extends Process{
     public Process a;
 
     public Iterative(Process a) {
-        this.a = a;
+        //This prevents immediate nesting of iteration
+        if(a.getClass().equals(Iterative.class)){
+            this.a = ((Iterative) a).a;
+        }else{
+            this.a = a;
+        }
     }
 
     public Set<Transition> asTransitionSystem(State start, State end){
-        stateSeed++;
-        Set<Transition> ts = a.asTransitionSystem(start, end);
+        Set<Transition> ts = new HashSet<>();
+        State intermediateStart = new State(getSeed());
+        State intermediateEnd = new State(getSeed());
+
+        Set<Transition> intermediateTs = a.asTransitionSystem(intermediateStart, intermediateEnd);
+
+        Set<Transition> entryTransitions = Transition.copyAndChangeSourceTo(
+                Transition.getTransitionsFrom(intermediateTs, intermediateStart),
+                start);
+        Set<Transition> exitTransitions = Transition.copyAndChangeDestinationTo(
+                Transition.getTransitionsTo(intermediateTs, intermediateEnd),
+                end);
+
+        exitTransitions.forEach(t -> t.getAction().addEntryCondition(new Not(this.entryCondition())));
+
+        ts.addAll(intermediateTs);
+        ts.addAll(entryTransitions);
+        ts.addAll(exitTransitions);
 
         return ts;
+    }
+
+    public Condition entryCondition(){
+        return a.entryCondition();
+    }
+
+    public void addEntryCondition(Condition condition){
+        a.addEntryCondition(condition);
     }
 
     public static Parser parser(Parser processParser){

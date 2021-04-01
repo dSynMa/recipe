@@ -7,7 +7,9 @@ import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.channels.ChannelExpression;
 import recipe.lang.expressions.channels.ChannelVariable;
+import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.expressions.predicate.Or;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
@@ -29,6 +31,14 @@ public class ReceiveProcess extends Process {
 
     public String toString() {
         return "<" + psi.toString() + ">" + channel + "?" + "[" + update + "]";
+    }
+
+    public Condition entryCondition(){
+        return psi;
+    }
+
+    public void addEntryCondition(Condition condition){
+        psi = new And(condition, psi);
     }
 
     public Set<Transition> asTransitionSystem(State start, State end){

@@ -7,6 +7,7 @@ import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.channels.ChannelExpression;
 import recipe.lang.expressions.channels.ChannelVariable;
+import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
@@ -42,6 +43,14 @@ public class SendProcess extends Process {
         ts.add(new Transition(start, end, this));
 
         return ts;
+    }
+
+    public Condition entryCondition(){
+        return psi;
+    }
+
+    public void addEntryCondition(Condition condition){
+        psi = new And(condition, psi);
     }
 
     public static Parser parser(TypingContext messageContext,

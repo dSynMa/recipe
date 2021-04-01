@@ -4,6 +4,9 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
+import recipe.lang.expressions.predicate.And;
+import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.expressions.predicate.Or;
 
 import java.util.List;
 import java.util.Set;
@@ -17,9 +20,16 @@ public class Sequence extends Process{
         this.b = b;
     }
 
+    public Condition entryCondition(){
+        return a.entryCondition();
+    }
+
+    public void addEntryCondition(Condition condition) {
+        a.addEntryCondition(condition);
+    }
+
     public Set<Transition> asTransitionSystem(State start, State end){
-        State intermediate = new State(stateSeed + "");
-        stateSeed++;
+        State intermediate = new State(getSeed());
         Set<Transition> ts = a.asTransitionSystem(start, intermediate);
         ts.addAll(this.b.asTransitionSystem(intermediate, end));
 
