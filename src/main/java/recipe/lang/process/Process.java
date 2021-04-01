@@ -40,6 +40,7 @@ public abstract class Process {
 
         parser.set(choice
                     .or(sequence)
+                    .or(iterative)
                     .or(basic));
 
         basic.set(receiveProcess
