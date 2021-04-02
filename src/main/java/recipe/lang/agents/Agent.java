@@ -50,7 +50,7 @@ public class Agent {
     private Condition initialCondition;
 
     public Agent(String name) {
-        this(name, new Store(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(new String()), Condition.FALSE);
+        this(name, new Store(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(name, new String()), Condition.FALSE);
 
     }
 
@@ -270,12 +270,17 @@ public class Agent {
                         });
                         Set<State> states = new HashSet<>();
                         for(Transition t : transitions){
+                            t.getSource().setAgent(agentName);
+                            t.getDestination().setAgent(agentName);
+                            t.setAgent(agentName);
+
                             states.add(t.getSource());
                             states.add(t.getDestination());
                         }
 
                         return new Agent(agentName,
-                                store, states,
+                                store,
+                                states,
                                 sendTransitions,
                                 receiveTransitions,
                                 actions,
@@ -309,23 +314,44 @@ public class Agent {
         Store store = agent1.getStore().copyWithRenaming(s -> agent1.name + "." + s);
         store.update(agent2.getStore().copyWithRenaming(s -> agent2.name + "." + s));
 
-        Set<String> states = new HashSet<>();
-        agent1.states.forEach(s -> states.add(agent1.name + "." + s));
-        agent2.states.forEach(s -> states.add(agent2.name + "." + s));
+        Set<State> states = new HashSet<>();
+        states.addAll(agent1.states);
+        states.addAll(agent2.states);
 
-        String currentState = "(" + agent1.name + "." + agent1.currentState + ", " + agent2.name + "." + agent2.currentState + ")";
+        State currentState = new State(name, new Pair<>(agent1.currentState, agent2.currentState));
 
-        Set<String> current = new HashSet<>();
+        Set<State> current = new HashSet<>();
         current.add(currentState);
 
-        Set<String> alreadyDone = new HashSet<>();
+        Set<State> alreadyDone = new HashSet<>();
 
         while (current.size() != 0){
-            Set<String> newCurrent = new HashSet<>();
+            Set<State> newCurrent = new HashSet<>();
 
-            for (Transition t1 : agent1.sendTransitions){
-                for(Transition t2 : agent2.receiveTransitions){
+            for(State state : current) {
+                State state1 = ((State<Pair<State, State>>) state).getLabel().getLeft();
+                State state2 = ((State<Pair<State, State>>) state).getLabel().getRight();
 
+                for (Transition t1 : agent1.sendTransitions) {
+                    if(t1.getSource().equals(state1)) {
+                        for (Transition t2 : agent2.receiveTransitions) {
+                            if(t2.getSource().equals(state2)){
+                                //see if channel expressions compatible
+                                //if yes then conjunct guards
+                                //
+                            }
+                        }
+                    }
+                }
+
+                for (Transition t2 : agent2.sendTransitions) {
+                    if(t2.getSource().equals(state2)) {
+                        for (Transition t1 : agent1.receiveTransitions) {
+                            if(t1.getSource().equals(state1)){
+
+                            }
+                        }
+                    }
                 }
             }
 
