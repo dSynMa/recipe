@@ -47,9 +47,9 @@ public class SystemTest {
                 "\t\tg <- a == 0\n" +
                 "\treceive-guard:\n" +
                 "\t\t(a < 5 & channel == C) | (a > 3 & channel == *)\n" +
-                "\trepeat: B + (<a > 3> C? [a := d1])";
+                "\trepeat: (<a > 3> C? [a := d1])";
 
-        Parser system = System.parser();
+        Parser system = System.parser().end();
         Result r = system.parse(script);
         java.lang.System.out.println(script.substring(r.getPosition()));
         assert r.isSuccess();
