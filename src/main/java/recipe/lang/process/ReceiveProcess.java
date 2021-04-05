@@ -19,10 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class ReceiveProcess extends Process {
-    public Condition psi;
-    public ChannelExpression channel;
-    public Map<String, Expression> update;
+public class ReceiveProcess extends BasicProcess {
 
     public ReceiveProcess(Condition psi, ChannelExpression channel, Map<String, Expression> update) {
         this.psi = psi;

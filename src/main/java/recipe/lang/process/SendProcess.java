@@ -20,11 +20,8 @@ import java.util.Set;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
 
-public class SendProcess extends Process {
-    public Condition psi;
-    public ChannelExpression channel;
+public class SendProcess extends BasicProcess {
     public Map<String, Expression> message;
-    public Map<String, Expression> update;
     public Condition guard;
 
     public SendProcess(Condition psi, ChannelExpression channel, Map<String, Expression> message, Map<String, Expression> update, Condition guard) {

@@ -1,5 +1,6 @@
 package recipe.lang.agents;
 
+import recipe.lang.process.BasicProcess;
 import recipe.lang.process.Process;
 
 import java.util.HashSet;
@@ -8,25 +9,25 @@ import java.util.Set;
 public class ProcessTransition extends Transition{
     // three attributes of transition: source,action,destination
     private String agent;
-    private Process action;
+    private BasicProcess action;
 
-    public ProcessTransition(State source, State destination, Process action) {
+    public ProcessTransition(State source, State destination, BasicProcess action) {
         super(source, destination);
         this.action = action;
     }
 
-    public ProcessTransition(String agent, State source, State destination, Process action) {
+    public ProcessTransition(String agent, State source, State destination, BasicProcess action) {
         super(source, destination);
         this.agent=agent;
         this.action = action;
     }
 
 
-    public Process getAction() {
+    public BasicProcess getAction() {
         return action;
     }
 
-    public void setAction(Process action) {
+    public void setAction(BasicProcess action) {
         this.action = action;
     }
 
