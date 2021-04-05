@@ -13,8 +13,7 @@ import recipe.lang.expressions.channels.ChannelValue;
 import recipe.lang.expressions.channels.ChannelVariable;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.process.Iterative;
-import recipe.lang.process.Process;
+import recipe.lang.process.*;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.expressions.strings.StringValue;
 import recipe.lang.expressions.strings.StringVariable;
@@ -22,8 +21,7 @@ import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.IsEqualTo;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.process.ReceiveProcess;
-import recipe.lang.process.SendProcess;
+import recipe.lang.process.Process;
 import recipe.lang.store.Store;
 import recipe.lang.utils.*;
 
@@ -35,7 +33,7 @@ public class Agent {
     private Store store;
     private HashMap<String, TypedVariable> CV;
     //TODO ensure that output store is a refinement of input store
-    private Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel;
+    private Map<TypedVariable, Expression> relabel;
     private Set<State> states;  //control flow
     private Set<ProcessTransition> sendTransitions;
     private Set<ProcessTransition> receiveTransitions;
@@ -77,7 +75,7 @@ public class Agent {
                  Set<ProcessTransition> receiveTransitions,
                  Set<IterationExitTransition> iterationExitTransitions,
                  Set<Process> actions,
-                 Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel,
+                 Map<TypedVariable, Expression> relabel,
                  State initialState) {
         this.name = name;
         this.store = store;
@@ -156,17 +154,12 @@ public class Agent {
         CV = cV;
     }
 
-    public Function<Pair<Store, HashMap<String, TypedVariable>>, Store> getrelabel() {
+    public Map<TypedVariable, Expression> getrelabel() {
         return relabel;
     }
 
-    public void setrelabel(Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel) {
+    public void setrelabel(Map<TypedVariable, Expression> relabel) {
         this.relabel = relabel;
-    }
-
-    public Store relabel() {
-        Pair<Store, HashMap<String, TypedVariable>> pair = new Pair<>(store, CV);
-        return relabel.apply(pair);
     }
 
     public State getInitialState() {
@@ -302,7 +295,7 @@ public class Agent {
                             }
                         }
 
-                        return new Agent(agentName,
+                        Agent agent = new Agent(agentName,
                                 store,
                                 states,
                                 sendTransitions,
@@ -311,6 +304,10 @@ public class Agent {
                                 actions,
                                 startState,
                                 receiveGuardCondition);
+
+                        agent.setrelabel(relabel);
+
+                        return agent;
                     } catch (AttributeTypeException e) {
                         error.set(e.toString());
                     } catch (AttributeNotInStoreException e) {
