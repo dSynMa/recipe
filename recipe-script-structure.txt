@@ -1,32 +1,25 @@
-channels: c, c1
-//multicast?? broadcast??
-message-structure: int d1, bool d2
-communication-variables: int f, bool g
+channels: A,B,C
+message-structure: d1 : int, d2 : bool
+communication-variables: f : int, g : bool
 
-guard h(a : int) := a > 9
-
-process p(b: Int, c: Int) := (<b == 0> c! (my.f == f) (d1 := b + 1, d2 := false)[b++])
+guard g(a : int) := a == 5
 
 agent B
-    local: 
-        b : Int := 0  
-        c : Int := 0  
-    relabel:
-        f <- c
-        g <- b != 0
-    repeat: p(b,c) + (<b == 1> c! h(b) (d1 := b + 2, d2 := true)[b++])
+	local:
+		b : Int := 0
+		c : Int := 0
+	relabel:
+		f <- c
+		g <- b != 0
+	receive-guard: true
+	repeat: (<b == 0> C! (c == f) (d1 := b + 1, d2 := false)[b := b + 1])
 
 agent A
-    local: 
-        a : Int := 0
-        b : Int := 0
-    relabel:
-        f <- a
-        g <- a == 0
-    receive-guard:
-        a < 5 -> c
-        a > 3 -> c1
-    repeat: (<a == 0> c? [b := d1]) + p(a,b)
-
-
-system: A | B
+	local:
+		a : int := 0
+	relabel:
+		f <- a
+		g <- a == 0
+	receive-guard:
+		(a < 5 & channel == C) | (a > 3 & channel == *)
+	repeat: (<a > 3> C? [a := d1])
