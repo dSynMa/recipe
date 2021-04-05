@@ -2,11 +2,11 @@ package recipe.lang.utils;
 
 import java.util.Arrays;
 
-public class Tuple {
+public class Tuple<T> {
 
-	private Object[] values;
+	private T[] values;
 	
-	public Tuple( Object ... values ) {
+	public Tuple( T ... values ) {
 		this.values = values;
 	}
 	
@@ -14,7 +14,7 @@ public class Tuple {
 		return values.length;
 	}
 	
-	public Object get( int i ) {
+	public T get( int i ) {
 		return values[i];
 	}
 
