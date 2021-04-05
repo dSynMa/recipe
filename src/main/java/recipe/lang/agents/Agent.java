@@ -7,7 +7,7 @@ import java.util.function.Function;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.exception.CompositionWithSameAgentNameException;
+import recipe.lang.exception.CompositionException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.channels.ChannelValue;
 import recipe.lang.expressions.channels.ChannelVariable;
@@ -39,43 +39,57 @@ public class Agent {
     //TODO ensure that output store is a refinement of input store
     private Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel;
     private Set<State> states;  //control flow
-
-    private HashMap<String, Set<Transition>> stateToOutgoingTransitions;
-
-    private Set<Transition> sendTransitions;
-    private Set<Transition> receiveTransitions;
+    private Set<ProcessTransition> sendTransitions;
+    private Set<ProcessTransition> receiveTransitions;
+    private Set<IterationExitTransition> iterationExitTransitions;
     private Set<Process> actions;
-    private State currentState;
+    private State initialState;
     private Condition receiveGuard;
     private Condition initialCondition;
 
     public Agent(String name) {
-        this(name, new Store(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(name, new String()), Condition.FALSE);
+        this(name, new Store(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(name, new String()), Condition.FALSE);
 
     }
 
-    public Agent(String name, Store store, Set<State> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<Process> actions,
-                 State currentState, Condition receiveGuard) {
+    public Agent(String name,
+                 Store store,
+                 Set<State> states,
+                 Set<ProcessTransition> sendTransitions,
+                 Set<ProcessTransition> receiveTransitions,
+                 Set<IterationExitTransition> iterationExitTransitions,
+                 Set<Process> actions,
+                 State initialState,
+                 Condition receiveGuard) {
         this.name = name;
         this.store = store;
         this.states = new HashSet<>(states);
         this.sendTransitions = new HashSet<>(sendTransitions);
         this.receiveTransitions = new HashSet<>(receiveTransitions);
+        this.iterationExitTransitions = new HashSet<>(iterationExitTransitions);
         this.actions = new HashSet<>(actions);
-        this.currentState = currentState;
+        this.initialState = initialState;
         this.receiveGuard = receiveGuard;
     }
 
-    public Agent(String name, Store store, Set<State> states, Set<Transition> sendTransitions, Set<Transition> receiveTransitions, Set<Process> actions,
-                 Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel, State currentState) {
+    public Agent(String name,
+                 Store store,
+                 Set<State> states,
+                 Set<ProcessTransition> sendTransitions,
+                 Set<ProcessTransition> receiveTransitions,
+                 Set<IterationExitTransition> iterationExitTransitions,
+                 Set<Process> actions,
+                 Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel,
+                 State initialState) {
         this.name = name;
         this.store = store;
         this.states = new HashSet<>(states);
         this.sendTransitions = new HashSet<>(sendTransitions);
         this.receiveTransitions = new HashSet<>(receiveTransitions);
+        this.iterationExitTransitions = new HashSet<>(iterationExitTransitions);
         this.actions = new HashSet<>(actions);
         this.relabel = relabel;
-        this.currentState = currentState;
+        this.initialState = initialState;
     }
 
     public String getName() {
@@ -157,12 +171,12 @@ public class Agent {
         return relabel.apply(pair);
     }
 
-    public State getCurrentState() {
-        return currentState;
+    public State getInitialState() {
+        return initialState;
     }
 
-    public void setCurrentState(State currentState) {
-        this.currentState = currentState;
+    public void setInitialState(State initialState) {
+        this.initialState = initialState;
     }
 
     public Condition getReceiveGuard() {
@@ -173,19 +187,19 @@ public class Agent {
         this.receiveGuard = receiveGuard;
     }
 
-    public Set<Transition> getSendTransitions() {
+    public Set<ProcessTransition> getSendTransitions() {
         return sendTransitions;
     }
 
-    public void setSendTransitions(Set<Transition> sendTransitions) {
+    public void setSendTransitions(Set<ProcessTransition> sendTransitions) {
         this.sendTransitions = sendTransitions;
     }
 
-    public Set<Transition> getReceiveTransitions() {
+    public Set<ProcessTransition> getReceiveTransitions() {
         return receiveTransitions;
     }
 
-    public void setReceiveTransitions(Set<Transition> receiveTransitions) {
+    public void setReceiveTransitions(Set<ProcessTransition> receiveTransitions) {
         this.receiveTransitions = receiveTransitions;
     }
 
@@ -251,31 +265,43 @@ public class Agent {
                     Store store = null;
                     try {
                         store = new Store(localValues, localVars);
+                        //TODO
                         Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(3);
                         Condition receiveGuardCondition = (Condition) values.get(4);
                         Process repeat = (Process) values.get(5);
                         State startState = new State("start");
                         Set<Transition> transitions = repeat.asTransitionSystem(startState, new State("end"));
-                        Set<Transition> sendTransitions = new HashSet<>();
-                        Set<Transition> receiveTransitions = new HashSet<>();
-                        Set<Process> actions = new HashSet<>();
-                        transitions.forEach(t -> {
-                            if(t.getAction().getClass().equals(SendProcess.class)){
-                                sendTransitions.add(t);
-                            } else if(t.getAction().getClass().equals(ReceiveProcess.class)){
-                                receiveTransitions.add(t);
-                            }
+                        Set<ProcessTransition> sendTransitions = new HashSet<>();
+                        Set<ProcessTransition> receiveTransitions = new HashSet<>();
+                        //TODO
+                        Set<IterationExitTransition> iterationExitTransitions = new HashSet<>();
 
-                            actions.add(t.getAction());
+                        Set<Process> actions = new HashSet<>();
+                        transitions.forEach(tt -> {
+                            if(tt.getClass().equals(ProcessTransition.class)) {
+                                ProcessTransition t = (ProcessTransition) tt;
+                                if (t.getAction().getClass().equals(SendProcess.class)) {
+                                    sendTransitions.add(t);
+                                } else if (t.getAction().getClass().equals(ReceiveProcess.class)) {
+                                    receiveTransitions.add(t);
+                                }
+
+                                actions.add(t.getAction());
+                            } else if(tt.getClass().equals(IterationExitTransition.class)) {
+                                iterationExitTransitions.add((IterationExitTransition) tt);
+                            }
                         });
                         Set<State> states = new HashSet<>();
-                        for(Transition t : transitions){
-                            t.getSource().setAgent(agentName);
-                            t.getDestination().setAgent(agentName);
-                            t.setAgent(agentName);
+                        for(Transition tt : transitions){
+                            if(tt.getClass().equals(ProcessTransition.class)) {
+                                ProcessTransition t = (ProcessTransition) tt;
+                                t.getSource().setAgent(agentName);
+                                t.getDestination().setAgent(agentName);
+                                t.setAgent(agentName);
 
-                            states.add(t.getSource());
-                            states.add(t.getDestination());
+                                states.add(t.getSource());
+                                states.add(t.getDestination());
+                            }
                         }
 
                         return new Agent(agentName,
@@ -283,6 +309,7 @@ public class Agent {
                                 states,
                                 sendTransitions,
                                 receiveTransitions,
+                                iterationExitTransitions,
                                 actions,
                                 startState,
                                 receiveGuardCondition);
@@ -302,68 +329,80 @@ public class Agent {
         return parser;
     }
 
-    public static Agent composition(Agent agent1, Agent agent2) throws AttributeTypeException, AttributeNotInStoreException, CompositionWithSameAgentNameException {
-        if(agent1.getName().equals(agent2.getName())){
-            throw new CompositionWithSameAgentNameException();
-        }
-
+    public static Agent composition(List<Agent> agents) throws AttributeTypeException, AttributeNotInStoreException, CompositionException {
+        //TODO ensure agents have unique name below at level of parsing
         Agent composition = null;
 
-        String name = agent1.name + " || " + agent2.name;
+        if(agents.size() == 0) throw new CompositionException("Empty list of agents.");
+        if(agents.size() == 1) return agents.get(0);
 
-        Store store = agent1.getStore().copyWithRenaming(s -> agent1.name + "." + s);
-        store.update(agent2.getStore().copyWithRenaming(s -> agent2.name + "." + s));
+        String name = agents.get(0).getName();
 
-        Set<State> states = new HashSet<>();
-        states.addAll(agent1.states);
-        states.addAll(agent2.states);
-
-        State currentState = new State(name, new Pair<>(agent1.currentState, agent2.currentState));
-
-        Set<State> current = new HashSet<>();
-        current.add(currentState);
-
-        Set<State> alreadyDone = new HashSet<>();
-
-        while (current.size() != 0){
-            Set<State> newCurrent = new HashSet<>();
-
-            for(State state : current) {
-                State state1 = ((State<Pair<State, State>>) state).getLabel().getLeft();
-                State state2 = ((State<Pair<State, State>>) state).getLabel().getRight();
-
-                for (Transition t1 : agent1.sendTransitions) {
-                    if(t1.getSource().equals(state1)) {
-                        for (Transition t2 : agent2.receiveTransitions) {
-                            if(t2.getSource().equals(state2)){
-                                //see if channel expressions compatible
-                                //if yes then conjunct guards
-                                //
-                            }
-                        }
-                    }
-                }
-
-                for (Transition t2 : agent2.sendTransitions) {
-                    if(t2.getSource().equals(state2)) {
-                        for (Transition t1 : agent1.receiveTransitions) {
-                            if(t1.getSource().equals(state1)){
-
-                            }
-                        }
-                    }
-                }
-            }
-
-            alreadyDone.addAll(current);
-            current = newCurrent;
-            current.removeAll(alreadyDone);
+        for(int i = 0; i < agents.size(); i++){
+            name += " || " + agents.get(i).getName();
         }
 
-        Set<Transition> sendTransitions;
-        Set<Transition> receiveTransitions;
-        Set<Process> actions;
-        Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel;
+//        Store store = agent1.getStore().copyWithRenaming(s -> agent1.name + "." + s);
+//        store.update(agent2.getStore().copyWithRenaming(s -> agent2.name + "." + s));
+//
+//        Set<State> states = new HashSet<>();
+//        states.addAll(agent1.states);
+//        states.addAll(agent2.states);
+//
+//        State initialState = new State(name, new Pair<>(agent1.initialState, agent2.initialState));
+//
+//        Set<State> current = new HashSet<>();
+//        current.add(initialState);
+//
+//        Set<State> alreadyDone = new HashSet<>();
+//
+//        while (current.size() != 0){
+//            Set<State> newCurrent = new HashSet<>();
+//
+//            for(State state : current) {
+//                State state1 = ((State<Pair<State, State>>) state).getLabel().getLeft();
+//                State state2 = ((State<Pair<State, State>>) state).getLabel().getRight();
+//
+//                for (ProcessTransition t1 : agent1.sendTransitions) {
+//                    //if guard of sendtransition is true
+//                    if(t1.getSource().equals(state1)) {
+//                        for (ProcessTransition t2 : agent2.receiveTransitions) {
+//                            if(t2.getSource().equals(state2)){
+//                                //if local guard of receive transition true
+//                                //and (if receive-guard conjuncted with 'channel == receiveTransition.channel') is true
+//                                //         or channel is *)
+//                                //and the message guard is true on agent 2
+//                                // then combine transitions
+//
+//                                //three possible transitions:
+//                                //send and not listen
+//                                //send and listen and have a receive transition and satisfy the send predicate
+//                                //send and not satisfy the send predicate when channel is broadcast
+//                            }
+//                        }
+//                    }
+//                }
+//
+//                for (ProcessTransition t2 : agent2.sendTransitions) {
+//                    if(t2.getSource().equals(state2)) {
+//                        for (ProcessTransition t1 : agent1.receiveTransitions) {
+//                            if(t1.getSource().equals(state1)){
+//
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//
+//            alreadyDone.addAll(current);
+//            current = newCurrent;
+//            current.removeAll(alreadyDone);
+//        }
+//
+//        Set<ProcessTransition> sendTransitions;
+//        Set<ProcessTransition> receiveTransitions;
+//        Set<Process> actions;
+//        Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel;
 
         return composition;
     }

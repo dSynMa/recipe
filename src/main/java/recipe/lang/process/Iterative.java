@@ -2,6 +2,7 @@ package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
+import recipe.lang.agents.IterationExitTransition;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.predicate.Condition;
@@ -28,20 +29,9 @@ public class Iterative extends Process{
         State intermediateStart = new State(getSeed());
         State intermediateEnd = new State(getSeed());
 
-        Set<Transition> intermediateTs = a.asTransitionSystem(intermediateStart, intermediateEnd);
+        Set<Transition> loop = a.asTransitionSystem(start, end);
 
-        Set<Transition> entryTransitions = Transition.copyAndChangeSourceTo(
-                Transition.getTransitionsFrom(intermediateTs, intermediateStart),
-                start);
-        Set<Transition> exitTransitions = Transition.copyAndChangeDestinationTo(
-                Transition.getTransitionsTo(intermediateTs, intermediateEnd),
-                end);
-
-        exitTransitions.forEach(t -> t.getAction().addEntryCondition(new Not(this.entryCondition())));
-
-        ts.addAll(intermediateTs);
-        ts.addAll(entryTransitions);
-        ts.addAll(exitTransitions);
+        IterationExitTransition iterationExitTransition = new IterationExitTransition(start, end, new Not(a.entryCondition()));
 
         return ts;
     }

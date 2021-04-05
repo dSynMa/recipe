@@ -2,6 +2,7 @@ package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
+import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
@@ -43,7 +44,7 @@ public class ReceiveProcess extends Process {
 
     public Set<Transition> asTransitionSystem(State start, State end){
         Set<Transition> ts = new HashSet<>();
-        ts.add(new Transition(start, end, this));
+        ts.add(new ProcessTransition(start, end, this));
 
         return ts;
     }
