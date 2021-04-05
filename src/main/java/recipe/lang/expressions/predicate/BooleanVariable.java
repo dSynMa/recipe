@@ -82,4 +82,8 @@ public class BooleanVariable extends Condition implements TypedVariable {
             return (Condition) relabelling.apply( this);
         }
     }
+
+    public TypedVariable sameTypeWithName(String name){
+        return new BooleanVariable(name);
+    }
 }

@@ -12,6 +12,7 @@ import recipe.lang.expressions.predicate.BooleanVariable;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.strings.StringExpression;
 import recipe.lang.expressions.strings.StringValue;
+import recipe.lang.expressions.strings.StringVariable;
 import recipe.lang.store.Store;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
@@ -85,4 +86,7 @@ public class ChannelVariable extends ChannelExpression implements TypedVariable 
         }
     }
 
+    public TypedVariable sameTypeWithName(String name){
+        return new ChannelVariable(name);
+    }
 }

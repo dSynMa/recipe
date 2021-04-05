@@ -81,4 +81,8 @@ public class NumberVariable extends ArithmeticExpression implements TypedVariabl
     public static org.petitparser.parser.Parser parser(TypingContext context){
         return Parsing.disjunctiveWordParser(context.get(NumberVariable.class), (String name) -> new NumberVariable(name));
     }
+
+    public TypedVariable sameTypeWithName(String name){
+        return new NumberVariable(name);
+    }
 }

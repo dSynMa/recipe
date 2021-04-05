@@ -79,4 +79,8 @@ public class StringVariable extends StringExpression implements TypedVariable {
             return (StringExpression) relabelling.apply( this);
         }
     }
+
+    public TypedVariable sameTypeWithName(String name){
+        return new StringVariable(name);
+    }
 }
