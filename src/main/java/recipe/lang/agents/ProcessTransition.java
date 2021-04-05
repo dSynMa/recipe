@@ -8,42 +8,19 @@ import java.util.Set;
 public class ProcessTransition extends Transition{
     // three attributes of transition: source,action,destination
     private String agent;
-    private State source;
-    private State destination;
     private Process action;
 
-    public ProcessTransition() {
-      
-    }
-
     public ProcessTransition(State source, State destination, Process action) {
-        this.source = source;
-        this.destination = destination;
+        super(source, destination);
         this.action = action;
     }
 
     public ProcessTransition(String agent, State source, State destination, Process action) {
+        super(source, destination);
         this.agent=agent;
-        this.source = source;
-        this.destination = destination;
         this.action = action;
     }
 
-    public State getSource() {
-        return source;
-    }
-
-    public void setSource(State source) {
-        this.source = source;
-    }
-
-    public State getDestination() {
-        return destination;
-    }
-
-    public void setDestination(State destination) {
-        this.destination = destination;
-    }
 
     public Process getAction() {
         return action;
