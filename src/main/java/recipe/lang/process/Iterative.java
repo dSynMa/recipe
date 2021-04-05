@@ -33,6 +33,8 @@ public class Iterative extends Process{
 
         IterationExitTransition iterationExitTransition = new IterationExitTransition(start, end, new Not(a.entryCondition()));
 
+        ts.addAll(loop);
+        ts.add(iterationExitTransition);
         return ts;
     }
 
