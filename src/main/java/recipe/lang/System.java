@@ -84,7 +84,6 @@ public class System{
                                         msgCmncChnContext.getRight()).plus(),
                         new Triple(messageContext.get(), communicationContext.get(), channelContext.get())))
                 .map((List<Object> values) -> {
-                    //TODO collect context (channels, message structue, communication vars)
                     Set<String> channels = new HashSet<>((List<String>) values.get(0));
                     Map<String, TypedVariable> messageStructure = (Map<String, TypedVariable>) values.get(1);
                     Map<String, TypedVariable> communicationVariables = (Map<String, TypedVariable>) values.get(2);
