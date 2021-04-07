@@ -20,7 +20,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
-//TODO add exception wrong type and non-existing variables
 public abstract class Condition implements Expression {
 
 	public enum PredicateType {
