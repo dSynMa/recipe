@@ -153,11 +153,11 @@ public class Agent {
         CV = CV;
     }
 
-    public Map<TypedVariable, Expression> getrelabel() {
+    public Map<TypedVariable, Expression> getRelabel() {
         return relabel;
     }
 
-    public void setrelabel(Map<TypedVariable, Expression> relabel) {
+    public void setRelabel(Map<TypedVariable, Expression> relabel) {
         this.relabel = relabel;
     }
 
@@ -304,7 +304,7 @@ public class Agent {
                                 startState,
                                 receiveGuardCondition);
 
-                        agent.setrelabel(relabel);
+                        agent.setRelabel(relabel);
 
                         return agent;
                     } catch (AttributeTypeException e) {
