@@ -51,12 +51,6 @@ public class IsGreaterOrEqualThan extends Condition {
 		return false;
 	}
 
-	
-	@Override
-	public int hashCode() {
-		return lhs.hashCode() ^ rhs.hashCode();
-	}
-
 	@Override
 	public String toString() {
 		return lhs + ">=" + rhs.toString();

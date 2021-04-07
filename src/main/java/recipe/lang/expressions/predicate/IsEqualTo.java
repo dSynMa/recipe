@@ -43,11 +43,6 @@ public class IsEqualTo extends Condition {
 	}
 
 	@Override
-	public int hashCode() {
-		return lhs.hashCode() ^ rhs.hashCode();
-	}
-
-	@Override
 	public String toString() {
 		return "{" + lhs + "==" + rhs + "}";
 	}

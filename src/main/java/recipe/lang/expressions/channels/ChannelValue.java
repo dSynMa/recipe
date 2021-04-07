@@ -30,6 +30,11 @@ public class ChannelValue extends ChannelExpression implements TypedValue {
     }
 
     @Override
+    public String toString(){
+        return value;
+    }
+
+    @Override
     public String getValue() {
         return value;
     }

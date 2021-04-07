@@ -41,11 +41,6 @@ public class Not extends Condition {
 	}
 
 	@Override
-	public int hashCode() {
-		return ~this.arg.hashCode();
-	}
-
-	@Override
 	public String toString() {
 		return "!(" + arg.toString() + ")";
 	}
@@ -78,7 +73,6 @@ public class Not extends Condition {
 			return Condition.FALSE;
 		}
 	}
-
 
 	public static org.petitparser.parser.Parser parser(Parser basicCondition) {
 		org.petitparser.parser.Parser parser =

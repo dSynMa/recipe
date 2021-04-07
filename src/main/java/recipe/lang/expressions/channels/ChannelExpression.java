@@ -11,6 +11,7 @@ import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.store.Store;
 import recipe.lang.utils.TypingContext;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -36,4 +37,8 @@ public abstract class ChannelExpression implements Expression {
 
     public abstract ChannelExpression relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException;
 
+    @Override
+    public int hashCode(){
+        return Objects.hash(this.toString());
+    }
 }

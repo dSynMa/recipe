@@ -13,6 +13,7 @@ import recipe.lang.store.Store;
 import recipe.lang.utils.TypingContext;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -52,4 +53,9 @@ public abstract class ArithmeticExpression implements Expression {
 
     @Override
     public abstract ArithmeticExpression relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException;
+
+    @Override
+    public int hashCode(){
+        return Objects.hash(this.toString());
+    }
 }

@@ -43,11 +43,6 @@ public class Or extends Condition {
 	}
 
 	@Override
-	public int hashCode() {
-		return this.lhs.hashCode() ^ this.rhs.hashCode();
-	}
-
-	@Override
 	public String toString() {
 		return "(" + lhs.toString() + ") | (" + rhs.toString() + ")";
 	}

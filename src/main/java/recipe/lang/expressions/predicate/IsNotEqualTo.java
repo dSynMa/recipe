@@ -42,12 +42,6 @@ public class IsNotEqualTo extends Condition {
 		return false;
 	}
 
-	//TODO this needs to be different for each relation
-	@Override
-	public int hashCode() {
-		return lhs.hashCode() ^ rhs.hashCode();
-	}
-
 	@Override
 	public String toString() {
 		return "{" + lhs + "!=" + rhs + "}";
