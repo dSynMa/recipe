@@ -210,20 +210,6 @@ public class Agent {
         return concrete.isSatisfiedBy(newstore);
     }
 
-
-    //try
-    public static void main(String[] arg) throws AttributeTypeException, AttributeNotInStoreException {
-
-        Store newstore =new Store();
-        newstore.setValue(new ChannelVariable("channel"), new ChannelValue("c"));
-        newstore.setValue(new StringVariable("state"), new StringValue("pending"));
-        Condition cc =new And(new IsEqualTo(new StringVariable("channel"), new StringValue("c")),
-        new IsEqualTo(new StringVariable("state"), new StringValue("ending")));
-        
-        boolean y = cc.isSatisfiedBy(newstore);
-        System.out.println(y);
-    }
-
     public static org.petitparser.parser.Parser parser(TypingContext messageContext,
                                                               TypingContext communicationContext,
                                                               TypingContext channelContext){
