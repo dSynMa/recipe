@@ -234,14 +234,12 @@ public class Agent {
                     .seq(new LazyParser<>(((TypingContext localContext1) -> Parsing.receiveGuardParser(localContext1, channelContext)), localContext.get()))
                     .seq(new LazyParser(process, localContext.get()).trim())
                 .map((List<Object> values) -> {
-                    //TODO
                     String agentName = (String) values.get(1);
                     Map<String, TypedVariable> localVars = ((Pair<Map, Map>) values.get(2)).getLeft();
                     Map<String, Expression> localValues = ((Pair<Map, Map>) values.get(2)).getRight();
                     Store store = null;
                     try {
                         store = new Store(localValues, localVars);
-                        //TODO
                         Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(3);
                         Condition receiveGuardCondition = (Condition) values.get(4);
                         Process repeat = (Process) values.get(5);
@@ -249,7 +247,6 @@ public class Agent {
                         Set<Transition> transitions = repeat.asTransitionSystem(startState, new State("end"));
                         Set<ProcessTransition> sendTransitions = new HashSet<>();
                         Set<ProcessTransition> receiveTransitions = new HashSet<>();
-                        //TODO
                         Set<IterationExitTransition> iterationExitTransitions = new HashSet<>();
 
                         Set<Process> actions = new HashSet<>();
