@@ -7,8 +7,7 @@ import java.util.function.Function;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.exception.CompositionException;
-import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.channels.ChannelExpression;
 import recipe.lang.expressions.channels.ChannelValue;
@@ -16,13 +15,11 @@ import recipe.lang.expressions.channels.ChannelVariable;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.process.*;
-import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.expressions.strings.StringValue;
 import recipe.lang.expressions.strings.StringVariable;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.IsEqualTo;
-import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.process.Process;
 import recipe.lang.store.Store;
 import recipe.lang.utils.*;
@@ -31,10 +28,8 @@ import static org.petitparser.parser.primitive.CharacterParser.word;
 
 public class Agent {
     private String name;
-    //TODO ensure that store variables and CV do not intersect, important for purposes of closure
     private Store store;
     private HashMap<String, TypedVariable> CV;
-    //TODO ensure that output store is a refinement of input store
     private Map<TypedVariable, Expression> relabel;
     private Set<State> states;  //control flow
     private Set<ProcessTransition> sendTransitions;
@@ -47,7 +42,6 @@ public class Agent {
 
     public Agent(String name) {
         this(name, new Store(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(name, new String()), Condition.FALSE);
-
     }
 
     public Agent(String name,
@@ -152,8 +146,11 @@ public class Agent {
         return CV;
     }
 
-    public void setCV(HashMap<String, TypedVariable> cV) {
-        CV = cV;
+    public void setCV(HashMap<String, TypedVariable> cV) throws CVAndStoreIntersectException {
+        if(!Collections.disjoint(cV.keySet(), store.getAttributes().keySet())){
+            throw new CVAndStoreIntersectException();
+        }
+        CV = CV;
     }
 
     public Map<TypedVariable, Expression> getrelabel() {
