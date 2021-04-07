@@ -8,7 +8,9 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.exception.CompositionException;
+import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.channels.ChannelExpression;
 import recipe.lang.expressions.channels.ChannelValue;
 import recipe.lang.expressions.channels.ChannelVariable;
 import recipe.lang.expressions.TypedValue;
@@ -271,13 +273,13 @@ public class Agent {
                         transitions.forEach(tt -> {
                             if(tt.getClass().equals(ProcessTransition.class)) {
                                 ProcessTransition t = (ProcessTransition) tt;
-                                if (t.getAction().getClass().equals(SendProcess.class)) {
+                                if (t.getLabel().getClass().equals(SendProcess.class)) {
                                     sendTransitions.add(t);
-                                } else if (t.getAction().getClass().equals(ReceiveProcess.class)) {
+                                } else if (t.getLabel().getClass().equals(ReceiveProcess.class)) {
                                     receiveTransitions.add(t);
                                 }
 
-                                actions.add(t.getAction());
+                                actions.add(t.getLabel());
                             } else if(tt.getClass().equals(IterationExitTransition.class)) {
                                 iterationExitTransitions.add((IterationExitTransition) tt);
                             }
@@ -342,103 +344,5 @@ public class Agent {
         }
 
         return stateTransitionMap;
-    }
-
-    public static Agent composition(List<Agent> agents) throws AttributeTypeException, AttributeNotInStoreException, CompositionException {
-        //TODO ensure agents have unique name below at level of parsing
-        Agent composition = null;
-        ;
-
-        if(agents.size() == 0) throw new CompositionException("Empty list of agents.");
-        if(agents.size() == 1) return agents.get(0);
-
-        String[] names = new String[agents.size()];
-        Store store = new Store();
-        Set<State> states = new HashSet<>();
-        State[] initialStates = new State[agents.size()];
-        Map<State, Set<ProcessTransition>> stateSendTransitionMap = new HashMap<>();
-        Map<State, Set<ProcessTransition>> stateReceiveTransitionMap = new HashMap<>();
-        Map<State, Set<IterationExitTransition>> stateIterationExitTransitionMap = new HashMap<>();
-
-        for(int i = 0; i < agents.size(); i++){
-            Agent agent = agents.get(i);
-            names[i] = agent.getName();
-            store.update(agent.getStore().copyWithRenaming(s -> agent.name + "." + s));
-            states.addAll(agent.getStates());
-            initialStates[i] = agent.initialState;
-            stateSendTransitionMap.putAll(agent.getStateTransitionMap(agent.sendTransitions));
-            stateReceiveTransitionMap.putAll(agent.getStateTransitionMap(agent.receiveTransitions));
-            stateIterationExitTransitionMap.putAll(agent.getStateTransitionMap(agent.iterationExitTransitions));
-        }
-
-        String name = String.join(" || ", names);
-
-        State initialState = new State(initialStates);
-
-        Set<ProcessTransition> sendTransitions = new HashSet<>();
-        Set<ProcessTransition> receiveTransitions = new HashSet<>();
-        Set<IterationExitTransition> iterationExitTransitions = new HashSet<>();
-
-        Set<State<State[]>> current = new HashSet<>();
-        current.add(initialState);
-
-        Set<State<State[]>> alreadyDone = new HashSet<>();
-
-        while (current.size() != 0){
-            Set<State<State[]>> nextStates = new HashSet<>();
-
-            for(State<State[]> state : current) {
-                State[] individualStates = state.getLabel();
-
-                for(int i = 0; i < individualStates.length; i++) {
-                    State state1 = individualStates[i];
-
-                    for (int j = 0; j < individualStates.length; j++) {
-                        State state2 = individualStates[j];
-
-                        for(IterationExitTransition iterationExitTransition : stateIterationExitTransitionMap.get(state2)){
-                            State[] next = individualStates.clone();
-                            next[j] = iterationExitTransition.getDestination();
-                            State nextState = new State(name, next);
-                            nextStates.add(nextState);
-
-                            iterationExitTransitions.add(new IterationExitTransition(state, nextState, iterationExitTransition.getCondition()));
-                        }
-
-                        //Ensure this is below above loop, since the loop must be executed for state1 too.
-                        if (state1 == state2) continue;
-
-                        for (ProcessTransition t1 : stateSendTransitionMap.get(state1)) {
-                            //if guard of sendtransition is true
-                            for (ProcessTransition t2 : stateReceiveTransitionMap.get(state2)) {
-                                if (t2.getSource().equals(state2)) {
-                                    //if local guard of receive transition true
-                                    //and (if receive-guard conjuncted with 'channel == receiveTransition.channel') is true
-                                    //         or channel is *)
-                                    //and the message guard is true on agent 2
-                                    // then combine transitions
-
-                                    //three possible transitions:
-                                    //send and not listen
-                                    //send and listen and have a receive transition and satisfy the send predicate
-                                    //send and not satisfy the send predicate when channel is broadcast
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            alreadyDone.addAll(current);
-            current = nextStates;
-            current.removeAll(alreadyDone);
-        }
-
-        Set<Process> actions;
-        Function<Pair<Store, HashMap<String, TypedVariable>>, Store> relabel;
-
-        composition = new Agent(name);
-
-        return composition;
     }
 }
