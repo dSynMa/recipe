@@ -8,6 +8,7 @@ import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.NumberValue;
+import recipe.lang.expressions.arithmetic.NumberVariable;
 import recipe.lang.expressions.strings.StringValue;
 import recipe.lang.expressions.strings.StringVariable;
 
@@ -53,13 +54,13 @@ public class StoreTest {
     public void safeAddAttribute() {
         assertTrue(emptyStore.safeAddAttribute(attribute));
 
-        TypedVariable attribute2 = new StringVariable("v");
+        TypedVariable attribute2 = new NumberVariable("v");
         assertFalse(store.safeAddAttribute(attribute2));
     }
 
     @Test
     public void getValue() {
-        assertTrue(store.getValue("v").equals("val"));
+        assertTrue(store.getValue("v").getValue().equals("val"));
         assertFalse(store.getValue("v").equals("vgg"));
     }
 
