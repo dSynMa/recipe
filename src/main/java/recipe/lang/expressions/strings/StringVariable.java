@@ -48,7 +48,7 @@ public class StringVariable extends StringExpression implements TypedVariable {
 
     @Override
     public boolean equals(Object o){
-        return o.getClass().equals(StringVariable.class) && name.equals(o);
+        return o.getClass().equals(StringVariable.class) && name.equals(((StringVariable) o).getName());
     }
 
     @Override
