@@ -252,7 +252,7 @@ public class Agent {
                         Condition receiveGuardCondition = (Condition) values.get(4);
                         Process repeat = (Process) values.get(5);
                         State startState = new State("start");
-                        Set<Transition> transitions = repeat.asTransitionSystem(startState, new State("end"));
+                        Set<Transition> transitions = repeat.asTransitionSystem(startState, startState);
                         Set<ProcessTransition> sendTransitions = new HashSet<>();
                         Set<ProcessTransition> receiveTransitions = new HashSet<>();
                         Set<IterationExitTransition> iterationExitTransitions = new HashSet<>();
