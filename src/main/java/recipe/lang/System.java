@@ -19,12 +19,12 @@ import static recipe.lang.utils.Parsing.*;
 import static recipe.lang.utils.Parsing.typedVariableList;
 
 public class System{
-    Set<String> channels;
+    Set<ChannelValue> channels;
     Map<String, TypedVariable> messageStructure;
     Map<String, TypedVariable> communicationVariables;
     Set<Agent> agents;
 
-    public Set<String> getChannels() {
+    public Set<ChannelValue> getChannels() {
         return channels;
     }
 
@@ -40,7 +40,7 @@ public class System{
         return agents;
     }
 
-    public System(Set<String> channels, Map<String, TypedVariable> messageStructure, Map<String, TypedVariable> communicationVariables, Set<Agent> agents) {
+    public System(Set<ChannelValue> channels, Map<String, TypedVariable> messageStructure, Map<String, TypedVariable> communicationVariables, Set<Agent> agents) {
         this.channels = channels;
         this.messageStructure = messageStructure;
         this.communicationVariables = communicationVariables;
@@ -84,7 +84,7 @@ public class System{
                                         msgCmncChnContext.getRight()).plus(),
                         new Triple(messageContext.get(), communicationContext.get(), channelContext.get())))
                 .map((List<Object> values) -> {
-                    Set<String> channels = new HashSet<>((List<String>) values.get(0));
+                    Set<ChannelValue> channels = new HashSet<>((List<ChannelValue>) values.get(0));
                     Map<String, TypedVariable> messageStructure = (Map<String, TypedVariable>) values.get(1);
                     Map<String, TypedVariable> communicationVariables = (Map<String, TypedVariable>) values.get(2);
                     Pair guardDefinitions = (Pair) values.get(3);
