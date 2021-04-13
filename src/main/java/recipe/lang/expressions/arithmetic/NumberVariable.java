@@ -65,7 +65,7 @@ public class NumberVariable extends ArithmeticExpression implements TypedVariabl
 
     @Override
     public boolean equals(Object o){
-        return o.getClass().equals(NumberVariable.class) && name.equals(o);
+        return o.getClass().equals(NumberVariable.class) && name.equals(((NumberVariable) o).getName());
     }
 
     @Override

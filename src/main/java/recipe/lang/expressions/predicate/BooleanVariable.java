@@ -66,7 +66,7 @@ public class BooleanVariable extends Condition implements TypedVariable {
 
     @Override
     public boolean equals(Object o){
-        return o.getClass().equals(BooleanVariable.class) && name.equals(o);
+        return o.getClass().equals(BooleanVariable.class) && name.equals(((BooleanVariable) o).getName());
     }
 
     public static org.petitparser.parser.Parser parser(TypingContext context){

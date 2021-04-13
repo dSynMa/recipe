@@ -54,7 +54,7 @@ public class ChannelVariable extends ChannelExpression implements TypedVariable 
 
     @Override
     public boolean equals(Object o){
-        return o.getClass().equals(ChannelVariable.class) && name.equals(o);
+        return o.getClass().equals(ChannelVariable.class) && name.equals(((ChannelVariable) o).getName());
     }
 
     @Override
