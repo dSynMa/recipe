@@ -21,19 +21,29 @@ import java.util.Set;
 import static org.petitparser.parser.primitive.CharacterParser.word;
 
 public class SendProcess extends BasicProcess {
-    public Map<String, Expression> message;
-    public Condition guard;
 
-    public SendProcess(Condition psi, ChannelExpression channel, Map<String, Expression> message, Map<String, Expression> update, Condition guard) {
+    public Map<String, Expression> message;
+
+    public Condition getMessageGuard() {
+        return messageGuard;
+    }
+
+    public Condition messageGuard;
+
+    public SendProcess(Condition psi, ChannelExpression channel, Map<String, Expression> message, Map<String, Expression> update, Condition messageGuard) {
         this.psi = psi;
         this.channel = channel;
         this.message = message;
         this.update = update;
-        this.guard = guard;
+        this.messageGuard = messageGuard;
+    }
+
+    public Map<String, Expression> getMessage() {
+        return message;
     }
 
     public String toString() {
-        return "<" + psi.toString() + ">" + channel + "!" + "(" + guard.toString() + ")" + "(" + message + ")[" + update + "]";
+        return "<" + psi.toString() + ">" + channel + "!" + "(" + messageGuard.toString() + ")" + "(" + message + ")[" + update + "]";
     }
 
     public Set<Transition> asTransitionSystem(State start, State end){
