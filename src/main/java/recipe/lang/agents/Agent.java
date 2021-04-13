@@ -53,7 +53,7 @@ public class Agent {
                  Set<Process> actions,
                  State initialState,
                  Condition receiveGuard) {
-        this.name = name;
+        this.name = name.trim();
         this.store = store;
         this.states = new HashSet<>(states);
         this.sendTransitions = new HashSet<>(sendTransitions);
@@ -73,7 +73,7 @@ public class Agent {
                  Set<Process> actions,
                  Map<TypedVariable, Expression> relabel,
                  State initialState) {
-        this.name = name;
+        this.name = name.trim();
         this.store = store;
         this.states = new HashSet<>(states);
         this.sendTransitions = new HashSet<>(sendTransitions);
@@ -139,7 +139,7 @@ public class Agent {
     }
 
     public void setName(String name) {
-        this.name = name;
+        this.name = name.trim();
     }
 
     public HashMap<String, TypedVariable> getCV() {
@@ -193,6 +193,14 @@ public class Agent {
         this.receiveTransitions = receiveTransitions;
     }
 
+    public Set<IterationExitTransition> getIterationExitTransitions() {
+        return iterationExitTransitions;
+    }
+
+    public void setIterationExitTransitions(Set<IterationExitTransition> iterationExitTransitions) {
+        this.iterationExitTransitions = iterationExitTransitions;
+    }
+
     public Condition getInitialCondition() {
         return initialCondition;
     }
@@ -234,7 +242,7 @@ public class Agent {
                     .seq(new LazyParser<>(((TypingContext localContext1) -> Parsing.receiveGuardParser(localContext1, channelContext)), localContext.get()))
                     .seq(new LazyParser(process, localContext.get()).trim())
                 .map((List<Object> values) -> {
-                    String agentName = (String) values.get(1);
+                    String agentName = ((String) values.get(1)).trim();
                     Map<String, TypedVariable> localVars = ((Pair<Map, Map>) values.get(2)).getLeft();
                     Map<String, Expression> localValues = ((Pair<Map, Map>) values.get(2)).getRight();
                     Store store = null;
