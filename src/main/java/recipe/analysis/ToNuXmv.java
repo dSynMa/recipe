@@ -49,8 +49,7 @@ public class ToNuXmv {
         String define = "DEFINE\n";
         String init = "INIT\n";
         String trans = "TRANS\n";
-        String transReceive = "TRUE";
-        String transSend = "TRUE";
+
         List<Agent> agents = new ArrayList<>(system.getAgents());
         List<String> agentSendPreds = new ArrayList<>();
         List<String> agentReceivePreds = new ArrayList<>();
@@ -78,8 +77,6 @@ public class ToNuXmv {
             stateReceiveTransitionMap.putAll(agent.getStateTransitionMap(agent.getReceiveTransitions()));
             stateIterationExitTransitionMap.putAll(agent.getStateTransitionMap(agent.getIterationExitTransitions()));
 
-            //TODO join with &
-            //TODO " & sendingAgent != " + name +  and "receive-guard-" + name + when joining
             List<String> stateReceivePreds = new ArrayList<>();
 
             List<String> stateSendPreds = new ArrayList<>();
@@ -91,7 +88,6 @@ public class ToNuXmv {
                 String stateReceivePrd = "(" + name + ".state" + " = " + state.toString() +  ") -> ";
                 if (receiveTransitions != null && receiveTransitions.size() > 0) {
                     List<String> transitionReceivePreds = new ArrayList<>();
-                    //TODO must get outgoing transition from each state, XOR them, and AND the NEG of all outgoing transition guards + receive-guard to imply remaining in same state.
                     for (Transition t : receiveTransitions) {
                         ReceiveProcess process = (ReceiveProcess) t.getLabel();
                         String transitionPred = "(";
@@ -129,8 +125,6 @@ public class ToNuXmv {
                 if (sendTransitions != null && sendTransitions.size() > 0) {
                     List<String> transitionSendPreds = new ArrayList<>();
 
-                    //TODO must get outgoing transition from each state, XOR them, and AND the NEG of all outgoing transition guards to imply remaining in same state.
-
                     String stateSendPred = "";
                     for (ProcessTransition t : sendTransitions) {
                         String transPred = "";
@@ -155,7 +149,7 @@ public class ToNuXmv {
 
                         transPred += " & ";
 
-                        //TODO this needs to be dealt when setting the next state here
+                        //TODO this needs to be dealt when setting the next state here also in receiving transition
                         for (Transition tt : agent.getIterationExitTransitions()) {
 
                         }
@@ -187,10 +181,7 @@ public class ToNuXmv {
 
         define += "\t" + String.join(";\n\t", agentReceivePreds) + ";\n";
 
-        //TODO need to encode states having the same value in the next step if no transition send activates
-//        trans += "(" + transSend + "\n\txor channel = {})\n";
         trans += "\t (" + String.join(" | ", agentSendPreds) + ")";
-        //TODO add all receive-trans
         trans += "\n\t & ";
         trans += String.join("\n\t & ", system.getAgents().stream().map(a -> {
             String left = "sendingAgent != " + a.getName();
