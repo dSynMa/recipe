@@ -51,7 +51,7 @@ public class StringVariableTest {
         store.setValue("v", new StringValue("example"));
         StringVariable stringVariable = new StringVariable("v");
         StringValue value = stringVariable.valueIn(store);
-        assertTrue(value.value.equals("example"));
+        assertTrue(value.getValue().equals("example"));
     }
 
     @Test(expected=AttributeTypeException.class)
