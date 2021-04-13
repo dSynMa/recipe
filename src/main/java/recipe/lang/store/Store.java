@@ -16,7 +16,7 @@ import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.expressions.strings.StringVariable;
 
 public class Store {
-    private HashMap<String, TypedValue> data;
+	private HashMap<String, TypedValue> data;
 
 	private HashMap<String, TypedVariable> attributes;
 
@@ -37,6 +37,10 @@ public class Store {
 	public Store() {
 		this.data = new HashMap<>();
 		this.attributes = new HashMap<>();
+	}
+
+	public HashMap<String, TypedValue> getData() {
+		return data;
 	}
 
 	protected boolean safeAddAttribute(TypedVariable attribute) {
