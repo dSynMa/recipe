@@ -249,11 +249,11 @@ public class Parsing {
     }
 
     public static Parser channelValues(){
-        Parser parser = word().plus().flatten().delimitedBy(CharacterParser.whitespace().or(CharacterParser.of(',')))
+        Parser parser = (word().plus().flatten().separatedBy(CharacterParser.of(',').trim())).seq(CharacterParser.of('\n'))
                 .map((List<Object> values) -> {
                     List<ChannelValue> vals = new ArrayList<>();
 
-                    for(Object v : values){
+                    for(Object v : (List) values.get(0)){
                         if(!v.getClass().equals(Character.class)){
                             vals.add(new ChannelValue((String) v));
                         }
