@@ -48,13 +48,15 @@ public class BooleanValue extends Condition implements TypedValue {
 
     @Override
     public String toString(){
-        return value.toString();
+        return value.toString().toUpperCase();
     }
 
     public static org.petitparser.parser.Parser parser(){
         org.petitparser.parser.Parser parser =
                 (StringParser.of("true").map((String value) -> new BooleanValue(true)))
-                .or(StringParser.of("false").map((String value) -> new BooleanValue(false)));
+                        .or(StringParser.of("TRUE").map((String value) -> new BooleanValue(true)))
+                        .or(StringParser.of("false").map((String value) -> new BooleanValue(false)))
+                        .or(StringParser.of("FALSE").map((String value) -> new BooleanValue(false)));
 
         return parser;
     }
