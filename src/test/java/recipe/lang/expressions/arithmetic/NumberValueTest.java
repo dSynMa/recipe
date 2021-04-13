@@ -22,14 +22,14 @@ public class NumberValueTest {
     @Test
     public void parserInteger() {
         Parser parser = NumberValue.parser();
-        Number n = parser.parse("6").get();
-        assertTrue(n.equals(6));
+        NumberValue n = parser.parse("6").get();
+        assertTrue(n.value.equals(6));
     }
 
     @Test
     public void parserDecimal() {
         Parser parser = NumberValue.parser();
-        Number n = parser.parse("9.9999").get();
-        assertTrue(n.equals(9.9999));
+        NumberValue n = parser.parse("9.9999").get();
+        assertTrue(n.value.equals(9.9999));
     }
 }
