@@ -44,7 +44,7 @@ public class IsEqualTo extends Condition {
 
 	@Override
 	public String toString() {
-		return "{" + lhs + "==" + rhs + "}";
+		return lhs + "=" + rhs;
 	}
 
 	@Override
