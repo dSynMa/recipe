@@ -45,7 +45,7 @@ public class OrTest {
 
     @Test
     public void getRhs() {
-        assertEquals(or.getLhs(), booleanVariable);
+        assertEquals(or.getRhs(), booleanVariable);
     }
 
     @Test
