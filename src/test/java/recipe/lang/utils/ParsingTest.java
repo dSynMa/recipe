@@ -209,6 +209,27 @@ public class ParsingTest {
     @Test
     public void receiveGuardParser4() {
         String script = "receive-guard:\n" +
+                    "\t\t((b < 5) & channel == A)";
+
+        TypingContext localContext = new TypingContext();
+        localContext.set("b", new NumberVariable("b"));
+        localContext.set("c", new NumberVariable("c"));
+
+        TypingContext channelContext = new TypingContext();
+        channelContext.set("A", new ChannelValue("A"));
+        channelContext.set("*", new ChannelValue("*"));
+        channelContext.set("channel", new ChannelVariable("channel"));
+        channelContext.set("chVar", new ChannelVariable("chVar"));
+
+        Parser parser = Parsing.receiveGuardParser(localContext, channelContext).end();
+        Result r = parser.parse(script);
+        System.out.println(r.getPosition() + " " + r.getMessage());
+        System.out.println(script.substring(r.getPosition()));
+        assert r.isSuccess();
+    }
+    @Test
+    public void receiveGuardParser5() {
+        String script = "receive-guard:\n" +
                     "\t\t((b < 5) & channel == A))";
 
         TypingContext localContext = new TypingContext();
@@ -224,6 +245,7 @@ public class ParsingTest {
         Parser parser = Parsing.receiveGuardParser(localContext, channelContext).end();
         Result r = parser.parse(script);
         System.out.println(r.getPosition() + " " + r.getMessage());
-        assert r.isSuccess();
+        System.out.println(script.substring(r.getPosition()));
+        assert !r.isSuccess();
     }
 }
