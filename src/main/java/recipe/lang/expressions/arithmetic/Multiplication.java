@@ -46,7 +46,7 @@ public class Multiplication extends ArithmeticExpression{
 
     @Override
     public String toString(){
-        return "(" + lhs.toString() + "*" + rhs.toString() + ")";
+        return "(" + lhs.toString() + " * " + rhs.toString() + ")";
     }
 
     public static org.petitparser.parser.Parser parser(Parser basicArithmeticExpression) {
