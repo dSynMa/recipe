@@ -32,11 +32,11 @@ public class NumberVariable extends ArithmeticExpression implements TypedVariabl
         Object o = store.getValue(name);
         if (o == null) {
             throw new AttributeNotInStoreException();
-        } else if(!Number.class.isAssignableFrom(o.getClass())){
+        } else if(!NumberValue.class.equals(o.getClass())){
             throw new AttributeTypeException();
         }
 
-        return new NumberValue((Number) o);
+        return (NumberValue) o;
     }
 
     @Override

@@ -27,14 +27,14 @@ public class StringVariable extends StringExpression implements TypedVariable {
 
     @Override
     public StringValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException {
-        Object o = store.getValue(name);
+        TypedValue o = store.getValue(name);
         if (o == null) {
             throw new AttributeNotInStoreException();
-        } else if(!String.class.isAssignableFrom(o.getClass())){
+        } else if(!StringValue.class.equals(o.getClass())){
             throw new AttributeTypeException();
         }
 
-        return new StringValue((String) o);
+        return (StringValue) o;
     }
 
     @Override
