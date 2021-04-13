@@ -33,11 +33,11 @@ public class BooleanVariable extends Condition implements TypedVariable {
         Object o = store.getValue(name);
         if (o == null) {
             throw new AttributeNotInStoreException();
-        } else if(!o.getClass().equals(Boolean.class)){
+        } else if(!o.getClass().equals(BooleanValue.class)){
             throw new AttributeTypeException();
         }
 
-        return new BooleanValue((Boolean) o);
+        return (BooleanValue) o;
     }
 
     @Override
