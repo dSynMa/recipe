@@ -98,6 +98,8 @@ public class ToNuXmv {
         define += "\t" + String.join(";\n\t", keepFunctions) + ";\n";
         define += "\t" + keepAll + ";\n";
 
+        int choice = 0;
+
         for(int i = 0; i < agents.size(); i++){
             Agent agent = agents.get(i);
             String name = agent.getName();
@@ -207,11 +209,12 @@ public class ToNuXmv {
                         next += "\n & keep-all-not-" + name;
                         next += "\n & next(sending) = FALSE";
 
-                        transitionSendPreds.add("(" + now + ") : " + indent(indent(indent("\n" + next))));
+                        transitionSendPreds.add("sendingChoice = " + choice + " & (" + now + ") : " + indent(indent(indent("\n" + next))));
+                        choice++;
                     }
-                    stateSendPred += String.join(";\n", transitionSendPreds) + ";";
+//                    stateSendPred += String.join(";\n", transitionSendPreds) + ";";
 
-                    stateSendPreds.add(stateSendPred);
+                    stateSendPreds.addAll(transitionSendPreds);
                 }
 
                 String stateReceivePrd = "";
@@ -273,11 +276,12 @@ public class ToNuXmv {
         }
 
 //        define += "\t" + String.join(";\n\t", agentReceivePreds) + ";\n";
+        vars += "\tsendingChoice : 0.." + (choice - 1) + ";\n";
 
         trans += "\tcase";
         trans += "\n\t sending :";
         trans += "\n\t\t case";
-        trans += "\n" + indent(indent(indent(String.join("\n", agentSendPreds))));
+        trans += "\n" + indent(indent(indent(String.join(";\n", agentSendPreds)))) + ";";
         trans += "\n\t\t\tTRUE: keep-all & next(sending) = TRUE;";
         trans += "\n\t\t esac;";
         trans += "\n\t !sending :";

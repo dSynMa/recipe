@@ -33,7 +33,7 @@ public class ToNuXmvTest {
                 "\t\tg <- a == 0\n" +
                 "\treceive-guard:\n" +
                 "\t\t(a < 5 & channel == ch1) | (a > 3 & channel == *)\n" +
-                "\trepeat: (<a > 3> ch1? [a := d1])";
+                "\trepeat:(<true> ch1! (true) (d1 := a; d2 := true) [a:= a + 1]) + (<a > 3> ch1? [a := d1])";
 
         Parser system = System.parser().end();
         Result r = system.parse(script);
