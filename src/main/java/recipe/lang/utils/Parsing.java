@@ -75,7 +75,7 @@ public class Parsing {
 
         Parser assignmentList =
                 assignment
-                        .delimitedBy(CharacterParser.of(',').trim())
+                        .delimitedBy(CharacterParser.of(',').or(CharacterParser.of(';')).trim())
                         .map((List<Object> values) -> {
                             HashMap<String, Expression> map = new HashMap();
                             for(Object v : values){
