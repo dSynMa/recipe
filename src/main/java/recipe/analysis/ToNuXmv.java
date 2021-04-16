@@ -258,21 +258,16 @@ public class ToNuXmv {
                         next = next.replaceAll("^\n *&", "");
                         transitionReceivePreds.add("(" + now + ") : " + indent(indent(indent("\n" + next))));
                     }
-                    transitionReceivePreds.add("TRUE : keep-all-" + name);
 
                     stateReceivePrd += String.join(";\n", transitionReceivePreds) + ";";
                     stateReceivePreds.add(stateReceivePrd);
-                } else{
-                    stateReceivePreds.add("TRUE : keep-all-" + name + ";");
                 }
-
             }
 
-            if(stateReceivePreds.size() > 0)
-                agentReceivePreds.add("case\n" + indent(String.join("\n", stateReceivePreds)) + "\nesac");
+            stateReceivePreds.add("TRUE : keep-all-" + name);
+            agentReceivePreds.add("case\n" + indent(String.join("\n", stateReceivePreds)) + ";\nesac");
 
-            if(stateSendPreds.size() > 0)
-                agentSendPreds.addAll(stateSendPreds);
+            agentSendPreds.addAll(stateSendPreds);
         }
 
 //        define += "\t" + String.join(";\n\t", agentReceivePreds) + ";\n";
