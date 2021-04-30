@@ -330,6 +330,13 @@ public class ToNuXmv {
         return nuxmv;
     }
 
+    //Semantics: If there is an agent is listening to sent-on non-broadcast channel that does not have a mathcing transition then the sending cannot occur.
+    // - broadcast doesn t send on every channel
+    // - A broadcast channel is just a channel that cannot be blocked
+    // - keep-all-agent when no mathcing broadcast transition
+    //      or not satisfying the send guard,
+    //      or when receive-guard is false
+    //      (ch=broadcast & (!send_guard | no_broadcast_transition)) | !listening
     public static String transform(System system) throws RelabellingTypeException {
         String nuxmv = "MODULE main\n";
         String vars = "VAR\n";
