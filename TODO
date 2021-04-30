@@ -2,3 +2,4 @@
 2. Agent templates
 3. Handle properly guard and process templates
 4. Connect with ACE
+6. Add bounded integer type to recipe
