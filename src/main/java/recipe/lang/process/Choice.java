@@ -41,7 +41,7 @@ public class Choice extends Process{
     public static Parser parser(Parser processParser){
         Parser parser =
                 processParser.seq(CharacterParser.of('+').trim()).seq(processParser)
-                        .map((List<Object> values) -> new Sequence((Process) values.get(0), (Process) values.get(2)));
+                        .map((List<Object> values) -> new Choice((Process) values.get(0), (Process) values.get(2)));
 
         return parser;
     }
