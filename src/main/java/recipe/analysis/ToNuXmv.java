@@ -534,7 +534,8 @@ public class ToNuXmv {
                                 }
 
                                 
-                                String agentReceivePred = "(" + receiveGuard + ")\n -> \n" + indent("((" + sendGuard + "\n" + indent(indent("& (" + stateReceivePrd) + "))"));
+                                String agentReceivePred = "(" + receiveGuard + ")\n & \n" + indent("((" + sendGuard + "\n" + indent(indent("& (" + stateReceivePrd) + "))"));
+                                agentReceivePred += indent("\n | (!(" + receiveGuard + ") & keep-all-" + receiveName + ")");
                                 agentReceivePred += indent("\n | (" + channel + " = " + broadcastChannel + " & " + "!(" + sendGuard + ") & keep-all-" + receiveName + ")");
                                 agentReceivePred += "\n)";
                                 agentReceivePreds.add(agentReceivePred);
