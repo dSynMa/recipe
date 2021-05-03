@@ -461,13 +461,14 @@ public class ToNuXmv {
                         }
 
                         List<String> agentReceivePreds = new ArrayList<>();
-                        //TODO deal with messages
+
                         for (int j = 0; j < agents.size(); j++) {
                             if (i != j) {
                                 Agent receiveAgent = agents.get(j);
                                 String receiveName = receiveAgent.getName();
 
                                 String receiveGuard = receiveAgent.getReceiveGuard().relabel(v -> v.sameTypeWithName(v.toString().equals("channel") ? v.toString() : receiveName + "-" + v)).toString().replaceAll("channel", channel);
+                                receiveGuard = "(" + receiveGuard + ") | " + channel + " = " + broadcastChannel;
 
                                 String sendGuard = "(" + process.getMessageGuard().relabel(v -> {
                                     try {
@@ -548,11 +549,8 @@ public class ToNuXmv {
                 }
 
                 agentSendPreds.addAll(stateSendPreds);
-                ;
             }
         }
-//        define += "\t" + String.join(";\n\t", agentReceivePreds) + ";\n";
-//        vars += "\tsendingChoice : 0.." + (choice - 1) + ";\n"
 
         trans += indent((("((" + String.join(")\n| (", agentSendPreds)))) + ")";
         trans += "\n\t\t| (!((" + String.join(") | (", sendNows) + ")) & keep-all))";
