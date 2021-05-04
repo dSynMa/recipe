@@ -5,7 +5,9 @@ import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
+import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.types.Boolean;
 import recipe.lang.utils.TypingContext;
 
 import java.util.List;
@@ -22,14 +24,14 @@ public abstract class Process {
 
     public abstract Set<Transition> asTransitionSystem(State start, State end);
 
-    public abstract Condition entryCondition();
+    public abstract Expression<Boolean> entryCondition();
 
-    public abstract void addEntryCondition(Condition condition);
+    public abstract void addEntryCondition(Expression<Boolean> condition);
 
     public static Parser parser(TypingContext messageContext,
                                 TypingContext localContext,
                                 TypingContext communicationContext,
-                                TypingContext channelContext){
+                                TypingContext channelContext) throws Exception {
         SettableParser parser = SettableParser.undefined();
         SettableParser basic = SettableParser.undefined();
         Parser choice = Choice.parser(basic);

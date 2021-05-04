@@ -27,7 +27,7 @@ public class SystemTest {
     @Test
     public void parser() {
         String script = "channels: A,B,C\n" +
-                "message-structure: d1 : int, d2 : bool\n" +
+                "message-structure: d1 : 0...8, d2 : bool\n" +
                 "communication-variables: f : int, g : bool\n\n" +
                 "guard g(a : int) := a == 5\n\n" +
                 "agent B\n" +

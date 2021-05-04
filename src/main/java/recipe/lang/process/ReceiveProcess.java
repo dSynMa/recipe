@@ -2,15 +2,15 @@ package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
+import recipe.lang.Config;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
-import recipe.lang.expressions.channels.ChannelExpression;
-import recipe.lang.expressions.channels.ChannelVariable;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.Or;
+import recipe.lang.types.Boolean;
+import recipe.lang.types.Enum;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
@@ -21,7 +21,7 @@ import java.util.Set;
 
 public class ReceiveProcess extends BasicProcess {
 
-    public ReceiveProcess(Condition psi, ChannelExpression channel, Map<String, Expression> update) {
+    public ReceiveProcess(Expression<Boolean> psi, Expression channel, Map<String, Expression> update) {
         this.psi = psi;
         this.channel = channel;
         this.update = update;
@@ -31,11 +31,11 @@ public class ReceiveProcess extends BasicProcess {
         return "<" + psi.toString() + ">" + channel + "?" + "[" + update + "]";
     }
 
-    public Condition entryCondition(){
+    public Expression<Boolean> entryCondition(){
         return psi;
     }
 
-    public void addEntryCondition(Condition condition){
+    public void addEntryCondition(Expression<Boolean> condition){
         psi = new And(condition, psi);
     }
 
@@ -48,9 +48,9 @@ public class ReceiveProcess extends BasicProcess {
 
     public static Parser parser(TypingContext messageContext,
                                 TypingContext localContext,
-                                TypingContext channelContext){
+                                TypingContext channelContext) throws Exception {
         TypingContext localAndChannelContext = TypingContext.union(localContext, channelContext);
-        TypingContext channelContextWithLocalChannelVars = TypingContext.union(localContext.getSubContext(ChannelVariable.class), channelContext);
+        TypingContext channelContextWithLocalChannelVars = TypingContext.union(localContext.getSubContext(Enum.getEnum(Config.channelLabel)), channelContext);
 
         Parser localGuard = Condition.typeParser(localAndChannelContext);
 
@@ -58,7 +58,7 @@ public class ReceiveProcess extends BasicProcess {
                 (CharacterParser.of('<').trim())
                         .seq(localGuard)
                         .seq(CharacterParser.of('>').trim())
-                        .map((List<Object> values) -> (Condition) values.get(1));
+                        .map((List<Object> values) -> (Expression<Boolean>) values.get(1));
 
 
         TypingContext localAndChannelAndMessageContext = TypingContext.union(TypingContext.union(localContext, channelContext), messageContext);
@@ -66,14 +66,14 @@ public class ReceiveProcess extends BasicProcess {
 
         Parser parser =
                 delimetedCondition
-                        .seq(ChannelExpression.parser(channelContextWithLocalChannelVars))
+                        .seq(channelContextWithLocalChannelVars.valueParser().or(channelContextWithLocalChannelVars.variableParser()))
                         .seq(CharacterParser.of('?'))
                         .seq((CharacterParser.of('[').trim()))
                         .seq(localAssignment)
                         .seq((CharacterParser.of(']').trim()))
                         .map((List<Object> values) -> {
-                            Condition psi = (Condition) values.get(0);
-                            ChannelExpression channel = (ChannelExpression) values.get(1);
+                            Expression<Boolean> psi = (Expression<Boolean>) values.get(0);
+                            Expression channel = (Expression) values.get(1);
                             Map<String, Expression> update = (Map<String, Expression>) values.get(4);
                             ReceiveProcess action = new ReceiveProcess(psi, channel, update);
                             return action;

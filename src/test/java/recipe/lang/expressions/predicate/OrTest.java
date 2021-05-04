@@ -2,7 +2,10 @@ package recipe.lang.expressions.predicate;
 
 import org.junit.Before;
 import org.junit.Test;
+import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
+import recipe.lang.types.Boolean;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -10,15 +13,15 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 public class OrTest {
-    BooleanVariable booleanVariable;
-    BooleanValue booleanValue;
+    TypedVariable<Boolean> booleanVariable;
+    TypedValue<Boolean> booleanValue;
     Or or;
     Store store;
 
     @Before
     public void setUp() throws Exception {
-        booleanVariable = new BooleanVariable("v");
-        booleanValue = new BooleanValue(false);
+        booleanVariable = new TypedVariable<Boolean>(Boolean.getType(),"v");
+        booleanValue = Condition.FALSE;
 
         or = new Or(booleanValue, booleanVariable);
 

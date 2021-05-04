@@ -1,17 +1,34 @@
 package recipe.lang.expressions.predicate;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
-import recipe.lang.expressions.arithmetic.ArithmeticExpression;
-import recipe.lang.expressions.arithmetic.NumberVariable;
-import recipe.lang.expressions.channels.ChannelValue;
-import recipe.lang.expressions.channels.ChannelVariable;
+import recipe.lang.Config;
+import recipe.lang.exception.TypeCreationException;
+import recipe.lang.types.Boolean;
+import recipe.lang.types.Enum;
+import recipe.lang.types.Real;
 import recipe.lang.utils.TypingContext;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
 public class ConditionTest {
+    static List<String> channels;
+    static Enum channelEnum;
+
+    @BeforeClass
+    public static void init() throws TypeCreationException {
+        Enum.clear();
+        channels = new ArrayList<>();
+        channels.add("A");
+        channels.add("*");
+
+        channelEnum = new Enum(Config.channelLabel, channels);
+    }
 
     @Test
     public void isSatisfiedBy() {
@@ -34,13 +51,13 @@ public class ConditionTest {
     }
 
     @Test
-    public void parserSuccess() {
+    public void parserSuccess() throws TypeCreationException {
         TypingContext context = new TypingContext();
 
-        context.set("cond", new BooleanVariable("cond"));
-        context.set("b", new NumberVariable("b"));
-        context.set("channel", new ChannelVariable("channel"));
-        context.set("A", new ChannelValue("A"));
+        context.set("cond", Boolean.getType());
+        context.set("b", Real.getType());
+
+        context.set("channel", channelEnum);
 
         Parser parser = Condition.parser(context).end();
         Result r = parser.parse("cond");
@@ -100,8 +117,8 @@ public class ConditionTest {
     @Test
     public void parserFailure() {
         TypingContext context = new TypingContext();
-        context.set("cond", new BooleanVariable("cond"));
-        context.set("b", new NumberVariable("b"));
+        context.set("cond", Boolean.getType());
+        context.set("b", Real.getType());
         Parser parser = Condition.parser(new TypingContext()).end();
         Result r = parser.parse("!condd");
         assert r.isFailure();

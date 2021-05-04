@@ -3,18 +3,20 @@ package recipe.lang.agents;
 import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
-import recipe.lang.expressions.arithmetic.NumberVariable;
-import recipe.lang.expressions.channels.ChannelValue;
-import recipe.lang.expressions.channels.ChannelVariable;
-import recipe.lang.expressions.predicate.BooleanVariable;
+import recipe.lang.types.Boolean;
+import recipe.lang.types.Enum;
+import recipe.lang.types.Real;
 import recipe.lang.utils.TypingContext;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
 public class AgentTest {
 
     @Test
-    public void parser() {
+    public void parser() throws Exception {
         String agent = "agent B\n" +
                 "\tlocal:\n" +
                 "\t\tc : int := 0\n" +
@@ -28,16 +30,19 @@ public class AgentTest {
                 "\trepeat: (<b == 0> chVar!(b == f) (d1 := b + 1, d2 := false)[b := b + 1])";
 
         TypingContext messageContext = new TypingContext();
-        messageContext.set("d1", new NumberVariable("d1"));
-        messageContext.set("d2", new BooleanVariable("d2"));
+        messageContext.set("d1", Real.getType());
+        messageContext.set("d2", Boolean.getType());
 
         TypingContext communicationContext = new TypingContext();
-        communicationContext.set("f", new NumberVariable("f"));
-        communicationContext.set("g", new BooleanVariable("g"));
+        communicationContext.set("f", Real.getType());
+        communicationContext.set("g", Boolean.getType());
 
         TypingContext channelContext = new TypingContext();
-        channelContext.set("A", new ChannelValue("A"));
-        channelContext.set("*", new ChannelValue("*"));
+        List<String> channels = new ArrayList<>();
+        channels.add("A");
+        channels.add("*");
+
+        Enum channelEnum = new Enum("channels", channels);
 
         Parser parser = Agent.parser(messageContext, communicationContext, channelContext).end();
         Result r = parser.parse(agent);

@@ -5,15 +5,13 @@ import java.util.Map;
 import java.util.function.Function;
 
 import recipe.lang.exception.AttributeNotInStoreException;
+import recipe.lang.exception.MismatchingTypeException;
+import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.expressions.arithmetic.NumberVariable;
-import recipe.lang.expressions.channels.ChannelVariable;
-import recipe.lang.expressions.predicate.BooleanVariable;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.expressions.strings.StringVariable;
 
 public class Store {
 	private HashMap<String, TypedValue> data;
@@ -24,7 +22,7 @@ public class Store {
 		return attributes;
 	}
 
-	public Store(Map<String, Expression> data, Map<String, TypedVariable> attributes) throws AttributeTypeException, AttributeNotInStoreException {
+	public Store(Map<String, TypedValue> data, Map<String, TypedVariable> attributes) throws AttributeTypeException, AttributeNotInStoreException {
 		this.data = new HashMap<>();
 
 		for(String v : data.keySet()){
@@ -139,11 +137,11 @@ public class Store {
 		return false;
 	}
 
-	public boolean satisfy( Condition p ) throws AttributeTypeException, AttributeNotInStoreException {
+	public boolean satisfy( Condition p ) throws AttributeTypeException, AttributeNotInStoreException, MismatchingTypeException {
 		return p.isSatisfiedBy( this );
 	}
 	
-	public boolean waitUntil( Condition p ) throws AttributeTypeException, InterruptedException, AttributeNotInStoreException {
+	public boolean waitUntil( Condition p ) throws AttributeTypeException, InterruptedException, AttributeNotInStoreException, MismatchingTypeException {
 		while (!p.isSatisfiedBy(this)) {
 		}
 		return true;
@@ -155,20 +153,13 @@ public class Store {
 		}
 	}
 
-	public Store copyWithRenaming(Function<String, String> renaming) throws AttributeTypeException, AttributeNotInStoreException {
+	public Store copyWithRenaming(Function<String, String> renaming) throws AttributeTypeException, AttributeNotInStoreException, RelabellingTypeException {
 		Store store = new Store();
 
 		for(TypedVariable v : this.attributes.values()){
 			String newName = renaming.apply(v.getName());
-			if(v.getClass().equals(BooleanVariable.class)){
-				store.safeAddAttribute(new BooleanVariable(newName));
-			} else if(v.getClass().equals(StringVariable.class)){
-				store.safeAddAttribute(new StringVariable(newName));
-			} else if(v.getClass().equals(ChannelVariable.class)){
-				store.safeAddAttribute(new ChannelVariable(newName));
-			} else if(v.getClass().equals(NumberVariable.class)){
-				store.safeAddAttribute(new NumberVariable(newName));
-			}
+			TypedVariable newV = (TypedVariable) v.relabel(tv -> ((TypedVariable) tv).sameTypeWithName(newName));
+			store.safeAddAttribute(newV);
 
 			store.setValue(newName, (TypedValue) this.getValue(newName));
 		}

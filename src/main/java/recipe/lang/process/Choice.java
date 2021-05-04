@@ -4,9 +4,11 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
+import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.Not;
 import recipe.lang.expressions.predicate.Or;
+import recipe.lang.types.Boolean;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -22,11 +24,11 @@ public class Choice extends Process{
         this.b = b;
     }
 
-    public Condition entryCondition(){
+    public Expression<Boolean> entryCondition(){
         return new Or(a.entryCondition(), b.entryCondition());
     }
 
-    public void addEntryCondition(Condition condition){
+    public void addEntryCondition(Expression<Boolean> condition){
         a.addEntryCondition(condition);
         b.addEntryCondition(condition);
     }

@@ -2,12 +2,12 @@ package recipe.lang.expressions.predicate;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
-import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
+import recipe.lang.types.Boolean;
 
 import java.util.List;
 import java.util.Set;
@@ -15,11 +15,10 @@ import java.util.function.Function;
 
 public class Or extends Condition {
 
-	private Condition lhs;
-	private Condition rhs;
+	private Expression<Boolean> lhs;
+	private Expression<Boolean> rhs;
 
-	public Or(Condition lhs, Condition rhs) {
-		super(Condition.PredicateType.OR);
+	public Or(Expression<Boolean> lhs, Expression<Boolean> rhs) {
 		if ((lhs == null) || (rhs == null)) {
 			throw new NullPointerException();
 		}
@@ -56,7 +55,7 @@ public class Or extends Condition {
 	}
 
 	@Override
-	public BooleanValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException {
+	public TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException {
 		Expression lhsObject = lhs.valueIn(store);
 		Expression rhsObject = rhs.valueIn(store);
 		if (lhsObject.equals(Condition.TRUE) || rhsObject.equals(Condition.TRUE)) {
@@ -69,9 +68,9 @@ public class Or extends Condition {
 	}
 
 	@Override
-	public Condition close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
-		Condition lhsObject = lhs.close(store, CV);
-		Condition rhsObject = rhs.close(store, CV);
+	public Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException {
+		Expression<Boolean> lhsObject = lhs.close(store, CV);
+		Expression<Boolean> rhsObject = rhs.close(store, CV);
 		if (lhsObject.equals(Condition.TRUE) || rhsObject.equals(Condition.TRUE)) {
 			return Condition.TRUE;
 		} else if(!lhsObject.equals(Condition.TRUE) && !rhsObject.equals(Condition.TRUE)){
@@ -87,7 +86,7 @@ public class Or extends Condition {
 						.seq(CharacterParser.of('|').seq(CharacterParser.of('|').optional()).trim())
 						.seq(basicCondition)
 						.map((List<Object> values) -> {
-							return new Or((Condition) values.get(0), (Condition) values.get(2));
+							return new Or((Expression<Boolean>) values.get(0), (Expression<Boolean>) values.get(2));
 						});
 
 		return parser;

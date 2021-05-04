@@ -1,28 +1,47 @@
 package recipe.lang.process;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
-import recipe.lang.expressions.arithmetic.NumberVariable;
-import recipe.lang.expressions.channels.ChannelVariable;
-import recipe.lang.expressions.predicate.BooleanVariable;
+import recipe.lang.Config;
+import recipe.lang.exception.TypeCreationException;
+import recipe.lang.types.Boolean;
+import recipe.lang.types.Enum;
+import recipe.lang.types.Real;
 import recipe.lang.utils.TypingContext;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class SendProcessTest {
+    static List<String> channels;
+    static Enum channelEnum;
+
+    @BeforeClass
+    public static void init() throws TypeCreationException {
+        Enum.clear();
+        channels = new ArrayList<>();
+        channels.add("A");
+        channels.add("*");
+
+        channelEnum = new Enum(Config.channelLabel, channels);
+    }
 
     @Test
-    public void parser() {
+    public void parser() throws Exception {
         TypingContext messageContext = new TypingContext();
-        messageContext.set("m", new NumberVariable("v"));
+        messageContext.set("m", Real.getType());
 
         TypingContext localContext = new TypingContext();
-        localContext.set("v", new NumberVariable("v"));
+        localContext.set("v", Real.getType());
 
         TypingContext communicationContext = new TypingContext();
-        communicationContext.set("g", new BooleanVariable("g"));
+        communicationContext.set("g", Boolean.getType());
 
         TypingContext channelContext = new TypingContext();
-        channelContext.set("c", new ChannelVariable("c"));
+
+        channelContext.set("c", channelEnum);
 
         Parser parser = SendProcess.parser(messageContext, localContext, communicationContext, channelContext);
 

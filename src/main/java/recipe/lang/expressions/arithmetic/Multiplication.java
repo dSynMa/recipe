@@ -2,13 +2,13 @@ package recipe.lang.expressions.arithmetic;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
-import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.expressions.arithmetic.NumberValue;
 import recipe.lang.store.Store;
+import recipe.lang.types.Number;
+import recipe.lang.types.Real;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -16,26 +16,26 @@ import java.util.Set;
 import java.util.function.Function;
 
 public class Multiplication extends ArithmeticExpression{
-    ArithmeticExpression lhs;
-    ArithmeticExpression rhs;
+    Expression<Number> lhs;
+    Expression<Number> rhs;
 
-    public Multiplication(ArithmeticExpression lhs, ArithmeticExpression rhs) {
+    public Multiplication(Expression<Number> lhs, Expression<Number> rhs) {
         this.lhs = lhs;
         this.rhs = rhs;
     }
 
     @Override
-    public NumberValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException {
-        NumberValue lhsValue = lhs.valueIn(store);
-        NumberValue rhsValue = rhs.valueIn(store);
+    public TypedValue<Number> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException {
+        TypedValue<Number> lhsValue = lhs.valueIn(store);
+        TypedValue<Number> rhsValue = rhs.valueIn(store);
 
-        BigDecimal lhsNo = new BigDecimal(lhsValue.value.toString());
-        BigDecimal rhsNo = new BigDecimal(rhsValue.value.toString());
-        return new NumberValue(lhsNo.multiply(rhsNo));
+        BigDecimal lhsNo = new BigDecimal(lhsValue.getValue().toString());
+        BigDecimal rhsNo = new BigDecimal(rhsValue.getType().toString());
+        return new TypedValue<Number>((Number) Real.getType(), lhsNo.multiply(rhsNo).toString());
     }
 
     @Override
-    public ArithmeticExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
+    public Expression<Number> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException {
         return new Multiplication(lhs.close(store, CV), rhs.close(store, CV));
     }
 
@@ -55,7 +55,7 @@ public class Multiplication extends ArithmeticExpression{
                         .seq(CharacterParser.of('*').trim())
                         .seq(basicArithmeticExpression)
                         .map((List<Object> values) -> {
-                            return new Multiplication((ArithmeticExpression) values.get(0), (ArithmeticExpression) values.get(2));
+                            return new Multiplication((Expression<Number>) values.get(0), (Expression<Number>) values.get(2));
                         });
         return parser;
     }

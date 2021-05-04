@@ -1,21 +1,32 @@
 package recipe.lang.expressions.predicate;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
+import recipe.lang.exception.TypeCreationException;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
-import recipe.lang.expressions.channels.ChannelExpression;
-import recipe.lang.expressions.channels.ChannelValue;
-import recipe.lang.expressions.channels.ChannelVariable;
-import recipe.lang.expressions.strings.StringExpression;
-import recipe.lang.process.ReceiveProcess;
-import recipe.lang.utils.Parsing;
+import recipe.lang.types.Enum;
 import recipe.lang.utils.TypingContext;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
 public class IsEqualToTest {
+    static List<String> channels;
+    static Enum channelEnum;
+
+    @BeforeClass
+    public static void init() throws TypeCreationException {
+        channels = new ArrayList<>();
+        channels.add("A");
+        channels.add("*");
+
+        channelEnum = new Enum("channels", channels);
+    }
 
     @Test
     public void parser() {
@@ -23,16 +34,13 @@ public class IsEqualToTest {
 
         TypingContext context = new TypingContext();
 
-        context.set("channel", new ChannelVariable("channel"));
-        context.set("A", new ChannelValue("A"));
+        context.set("channel", channelEnum);
 
-        org.petitparser.parser.Parser arithmeticExpression = ArithmeticExpression.typeParser(context);
-        org.petitparser.parser.Parser channelExpression = ChannelExpression.typeParser(context);
-        org.petitparser.parser.Parser stringExpression = StringExpression.typeParser(context);
+        org.petitparser.parser.Parser variable = context.variableParser();
+        org.petitparser.parser.Parser value = context.valueParser();
 
         SettableParser expression = SettableParser.undefined();
-        expression.set((arithmeticExpression).or(channelExpression).or(stringExpression));
-
+        expression.set((variable).or(value));
 
         Parser parser = IsEqualTo.parser(expression).end();
         Result r = parser.parse(script);
@@ -45,16 +53,13 @@ public class IsEqualToTest {
 
         TypingContext context = new TypingContext();
 
-        context.set("channel", new ChannelVariable("channel"));
-        context.set("A", new ChannelValue("A"));
+        context.set("channel", channelEnum);
 
-        org.petitparser.parser.Parser arithmeticExpression = ArithmeticExpression.typeParser(context);
-        org.petitparser.parser.Parser channelExpression = ChannelExpression.typeParser(context);
-        org.petitparser.parser.Parser stringExpression = StringExpression.typeParser(context);
+        org.petitparser.parser.Parser variable = context.variableParser();
+        org.petitparser.parser.Parser value = context.valueParser();
 
         SettableParser expression = SettableParser.undefined();
-        expression.set((arithmeticExpression).or(channelExpression).or(stringExpression));
-
+        expression.set((variable).or(value));
 
         Parser parser = IsEqualTo.parser(expression).end();
         Result r = parser.parse(script);

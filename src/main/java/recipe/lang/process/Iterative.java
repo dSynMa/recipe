@@ -5,8 +5,10 @@ import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.agents.IterationExitTransition;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
+import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.Not;
+import recipe.lang.types.Boolean;
 
 import java.util.HashSet;
 import java.util.List;
@@ -38,11 +40,11 @@ public class Iterative extends Process{
         return ts;
     }
 
-    public Condition entryCondition(){
+    public Expression<Boolean> entryCondition(){
         return a.entryCondition();
     }
 
-    public void addEntryCondition(Condition condition){
+    public void addEntryCondition(Expression<Boolean> condition){
         a.addEntryCondition(condition);
     }
 

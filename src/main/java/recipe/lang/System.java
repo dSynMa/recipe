@@ -3,10 +3,10 @@ package recipe.lang;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import recipe.lang.agents.Agent;
-import recipe.lang.expressions.Expression;
+import recipe.lang.exception.TypeCreationException;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.expressions.channels.ChannelValue;
-import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.types.Enum;
+import recipe.lang.types.Type;
 import recipe.lang.utils.LazyParser;
 import recipe.lang.utils.Pair;
 import recipe.lang.utils.Triple;
@@ -19,14 +19,9 @@ import static recipe.lang.utils.Parsing.*;
 import static recipe.lang.utils.Parsing.typedVariableList;
 
 public class System{
-    Set<ChannelValue> channels;
     Map<String, TypedVariable> messageStructure;
     Map<String, TypedVariable> communicationVariables;
     Set<Agent> agents;
-
-    public Set<ChannelValue> getChannels() {
-        return channels;
-    }
 
     public Map<String, TypedVariable> getMessageStructure() {
         return messageStructure;
@@ -40,8 +35,7 @@ public class System{
         return agents;
     }
 
-    public System(Set<ChannelValue> channels, Map<String, TypedVariable> messageStructure, Map<String, TypedVariable> communicationVariables, Set<Agent> agents) {
-        this.channels = channels;
+    public System(Map<String, TypedVariable> messageStructure, Map<String, TypedVariable> communicationVariables, Set<Agent> agents) {
         this.messageStructure = messageStructure;
         this.communicationVariables = communicationVariables;
         this.agents = agents;
@@ -56,19 +50,25 @@ public class System{
         AtomicReference<Pair> guardDefinitionsContext = new AtomicReference<>();
 
         parser.set((labelledParser("channels", channelValues())
-                        .map((List<ChannelValue> values) -> {
-                            for(ChannelValue v : values){
-                                channelContext.get().set(v.getValue(), v);
+                        .map((List<String> values) -> {
+                            try {
+                                values.add("*");
+                                Enum channelEnum = new Enum(Config.channelLabel, values);
+                                for(String v : values){
+                                    channelContext.get().set(v, channelEnum);
+                                }
+                            } catch (TypeCreationException e) {
+                                e.printStackTrace();
                             }
                             return values;
                         }))
                 .seq(labelledParser("message-structure", typedVariableList())
-                        .map((Map<String, Expression> values) -> {
+                        .map((Map<String, Type> values) -> {
                             messageContext.get().setAll(new TypingContext(values));
                             return values;
                         }))
                 .seq(labelledParser("communication-variables", typedVariableList())
-                        .map((Map<String, Expression> values) -> {
+                        .map((Map<String, Type> values) -> {
                             communicationContext.get().setAll(new TypingContext(values));
                             return values;
                         }))
@@ -76,22 +76,29 @@ public class System{
                         .map((Pair values) -> {
                             guardDefinitionsContext.set(values);
                             return values;
-                        }))
+                        }).optional())
                 .seq(new LazyParser<>(
                         (Triple<TypingContext, TypingContext, TypingContext> msgCmncChnContext) ->
-                                Agent.parser(msgCmncChnContext.getLeft(),
+                        {
+                            try {
+                                return Agent.parser(msgCmncChnContext.getLeft(),
                                         msgCmncChnContext.getMiddle(),
-                                        msgCmncChnContext.getRight()).plus(),
+                                        msgCmncChnContext.getRight()).plus();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            return null;
+                        },
                         new Triple(messageContext.get(), communicationContext.get(), channelContext.get())))
                 .map((List<Object> values) -> {
-                    Set<ChannelValue> channels = new HashSet<>((List<ChannelValue>) values.get(0));
+                    Set<String> channels = new HashSet<>((List<String>) values.get(0));
                     Map<String, TypedVariable> messageStructure = (Map<String, TypedVariable>) values.get(1);
                     Map<String, TypedVariable> communicationVariables = (Map<String, TypedVariable>) values.get(2);
                     Pair guardDefinitions = (Pair) values.get(3);
 
                     Set<Agent> agents = new HashSet<>((List<Agent>) values.get(4));
 
-                    return new System(channels, messageStructure, communicationVariables, agents);
+                    return new System(messageStructure, communicationVariables, agents);
                 })
         );
 

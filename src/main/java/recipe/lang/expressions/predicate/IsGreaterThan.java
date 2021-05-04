@@ -2,35 +2,29 @@ package recipe.lang.expressions.predicate;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
-import recipe.lang.expressions.arithmetic.NumberValue;
 import recipe.lang.store.Store;
+import recipe.lang.types.Boolean;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+import recipe.lang.types.Number;
 
 public class IsGreaterThan extends Condition {
 
-	private ArithmeticExpression lhs;
-	private ArithmeticExpression rhs;
+	private Expression<Number> lhs;
+	private Expression<Number> rhs;
 
-	public IsGreaterThan(ArithmeticExpression lhs, ArithmeticExpression rhs) {
-		super(Condition.PredicateType.ISGTR);
+	public IsGreaterThan(Expression<Number> lhs, Expression<Number> rhs) {
 		this.lhs = lhs;
 		this.rhs = rhs;
 	}
-//	public IsGreaterThan(Attribute<?> attribute, Number value) {
-//		super(Condition.PredicateType.ISGTR);
-//		this.lhs = new Variable(attribute.getName());
-//		this.rhs = new Value(value);
-//	}
 
 	@Override
 	public boolean equals(Object obj) {
@@ -56,12 +50,12 @@ public class IsGreaterThan extends Condition {
 	}
 
 	@Override
-	public BooleanValue valueIn(Store store) throws AttributeTypeException, AttributeNotInStoreException {
-		NumberValue lhsValue = lhs.valueIn(store);
-		NumberValue rhsValue = rhs.valueIn(store);
+	public TypedValue<Boolean> valueIn(Store store) throws AttributeTypeException, AttributeNotInStoreException, MismatchingTypeException {
+		TypedValue<recipe.lang.types.Number> lhsValue = lhs.valueIn(store);
+		TypedValue<recipe.lang.types.Number> rhsValue = rhs.valueIn(store);
 
-		Number lhsNo = lhsValue.value;
-		Number rhsNo = rhsValue.value;
+		Number lhsNo = (Number) lhsValue.getValue();
+		Number rhsNo = (Number) rhsValue.getValue();
 
 		if(0 > new BigDecimal(lhsNo.toString()).compareTo(new BigDecimal(rhsNo.toString()))) {
 			return Condition.TRUE;
@@ -71,16 +65,16 @@ public class IsGreaterThan extends Condition {
 	}
 
 	@Override
-	public Condition close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
-		ArithmeticExpression lhsObject = lhs.close(store, CV);
-		ArithmeticExpression rhsObject = rhs.close(store, CV);
+	public Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException {
+		Expression<Number> lhsObject = lhs.close(store, CV);
+		Expression<Number> rhsObject = rhs.close(store, CV);
 		if (lhsObject.equals(rhsObject)) {
 			return Condition.TRUE;
-		} else if(!lhsObject.getClass().equals(NumberValue.class) ||
-				!rhsObject.getClass().equals(NumberValue.class)){
+		} else if(!lhsObject.getClass().equals(TypedValue.class) &&
+				!rhsObject.getClass().equals(TypedValue.class)) {
 			return new IsGreaterThan(lhsObject, rhsObject);
 		} else{
-			return Condition.FALSE;
+			return Condition.TRUE;
 		}
 	}
 
@@ -90,7 +84,7 @@ public class IsGreaterThan extends Condition {
 						.seq(StringParser.of(">").trim())
 						.seq(arithmeticExpression)
 						.map((List<Object> values) -> {
-							return new IsGreaterThan((ArithmeticExpression) values.get(0), (ArithmeticExpression) values.get(2));
+							return new IsGreaterThan((Expression<Number>) values.get(0), (Expression<Number>) values.get(2));
 						});
 
 		return parser;

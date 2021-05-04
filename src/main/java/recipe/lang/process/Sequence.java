@@ -4,9 +4,11 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
+import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.Or;
+import recipe.lang.types.Boolean;
 
 import java.util.List;
 import java.util.Set;
@@ -20,11 +22,11 @@ public class Sequence extends Process{
         this.b = b;
     }
 
-    public Condition entryCondition(){
+    public Expression<Boolean> entryCondition(){
         return a.entryCondition();
     }
 
-    public void addEntryCondition(Condition condition) {
+    public void addEntryCondition(Expression<Boolean> condition) {
         a.addEntryCondition(condition);
     }
 

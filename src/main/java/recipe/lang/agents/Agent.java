@@ -7,21 +7,17 @@ import java.util.function.Function;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.StringParser;
+import recipe.lang.Config;
 import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
-import recipe.lang.expressions.channels.ChannelExpression;
-import recipe.lang.expressions.channels.ChannelValue;
-import recipe.lang.expressions.channels.ChannelVariable;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.process.*;
-import recipe.lang.expressions.strings.StringValue;
-import recipe.lang.expressions.strings.StringVariable;
-import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.IsEqualTo;
 import recipe.lang.process.Process;
 import recipe.lang.store.Store;
+import recipe.lang.types.Boolean;
+import recipe.lang.types.Type;
 import recipe.lang.utils.*;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
@@ -37,11 +33,11 @@ public class Agent {
     private Set<IterationExitTransition> iterationExitTransitions;
     private Set<Process> actions;
     private State initialState;
-    private Condition receiveGuard;
-    private Condition initialCondition;
+    private Expression<Boolean> receiveGuard;
+    private Expression<Boolean> initialCondition;
 
-    public Agent(String name) {
-        this(name, new Store(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(name, new String()), Condition.FALSE);
+    public Agent(String name) throws MismatchingTypeException {
+        this(name, new Store(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(name, new String()), new TypedValue<Boolean>(Boolean.getType(), "false"));
     }
 
     public Agent(String name,
@@ -52,7 +48,7 @@ public class Agent {
                  Set<IterationExitTransition> iterationExitTransitions,
                  Set<Process> actions,
                  State initialState,
-                 Condition receiveGuard) {
+                 Expression<Boolean> receiveGuard) {
         this.name = name.trim();
         this.store = store;
         this.states = new HashSet<>(states);
@@ -169,7 +165,7 @@ public class Agent {
         this.initialState = initialState;
     }
 
-    public Condition getReceiveGuard() {
+    public Expression<Boolean> getReceiveGuard() {
         return receiveGuard;
     }
 
@@ -201,7 +197,7 @@ public class Agent {
         this.iterationExitTransitions = iterationExitTransitions;
     }
 
-    public Condition getInitialCondition() {
+    public Expression<Boolean> getInitialCondition() {
         return initialCondition;
     }
 
@@ -209,47 +205,66 @@ public class Agent {
         this.initialCondition = initialCondition;
     }
 
-    public boolean isListening(String channel, String state) throws AttributeTypeException, AttributeNotInStoreException {
-        Condition concrete = receiveGuard.close(store, getCV().keySet());
-        Store newstore = new Store();
-
-        newstore.setValue(new ChannelVariable("channel"), new ChannelValue(channel));
-        newstore.setValue(new StringVariable("state"), new StringValue(state));
-        return concrete.isSatisfiedBy(newstore);
-    }
+//    public boolean isListening(String channel, String state) throws Exception {
+//        Condition concrete = receiveGuard.close(store, getCV().keySet());
+//        Store newstore = new Store();
+//
+//        recipe.lang.types.Enum channels = recipe.lang.types.Enum.getEnum("channels");
+//        newstore.setValue(new TypedVariable(channels, "channel"), new TypedValue(channels, channel));
+//        newstore.setValue(new StringVariable("state"), new StringValue(state));
+//        return concrete.isSatisfiedBy(newstore);
+//    }
 
     public static org.petitparser.parser.Parser parser(TypingContext messageContext,
                                                               TypingContext communicationContext,
-                                                              TypingContext channelContext){
+                                                              TypingContext channelContext) throws Exception {
         SettableParser parser = SettableParser.undefined();
-        Function<TypingContext, Parser> process = (TypingContext localContext) -> Parsing.labelledParser("repeat", Process.parser(messageContext, localContext, communicationContext, channelContext));
+        Function<TypingContext, Parser> process = (TypingContext localContext) -> {
+            try {
+                return Parsing.labelledParser("repeat", Process.parser(messageContext, localContext, communicationContext, channelContext));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
+        };
 
         Parser name = word().plus().trim().flatten();
 
         AtomicReference<String> error = new AtomicReference<>("");
         AtomicReference<TypingContext> localContext = new AtomicReference<>(new TypingContext());
 
-        TypingContext channelValueContext = channelContext.getSubContext(ChannelValue.class);
+        TypingContext channelValueContext = channelContext.getSubContext(recipe.lang.types.Enum.getEnum(Config.channelLabel));
 
         parser.set(StringParser.of("agent").trim()
                     .seq(name)
                     .seq(Parsing.labelledParser("local", Parsing.typedAssignmentList(channelValueContext))
-                            .mapWithSideEffects((Pair<Map, Map> values) -> {
-                                localContext.get().setAll(new TypingContext(values.getLeft()));
+                            .mapWithSideEffects((Pair<Map<String, TypedVariable>, Map<String, TypedValue>> values) -> {
+                                Map<String, Type> varTypes = new HashMap();
+                                for(Map.Entry<String, TypedVariable> entry : values.getLeft().entrySet()){
+                                    varTypes.put(entry.getKey(), entry.getValue().getType());
+                                }
+                                localContext.get().setAll(new TypingContext(varTypes));
                                 return values;
                             }))
                     .seq(new LazyParser<>(((TypingContext localContext1) -> Parsing.relabellingParser(localContext1, communicationContext)), localContext.get()).trim())
-                    .seq(new LazyParser<>(((TypingContext localContext1) -> Parsing.receiveGuardParser(localContext1, channelContext)), localContext.get()))
+                    .seq(new LazyParser<>(((TypingContext localContext1) -> {
+                        try {
+                            return Parsing.receiveGuardParser(localContext1, channelContext);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    }), localContext.get()))
                     .seq(new LazyParser(process, localContext.get()).trim())
                 .map((List<Object> values) -> {
                     String agentName = ((String) values.get(1)).trim();
                     Map<String, TypedVariable> localVars = ((Pair<Map, Map>) values.get(2)).getLeft();
-                    Map<String, Expression> localValues = ((Pair<Map, Map>) values.get(2)).getRight();
+                    Map<String, TypedValue> localValues = ((Pair<Map, Map>) values.get(2)).getRight();
                     Store store = null;
                     try {
                         store = new Store(localValues, localVars);
                         Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(3);
-                        Condition receiveGuardCondition = (Condition) values.get(4);
+                        Expression<Boolean> receiveGuardCondition = (Expression<Boolean>) values.get(4);
                         Process repeat = (Process) values.get(5);
                         State startState = new State("start");
                         Set<Transition> transitions = repeat.asTransitionSystem(startState, startState);

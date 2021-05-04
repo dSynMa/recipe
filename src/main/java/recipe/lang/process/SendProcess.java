@@ -2,14 +2,15 @@ package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
+import recipe.lang.Config;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
-import recipe.lang.expressions.channels.ChannelExpression;
-import recipe.lang.expressions.channels.ChannelVariable;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.types.Boolean;
+import recipe.lang.types.Enum;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
@@ -24,13 +25,13 @@ public class SendProcess extends BasicProcess {
 
     public Map<String, Expression> message;
 
-    public Condition getMessageGuard() {
+    public Expression<Boolean> getMessageGuard() {
         return messageGuard;
     }
 
-    public Condition messageGuard;
+    public Expression<Boolean> messageGuard;
 
-    public SendProcess(Condition psi, ChannelExpression channel, Map<String, Expression> message, Map<String, Expression> update, Condition messageGuard) {
+    public SendProcess(Expression<Boolean> psi, Expression channel, Map<String, Expression> message, Map<String, Expression> update, Expression<Boolean> messageGuard) {
         this.psi = psi;
         this.channel = channel;
         this.message = message;
@@ -53,20 +54,20 @@ public class SendProcess extends BasicProcess {
         return ts;
     }
 
-    public Condition entryCondition(){
+    public Expression<Boolean> entryCondition(){
         return psi;
     }
 
-    public void addEntryCondition(Condition condition){
+    public void addEntryCondition(Expression<Boolean> condition){
         psi = new And(condition, psi);
     }
 
     public static Parser parser(TypingContext messageContext,
                          TypingContext localContext,
                          TypingContext communicationContext,
-                         TypingContext channelContext){
+                         TypingContext channelContext) throws Exception {
         TypingContext localAndChannelContext = TypingContext.union(localContext, channelContext);
-        TypingContext channelContextWithLocalChannelVars = TypingContext.union(localContext.getSubContext(ChannelVariable.class), channelContext);
+        TypingContext channelContextWithLocalChannelVars = TypingContext.union(localContext.getSubContext(Enum.getEnum(Config.channelLabel)), channelContext);
 
         Parser localGuard = Condition.typeParser(localAndChannelContext);
 
@@ -74,7 +75,7 @@ public class SendProcess extends BasicProcess {
                 (CharacterParser.of('<').trim())
                         .seq(localGuard)
                         .seq(CharacterParser.of('>').trim())
-                        .map((List<Object> values) -> (Condition) values.get(1));
+                        .map((List<Object> values) -> (Expression<Boolean>) values.get(1));
 
         TypingContext localAndChannelAndCommunicationContext =
                 TypingContext.union(localAndChannelContext, communicationContext);
@@ -86,7 +87,7 @@ public class SendProcess extends BasicProcess {
 
         Parser parser =
                 delimetedCondition
-                        .seq(ChannelExpression.parser(channelContextWithLocalChannelVars))
+                        .seq(channelContextWithLocalChannelVars.valueParser().or(channelContextWithLocalChannelVars.variableParser()))
                         .seq(CharacterParser.of('!'))
                         .seq(messageGuard)
                         .seq((CharacterParser.of('(').trim()))
@@ -96,9 +97,9 @@ public class SendProcess extends BasicProcess {
                         .seq(localAssignment)
                         .seq((CharacterParser.of(']').trim()))
                         .map((List<Object> values) -> {
-                            Condition psi = (Condition) values.get(0);
-                            ChannelExpression channel = (ChannelExpression) values.get(1);
-                            Condition guard = (Condition) values.get(3);
+                            Expression<Boolean> psi = (Expression<Boolean>) values.get(0);
+                            Expression channel = (Expression) values.get(1);
+                            Expression<Boolean> guard = (Expression<Boolean>) values.get(3);
                             Map<String, Expression> message = (Map<String, Expression>) values.get(5);
                             Map<String, Expression> update = (Map<String, Expression>) values.get(8);
                             SendProcess action = new SendProcess(psi, channel, message, update, guard);
