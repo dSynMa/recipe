@@ -55,4 +55,9 @@ public class TypedValue<T extends Type> implements Expression<T> {
     public int hashCode() {
         return Objects.hash(value);
     }
+
+    @Override
+    public String toString() {
+        return value.toString();
+    }
 }

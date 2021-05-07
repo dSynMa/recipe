@@ -66,4 +66,9 @@ public class TypedVariable<T extends Type> implements Expression<T> {
     public int hashCode() {
         return Objects.hash(name, type);
     }
+
+    @Override
+    public String toString() {
+        return name;
+    }
 }
