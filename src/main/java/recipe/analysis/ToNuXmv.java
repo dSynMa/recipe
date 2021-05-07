@@ -257,13 +257,9 @@ public class ToNuXmv {
         trans += "\n\t\t| (!((" + String.join(") | (", sendNows) + ")) & keep-all))";
 
         nuxmv += vars;
-        nuxmv +=  define;
-        //TODO below only if no channel variable.
-        nuxmv += "CONSTANTS";
-        nuxmv += "\n\t" + broadcastChannel;
-        for(String v : Enum.getEnum(Config.channelLabel).getValues()){
-            nuxmv += "," + v;
-        }
+        nuxmv += define;
+        nuxmv += "CONSTANTS\n\t";
+        nuxmv += String.join(", ", Enum.getEnum(Config.channelLabel).getValues());
         nuxmv += ";\n";
         nuxmv += init;
         nuxmv += trans;
