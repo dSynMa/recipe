@@ -63,7 +63,7 @@ public class Not extends Condition {
 	}
 
 	@Override
-	public Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException {
+	public Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
 		Expression<Boolean> closure = arg.close(store, CV);
 		if (closure.equals(Condition.FALSE)) {
 			return Condition.TRUE;
@@ -86,7 +86,7 @@ public class Not extends Condition {
 	}
 
 	@Override
-	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
 		return new Not(this.arg.relabel(relabelling));
 	}
 }

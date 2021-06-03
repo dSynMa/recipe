@@ -15,10 +15,10 @@ public class ToNuXmvTest {
         String script = "channels: ch1, ch2, ch3\n" +
                 "message-structure: d1 : int, d2 : bool\n" +
                 "communication-variables: f : int, g : bool\n\n" +
-                "guard g(a : int) := a == 5\n\n" +
+//                "guard g(a : int) := a == 5\n\n" +
                 "agent first\n" +
                 "\tlocal:\n" +
-                "\t\tb : 0..8 := 0\n" +
+                "\t\tb : Int := 0\n" +
                 "\t\tc : Int := 0\n" +
                 "\trelabel:\n" +
                 "\t\tf <- c\n" +
@@ -32,7 +32,7 @@ public class ToNuXmvTest {
                 "\t\tf <- a\n" +
                 "\t\tg <- a == 0\n" +
                 "\treceive-guard:\n" +
-                "\t\t(a < 5 & channel == ch1) | (a > 3 & channel == *)\n" +
+                "\t\t(a < 5 & channel == ch1) | (a > 3 & channel == B)\n" +
                 "\trepeat:(<true> ch1! (true) (d1 := a; d2 := true) [a:= a + 1]) + (<a > 3> ch1? [a := d1])";
 
         Parser system = System.parser().end();

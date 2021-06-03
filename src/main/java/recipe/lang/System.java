@@ -3,6 +3,7 @@ package recipe.lang;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import recipe.lang.agents.Agent;
+import recipe.lang.exception.ParsingException;
 import recipe.lang.exception.TypeCreationException;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.types.Enum;
@@ -44,20 +45,27 @@ public class System{
     public static Parser parser(){
         SettableParser parser = SettableParser.undefined();
 
-        AtomicReference<TypingContext> channelContext = new AtomicReference<>(new TypingContext());
+//        AtomicReference<TypingContext> channelContext = new AtomicReference<>(new TypingContext());
         AtomicReference<TypingContext> messageContext = new AtomicReference<>(new TypingContext());
         AtomicReference<TypingContext> communicationContext = new AtomicReference<>(new TypingContext());
         AtomicReference<Pair> guardDefinitionsContext = new AtomicReference<>();
 
         parser.set((labelledParser("channels", channelValues())
-                        .map((List<String> values) -> {
+                        .mapWithSideEffects((List<String> values) -> {
                             try {
-                                values.add("*");
-                                Enum channelEnum = new Enum(Config.channelLabel, values);
-                                for(String v : values){
-                                    channelContext.get().set(v, channelEnum);
+                                if(values.contains(Config.broadcast)){
+                                    throw new ParsingException(Config.broadcast + " is a reserved keyword and defined implicit, there is no need to add it to declared channel values.");
                                 }
-                            } catch (TypeCreationException e) {
+                                //Do not remove this, enum stored in Enum.existing
+                                new Enum(Config.channelWithoutBroadcastLabel, values);
+
+                                List<String> valuesWithBroadcast = new ArrayList<>(values);
+                                valuesWithBroadcast.add(Config.broadcast);
+                                Enum channelEnum = new Enum(Config.channelLabel, valuesWithBroadcast);
+//                                for(String v : valuesWithBroadcast){
+//                                    channelContext.get().set(v, channelEnum);
+//                                }
+                            } catch (TypeCreationException | ParsingException e) {
                                 e.printStackTrace();
                             }
                             return values;
@@ -78,22 +86,23 @@ public class System{
                             return values;
                         }).optional())
                 .seq(new LazyParser<>(
-                        (Triple<TypingContext, TypingContext, TypingContext> msgCmncChnContext) ->
+                        (Pair<TypingContext, TypingContext> msgCmncContext) ->
                         {
                             try {
-                                return Agent.parser(msgCmncChnContext.getLeft(),
-                                        msgCmncChnContext.getMiddle(),
-                                        msgCmncChnContext.getRight()).plus();
+                                Parser agent = Agent.parser(msgCmncContext.getLeft(),
+                                        msgCmncContext.getRight()).plus();
+                                return agent;
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
                             return null;
                         },
-                        new Triple(messageContext.get(), communicationContext.get(), channelContext.get())))
+                        new Pair<>(messageContext.get(), communicationContext.get())))//, channelContext.get())))
                 .map((List<Object> values) -> {
                     Set<String> channels = new HashSet<>((List<String>) values.get(0));
                     Map<String, TypedVariable> messageStructure = (Map<String, TypedVariable>) values.get(1);
                     Map<String, TypedVariable> communicationVariables = (Map<String, TypedVariable>) values.get(2);
+                    ///TODO use these
                     Pair guardDefinitions = (Pair) values.get(3);
 
                     Set<Agent> agents = new HashSet<>((List<Agent>) values.get(4));

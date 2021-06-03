@@ -59,7 +59,7 @@ public class StoreTest {
 
     @Test
     public void getValue() {
-        assertTrue(store.getValue("v").getValue().toString().equals("7.0"));
+        assertTrue(store.getValue("v").getValue().toString().equals("7"));
         assertFalse(store.getValue("v").equals("vgg"));
     }
 

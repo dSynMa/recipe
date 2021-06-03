@@ -65,7 +65,7 @@ public class IsLessOrEqualThan extends Condition {
 	}
 
 	@Override
-	public Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException {
+	public Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
 		Expression<Number> lhsObject = lhs.close(store, CV);
 		Expression<Number> rhsObject = rhs.close(store, CV);
 		if (lhsObject.equals(rhsObject)) {
@@ -92,7 +92,7 @@ public class IsLessOrEqualThan extends Condition {
 	}
 
 	@Override
-	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
 		return new IsLessOrEqualThan(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
 	}
 }

@@ -37,11 +37,11 @@ public class ReceiveProcessTest {
         TypingContext localContext = new TypingContext();
         localContext.set("v", Real.getType());
 
-        TypingContext channelContext = new TypingContext();
+        TypingContext communicationContext = new TypingContext();
 
-        channelContext.set("c", channelEnum);
+        localContext.set("c", channelEnum);
 
-        Parser parser = ReceiveProcess.parser(messageContext, localContext, channelContext);
+        Parser parser = ReceiveProcess.parser(messageContext, localContext, communicationContext);
 
         Result r = parser.parse("<v == 5> c? [v := 6]");
         assert r.isSuccess();

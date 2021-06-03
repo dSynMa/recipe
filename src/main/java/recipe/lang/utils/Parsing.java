@@ -5,15 +5,14 @@ import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.Config;
-import recipe.lang.exception.TypeCreationException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.types.Boolean;
 import recipe.lang.types.BoundedInteger;
 import recipe.lang.types.Enum;
-import recipe.lang.types.Integer;
 import recipe.lang.types.Type;
 
 import java.util.*;
@@ -57,7 +56,7 @@ public class Parsing {
         return any().not();
     }
 
-    public static org.petitparser.parser.Parser expressionParser(TypingContext context) {
+    public static org.petitparser.parser.Parser expressionParser(TypingContext context) throws Exception {
         return Condition.parser(context)
                 .or(ArithmeticExpression.parser(context))
                 .or(context.variableParser())
@@ -65,7 +64,7 @@ public class Parsing {
     }
 
     public static org.petitparser.parser.Parser assignmentListParser(TypingContext variableContext,
-                                                                     TypingContext expressionContext) {
+                                                                     TypingContext expressionContext) throws Exception {
         Parser assignment =
                 variableContext.variableParser()
                         .seq(StringParser.of(":=").trim())
@@ -94,16 +93,21 @@ public class Parsing {
     public static Parser numberType(){
         return (StringParser.ofIgnoringCase("integer")
                 .or(StringParser.ofIgnoringCase("int"))
-                .map((Object value) -> recipe.lang.types.Integer.getType()))
+                .map((Object value) -> {
+                    return recipe.lang.types.Integer.getType();
+                }))
                 .or(StringParser.ofIgnoringCase("real")
-                        .map((Object value) -> recipe.lang.types.Real.getType()))
+                        .map((Object value) -> {
+                            return recipe.lang.types.Real.getType();
+                        }))
                 .or(CharacterParser.digit().plus().flatten()
                         .seq(CharacterParser.of('.').seq(CharacterParser.of('.').plus()).flatten())
                         .seq(CharacterParser.digit().plus().flatten())
                         .map((List<String> values) ->
-                                new BoundedInteger(java.lang.Integer.parseInt(values.get(0)), java.lang.Integer.parseInt(values.get(2)))));
+                        {;
+                            return new BoundedInteger(java.lang.Integer.parseInt(values.get(0)), java.lang.Integer.parseInt(values.get(2)));
+                        }));
     }
-
 
     public static Parser booleanType(){
         return StringParser.ofIgnoringCase("boolean")
@@ -112,24 +116,40 @@ public class Parsing {
     }
 
     public static Parser enumType(){
-        List<String> labels = new ArrayList<>(recipe.lang.types.Enum.getEnumLabels());
-        return disjunctiveStringParser(labels)
-                .map((String value) -> {
-                    try {
-                        return recipe.lang.types.Enum.getEnum(value);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    return null;
-                });
+        //Lazy parser is needed to wait for the channels to be set
+        return new LazyParser<>((Object x) -> {
+            List<String> labels = new ArrayList<>(recipe.lang.types.Enum.getEnumLabels());
+            labels.remove(Config.channelWithoutBroadcastLabel);
+            return disjunctiveStringParser(labels)
+                    .map((String value) -> {
+                        try {
+                            return recipe.lang.types.Enum.getEnum(value);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    });
+        }, null);
+    }
+
+    public static Parser processType(TypingContext messageContext,
+                                     TypingContext localContext,
+                                     TypingContext communicationContext){
+        return StringParser.ofIgnoringCase("process")
+                .map((Object value) ->
+                        new recipe.lang.types.Process(messageContext, localContext, communicationContext));
     }
 
     public static Parser typedVariableList(){
+        return typedVariableList(numberType().or(enumType()).or(booleanType()));
+    }
+
+    public static Parser typedVariableList(Parser typeParser){
         org.petitparser.parser.Parser stringParser = word().plus().seq(CharacterParser.word().not()).flatten().trim();
 
         org.petitparser.parser.Parser typedVariable = stringParser
                 .seq(CharacterParser.of(':').trim())
-                .seq(numberType().or(enumType()).or(booleanType())).trim()
+                .seq(typeParser).trim()
                 .map((List<Object> values) -> {
                     return new TypedVariable((Type) values.get(2), (String) values.get(0));
                 });
@@ -148,7 +168,7 @@ public class Parsing {
         return typedVariableList;
     }
 
-    public static Parser typedAssignmentList(TypingContext channelValueContext){
+    public static Parser typedAssignmentList(TypingContext channelValueContext) throws Exception {
         org.petitparser.parser.Parser stringParser = (word().plus().seq(CharacterParser.word().not())).flatten().trim();
 
         org.petitparser.parser.Parser numberVarParser = stringParser
@@ -170,7 +190,7 @@ public class Parsing {
                 }))
                 .seq(StringParser.of(":=").trim())
                 .seq(new LazyParser<>((List<recipe.lang.types.Enum> enumList) -> {
-                    return enumList.get(0).parser();
+                    return enumList.get(0).valueParser();
                 },
                         enumType.get()))
                 .map((List<Object> values) -> {
@@ -215,7 +235,14 @@ public class Parsing {
                         }))
                 .seq(CharacterParser.of(')').trim())
                 .seq(StringParser.of(":=").trim())
-                .seq(new LazyParser<>((TypingContext context) -> Condition.parser(context), typedVariableList.get()))
+                .seq(new LazyParser<>((TypingContext context) -> {
+                    try {
+                        return Condition.parser(context);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                }, typedVariableList.get()))
                 .map((List<Object> values) -> {
                     return new HashMap.SimpleEntry<>(values.get(1), new Pair(values.get(3), values.get(6)));
                 });
@@ -266,7 +293,7 @@ public class Parsing {
                 });
     }
 
-    public static Parser conditionalFail(Boolean yes){
+    public static Parser conditionalFail(java.lang.Boolean yes){
         if(yes){
             return StringParser.of("").not();
         } else{
@@ -274,7 +301,7 @@ public class Parsing {
         }
     }
 
-    public static Parser relabellingParser(TypingContext localContext, TypingContext communicationContext){
+    public static Parser relabellingParser(TypingContext localContext, TypingContext communicationContext) throws Exception {
         return labelledParser("relabel", (Parsing.expressionParser(communicationContext).trim()
                 .seq(StringParser.of("<-").trim())
                 .seq(Parsing.expressionParser(localContext)).delimitedBy(CharacterParser.of('\n'))
@@ -289,13 +316,21 @@ public class Parsing {
                 });
     }
 
-    public static Parser receiveGuardParser(TypingContext localContext, TypingContext channelContext) throws Exception {
-        TypingContext receiveGuardContext = TypingContext.union(channelContext, localContext);
-        receiveGuardContext.set("channel", Enum.getEnum(Config.channelLabel));
+    public static Parser receiveGuardParser(TypingContext localContext) throws Exception {
+        TypingContext receiveGuardContext = TypingContext.union(localContext, new TypingContext());
+
+        //Broadcast channel cannot be mentioned in receive guard
+        receiveGuardContext.set("channel", Enum.getEnum(Config.channelWithoutBroadcastLabel));
 
         return labelledParser("receive-guard", Condition.parser(receiveGuardContext))
                 .map((Expression<recipe.lang.types.Boolean> cond) -> {
                     return cond;
                 });
+    }
+
+    public static boolean compatible(Expression lhs, Expression rhs){
+        //TODO is this a correct implementation?
+        return rhs.isValidAssignmentFor(new TypedVariable(lhs.getType(), "vv")) ||
+                lhs.isValidAssignmentFor(new TypedVariable(rhs.getType(), "vv"));
     }
 }

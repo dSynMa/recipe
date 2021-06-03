@@ -10,6 +10,7 @@ import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.*;
 import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
+import recipe.lang.types.Type;
 import recipe.lang.utils.TypingContext;
 
 import java.util.List;
@@ -40,20 +41,20 @@ public abstract class Condition implements Expression<Boolean> {
 	}
 
 	public abstract TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException;
-	public abstract Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, TypeCreationException;
+	public abstract Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, TypeCreationException, RelabellingTypeException;
 
-	public static Parser typeParser(TypingContext context){
+	public static Parser typeParser(TypingContext context) throws Exception {
 		return Condition.parser(context);
 	}
 
-	public static org.petitparser.parser.Parser parser(TypingContext context) {
+	public static org.petitparser.parser.Parser parser(TypingContext context) throws Exception {
 		org.petitparser.parser.Parser arithmeticExpression = ArithmeticExpression.typeParser(context);
 
 		SettableParser parser = SettableParser.undefined();
 		SettableParser basic = SettableParser.undefined();
 
 		SettableParser generalExpression = SettableParser.undefined();
-		generalExpression.set((arithmeticExpression).or(context.variableParser()).or(context.valueParser()));
+		generalExpression.set((arithmeticExpression).or(context.variableParser()).or(context.valueParser()).or(GuardReference.parser(context)));
 
 		org.petitparser.parser.Parser and = And.parser(basic);
 		org.petitparser.parser.Parser or = Or.parser(basic);
@@ -75,7 +76,7 @@ public abstract class Condition implements Expression<Boolean> {
 				.or(isGreaterOrEqualThan)
 				.or(isGreaterThan);
 
-		org.petitparser.parser.Parser value = Boolean.getType().parser();
+		org.petitparser.parser.Parser value = Boolean.getType().valueParser();
 		org.petitparser.parser.Parser variable = context.getSubContext(Boolean.getType()).variableParser();
 
 		parser.set(and
@@ -95,10 +96,20 @@ public abstract class Condition implements Expression<Boolean> {
 		return parser;
 	}
 
-	public abstract Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException;
+	public abstract Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException;
 
 	@Override
 	public int hashCode(){
 		return Objects.hash(this.toString());
+	}
+
+	@Override
+	public java.lang.Boolean isValidAssignmentFor(TypedVariable var){
+		return var.getType().equals(Boolean.getType());
+	}
+
+	@Override
+	public Type getType(){
+		return Boolean.getType();
 	}
 }

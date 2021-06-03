@@ -35,12 +35,12 @@ public class Addition extends ArithmeticExpression{
     }
 
     @Override
-    public Expression<Number> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException {
+    public Expression<Number> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
         return new Addition(lhs.close(store, CV), rhs.close(store, CV));
     }
 
     @Override
-    public ArithmeticExpression relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+    public ArithmeticExpression relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
         return new Addition(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
     }
 

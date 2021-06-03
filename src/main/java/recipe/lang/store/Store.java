@@ -4,10 +4,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import recipe.lang.definitions.Definition;
 import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.MismatchingTypeException;
 import recipe.lang.exception.RelabellingTypeException;
-import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
@@ -17,6 +17,16 @@ public class Store {
 	private HashMap<String, TypedValue> data;
 
 	private HashMap<String, TypedVariable> attributes;
+
+	public Definition getDefinition(String label) {
+		return definitions.get(label);
+	}
+
+	public void setDefinition(String label, Definition definition) {
+		this.definitions.put(label, definition);
+	}
+
+	private HashMap<String, Definition> definitions;
 
 	public Map<String, TypedVariable> getAttributes() {
 		return attributes;

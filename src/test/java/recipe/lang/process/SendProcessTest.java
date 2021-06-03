@@ -39,11 +39,9 @@ public class SendProcessTest {
         TypingContext communicationContext = new TypingContext();
         communicationContext.set("g", Boolean.getType());
 
-        TypingContext channelContext = new TypingContext();
+        localContext.set("c", channelEnum);
 
-        channelContext.set("c", channelEnum);
-
-        Parser parser = SendProcess.parser(messageContext, localContext, communicationContext, channelContext);
+        Parser parser = SendProcess.parser(messageContext, localContext, communicationContext);
 
         Result r = parser.parse("<v == 5> c!g(m := 1)[v := 6]");
         assert r.isSuccess();

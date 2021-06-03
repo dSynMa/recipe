@@ -1,8 +1,12 @@
 package recipe.lang.agents;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
+import recipe.lang.Config;
+import recipe.lang.exception.TypeCreationException;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Real;
@@ -15,6 +19,11 @@ import static org.junit.Assert.*;
 
 public class AgentTest {
 
+    @BeforeClass
+    public static void init() throws TypeCreationException {
+        Enum.clear();
+    }
+
     @Test
     public void parser() throws Exception {
         String agent = "agent B\n" +
@@ -26,7 +35,7 @@ public class AgentTest {
                 "\t\tf <- b\n" +
                 "\t\tg <- b != 0\n" +
                 "\treceive-guard:\n" +
-                "\t\t(c < 5 & channel == A) | (c > 3 & channel == *)\n" +
+                "\t\t(c < 5 & channel == A) | (c > 3 & channel == B)\n" +
                 "\trepeat: (<b == 0> chVar!(b == f) (d1 := b + 1, d2 := false)[b := b + 1])";
 
         TypingContext messageContext = new TypingContext();
@@ -37,14 +46,16 @@ public class AgentTest {
         communicationContext.set("f", Real.getType());
         communicationContext.set("g", Boolean.getType());
 
-        TypingContext channelContext = new TypingContext();
         List<String> channels = new ArrayList<>();
         channels.add("A");
-        channels.add("*");
+        channels.add("B");
 
-        Enum channelEnum = new Enum("channels", channels);
+        new Enum(Config.channelWithoutBroadcastLabel, channels);
+        List<String> channelsWithBroadcast = new ArrayList<>(channels);
+        channelsWithBroadcast.add("*");
+        new Enum(Config.channelLabel, channelsWithBroadcast);
 
-        Parser parser = Agent.parser(messageContext, communicationContext, channelContext).end();
+        Parser parser = Agent.parser(messageContext, communicationContext).end();
         Result r = parser.parse(agent);
         System.out.println(r.getPosition());
         System.out.println(agent.substring(r.getPosition()));

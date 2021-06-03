@@ -11,10 +11,13 @@ import java.util.*;
 
 public class Enum extends Type {
     private List<String> values;
-    static Map<String, Enum> existing = new HashMap<>();
+
+    //TODO this should be in TypingContext
+    private static Map<String, Enum> existing = new HashMap<>();
     public static void clear(){
         existing.clear();
     }
+
     private String label;
 
     public Enum(String label, List<String> values) throws TypeCreationException {
@@ -42,7 +45,7 @@ public class Enum extends Type {
         return existing.keySet();
     }
 
-    public org.petitparser.parser.Parser parser(){
+    public org.petitparser.parser.Parser valueParser(){
         return Parsing.disjunctiveWordParser(values, (String name) -> {
             try {
                 return new TypedValue(this, name);

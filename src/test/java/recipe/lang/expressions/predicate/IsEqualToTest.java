@@ -29,7 +29,7 @@ public class IsEqualToTest {
     }
 
     @Test
-    public void parser() {
+    public void parser() throws Exception {
         String script = "channel == A";
 
         TypingContext context = new TypingContext();
@@ -48,7 +48,7 @@ public class IsEqualToTest {
     }
 
     @Test
-    public void parser1() {
+    public void parser1() throws Exception {
         String script = "channel = A";
 
         TypingContext context = new TypingContext();

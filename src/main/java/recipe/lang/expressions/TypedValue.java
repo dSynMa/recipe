@@ -39,6 +39,11 @@ public class TypedValue<T extends Type> implements Expression<T> {
         return this;
     }
 
+    @Override
+    public Boolean isValidAssignmentFor(TypedVariable var) {
+        return var.getType().isValidValue(this.getValue());
+    }
+
     public Type getType() {
         return type;
     }

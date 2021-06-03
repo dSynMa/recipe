@@ -7,6 +7,8 @@ import recipe.lang.expressions.TypedValue;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
+import java.util.Locale;
+
 public class Boolean extends Type {
     static Boolean base = new Boolean();
     private Boolean(){}
@@ -24,7 +26,7 @@ public class Boolean extends Type {
         }
     }
 
-    public org.petitparser.parser.Parser parser(){
+    public org.petitparser.parser.Parser valueParser(){
         return StringParser.of("true")
                 .or(StringParser.of("TRUE"))
                 .or(StringParser.of("True"))
@@ -33,7 +35,7 @@ public class Boolean extends Type {
                 .or(StringParser.of("False"))
                         .map((String value) -> {
                             try {
-                                return new TypedValue(this, value);
+                                return new TypedValue(this, value.toUpperCase(Locale.ROOT));
                             } catch (MismatchingTypeException e) {
                                 e.printStackTrace();
                                 return null;

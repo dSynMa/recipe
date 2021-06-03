@@ -11,6 +11,7 @@ import recipe.lang.types.Boolean;
 import recipe.lang.types.Number;
 import recipe.lang.store.Store;
 import recipe.lang.types.Real;
+import recipe.lang.types.Type;
 import recipe.lang.utils.TypingContext;
 
 import java.util.List;
@@ -21,7 +22,7 @@ import java.util.function.Function;
 public abstract class ArithmeticExpression implements Expression<Number> {
     public abstract TypedValue<Number> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException;
 
-    public abstract Expression<Number> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException;
+    public abstract Expression<Number> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException;
 
     public static Parser typeParser(TypingContext context){
         return ArithmeticExpression.parser(context);
@@ -33,14 +34,7 @@ public abstract class ArithmeticExpression implements Expression<Number> {
         org.petitparser.parser.Parser addition = Addition.parser(basic);
         org.petitparser.parser.Parser multiplication = Multiplication.parser(basic);
         org.petitparser.parser.Parser subtraction = Subtraction.parser(basic);
-        org.petitparser.parser.Parser value = Real.getType().parser().map((String val) -> {
-            try {
-                return new TypedValue(Real.getType(), val);
-            } catch (MismatchingTypeException e) {
-                e.printStackTrace();
-            }
-            return null;
-        });
+        org.petitparser.parser.Parser value = Real.getType().valueParser().or(recipe.lang.types.Integer.getType().valueParser());
         org.petitparser.parser.Parser variable = context.getSubContext(Real.getType()).variableParser();
 
         parser.set(addition
@@ -59,10 +53,20 @@ public abstract class ArithmeticExpression implements Expression<Number> {
     }
 
     @Override
-    public abstract Expression<Number> relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException;
+    public abstract Expression<Number> relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException;
 
     @Override
     public int hashCode(){
         return Objects.hash(this.toString());
+    }
+
+    @Override
+    public java.lang.Boolean isValidAssignmentFor(TypedVariable var){
+        return Number.class.isAssignableFrom(var.getType().getClass());
+    }
+
+    @Override
+    public Type getType(){
+        return Real.getType();
     }
 }

@@ -1,12 +1,20 @@
 package recipe.lang;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
+import recipe.lang.exception.TypeCreationException;
+import recipe.lang.types.Enum;
 
 import static org.junit.Assert.*;
 
 public class SystemTest {
+
+    @BeforeClass
+    public static void init() throws TypeCreationException {
+        Enum.clear();
+    }
 
     @Test
     public void getChannels() {
@@ -27,9 +35,8 @@ public class SystemTest {
     @Test
     public void parser() {
         String script = "channels: A,B,C\n" +
-                "message-structure: d1 : 0...8, d2 : bool\n" +
+                "message-structure: d1 : 0..8, d2 : bool\n" +
                 "communication-variables: f : int, g : bool\n\n" +
-                "guard g(a : int) := a == 5\n\n" +
                 "agent B\n" +
                 "\tlocal:\n" +
                 "\t\tb : Int := 0\n" +
@@ -46,7 +53,7 @@ public class SystemTest {
                 "\t\tf <- a\n" +
                 "\t\tg <- a == 0\n" +
                 "\treceive-guard:\n" +
-                "\t\t(a < 5 & channel == C) | (a > 3 & channel == *)\n" +
+                "\t\t(a < 5 & channel == C) | (a > 3 & channel == B)\n" +
                 "\trepeat: (<a > 3> C? [a := d1])";
 
         Parser system = System.parser().end();

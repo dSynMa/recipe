@@ -8,7 +8,7 @@ import java.util.Objects;
 public abstract class Type {
     public abstract Object interpret(String value) throws MismatchingTypeException;
     public abstract String name();
-    public abstract org.petitparser.parser.Parser parser();
+    public abstract org.petitparser.parser.Parser valueParser() throws Exception;
     public boolean isValidValue(Object value){
         try{
             this.interpret(value.toString());

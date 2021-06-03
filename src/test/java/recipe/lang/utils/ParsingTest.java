@@ -7,27 +7,28 @@ import org.petitparser.parser.Parser;
 import recipe.lang.Config;
 import recipe.lang.exception.TypeCreationException;
 import recipe.lang.types.Boolean;
-import recipe.lang.expressions.predicate.IsEqualTo;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Real;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.*;
-
 public class ParsingTest {
     static List<String> channels;
-    static Enum channelEnum;
+    static Enum channelWithoutBroadcastEnum;
+    static Enum channel;
 
     @BeforeClass
     public static void init() throws TypeCreationException {
         Enum.clear();
         channels = new ArrayList<>();
         channels.add("A");
-        channels.add("*");
 
-        channelEnum = new Enum(Config.channelLabel, channels);
+        channelWithoutBroadcastEnum = new Enum(Config.channelWithoutBroadcastLabel, channels);
+        List<String> channelsWithBroadcast = new ArrayList<>(channels);
+        channelsWithBroadcast.add("*");
+
+        channel = new Enum(Config.channelLabel, channelsWithBroadcast);
     }
     @Test
     public void disjunctiveWordParser() {
@@ -83,9 +84,8 @@ public class ParsingTest {
     }
 
     @Test
-    public void testTypedVariableList() {
+    public void testTypedVariableList() throws TypeCreationException {
         String script = "c : channel, k : bool, kk : Boolean, K : Bool, KK : boolean, b : int, c : Int, d : Integer, dd : integer";
-
         Parser parser = Parsing.typedVariableList().end();
 
         Result r = parser.parse(script);
@@ -93,12 +93,12 @@ public class ParsingTest {
     }
 
     @Test
-    public void typedAssignmentList0() throws TypeCreationException {
-        String script = "c : channel := A";
+    public void typedAssignmentList0() throws Exception {
+        String script = "c : " + Config.channelLabel + " := A";
 
         TypingContext channelContext = new TypingContext();
 
-        channelContext.set("c", channelEnum);
+        channelContext.set("c", channelWithoutBroadcastEnum);
 
         Parser parser = Parsing.typedAssignmentList(channelContext).end();
 
@@ -107,10 +107,10 @@ public class ParsingTest {
     }
 
     @Test
-    public void typedAssignmentList1() throws TypeCreationException {
+    public void typedAssignmentList1() throws Exception {
         String script =
-                "b : int := 0\n" +
-                        "\t\tchVar : channel := A";
+                "b : int := (0)\n" +
+                        "\t\tchVar : " + Config.channelLabel + " := A";
 
         TypingContext channelContext = new TypingContext();
 
@@ -121,7 +121,7 @@ public class ParsingTest {
     }
 
     @Test
-    public void typedAssignmentList2() throws TypeCreationException {
+    public void typedAssignmentList2() throws Exception {
         String script =
                 "b : int := 0\n" +
                         "\t\tb : int := 0";
@@ -158,7 +158,7 @@ public class ParsingTest {
     }
 
     @Test
-    public void relabellingParser() {
+    public void relabellingParser() throws Exception {
         String script = "\trelabel:\n" +
                 "\t\tf <- 1\n" +
                 "\t\tg <- b != 0";
@@ -184,9 +184,7 @@ public class ParsingTest {
         localContext.set("b", Real.getType());
         localContext.set("c", Real.getType());
 
-        TypingContext channelContext = new TypingContext();
-
-        Parser parser = Parsing.receiveGuardParser(localContext, channelContext).end();
+        Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
         System.out.println(r.getPosition() + " " + r.getMessage());
         assert r.isSuccess();
@@ -201,9 +199,7 @@ public class ParsingTest {
         localContext.set("b", Real.getType());
         localContext.set("c", Real.getType());
 
-        TypingContext channelContext = new TypingContext();
-
-        Parser parser = Parsing.receiveGuardParser(localContext, channelContext).end();
+        Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
         System.out.println(r.getPosition() + " " + r.getMessage());
         assert r.isSuccess();
@@ -216,12 +212,9 @@ public class ParsingTest {
         TypingContext localContext = new TypingContext();
         localContext.set("b", Real.getType());
         localContext.set("c", Real.getType());
+        localContext.set("channel", channelWithoutBroadcastEnum);
 
-        TypingContext channelContext = new TypingContext();
-
-        channelContext.set("channel", channelEnum);
-
-        Parser parser = Parsing.receiveGuardParser(localContext, channelContext).end();
+        Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
         System.out.println(r.getPosition() + " " + r.getMessage());
         assert r.isSuccess();
@@ -236,11 +229,10 @@ public class ParsingTest {
         localContext.set("b", Real.getType());
         localContext.set("c", Real.getType());
 
-        TypingContext channelContext = new TypingContext();
-        channelContext.set("channel", channelEnum);
-        channelContext.set("chVar", channelEnum);
+        localContext.set("channel", channelWithoutBroadcastEnum);
+        localContext.set("chVar", channelWithoutBroadcastEnum);
 
-        Parser parser = Parsing.receiveGuardParser(localContext, channelContext).end();
+        Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
         System.out.println(r.getPosition() + " " + r.getMessage());
         System.out.println(script.substring(r.getPosition()));
@@ -255,14 +247,19 @@ public class ParsingTest {
         localContext.set("b", Real.getType());
         localContext.set("c", Real.getType());
 
-        TypingContext channelContext = new TypingContext();
-        channelContext.set("channel", channelEnum);
-        channelContext.set("chVar", channelEnum);
+        localContext.set("channel", channelWithoutBroadcastEnum);
+        localContext.set("chVar", channelWithoutBroadcastEnum);
 
-        Parser parser = Parsing.receiveGuardParser(localContext, channelContext).end();
+        Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
         System.out.println(r.getPosition() + " " + r.getMessage());
         System.out.println(script.substring(r.getPosition()));
         assert !r.isSuccess();
+    }
+
+    @Test
+    public void numberType() {
+        Result parse = Parsing.numberType().parse("0...8");
+        assert parse.isSuccess();
     }
 }

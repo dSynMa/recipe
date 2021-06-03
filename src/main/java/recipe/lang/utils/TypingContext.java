@@ -1,11 +1,11 @@
 package recipe.lang.utils;
 
-import recipe.lang.expressions.Expression;
+import recipe.lang.Config;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.types.*;
 import recipe.lang.types.Boolean;
+import recipe.lang.types.Enum;
 import recipe.lang.types.Integer;
-import recipe.lang.types.Real;
-import recipe.lang.types.Type;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -50,6 +50,12 @@ public class TypingContext {
         this.types = types;
         this.varType = varType;
         this.typeVars = typeVars;
+    }
+
+    public void remove(String name){
+        Type type = varType.get(name);
+        typeVars.get(type).remove(name);
+        varType.remove(name);
     }
 
     public void set(String name, Type type){
@@ -112,11 +118,14 @@ public class TypingContext {
         });
     }
 
-    public org.petitparser.parser.Parser valueParser(){
-        org.petitparser.parser.Parser parser = Boolean.getType().parser().or(Integer.getType().parser()).or(Real.getType().parser());
-        for(Type type : types){
-            parser = parser.or(type.parser());
+    public org.petitparser.parser.Parser valueParser() throws Exception {
+        org.petitparser.parser.Parser parser = Boolean.getType().valueParser().or(Integer.getType().valueParser()).or(Real.getType().valueParser());
+        for(String enumType : Enum.getEnumLabels()){
+            if(!enumType.equals(Config.channelWithoutBroadcastLabel)) {
+                parser = parser.or(Enum.getEnum(enumType).valueParser());
+            }
         }
+        //TODO add GuardReferences
         return parser;
     }
 }

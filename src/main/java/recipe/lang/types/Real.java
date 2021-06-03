@@ -2,6 +2,7 @@ package recipe.lang.types;
 
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.exception.MismatchingTypeException;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.utils.TypingContext;
 
 public class Real extends Number {
@@ -12,12 +13,20 @@ public class Real extends Number {
         return base;
     }
 
-    public org.petitparser.parser.Parser parser(){
-        return (CharacterParser.digit().plus()).seq((CharacterParser.of('.').seq(CharacterParser.digit().plus().flatten())).flatten().optional()).flatten();
+    public org.petitparser.parser.Parser valueParser(){
+        return (CharacterParser.digit().plus()).seq((CharacterParser.of('.').seq(CharacterParser.digit().plus().flatten())).flatten()).flatten()
+                .map((Object val) -> {
+                    try {
+                        return new TypedValue(this, (String) val);
+                    } catch (MismatchingTypeException e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                });
     }
 
     @Override
-    public Double interpret(String value) throws MismatchingTypeException {
+    public java.lang.Number interpret(String value) throws MismatchingTypeException {
         try{
             return Double.parseDouble(value);
         } catch (Exception e) {

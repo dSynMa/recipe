@@ -30,15 +30,14 @@ public abstract class Process {
 
     public static Parser parser(TypingContext messageContext,
                                 TypingContext localContext,
-                                TypingContext communicationContext,
-                                TypingContext channelContext) throws Exception {
+                                TypingContext communicationContext) throws Exception {
         SettableParser parser = SettableParser.undefined();
         SettableParser basic = SettableParser.undefined();
         Parser choice = Choice.parser(basic);
         Parser sequence = Sequence.parser(basic);
         Parser iterative = Iterative.parser(basic);
-        Parser receiveProcess = ReceiveProcess.parser(messageContext, localContext, channelContext);
-        Parser sendProcess = SendProcess.parser(messageContext, localContext, communicationContext, channelContext);
+        Parser receiveProcess = ReceiveProcess.parser(messageContext, localContext);
+        Parser sendProcess = SendProcess.parser(messageContext, localContext, communicationContext);
 
         parser.set(choice
                     .or(sequence)

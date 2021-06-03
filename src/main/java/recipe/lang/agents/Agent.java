@@ -216,12 +216,11 @@ public class Agent {
 //    }
 
     public static org.petitparser.parser.Parser parser(TypingContext messageContext,
-                                                              TypingContext communicationContext,
-                                                              TypingContext channelContext) throws Exception {
+                                                              TypingContext communicationContext) throws Exception {
         SettableParser parser = SettableParser.undefined();
         Function<TypingContext, Parser> process = (TypingContext localContext) -> {
             try {
-                return Parsing.labelledParser("repeat", Process.parser(messageContext, localContext, communicationContext, channelContext));
+                return Parsing.labelledParser("repeat", Process.parser(messageContext, localContext, communicationContext));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -233,11 +232,9 @@ public class Agent {
         AtomicReference<String> error = new AtomicReference<>("");
         AtomicReference<TypingContext> localContext = new AtomicReference<>(new TypingContext());
 
-        TypingContext channelValueContext = channelContext.getSubContext(recipe.lang.types.Enum.getEnum(Config.channelLabel));
-
         parser.set(StringParser.of("agent").trim()
                     .seq(name)
-                    .seq(Parsing.labelledParser("local", Parsing.typedAssignmentList(channelValueContext))
+                    .seq(Parsing.labelledParser("local", Parsing.typedAssignmentList(new TypingContext()))
                             .mapWithSideEffects((Pair<Map<String, TypedVariable>, Map<String, TypedValue>> values) -> {
                                 Map<String, Type> varTypes = new HashMap();
                                 for(Map.Entry<String, TypedVariable> entry : values.getLeft().entrySet()){
@@ -246,10 +243,17 @@ public class Agent {
                                 localContext.get().setAll(new TypingContext(varTypes));
                                 return values;
                             }))
-                    .seq(new LazyParser<>(((TypingContext localContext1) -> Parsing.relabellingParser(localContext1, communicationContext)), localContext.get()).trim())
                     .seq(new LazyParser<>(((TypingContext localContext1) -> {
                         try {
-                            return Parsing.receiveGuardParser(localContext1, channelContext);
+                            return Parsing.relabellingParser(localContext1, communicationContext);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    }), localContext.get()).trim())
+                    .seq(new LazyParser<>(((TypingContext localContext1) -> {
+                        try {
+                            return Parsing.receiveGuardParser(localContext1);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }

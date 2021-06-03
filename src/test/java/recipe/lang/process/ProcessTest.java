@@ -38,15 +38,12 @@ public class ProcessTest {
 
         TypingContext localContext = new TypingContext();
         localContext.set("v", Real.getType());
+        localContext.set("c", channelEnum);
 
         TypingContext communicationContext = new TypingContext();
         communicationContext.set("g", Boolean.getType());
 
-        TypingContext channelContext = new TypingContext();
-
-        channelContext.set("c", channelEnum);
-
-        Parser parser = Process.parser(messageContext, localContext, communicationContext, channelContext);
+        Parser parser = Process.parser(messageContext, localContext, communicationContext);
 
         Result r = parser.parse("<v == 5> c!g (m1 := 1, m2 := 2)[v := 6]");
         assert r.isSuccess();

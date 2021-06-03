@@ -68,7 +68,7 @@ public class Or extends Condition {
 	}
 
 	@Override
-	public Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException {
+	public Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
 		Expression<Boolean> lhsObject = lhs.close(store, CV);
 		Expression<Boolean> rhsObject = rhs.close(store, CV);
 		if (lhsObject.equals(Condition.TRUE) || rhsObject.equals(Condition.TRUE)) {
@@ -93,7 +93,7 @@ public class Or extends Condition {
 	}
 
 	@Override
-	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
 		return new Or(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
 	}
 }

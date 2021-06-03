@@ -39,12 +39,12 @@ public class Subtraction extends ArithmeticExpression{
     }
 
     @Override
-    public Expression<Number> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException {
+    public Expression<Number> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
         return new Subtraction(lhs.close(store, CV), rhs.close(store, CV));
     }
 
     @Override
-    public Expression<Number> relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+    public Expression<Number> relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
         return new Subtraction(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
     }
 

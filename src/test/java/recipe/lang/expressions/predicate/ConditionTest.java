@@ -51,7 +51,7 @@ public class ConditionTest {
     }
 
     @Test
-    public void parserSuccess() throws TypeCreationException {
+    public void parserSuccess() throws Exception {
         TypingContext context = new TypingContext();
 
         context.set("cond", Boolean.getType());
@@ -115,7 +115,7 @@ public class ConditionTest {
     }
 
     @Test
-    public void parserFailure() {
+    public void parserFailure() throws Exception {
         TypingContext context = new TypingContext();
         context.set("cond", Boolean.getType());
         context.set("b", Real.getType());

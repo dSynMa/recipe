@@ -47,12 +47,10 @@ public class ReceiveProcess extends BasicProcess {
     }
 
     public static Parser parser(TypingContext messageContext,
-                                TypingContext localContext,
-                                TypingContext channelContext) throws Exception {
-        TypingContext localAndChannelContext = TypingContext.union(localContext, channelContext);
-        TypingContext channelContextWithLocalChannelVars = TypingContext.union(localContext.getSubContext(Enum.getEnum(Config.channelLabel)), channelContext);
+                                TypingContext localContext) throws Exception {
+        TypingContext localChannelVars = localContext.getSubContext(Enum.getEnum(Config.channelLabel));
 
-        Parser localGuard = Condition.typeParser(localAndChannelContext);
+        Parser localGuard = Condition.typeParser(localContext);
 
         Parser delimetedCondition =
                 (CharacterParser.of('<').trim())
@@ -61,12 +59,12 @@ public class ReceiveProcess extends BasicProcess {
                         .map((List<Object> values) -> (Expression<Boolean>) values.get(1));
 
 
-        TypingContext localAndChannelAndMessageContext = TypingContext.union(TypingContext.union(localContext, channelContext), messageContext);
+        TypingContext localAndChannelAndMessageContext = TypingContext.union(localContext, messageContext);
         Parser localAssignment = Parsing.assignmentListParser(localContext, localAndChannelAndMessageContext);
 
         Parser parser =
                 delimetedCondition
-                        .seq(channelContextWithLocalChannelVars.valueParser().or(channelContextWithLocalChannelVars.variableParser()))
+                        .seq(localChannelVars.valueParser().or(localChannelVars.variableParser()))
                         .seq(CharacterParser.of('?'))
                         .seq((CharacterParser.of('[').trim()))
                         .seq(localAssignment)

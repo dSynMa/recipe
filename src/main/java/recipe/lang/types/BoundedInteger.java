@@ -33,7 +33,7 @@ public class BoundedInteger extends Integer {
         return min == that.min && max == that.max;
     }
 
-    public org.petitparser.parser.Parser parser(){
+    public org.petitparser.parser.Parser valueParser(){
         List<String> nums = new ArrayList<>();
         int i = min;
         while(i <= max){
@@ -57,11 +57,11 @@ public class BoundedInteger extends Integer {
     }
 
     @Override
-    public Double interpret(String value) throws MismatchingTypeException {
+    public java.lang.Number interpret(String value) throws MismatchingTypeException {
         try{
             int val = java.lang.Integer.parseInt(value);
             if(val >= min && val <= max){
-                return Double.valueOf(val);
+                return val;
             } else{
                 throw new MismatchingTypeException(value + " is not of type " + name());
             }
@@ -73,6 +73,6 @@ public class BoundedInteger extends Integer {
 
     @Override
     public String name() {
-        return min + "..." + max;
+        return min + ".." + max;
     }
 }

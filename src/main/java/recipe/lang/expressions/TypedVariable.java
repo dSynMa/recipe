@@ -4,6 +4,9 @@ import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.store.Store;
+import recipe.lang.types.Enum;
+import recipe.lang.types.Guard;
+import recipe.lang.types.Process;
 import recipe.lang.types.Type;
 
 import java.util.Objects;
@@ -52,6 +55,19 @@ public class TypedVariable<T extends Type> implements Expression<T> {
     @Override
     public Expression<T> relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
         return relabelling.apply(this);
+    }
+
+    @Override
+    public Boolean isValidAssignmentFor(TypedVariable var) {
+        if(getType().getClass().equals(Enum.class) && var.getType().getClass().equals(Enum.class)){
+            return getType().equals(var.getType());
+        } else if(getType().getClass().equals(Guard.class) && var.getType().getClass().equals(Guard.class)){
+            return getType().equals(var.getType());
+        } else if(getType().getClass().equals(Process.class) && var.getType().getClass().equals(Process.class)) {
+            return getType().equals(var.getType());
+        } else{
+            return this.getType().getClass().isAssignableFrom(var.getType().getClass());
+        }
     }
 
     @Override

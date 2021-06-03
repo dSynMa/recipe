@@ -3,6 +3,7 @@ package recipe.analysis;
 import recipe.lang.Config;
 import recipe.lang.System;
 import recipe.lang.agents.*;
+import recipe.lang.exception.MismatchingTypeException;
 import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
@@ -174,7 +175,7 @@ public class ToNuXmv {
                                 String sendGuard = "(" + process.getMessageGuard().relabel(v -> {
                                     try {
                                         return system.getCommunicationVariables().containsKey(v.getName()) ? receiveAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(receiveName + "-" + vv)) : v.sameTypeWithName(name + "-" + v);
-                                    } catch (RelabellingTypeException e) {
+                                    } catch (RelabellingTypeException | MismatchingTypeException e) {
                                         e.printStackTrace();
                                     }
                                     return null;
