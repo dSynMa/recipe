@@ -4,6 +4,7 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.exception.MismatchingTypeException;
 import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
@@ -27,20 +28,14 @@ public class Boolean extends Type {
     }
 
     public org.petitparser.parser.Parser valueParser(){
-        return StringParser.of("true")
-                .or(StringParser.of("TRUE"))
-                .or(StringParser.of("True"))
-                .or(StringParser.of("false"))
-                .or(StringParser.of("FALSE"))
-                .or(StringParser.of("False"))
+        return (StringParser.ofIgnoringCase("true")
+                .map((String value) -> {
+                    return Condition.getTrue();
+                }))
+                .or(StringParser.ofIgnoringCase("false")
                         .map((String value) -> {
-                            try {
-                                return new TypedValue(this, value.toUpperCase(Locale.ROOT));
-                            } catch (MismatchingTypeException e) {
-                                e.printStackTrace();
-                                return null;
-                            }
-                        });
+                            return Condition.getFalse();
+                        }));
     }
 
     @Override

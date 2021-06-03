@@ -46,7 +46,7 @@ public class ToNuXmv {
 
         String define = "DEFINE\n";
         String init = "INIT\n";
-        String trans = "TRANS\n";
+        String trans = "";
 
         List<Agent> agents = new ArrayList<>(system.getAgents());
         List<String> agentSendPreds = new ArrayList<>();
@@ -105,7 +105,7 @@ public class ToNuXmv {
             for (Map.Entry<String, TypedValue> entry : agent.getStore().getData().entrySet()) {
                 init += "\t& " + name + "-" + entry.getKey() + " = " + entry.getValue().getValue() + "\n";
             }
-//            define += "\treceive-guard-" + name + " := (" + agent.getReceiveGuard().relabel(v -> system.getCommunicationVariables().containsKey(v.getName()) ? v : v.getName().equals("channel") ? v : v.sameTypeWithName(name + "-" + v)) + ");\n";
+//            define += "\treceive-guard-" + name + " := (" + agent.getReceiveGuard().relabel(v -> system.getCommunicationVariables().containsKey(v.getName()) ? v : v.getName().equals(Config.channelLabel) ? v : v.sameTypeWithName(name + "-" + v)) + ");\n";
 
             Map<State, Set<ProcessTransition>> stateSendTransitionMap = new HashMap<>();
             Map<State, Set<ProcessTransition>> stateReceiveTransitionMap = new HashMap<>();
@@ -169,7 +169,7 @@ public class ToNuXmv {
                                 Agent receiveAgent = agents.get(j);
                                 String receiveName = receiveAgent.getName();
 
-                                String receiveGuard = receiveAgent.getReceiveGuard().relabel(v -> v.sameTypeWithName(v.toString().equals("channel") ? v.toString() : receiveName + "-" + v)).toString().replaceAll("channel", channel);
+                                String receiveGuard = receiveAgent.getReceiveGuard().relabel(v -> v.sameTypeWithName(v.toString().equals(Config.channelLabel) ? v.toString() : receiveName + "-" + v)).toString().replaceAll(Config.channelLabel, channel);
                                 receiveGuard = "(" + receiveGuard + ") | " + channel + " = " + broadcastChannel;
 
                                 String sendGuard = "(" + process.getMessageGuard().relabel(v -> {
@@ -254,16 +254,18 @@ public class ToNuXmv {
             }
         }
 
-        trans += indent((("((" + String.join(")\n| (", agentSendPreds)))) + ")";
-        trans += "\n\t\t| (!((" + String.join(") | (", sendNows) + ")) & keep-all))";
+        trans += "((" + String.join(")\n| (", agentSendPreds) + "));\n";
+//        trans += "\n\t\t| (!((" + String.join(") | (", sendNows) + ")) & keep-all))";
 
+        define += "\ttransition := " + trans;
         nuxmv += vars;
         nuxmv += define;
         nuxmv += "CONSTANTS\n\t";
-        nuxmv += String.join(", ", Enum.getEnum(Config.channelLabel).getValues());
+        nuxmv +=  String.join(", ", Enum.getEnum(Config.channelLabel).getValues());
         nuxmv += ";\n";
         nuxmv += init;
-        nuxmv += trans;
+        nuxmv += "TRANS\n";
+        nuxmv += "\ttransition | (!transition & keep-all)";
         nuxmv = nuxmv.replaceAll("&( |\n)*TRUE(( )*&( )*)( |\n)*", "");
         nuxmv = nuxmv.replaceAll("TRUE(( )*&( )*)", "");
 //        nuxmv = nuxmv.replaceAll("TRUE\n(\t& )", "\t");

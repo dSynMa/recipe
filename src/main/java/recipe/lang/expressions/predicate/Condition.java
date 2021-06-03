@@ -24,11 +24,20 @@ public abstract class Condition implements Expression<Boolean> {
 
 	static {
 		try {
-			TRUE = new TypedValue<Boolean>(Boolean.getType(), "true");
-			FALSE = new TypedValue<Boolean>(Boolean.getType(), "false");
+			TRUE = new TypedValue<Boolean>(Boolean.getType(), "TRUE");
+			FALSE = new TypedValue<Boolean>(Boolean.getType(), "FALSE");
 		} catch (MismatchingTypeException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public static TypedValue<Boolean> getTrue(){
+		return TRUE;
+	}
+
+
+	public static TypedValue<Boolean> getFalse(){
+		return FALSE;
 	}
 
 	public boolean isSatisfiedBy(Store store) throws AttributeTypeException, AttributeNotInStoreException, MismatchingTypeException {

@@ -5,8 +5,10 @@ import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.exception.MismatchingTypeException;
 import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.store.Store;
+import recipe.lang.types.Boolean;
 import recipe.lang.types.Type;
 
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
@@ -40,7 +42,7 @@ public class TypedValue<T extends Type> implements Expression<T> {
     }
 
     @Override
-    public Boolean isValidAssignmentFor(TypedVariable var) {
+    public java.lang.Boolean isValidAssignmentFor(TypedVariable var) {
         return var.getType().isValidValue(this.getValue());
     }
 
@@ -63,6 +65,10 @@ public class TypedValue<T extends Type> implements Expression<T> {
 
     @Override
     public String toString() {
+        if(type.equals(Boolean.getType())){
+            return value.toString().toUpperCase(Locale.ROOT);
+        }
+
         return value.toString();
     }
 }
