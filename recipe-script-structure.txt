@@ -1,25 +1,26 @@
-channels: A,B,C
+channels: ch1,ch2,ch3
 message-structure: d1 : int, d2 : bool
 communication-variables: f : int, g : bool
 
 guard g(a : int) := a == 5
 
-agent B
+agent first
 	local:
-		b : Int := 0
-		c : Int := 0
+		b : 0..12
+		c : 0..5
+	initial: b == 0 && c == 0
 	relabel:
 		f <- c
 		g <- b != 0
 	receive-guard: true
-	repeat: (<b == 0> C! (c == f) (d1 := b + 1, d2 := false)[b := b + 1])
+	repeat: (<b == 0> ch3! (c == f) (d1 := b + 1, d2 := false)[b := b + 1])
 
-agent A
+agent second
 	local:
 		a : int := 0
 	relabel:
 		f <- a
 		g <- a == 0
 	receive-guard:
-		(a < 5 & channel == C) | (a > 3 & channel == *)
-	repeat: (<a > 3> C? [a := d1])
+		(a < 5 & channel == ch3) | (a > 3 & channel == *)
+	repeat: (<a > 3> ch3? [a := d1])
