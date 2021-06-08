@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>LTL Synthesis</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" type="text/css" href="../static/devc.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://visjs.github.io/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style type="text/css">
+        #mynetwork {
+            width: 100%;
+            height: 100%;
+            border: 1px solid #d3d3d3;
+            box-sizing: border-box;
+        }
+
+        #contents {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        #error {
+            color: red;
+        }
+
+        #draw {
+            padding: 5px 15px;
+        }
+
+        #right {
+            top: 0;
+            right: 0;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body id="index" class="home">
+    <div id="contents">
+        <!-- ************  CODING ZONE  ************ -->
+        <div>
+            <div id="code">
+                <form method="post" action="{{ url_for(target) }}">
+                    <div id="title-code" class="head-section">
+                        LTL Specifications
+                    </div>
+                    <input id="launch-button" class="head-section" type="submit" value="Synthesize" />
+                    <!-- {% block code %}
+                    {% endblock %} -->
+                    <textarea id="text-code" name="code" rows={{ rows }} cols={{ cols }}>
+                        {{ code }}
+                        </textarea>
+                    <div id="text-code-ace" class="hidden">{{ code }}</div>
+            </div>
+
+            </form>
+        </div>
+        
+        <!-- <div>
+                <div>
+                    <div>Input variables:
+
+                    </div>
+                    <textarea id="inputs" type="text">{{ inputs }}</textarea>
+                </div>
+
+                <div>
+                    <div>
+                        Output variables:
+                    </div>
+                    <textarea id="outputs" type="text"></textarea>
+                </div>
+            </div> -->
+    </div>
+    <div>
+        <button id="draw" title="Draw the DOT graph (Ctrl+Enter)">Draw</button>
+        <span id="error"></span>
+    </div>
+    <div id="right">
+        <div id="mynetwork"></div>
+    </div>
+    <!-- ************ RUNNING ZONE RESULTS ************ -->
+
+    <div id="result">
+        <div id="title-result" class="head-section">
+            Controller/ Environment's winning strategy
+        </div>
+        <!-- {% block run %}
+            {% endblock %} -->
+        <textarea id="text-result" rows="18" cols="70">{{ resrun }}</textarea>
+    </div>
+
+    <!-- ************ COMPILATION ************ -->
+
+    <div id="compile">
+        <div id="title-compile" class="head-section">
+            Compilation Errors
+        </div>
+        <!-- {% block comp %}
+            {% endblock %} -->
+        <textarea id="text-compile" rows="7" cols="140">{{ rescomp }}</textarea>
+    </div>
+    </div>
+    <script src="../static/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script>
+        // The Ace editor needs divs instead of textareas
+        // So we hide the textarea and show a div instead
+        var editorElement = document.getElementById("text-code");
+        editorElement.classList.add("hidden");
+        document.getElementById("text-code-ace").classList.remove("hidden");
+
+        // Set up the editor
+        var editor = ace.edit("text-code-ace");
+        editor.setTheme("ace/theme/tomorrow");
+        //var language = ("{{ target }}" === "runpy") ? "python" : "c_cpp";
+        editor.getSession().setMode("ace/mode/java");
+        document.getElementById('text-code-ace').style.fontSize = '25px';
+        // Make sure we copy the content of the editor to the textarea before posting
+        // its content to the server
+        document.getElementById("launch-button").addEventListener("click", function () {
+            editorElement.innerHTML = editor.getValue();
+        });
+    </script>
+    <script type="text/javascript">
+        // create a network
+        var container = document.getElementById('mynetwork');
+        var options = {
+            physics: {
+                stabilization: false,
+                barnesHut: {
+                    springLength: 200
+                }
+            }
+        };
+        var data = {};
+        var network = new vis.Network(container, data, options);
+
+        $('#draw').click(draw);
+
+
+
+        $(window).resize(resize);
+        //$(window).load(draw); 
+
+        $('#text-result').keydown(function (event) {
+            if (event.ctrlKey && event.keyCode === 13) { // Ctrl+Enter
+                draw();
+                event.stopPropagation();
+                event.preventDefault();
+            }
+        });
+
+
+
+        function draw() {
+            try {
+                $('#error').html('');
+
+                // Provide a string with data in DOT language
+                data = vis.parseDOTNetwork($('#text-result').val());
+
+                network.setData(data);
+            }
+            catch (err) {
+                // set the cursor at the position where the error occurred
+                var match = /\(char (.*)\)/.exec(err);
+                if (match) {
+                    var pos = Number(match[1]);
+                    var textarea = $('#text-result')[0];
+
+                }
+
+                // show an error message
+                $('#error').html(err.toString());
+            }
+        }
+    </script>
+</body>
+
+</html>
