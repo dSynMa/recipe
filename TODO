@@ -1,5 +1,8 @@
 1. Process templates
 2. Agent templates
 3. Handle properly guard and process templates
-4. Connect with ACE
-6. Add bounded integer type to recipe
+4. Connect with ACE and viznetwork (basic web-based ui)
+5. Visualising individual agents viznetwork
+6. Specification to file
+7. Simulation (like formalmethods.dk)
+8. Allow unique labels for send transitions (p: ...) [allow transitions to remain unlabelled]
