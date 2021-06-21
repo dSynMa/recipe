@@ -23,6 +23,7 @@ public class GuardReference extends Condition {
     public GuardReference(Guard guardType, Expression[] parametersValues) throws MismatchingTypeException {
         this.guardType = guardType;
         TypedVariable[] params = guardType.getParameters();
+        this.parametersValues = new Expression[parametersValues.length];
 
         for (int i = 0; i < params.length; i++) {
             TypedVariable typedVariable = params[i];
@@ -62,30 +63,33 @@ public class GuardReference extends Condition {
 
     public static org.petitparser.parser.Parser parser(TypingContext context) throws Exception {
         Parser variable = context.variableParser();
+        Parser value = context.valueParser();
+        Parser guard = context.guardParser();
 
-        Parser parser = (CharacterParser.word().plus().flatten())
+        Parser parser = (guard)
                 .seq(CharacterParser.of('(').trim())
-                .seq(variable.separatedBy(CharacterParser.of(',').trim()))
+                //TODO parse also general expressions
+                .seq(((variable.or(value)).separatedBy(CharacterParser.of(',').trim())).optional(new ArrayList<Expression>()))
                 .map((List<Object> values) -> {
                     GuardReference guardReference = null;
-                    String label = (String) values.get(0);
-                    List<TypedVariable> vars = (List<TypedVariable>) values.get(2);
-                    List<String> varNames = new ArrayList<>();
-                    for(int i = 0; i < vars.size(); i++){
-                        varNames.add(vars.get(i).getName());
-                    }
+                    String label = ((TypedVariable) values.get(0)).getName();
+                    List<Expression> paramVals = (List<Expression>) values.get(2);
+//                    List<String> varNames = new ArrayList<>();
+//                    for(int i = 0; i < params.size(); i++){
+//                        varNames.add(vars.get(i).getName());
+//                    }
 
                     try{
-                        Guard guardType =
-                                Guard.getGuardDefinition(label);
+                        Guard guardType = (Guard) context.get(label);
+//                                Guard.getGuardDefinition(label);
                         TypedVariable[] params = guardType.getParameters();
-                        for(int i = 0 ; i < vars.size(); i++){
-                            if(!vars.get(i).getType().equals(params[i])){
-                                throw new MismatchingTypeException(label + "(" + String.join(", ", varNames) + ") has mismatching types of var " + vars.get(i).getName() + " with expected " + params[i].toString() + ".");
+                        for(int i = 0 ; i < paramVals.size(); i++){
+                            if(!paramVals.get(i).getType().equals(params[i].getType())){
+                                throw new MismatchingTypeException("Guard reference " + label + " is used with mismatching types of var: value is " + paramVals.get(i) + " but expected type " + params[i].getType() + ".");
                             }
                         }
 
-                        return new GuardReference(guardType, vars.toArray(new TypedVariable[0]));
+                        return new GuardReference(guardType, paramVals.toArray(new Expression[paramVals.size()]));
                     } catch (Exception e){
                         e.printStackTrace();
                     }

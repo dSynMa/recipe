@@ -6,7 +6,7 @@ import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.Config;
 import recipe.lang.expressions.Expression;
-import recipe.lang.expressions.TypedValue;
+import recipe.lang.definitions.GuardDefinition;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.expressions.predicate.Condition;
@@ -223,40 +223,18 @@ public class Parsing {
         return typedVariableAssignmentList;
     }
 
-    public static Parser guardDefinitionList(){
+    public static Parser guardDefinitionList(TypingContext typingContext){
         AtomicReference<TypingContext> typedVariableList = new AtomicReference<>(new TypingContext());
-        org.petitparser.parser.Parser guardDefinitionParser = StringParser.of("guard").trim()
-                .seq(word().plus().trim().flatten())
-                .seq(CharacterParser.of('(').trim())
-                .seq(typedVariableList()
-                        .mapWithSideEffects((Map<String, Type> value) -> {
-                            typedVariableList.get().setAll(new TypingContext(value));
-                            return value;
-                        }))
-                .seq(CharacterParser.of(')').trim())
-                .seq(StringParser.of(":=").trim())
-                .seq(new LazyParser<>((TypingContext context) -> {
-                    try {
-                        return Condition.parser(context);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    return null;
-                }, typedVariableList.get()))
-                .map((List<Object> values) -> {
-                    return new HashMap.SimpleEntry<>(values.get(1), new Pair(values.get(3), values.get(6)));
-                });
+        org.petitparser.parser.Parser guardDefinitionParser = GuardDefinition.parser(typingContext);
 
         org.petitparser.parser.Parser guardDefinitionListParser = guardDefinitionParser.separatedBy(CharacterParser.of('\n').star())
-                .map((List<Object> values) -> {
-                    Map<String, Map<String, Expression>> guardsParams = new HashMap();
-                    Map<String, Condition> guards = new HashMap();
-                    for(Object v : values){
-                        HashMap.SimpleEntry entry = (HashMap.SimpleEntry) v;
-                        guardsParams.put((String) entry.getKey(), (Map<String, Expression>) ((Pair) entry.getValue()).getLeft());
-                        guards.put((String) entry.getKey(), (Condition) ((Pair) entry.getValue()).getRight());
+                .map((List<GuardDefinition> values) -> {
+                    Map<String, Type> guardDefinitionContext = new HashMap<>();
+                    for(GuardDefinition v : values){
+                        guardDefinitionContext.put(v.getName(), v.getType());
                     }
-                    return new Pair(guardsParams, guards);
+
+                    return guardDefinitionContext;
                 });
 
         return guardDefinitionListParser;

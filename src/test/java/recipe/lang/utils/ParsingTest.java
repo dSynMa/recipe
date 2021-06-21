@@ -56,9 +56,9 @@ public class ParsingTest {
 
     @Test
     public void guardDefinitionList1() {
-        String script = "guard g(a : int) := a == 5";
+        String script = "guard g(a : int) := a == 5;";
 
-        Parser parser = Parsing.guardDefinitionList().end();
+        Parser parser = Parsing.guardDefinitionList(new TypingContext()).end();
         Result r = parser.parse(script);
         assert r.isSuccess();
     }

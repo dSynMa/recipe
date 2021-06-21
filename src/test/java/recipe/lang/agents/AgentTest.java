@@ -55,7 +55,7 @@ public class AgentTest {
         channelsWithBroadcast.add("*");
         new Enum(Config.channelLabel, channelsWithBroadcast);
 
-        Parser parser = Agent.parser(messageContext, communicationContext).end();
+        Parser parser = Agent.parser(messageContext, communicationContext, new TypingContext()).end();
         Result r = parser.parse(agent);
         System.out.println(r.getPosition());
         System.out.println(agent.substring(r.getPosition()));

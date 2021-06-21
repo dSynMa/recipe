@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class TypingContext {
     Set<Type> types;
@@ -110,6 +111,12 @@ public class TypingContext {
         newContext.setAll(context2);
 
         return newContext;
+    }
+
+    public org.petitparser.parser.Parser guardParser(){
+        return Parsing.disjunctiveWordParser(varType.keySet().stream().filter(x -> varType.get(x).getClass().equals(Guard.class)).collect(Collectors.toUnmodifiableList()), (String parsed) -> {
+            return new TypedVariable(varType.get(parsed), parsed);
+        });
     }
 
     public org.petitparser.parser.Parser variableParser(){

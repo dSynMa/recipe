@@ -37,6 +37,7 @@ public class SystemTest {
         String script = "channels: A,B,C\n" +
                 "message-structure: d1 : 0..8, d2 : bool\n" +
                 "communication-variables: f : int, g : bool\n\n" +
+                "guard h(a : int) := true;\n\n" +
                 "agent B\n" +
                 "\tlocal:\n" +
                 "\t\tb : Int := 0\n" +

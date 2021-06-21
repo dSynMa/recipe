@@ -216,7 +216,8 @@ public class Agent {
 //    }
 
     public static org.petitparser.parser.Parser parser(TypingContext messageContext,
-                                                              TypingContext communicationContext) throws Exception {
+                                                       TypingContext communicationContext,
+                                                       TypingContext guardDefinitionContext) throws Exception {
         SettableParser parser = SettableParser.undefined();
         Function<TypingContext, Parser> process = (TypingContext localContext) -> {
             try {
@@ -251,15 +252,17 @@ public class Agent {
                         }
                         return null;
                     }), localContext.get()).trim())
-                    .seq(new LazyParser<>(((TypingContext localContext1) -> {
+                    .seq(new LazyParser<>(((Pair<TypingContext,TypingContext> guardAndLocalContext) -> {
                         try {
-                            return Parsing.receiveGuardParser(localContext1);
+                            return Parsing.receiveGuardParser(TypingContext.union(guardAndLocalContext.getLeft(), guardAndLocalContext.getRight()));
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
                         return null;
-                    }), localContext.get()))
-                    .seq(new LazyParser(process, localContext.get()).trim())
+                    }), new Pair(guardDefinitionContext, localContext.get())))
+                    .seq(new LazyParser<>((Pair<TypingContext,TypingContext> guardAndLocalContext) -> {
+                        return process.apply(TypingContext.union(guardAndLocalContext.getLeft(), guardAndLocalContext.getRight()));
+                    }, new Pair(guardDefinitionContext, localContext.get())).trim())
                 .map((List<Object> values) -> {
                     String agentName = ((String) values.get(1)).trim();
                     Map<String, TypedVariable> localVars = ((Pair<Map, Map>) values.get(2)).getLeft();

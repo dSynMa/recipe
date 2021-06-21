@@ -14,28 +14,16 @@ public class Guard extends Type {
     private TypedVariable[] parameters;
     private String label;
 
-    //TODO this should be in TypingContext
-    private static Map<String, Guard> existing = new HashMap<>();
-
-    public static void clear(){
-        existing.clear();
-    }
-
-    public static Guard getGuardDefinition(String name) throws Exception {
-        if(existing.containsKey(name)) return existing.get(name);
-        else throw new Exception("No such guard definition: " + name);
-    }
-
     public Guard(String label, TypedVariable[] parameters) throws TypeCreationException{
         if(parameters == null){
             throw new TypeCreationException("Guard type initialised with null.");
         }
-        if(existing.containsKey(label)){
-            throw new TypeCreationException("Guard with name " + label + " already exists.");
-        }
+//        if(existing.containsKey(label)){
+//            throw new TypeCreationException("Guard with name " + label + " already exists.");
+//        }
         this.label = label;
         this.parameters = parameters;
-        existing.put(label, this);
+//        existing.put(label, this);
     }
 
     public TypedVariable[] getParameters(){
