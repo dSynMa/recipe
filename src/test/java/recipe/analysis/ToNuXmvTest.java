@@ -13,6 +13,7 @@ public class ToNuXmvTest {
     @Test
     public void transform() throws Exception {
         String script = "channels: ch1,ch2,ch3\n" +
+//                "message-label: team, form, assemble\n" +
                 "message-structure: d1 : 0..8, d2 : bool\n" +
                 "communication-variables: f : int, g : bool\n\n" +
                 "agent first\n" +
@@ -22,7 +23,7 @@ public class ToNuXmvTest {
                 "\trelabel:\n" +
                 "\t\tf <- c\n" +
                 "\t\tg <- b != 0\n" +
-                "\treceive-guard: true\n" +
+                "\treceive-guard: channel != ch1\n" +
                 "\trepeat: (<b == 0> ch3! (c == f) (d1 := b + 1, d2 := false)[b := b + 1])\n\n" +
                 "agent second\n" +
                 "\tlocal:\n" +

@@ -7,7 +7,6 @@ import java.util.function.Function;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.Config;
 import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
@@ -25,6 +24,7 @@ import static org.petitparser.parser.primitive.CharacterParser.word;
 public class Agent {
     private String name;
     private Store store;
+    private Expression<Boolean> init;
     private HashMap<String, TypedVariable> CV;
     private Map<TypedVariable, Expression> relabel;
     private Set<State> states;  //control flow
@@ -37,11 +37,12 @@ public class Agent {
     private Expression<Boolean> initialCondition;
 
     public Agent(String name) throws MismatchingTypeException {
-        this(name, new Store(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(name, new String()), new TypedValue<Boolean>(Boolean.getType(), "false"));
+        this(name, new Store(), Condition.getTrue(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(name, new String()), new TypedValue<Boolean>(Boolean.getType(), "false"));
     }
 
     public Agent(String name,
-                 Store store,
+                 Store locals,
+                 Expression<Boolean> init,
                  Set<State> states,
                  Set<ProcessTransition> sendTransitions,
                  Set<ProcessTransition> receiveTransitions,
@@ -50,7 +51,8 @@ public class Agent {
                  State initialState,
                  Expression<Boolean> receiveGuard) {
         this.name = name.trim();
-        this.store = store;
+        this.store = locals;
+        this.init = init;
         this.states = new HashSet<>(states);
         this.sendTransitions = new HashSet<>(sendTransitions);
         this.receiveTransitions = new HashSet<>(receiveTransitions);
@@ -62,6 +64,7 @@ public class Agent {
 
     public Agent(String name,
                  Store store,
+                 Expression<Boolean> init,
                  Set<State> states,
                  Set<ProcessTransition> sendTransitions,
                  Set<ProcessTransition> receiveTransitions,
@@ -71,6 +74,7 @@ public class Agent {
                  State initialState) {
         this.name = name.trim();
         this.store = store;
+        this.init = init;
         this.states = new HashSet<>(states);
         this.sendTransitions = new HashSet<>(sendTransitions);
         this.receiveTransitions = new HashSet<>(receiveTransitions);
@@ -84,38 +88,29 @@ public class Agent {
         return this.name;
     }
 
-    public TypedValue getValue(TypedVariable attribute) throws AttributeTypeException {
-        return store.getValue(attribute);
-    }
-
-    public void setValue(TypedVariable attribute, TypedValue value) throws AttributeTypeException {
-        store.setValue(attribute, value);
-    }
+//    public TypedValue getValue(TypedVariable attribute) throws AttributeTypeException {
+//        return store.getValue(attribute);
+//    }
+//
+//    public void setValue(TypedVariable attribute, TypedValue value) throws AttributeTypeException {
+//        store.setValue(attribute, value);
+//    }
 
     public Store getStore() {
         return store;
     }
 
-    protected void setStore(Store store) {
-        this.store = store;
+    public Expression<Boolean> getInit() {
+        return init;
+    }
+
+    protected void setInit(Expression<Boolean> init) {
+        this.init = init;
     }
 
     @Override
     public String toString() {
-        return name + ":" + store.toString();
-    }
-
-    public void storeUpdate(Map<TypedVariable, TypedValue> update) throws AttributeTypeException {
-        if (update != null) {
-            for (TypedVariable att : update.keySet()) {
-                store.setValue(att, update.get(att));
-            }
-        }
-
-    }
-
-    public TypedVariable getAttribute(String name) throws AttributeNotInStoreException {
-        return store.getAttribute(name);
+        return name + ":" + init.toString();
     }
 
     public Set<State> getStates() {
@@ -140,13 +135,6 @@ public class Agent {
 
     public HashMap<String, TypedVariable> getCV() {
         return CV;
-    }
-
-    public void setCV(HashMap<String, TypedVariable> cV) throws CVAndStoreIntersectException {
-        if(!Collections.disjoint(cV.keySet(), store.getAttributes().keySet())){
-            throw new CVAndStoreIntersectException();
-        }
-        CV = CV;
     }
 
     public Map<TypedVariable, Expression> getRelabel() {
@@ -235,15 +223,23 @@ public class Agent {
 
         parser.set(StringParser.of("agent").trim()
                     .seq(name)
-                    .seq(Parsing.labelledParser("local", Parsing.typedAssignmentList(new TypingContext()))
-                            .mapWithSideEffects((Pair<Map<String, TypedVariable>, Map<String, TypedValue>> values) -> {
-                                Map<String, Type> varTypes = new HashMap();
-                                for(Map.Entry<String, TypedVariable> entry : values.getLeft().entrySet()){
-                                    varTypes.put(entry.getKey(), entry.getValue().getType());
+                    .seq(Parsing.labelledParser("local", Parsing.typedVariableList())
+                            .mapWithSideEffects((Map<String, Type> values) -> {
+                                localContext.get().setAll(new TypingContext(values));
+                                Map<String, TypedVariable> vars = new HashMap();
+                                for(Map.Entry<String, Type> var : values.entrySet()){
+                                    vars.put(var.getKey(), new TypedVariable(var.getValue(), var.getKey()));
                                 }
-                                localContext.get().setAll(new TypingContext(varTypes));
-                                return values;
+                                return vars;
                             }))
+                    .seq(Parsing.labelledParser("init", new LazyParser<>((TypingContext context) -> {
+                        try {
+                            return Condition.parser(context);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    }, localContext.get())))
                     .seq(new LazyParser<>(((TypingContext localContext1) -> {
                         try {
                             return Parsing.relabellingParser(localContext1, communicationContext);
@@ -265,14 +261,16 @@ public class Agent {
                     }, new Pair(guardDefinitionContext, localContext.get())).trim())
                 .map((List<Object> values) -> {
                     String agentName = ((String) values.get(1)).trim();
-                    Map<String, TypedVariable> localVars = ((Pair<Map, Map>) values.get(2)).getLeft();
-                    Map<String, TypedValue> localValues = ((Pair<Map, Map>) values.get(2)).getRight();
+                    Map<String, TypedVariable> localVars = (Map<String, TypedVariable>) values.get(2);
                     Store store = null;
                     try {
-                        store = new Store(localValues, localVars);
-                        Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(3);
-                        Expression<Boolean> receiveGuardCondition = (Expression<Boolean>) values.get(4);
-                        Process repeat = (Process) values.get(5);
+                        store = new Store(localVars);
+//                    Map<String, TypedValue> localValues = ((Pair<Map, Map>) values.get(2)).getRight();
+                        Expression<Boolean> init = null;
+                        init = (Expression<Boolean>) values.get(3);//new Store(localValues, localVars);
+                        Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(4);
+                        Expression<Boolean> receiveGuardCondition = (Expression<Boolean>) values.get(5);
+                        Process repeat = (Process) values.get(6);
                         State startState = new State("start");
                         Set<Transition> transitions = repeat.asTransitionSystem(startState, startState);
                         Set<ProcessTransition> sendTransitions = new HashSet<>();
@@ -309,6 +307,7 @@ public class Agent {
 
                         Agent agent = new Agent(agentName,
                                 store,
+                                init,
                                 states,
                                 sendTransitions,
                                 receiveTransitions,
@@ -321,9 +320,9 @@ public class Agent {
 
                         return agent;
                     } catch (AttributeTypeException e) {
-                        error.set(e.toString());
+                        e.printStackTrace();
                     } catch (AttributeNotInStoreException e) {
-                        error.set(e.toString());
+                        e.printStackTrace();
                     }
 
                     return null;

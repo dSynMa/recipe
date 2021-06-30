@@ -3,9 +3,8 @@ message-structure: d1 : 0..8, d2 : bool
 communication-variables: f : int, g : bool
 
 agent first
-	local:
-		b : Int := 0
-		c : Int := 0
+	local: b : Int, c : Int
+	init: b == 0 && c == 0
 	relabel:
 		f <- c
 		g <- b != 0
@@ -13,8 +12,8 @@ agent first
 	repeat: (<b == 0> ch3! (c == f) (d1 := b + 1, d2 := false)[b := b + 1])
 
 agent second
-	local:
-		a : Int := 0
+	local: a : Int
+	init: a == 0
 	relabel:
 		f <- a
 		g <- a == 0

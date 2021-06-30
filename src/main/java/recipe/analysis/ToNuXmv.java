@@ -102,10 +102,7 @@ public class ToNuXmv {
             vars += "\t" + name + ".state" + " : {" + stateList + "};\n";
             init += "\t& " + name + ".state" + " = " + name + "-" + agent.getInitialState().toString() + "\n";
 
-            for (Map.Entry<String, TypedValue> entry : agent.getStore().getData().entrySet()) {
-                init += "\t& " + name + "-" + entry.getKey() + " = " + entry.getValue().getValue() + "\n";
-            }
-//            define += "\treceive-guard-" + name + " := (" + agent.getReceiveGuard().relabel(v -> system.getCommunicationVariables().containsKey(v.getName()) ? v : v.getName().equals(Config.channelLabel) ? v : v.sameTypeWithName(name + "-" + v)) + ");\n";
+            init += "\t& " + agent.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(name + "-" + v)) + "\n";
 
             Map<State, Set<ProcessTransition>> stateSendTransitionMap = new HashMap<>();
             Map<State, Set<ProcessTransition>> stateReceiveTransitionMap = new HashMap<>();

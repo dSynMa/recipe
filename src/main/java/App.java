@@ -6,7 +6,6 @@ import java.nio.file.Path;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
 import recipe.analysis.ToNuXmv;
-import recipe.lang.exception.RelabellingTypeException;
 
 public class App 
 {
