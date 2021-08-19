@@ -57,11 +57,11 @@ public class StoreTest {
         assertFalse(store.safeAddAttribute(attribute2));
     }
 
-    @Test
-    public void getValue() {
-        assertTrue(store.getValue("v").getValue().toString().equals("7"));
-        assertFalse(store.getValue("v").equals("vgg"));
-    }
+//    @Test
+//    public void getValue() {
+//        assertTrue(store.getValue("v").getValue().toString().equals("7"));
+//        assertFalse(store.getValue("v").equals("vgg"));
+//    }
 
 //    @Test
 //    public void setValue() throws AttributeTypeException, AttributeNotInStoreException, MismatchingTypeException {
