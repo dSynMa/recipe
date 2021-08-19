@@ -7,6 +7,10 @@ import org.petitparser.parser.Parser;
 import recipe.lang.exception.TypeCreationException;
 import recipe.lang.types.Enum;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 import static org.junit.Assert.*;
 
 public class SystemTest {
@@ -33,29 +37,8 @@ public class SystemTest {
     }
 
     @Test
-    public void parser() {
-        String script = "channels: A,B,C\n" +
-                "message-structure: d1 : 0..8, d2 : bool\n" +
-                "communication-variables: f : int, g : bool\n\n" +
-                "guard h(a : int) := true;\n\n" +
-                "agent B\n" +
-                "\tlocal:\n" +
-                "\t\tb : Int := 0\n" +
-                "\t\tc : Int := 0\n" +
-                "\trelabel:\n" +
-                "\t\tf <- c\n" +
-                "\t\tg <- b != 0\n" +
-                "\treceive-guard: true\n" +
-                "\trepeat: (<b == 0> C! (c == f) (d1 := b + 1, d2 := false)[b := b + 1])\n\n" +
-                "agent A\n" +
-                "\tlocal:\n" +
-                "\t\ta : Int := 0\n" +
-                "\trelabel:\n" +
-                "\t\tf <- a\n" +
-                "\t\tg <- a == 0\n" +
-                "\treceive-guard:\n" +
-                "\t\t(a < 5 & channel == C) | (a > 3 & channel == B)\n" +
-                "\trepeat: (<a > 3> C? [a := d1])";
+    public void parser() throws IOException {
+        String script = String.join("\n", Files.readAllLines(Paths.get("./example-current-syntax.txt")));
 
         Parser system = System.parser().end();
         Result r = system.parse(script);

@@ -27,10 +27,8 @@ public class AgentTest {
     @Test
     public void parser() throws Exception {
         String agent = "agent B\n" +
-                "\tlocal:\n" +
-                "\t\tc : int := 0\n" +
-                "\t\tb : int := 0\n" +
-                "\t\tchVar : channel := A\n" +
+                "\tlocal: c : int, b : int, chVar : channel\n" +
+                "\tinit: b == 0 && (c == 0 && chVar == A)\n" +
                 "\trelabel:\n" +
                 "\t\tf <- b\n" +
                 "\t\tg <- b != 0\n" +
