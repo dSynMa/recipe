@@ -2,6 +2,7 @@ package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
+import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.Config;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
@@ -31,7 +32,8 @@ public class SendProcess extends BasicProcess {
 
     public Expression<Boolean> messageGuard;
 
-    public SendProcess(Expression<Boolean> psi, Expression channel, Map<String, Expression> message, Map<String, Expression> update, Expression<Boolean> messageGuard) {
+    public SendProcess(String label, Expression<Boolean> psi, Expression channel, Map<String, Expression> message, Map<String, Expression> update, Expression<Boolean> messageGuard) {
+        this.label = label;
         this.psi = psi;
         this.channel = channel;
         this.message = message;
@@ -85,8 +87,9 @@ public class SendProcess extends BasicProcess {
         Parser messageAssignment = Parsing.assignmentListParser(messageContext, localAndChannelAndCommunicationContext);
         Parser localAssignment = Parsing.assignmentListParser(localContext, localContext);
 
-        Parser parser =
-                delimetedCondition
+        Parser parser = (CharacterParser.word().plus().trim()
+                        .seq(CharacterParser.of(':').trim()).flatten()).optional()
+                        .seq(delimetedCondition)
                         .seq(localChannelVars.valueParser().or(localChannelVars.variableParser()))
                         .seq(CharacterParser.of('!'))
                         .seq(messageGuard)
@@ -97,12 +100,15 @@ public class SendProcess extends BasicProcess {
                         .seq(localAssignment)
                         .seq((CharacterParser.of(']').trim()))
                         .map((List<Object> values) -> {
-                            Expression<Boolean> psi = (Expression<Boolean>) values.get(0);
-                            Expression channel = (Expression) values.get(1);
-                            Expression<Boolean> guard = (Expression<Boolean>) values.get(3);
-                            Map<String, Expression> message = (Map<String, Expression>) values.get(5);
-                            Map<String, Expression> update = (Map<String, Expression>) values.get(8);
-                            SendProcess action = new SendProcess(psi, channel, message, update, guard);
+                            String label = ((String) values.get(0));
+                            if(label != null) label = label.replace(":", "").trim();
+                            int i = 1;
+                            Expression<Boolean> psi = (Expression<Boolean>) values.get(i);
+                            Expression channel = (Expression) values.get(i+1);
+                            Expression<Boolean> guard = (Expression<Boolean>) values.get(i+3);
+                            Map<String, Expression> message = (Map<String, Expression>) values.get(i+5);
+                            Map<String, Expression> update = (Map<String, Expression>) values.get(i+8);
+                            SendProcess action = new SendProcess(label, psi, channel, message, update, guard);
                             return action;
                         });
 

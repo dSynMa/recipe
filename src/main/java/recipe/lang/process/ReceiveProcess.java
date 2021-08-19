@@ -21,7 +21,8 @@ import java.util.Set;
 
 public class ReceiveProcess extends BasicProcess {
 
-    public ReceiveProcess(Expression<Boolean> psi, Expression channel, Map<String, Expression> update) {
+    public ReceiveProcess(String label, Expression<Boolean> psi, Expression channel, Map<String, Expression> update) {
+        this.label = label;
         this.psi = psi;
         this.channel = channel;
         this.update = update;
@@ -62,18 +63,22 @@ public class ReceiveProcess extends BasicProcess {
         TypingContext localAndChannelAndMessageContext = TypingContext.union(localContext, messageContext);
         Parser localAssignment = Parsing.assignmentListParser(localContext, localAndChannelAndMessageContext);
 
-        Parser parser =
-                delimetedCondition
+        Parser parser = (CharacterParser.word().plus().trim()
+                        .seq(CharacterParser.of(':').trim()).flatten()).optional()
+                        .seq(delimetedCondition)
                         .seq(localChannelVars.valueParser().or(localChannelVars.variableParser()))
                         .seq(CharacterParser.of('?'))
                         .seq((CharacterParser.of('[').trim()))
                         .seq(localAssignment)
                         .seq((CharacterParser.of(']').trim()))
                         .map((List<Object> values) -> {
-                            Expression<Boolean> psi = (Expression<Boolean>) values.get(0);
-                            Expression channel = (Expression) values.get(1);
-                            Map<String, Expression> update = (Map<String, Expression>) values.get(4);
-                            ReceiveProcess action = new ReceiveProcess(psi, channel, update);
+                            String label = ((String) values.get(0));
+                            if(label != null) label = label.replace(":", "").trim();
+                            int i = 1;
+                            Expression<Boolean> psi = (Expression<Boolean>) values.get(i);
+                            Expression channel = (Expression) values.get(i+1);
+                            Map<String, Expression> update = (Map<String, Expression>) values.get(i+4);
+                            ReceiveProcess action = new ReceiveProcess(label, psi, channel, update);
                             return action;
                         });
 

@@ -50,9 +50,50 @@ public class ToNuXmv {
 
         List<Agent> agents = new ArrayList<>(system.getAgents());
         List<String> agentSendPreds = new ArrayList<>();
-
+        Set<String> sendProcessNames = new HashSet<>();
+        Set<String> receiveProcessNames = new HashSet<>();
         List<String> keepFunctions = new ArrayList<>();
+
         String keepAll = "keep-all := TRUE";
+//        String keepAllLabels = "keep-all-labels := TRUE";
+//
+//        for(int i = 0; i < agents.size(); i++) {
+////            for(Transition t : agents.get(i).getSendTransitions()){
+////                String label = ((SendProcess) t.getLabel()).getLabel();
+////                if (label != null){
+////                    keepAllLabels += " & next(" + agents.get(i).getName() + "-" + label + ") = " + agents.get(i).getName() + "-" + label;
+////                    sendProcessNames.add(agents.get(i).getName() + "-" + label);
+////                }
+////            }
+//            for(Transition t : agents.get(i).getReceiveTransitions()){
+//                String label = ((ReceiveProcess) t.getLabel()).getLabel();
+//                if (label != null && !label.equals("")){
+//                    keepAllLabels += " & next(" + agents.get(i).getName() + "-" + label + ") = " + agents.get(i).getName() + "-" + label;
+//                    receiveProcessNames.add(agents.get(i).getName() + "-" + label);
+//                    String keep = "keep-local-not-" + agents.get(i).getName() + "-" + label + " := TRUE";
+//                    for(Transition tt : agents.get(i).getReceiveTransitions()){
+//                        String labell = ((ReceiveProcess) tt.getLabel()).getLabel();
+//                        if(!label.equals(labell)){
+//                            keep += " & next(" + agents.get(i).getName() + "-" + labell + ") = " + agents.get(i).getName() + "-" + labell;
+//                        }
+//                    }
+//                    keepFunctions.add(keep);
+//                }
+//            }
+//        }
+//
+//        keepFunctions.add(keepAllLabels);
+
+        for(String sendName : sendProcessNames){
+            String keep = "keep-not-" + sendName + " := TRUE";
+            for(String sendName2 : sendProcessNames){
+                if(!sendName.equals(sendName2)){
+                    keep += " & next(" + sendName2 + ") = " + sendName2;
+                }
+            }
+
+            keepFunctions.add(keep);
+        }
 
         for(int i = 0; i < agents.size(); i++) {
             Agent agent = agents.get(i);
@@ -76,7 +117,27 @@ public class ToNuXmv {
                 keepThis += " & next(" + name + "-" + var + ") = " + name + "-" + var;
                 keepAll += " & next(" + name + "-" + var + ") = " + name + "-" + var;
             }
-            keepAll += " & next(" + name + ".state) = " + name + ".state";
+
+            for(Transition t : agents.get(i).getReceiveTransitions()){
+                String label = ((ReceiveProcess) t.getLabel()).getLabel();
+                if (label != null && !label.equals("")){
+                    keepThis += " & next(" + agents.get(i).getName() + "-" + label + "-prev) = FALSE";
+                    keepAll += " & next(" + agents.get(i).getName() + "-" + label + "-prev) = FALSE";
+                    receiveProcessNames.add(agents.get(i).getName() + "-" + label);
+
+                    String falsifyAllLabelsExceptThis = "falsify-not-" + agents.get(i).getName() + "-" + label + "-prev := TRUE";
+                    for(Transition tt : agents.get(i).getReceiveTransitions()){
+                        String labell = ((ReceiveProcess) tt.getLabel()).getLabel();
+                        if(!label.equals(labell) && label != null && !label.equals("")){
+                            falsifyAllLabelsExceptThis += " & next(" + agents.get(i).getName() + "-" + labell + ") = FALSE";
+                        }
+                    }
+                    keepFunctions.add(falsifyAllLabelsExceptThis);
+                }
+            }
+
+            keepAll += " & keep-all-" + name;
+
             keepFunctions.add(keepThis);
         }
 
@@ -121,7 +182,6 @@ public class ToNuXmv {
                 if (sendTransitions != null && sendTransitions.size() > 0) {
                     List<String> transitionSendPreds = new ArrayList<>();
 
-                    String stateSendPred = "";
                     for (ProcessTransition t : sendTransitions) {
                         //conditions for activation in now (is in source, and local guard holds),
                         // and effects in next (update, next state, and other stuff for receipt)
@@ -198,14 +258,18 @@ public class ToNuXmv {
                                         }
 
                                         for (Map.Entry<String, Expression> entry : receiveProcess.getUpdate().entrySet()) {
-                                            receiveNext += "\n & (" + "next(" + receiveName + "-" + entry.getKey() + ") = " + entry.getValue().relabel(v -> system.getMessageStructure().containsKey(((TypedVariable) v).getName()) ? relabelledMessage.get(((TypedVariable) v).getName()) : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v)) + ")";
+                                            receiveNext += "\n & " + "next(" + receiveName + "-" + entry.getKey() + ") = " + entry.getValue().relabel(v -> system.getMessageStructure().containsKey(((TypedVariable) v).getName()) ? relabelledMessage.get(((TypedVariable) v).getName()) : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v));
                                         }
                                         for (String var : receiveAgent.getStore().getAttributes().keySet()) {
                                             if (!receiveProcess.getUpdate().containsKey(var)) {
-                                                receiveNext += "\n & (" + "next(" + receiveName + "-" + var + ") = " + receiveName + "-" + var + ")";
+                                                receiveNext += "\n & " + "next(" + receiveName + "-" + var + ") = " + receiveName + "-" + var;
                                             }
                                         }
 
+                                        if(receiveProcess.getLabel() != null && !receiveProcess.equals("")){
+                                            receiveNext += "\n & "  + "next(" + receiveName + "-" + receiveProcess.getLabel() + "-prev) = TRUE";
+                                            receiveNext += "\n & falsify-not-" + receiveName + "-" + receiveProcess.getLabel() + "-prev";
+                                        }
 
                                         if (iterationExitTransitions != null && iterationExitTransitions.size() > 0) {
                                             Set<IterationExitTransition> destItExit = stateIterationExitTransitionMap.get(t.getDestination());
@@ -233,7 +297,6 @@ public class ToNuXmv {
                                     stateReceivePrd += "FALSE";
                                 }
 
-                                
                                 String agentReceivePred = "(" + receiveGuard + ")\n & \n" + indent("((" + sendGuard + "\n" + indent(indent("& (" + stateReceivePrd) + "))"));
                                 agentReceivePred += indent("\n | (!(" + receiveGuard + ") & keep-all-" + receiveName + ")");
                                 agentReceivePred += indent("\n | (" + channel + " = " + broadcastChannel + " & " + "!(" + sendGuard + ") & keep-all-" + receiveName + ")");
@@ -242,7 +305,14 @@ public class ToNuXmv {
                             }
                         }
 
-                        transitionSendPreds.add(now + indent(indent(indent(next))) + "\n" + indent("& (" + String.join("\n & ", agentReceivePreds)+ ")") );
+                        String logic = now + indent(indent(indent(next))) + "\n" + indent("& (" + String.join("\n & ", agentReceivePreds)+ ")");
+
+                        if(process.getLabel() != null) {
+                            define +=  "\t" + name + "-" + process.getLabel() + " := " + logic + ";\n";
+                            transitionSendPreds.add(name + "-" + process.getLabel());
+                        } else {
+                            transitionSendPreds.add(logic);
+                        }
                     }
                     stateSendPreds.addAll(transitionSendPreds);
                 }
@@ -254,12 +324,24 @@ public class ToNuXmv {
         trans += "((" + String.join(")\n| (", agentSendPreds) + "));\n";
 //        trans += "\n\t\t| (!((" + String.join(") | (", sendNows) + ")) & keep-all))";
 
-        define += "\ttransition := " + trans;
+        for(String name : receiveProcessNames){
+            vars += "\t" + name + "-prev : " + "boolean;\n";
+        }
         nuxmv += vars;
+        define += "\ttransition := " + trans;
         nuxmv += define;
         nuxmv += "CONSTANTS\n\t";
         nuxmv +=  String.join(", ", Enum.getEnum(Config.channelLabel).getValues());
         nuxmv += ";\n";
+
+//        for(String name : sendProcessNames){
+//            init += "\t& " + name + " = " + "FALSE\n";
+//        }
+
+        for(String name : receiveProcessNames){
+            init += "\t& " + name + "-prev = " + "FALSE\n";
+        }
+
         nuxmv += init;
         nuxmv += "TRANS\n";
         nuxmv += "\ttransition | (!transition & keep-all)";
