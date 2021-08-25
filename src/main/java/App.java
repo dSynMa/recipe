@@ -14,8 +14,11 @@ public class App
         Options options = new Options();
 
         Option input = new Option("i", "input", true, "recipe script file");
+        Option nuxmv = new Option("n", "nuxmv", false, "model check nuxmv");
         input.setRequired(true);
+        nuxmv.setRequired(false);
         options.addOption(input);
+        options.addOption(nuxmv);
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -38,7 +41,11 @@ public class App
         Result r = system.parse(script);
         recipe.lang.System s = r.get();
 
-        String transform = ToNuXmv.transform(s);
-        java.lang.System.out.println(transform);
+        if(cmd.hasOption("nuxmv")){
+            ToNuXmv.nuxmvLTL(s);
+        } else{
+            String transform = ToNuXmv.transform(s);
+            java.lang.System.out.println(transform);
+        }
     }
 }

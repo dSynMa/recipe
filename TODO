@@ -1,11 +1,6 @@
+7. Simulation (like formalmethods.dk)
 1. Process templates
 2. Agent templates
-3. Handle properly process templates
-4. Connect with ACE and viznetwork (basic web-based ui)
-5. Visualising individual agents viznetwork
-6. Write LTL formula as part of recipe script
-7. Simulation (like formalmethods.dk)
+4. Connect with ACE and viznetwork (basic web-based ui) (translate fsms to dot)
 8. mention in dsynma webpage
-9. Add error parsing messages
-10. CLI for analysis with nuxmv
 11. Currently not parsing "cond && cond && cond", but only "cond && (cond && cond)"

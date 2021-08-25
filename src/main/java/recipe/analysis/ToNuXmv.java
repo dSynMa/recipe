@@ -6,17 +6,44 @@ import recipe.lang.agents.*;
 import recipe.lang.exception.MismatchingTypeException;
 import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.expressions.Expression;
-import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Type;
 
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Stream;
 
 public class ToNuXmv {
+
+    public static void nuxmvLTL(System system) throws Exception {
+        BufferedWriter writer = new BufferedWriter(new FileWriter("translation.smv"));
+        String script = transform(system);
+        writer.write(script);
+        writer.close();
+        Runtime rt = Runtime.getRuntime();
+        Process pr = rt.exec("nuxmv translation.smv");
+
+        new Thread(() -> {
+            BufferedReader input = new BufferedReader(new InputStreamReader(pr.getInputStream()));
+            String line = null;
+
+            try {
+                while ((line = input.readLine()) != null) {
+                    java.lang.System.out.println(line);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+
+        pr.waitFor();
+    }
+
 
     public static String type(TypedVariable typedVariable){
         Type type = typedVariable.getType();
@@ -121,11 +148,11 @@ public class ToNuXmv {
             for(Transition t : agents.get(i).getReceiveTransitions()){
                 String label = ((ReceiveProcess) t.getLabel()).getLabel();
                 if (label != null && !label.equals("")){
-                    keepThis += " & next(" + agents.get(i).getName() + "-" + label + "-prev) = FALSE";
-                    keepAll += " & next(" + agents.get(i).getName() + "-" + label + "-prev) = FALSE";
+                    keepThis += " & next(" + agents.get(i).getName() + "-" + label + ") = FALSE";
+                    keepAll += " & next(" + agents.get(i).getName() + "-" + label + ") = FALSE";
                     receiveProcessNames.add(agents.get(i).getName() + "-" + label);
 
-                    String falsifyAllLabelsExceptThis = "falsify-not-" + agents.get(i).getName() + "-" + label + "-prev := TRUE";
+                    String falsifyAllLabelsExceptThis = "falsify-not-" + agents.get(i).getName() + "-" + label + " := TRUE";
                     for(Transition tt : agents.get(i).getReceiveTransitions()){
                         String labell = ((ReceiveProcess) tt.getLabel()).getLabel();
                         if(!label.equals(labell) && label != null && !label.equals("")){
@@ -267,8 +294,8 @@ public class ToNuXmv {
                                         }
 
                                         if(receiveProcess.getLabel() != null && !receiveProcess.equals("")){
-                                            receiveNext += "\n & "  + "next(" + receiveName + "-" + receiveProcess.getLabel() + "-prev) = TRUE";
-                                            receiveNext += "\n & falsify-not-" + receiveName + "-" + receiveProcess.getLabel() + "-prev";
+                                            receiveNext += "\n & "  + "next(" + receiveName + "-" + receiveProcess.getLabel() + ") = TRUE";
+                                            receiveNext += "\n & falsify-not-" + receiveName + "-" + receiveProcess.getLabel() + "";
                                         }
 
                                         if (iterationExitTransitions != null && iterationExitTransitions.size() > 0) {
@@ -325,7 +352,7 @@ public class ToNuXmv {
 //        trans += "\n\t\t| (!((" + String.join(") | (", sendNows) + ")) & keep-all))";
 
         for(String name : receiveProcessNames){
-            vars += "\t" + name + "-prev : " + "boolean;\n";
+            vars += "\t" + name + " : " + "boolean;\n";
         }
         nuxmv += vars;
         define += "\ttransition := " + trans;
@@ -339,17 +366,19 @@ public class ToNuXmv {
 //        }
 
         for(String name : receiveProcessNames){
-            init += "\t& " + name + "-prev = " + "FALSE\n";
+            init += "\t& " + name + " = " + "FALSE\n";
         }
 
         nuxmv += init;
         nuxmv += "TRANS\n";
-        nuxmv += "\ttransition | (!transition & keep-all)";
+        nuxmv += "\ttransition | (!transition & keep-all)\n";
         nuxmv = nuxmv.replaceAll("&( |\n)*TRUE(( )*&( )*)( |\n)*", "");
         nuxmv = nuxmv.replaceAll("TRUE(( )*&( )*)", "");
 //        nuxmv = nuxmv.replaceAll("TRUE\n(\t& )", "\t");
         nuxmv = nuxmv.replaceAll("==", " = ");
         nuxmv = nuxmv.replaceAll("\\*", broadcastChannel);
+
+        nuxmv += String.join("\n", system.getLtlspec());
 
         return nuxmv;
     }

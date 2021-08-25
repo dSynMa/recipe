@@ -2,6 +2,8 @@ package recipe.lang;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
+import org.petitparser.parser.primitive.CharacterParser;
+import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.agents.Agent;
 import recipe.lang.exception.ParsingException;
 import recipe.lang.exception.TypeCreationException;
@@ -25,6 +27,12 @@ public class System{
     Map<String, Type> guardDefinitions;
     Set<Agent> agents;
 
+    public List<String> getLtlspec() {
+        return specs;
+    }
+
+    List<String> specs;
+
     public Map<String, Type> getMessageStructure() {
         return messageStructure;
     }
@@ -37,11 +45,12 @@ public class System{
         return agents;
     }
 
-    public System(Map<String, Type> messageStructure, Map<String, Type> communicationVariables, Map<String, Type> guardDefinitions, Set<Agent> agents) {
+    public System(Map<String, Type> messageStructure, Map<String, Type> communicationVariables, Map<String, Type> guardDefinitions, Set<Agent> agents, List<String> specs) {
         this.messageStructure = messageStructure;
         this.communicationVariables = communicationVariables;
         this.guardDefinitions = guardDefinitions;
         this.agents = agents;
+        this.specs = specs;
     }
 
     public static Parser parser(){
@@ -99,7 +108,14 @@ public class System{
                             }
                             return null;
                         },
-                        new Pair<>(new Pair<>(messageContext.get(), communicationContext.get()), guardDefinitionsContext.get())))//, channelContext.get())))
+                        new Pair<>(new Pair<>(messageContext.get(), communicationContext.get()), guardDefinitionsContext.get())))
+                .seq(((StringParser.of("LTLSPEC")
+                        .or(StringParser.of("CTLSPEC"))
+                        .or(StringParser.of("INVARSPEC"))
+                        .or(StringParser.of("PSLSPEC"))
+                        .or(StringParser.of("COMPUTE"))
+                        .or(StringParser.of("SPEC"))
+                        .or(StringParser.of("PARSYNTH"))).flatten().seq(CharacterParser.any().plus()).flatten()).delimitedBy(CharacterParser.of(';')))
                 .map((List<Object> values) -> {
                     Set<String> channels = new HashSet<>((List<String>) values.get(0));
                     Map<String, Type> messageStructure = (Map<String, Type>) values.get(1);
@@ -107,8 +123,13 @@ public class System{
                     Map<String, Type> guardDefinitions = (Map<String, Type>) values.get(3);
 
                     Set<Agent> agents = new HashSet<>((List<Agent>) values.get(4));
+                    List<String> specs;
+                    if(values.get(5) != null)
+                        specs = (List<String>) values.get(5);
+                    else
+                        specs = new ArrayList<>();
 
-                    return new System(messageStructure, communicationVariables, guardDefinitions, agents);
+                    return new System(messageStructure, communicationVariables, guardDefinitions, agents, specs);
                 })
         );
 
