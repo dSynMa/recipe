@@ -135,4 +135,13 @@ public class System{
 
         return parser;
     }
+
+    public String toDOT(){
+        String dot = "";
+        for(Agent agent : this.agents){
+            dot += agent.toDOT() + "\n";
+        }
+
+        return dot;
+    }
 }

@@ -354,4 +354,25 @@ public class Agent {
 
         return stateTransitionMap;
     }
+
+    public String toDOT(){
+        String dot = "digraph " + this.name + " {\n";
+
+        for(State state : this.states){
+            dot += "\t" + state.toString() + ";\n";
+        }
+        for(Transition t : this.sendTransitions){
+            dot += "\t" + t.getSource() + " -> " + t.getDestination() + "[\"" + t.getLabel() + "\"]" + ";\n";
+        }
+        for(Transition t : this.receiveTransitions){
+            dot += "\t" + t.getSource() + " -> " + t.getDestination() + "[\"" + t.getLabel() + "\"]" + ";\n";
+        }
+        for(Transition t : this.iterationExitTransitions){
+            dot += "\t" + t.getSource() + " -> " + t.getDestination() + "[\"" + t.getLabel() + "\"]" + ";\n";
+        }
+
+        dot += "}";
+
+        return dot;
+    }
 }

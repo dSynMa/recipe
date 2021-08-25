@@ -15,10 +15,12 @@ public class App
 
         Option input = new Option("i", "input", true, "recipe script file");
         Option nuxmv = new Option("n", "nuxmv", false, "model check nuxmv");
+        Option dot = new Option("d", "dot", false, "output agents DOT files");
         input.setRequired(true);
         nuxmv.setRequired(false);
         options.addOption(input);
         options.addOption(nuxmv);
+        options.addOption(dot);
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -42,10 +44,14 @@ public class App
         recipe.lang.System s = r.get();
 
         if(cmd.hasOption("nuxmv")){
-            ToNuXmv.nuxmvLTL(s);
+            ToNuXmv.nuxmvModelChecking(s);
         } else{
             String transform = ToNuXmv.transform(s);
             java.lang.System.out.println(transform);
+        }
+
+        if(cmd.hasOption("dot")){
+            java.lang.System.out.println(s.toDOT());
         }
     }
 }
