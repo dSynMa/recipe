@@ -6,11 +6,8 @@ import org.petitparser.parser.Parser;
 import recipe.lang.System;
 import recipe.lang.exception.RelabellingTypeException;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-
-import static org.junit.Assert.*;
 
 public class ToNuXmvTest {
 
@@ -39,7 +36,7 @@ public class ToNuXmvTest {
         Result r = system.parse(script);
         System s = r.get();
         try {
-            ToNuXmv.nuxmvLTL(s);
+            ToNuXmv.nuxmvModelChecking(s);
 //            java.lang.System.out.println(transform);
         } catch (Exception e) {
             e.printStackTrace();

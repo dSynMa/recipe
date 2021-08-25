@@ -20,7 +20,7 @@ import java.util.stream.Stream;
 
 public class ToNuXmv {
 
-    public static void nuxmvLTL(System system) throws Exception {
+    public static void nuxmvModelChecking(System system) throws Exception {
         BufferedWriter writer = new BufferedWriter(new FileWriter("translation.smv"));
         String script = transform(system);
         writer.write(script);
@@ -43,7 +43,6 @@ public class ToNuXmv {
 
         pr.waitFor();
     }
-
 
     public static String type(TypedVariable typedVariable){
         Type type = typedVariable.getType();
