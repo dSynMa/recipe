@@ -111,13 +111,13 @@ public class System{
                                     return null;
                                 },
                                 new Pair<>(new Pair<>(messageContext.get(), communicationContext.get()), guardDefinitionsContext.get())))
-                        .seq(((StringParser.of("LTLSPEC") //make all of this optional
+                        .seq(((StringParser.of("LTLSPEC")
                                 .or(StringParser.of("CTLSPEC"))
                                 .or(StringParser.of("INVARSPEC"))
                                 .or(StringParser.of("PSLSPEC"))
                                 .or(StringParser.of("COMPUTE"))
                                 .or(StringParser.of("SPEC"))
-                                .or(StringParser.of("PARSYNTH"))).flatten().seq(CharacterParser.any().plus()).flatten()).delimitedBy(CharacterParser.of(';')))
+                                .or(StringParser.of("PARSYNTH"))).flatten().seq(CharacterParser.any().plus()).flatten()).delimitedBy(CharacterParser.of(';')).optional())
                         .map((List<Object> values) -> {
                             Set<String> channels = new HashSet<>((List<String>) values.get(0));
                             Map<String, Type> messageStructure = (Map<String, Type>) values.get(1);
