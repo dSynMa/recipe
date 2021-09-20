@@ -66,6 +66,7 @@ public abstract class Condition implements Expression<Boolean> {
 		generalExpression.set((arithmeticExpression).or(context.variableParser()).or(context.valueParser()).or(GuardReference.parser(context)));
 
 		org.petitparser.parser.Parser and = And.parser(basic);
+		org.petitparser.parser.Parser implies = Implies.parser(basic);
 		org.petitparser.parser.Parser or = Or.parser(basic);
 		org.petitparser.parser.Parser not = Not.parser(basic);
 
@@ -90,6 +91,7 @@ public abstract class Condition implements Expression<Boolean> {
 
 		parser.set(and
 				.or(or)
+				.or(implies)
 				.or(basic));
 
 		basic.set(value
