@@ -1,6 +1,8 @@
-7. Simulation (like formalmethods.dk)
-1. Process templates
-2. Agent templates
-4. Connect with ACE and viznetwork (basic web-based ui) (translate fsms to dot)
-8. mention in dsynma webpage
-11. Currently not parsing "cond && cond && cond", but only "cond && (cond && cond)"
+- Agent templates (only take agent name, and init predicate as params)
+-- system := Line | robot(name1, a == 6) | robot(name2, a == 9)
+- parse enums
+- multiple guard definitions
+- mention in dsynma webpage
+- send guards do not have to have brackets around them
+- documentation (make it clear each specification is checked separately (not conjunctively))
+- update github readme
