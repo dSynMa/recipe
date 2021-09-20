@@ -207,7 +207,7 @@ public class Parsing {
                 });
 
         org.petitparser.parser.Parser typedVariableAssignment = numberVarParser.or(boolVarParser).or(enumVarParser);//.or(channelVarParser);
-        org.petitparser.parser.Parser typedVariableAssignmentList = (typedVariableAssignment.delimitedBy(CharacterParser.of('\n')))
+        org.petitparser.parser.Parser typedVariableAssignmentList = (typedVariableAssignment.delimitedBy(CharacterParser.whitespace()))
                 .map((List<Object> values) -> {
                     List<Object> delimitedTypedVariablesAssignment = values;
                     Map<String, TypedVariable> typedVariables = new HashMap<>();
@@ -244,7 +244,7 @@ public class Parsing {
     }
 
     public static Parser channelValues() {
-        Parser parser = (word().plus().flatten().separatedBy(CharacterParser.of(',').trim())).seq(CharacterParser.of('\n'))
+        Parser parser = (word().plus().flatten().separatedBy(CharacterParser.of(',').trim())).seq(CharacterParser.whitespace())
                 .map((List<Object> values) -> {
                     List<String> vals = new ArrayList<>();
 
@@ -282,12 +282,20 @@ public class Parsing {
         }
     }
 
+    private static boolean isWhitespace(Object obj){
+        if(obj.getClass().equals(Character.class)){
+            return Character.isWhitespace((Character) obj);
+        }
+
+        return false;
+    }
+
     public static Parser relabellingParser(TypingContext localContext, TypingContext communicationContext) throws Exception {
         return labelledParser("relabel", (Parsing.expressionParser(communicationContext).trim()
                 .seq(StringParser.of("<-").trim())
-                .seq(Parsing.expressionParser(localContext)).delimitedBy(CharacterParser.of('\n'))
+                .seq(Parsing.expressionParser(localContext)).delimitedBy(CharacterParser.whitespace())
                 )).map((List<Object> values) -> {
-                    values.removeIf(v -> v.equals('\n'));
+                    values.removeIf(v -> isWhitespace(v));
                     Map<TypedVariable, Expression> relabellingMap = new HashMap<>();
                     for(Object relabelObj : values){
                         List relabel = (List) relabelObj;
