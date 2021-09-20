@@ -21,6 +21,10 @@ public abstract class BasicProcess extends Process{
         return psi;
     }
 
+    public void setPsi(Expression<Boolean> psi1) {
+        psi = psi1;
+    }
+
     public Expression<Enum> getChannel() {
         return channel;
     }
