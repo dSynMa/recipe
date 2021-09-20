@@ -10,6 +10,7 @@ import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.Or;
 import recipe.lang.types.Boolean;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -40,8 +41,21 @@ public class Sequence extends Process{
 
     public static Parser parser(Parser processParser){
         Parser parser =
-                processParser.seq(CharacterParser.of(';').trim()).seq(processParser)
-                .map((List<Object> values) -> new Sequence((Process) values.get(0), (Process) values.get(2)));
+                processParser
+                        .seq((CharacterParser.of(';').trim().seq(processParser).trim()).plus())
+                .map((List<Object> values) -> {
+                    Sequence seq = null;
+                    Process current = (Process) values.get(0);
+                    for(int i = 0; i < ((List) values.get(1)).size(); i++){
+                        ArrayList val = (ArrayList) ((ArrayList) values.get(1)).get(i);
+                        if (Process.class.isAssignableFrom(val.get(1).getClass())) {
+                            seq = new Sequence(current, (Process) val.get(1));
+                            current = seq;
+                        }
+
+                    }
+                    return seq;
+                });
 
         return parser;
     }

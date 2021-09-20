@@ -57,13 +57,17 @@ public abstract class Condition implements Expression<Boolean> {
 	}
 
 	public static org.petitparser.parser.Parser parser(TypingContext context) throws Exception {
+		return parser(context, true);
+	}
+
+	public static org.petitparser.parser.Parser parser(TypingContext context, java.lang.Boolean guardReferences) throws Exception {
 		org.petitparser.parser.Parser arithmeticExpression = ArithmeticExpression.typeParser(context);
 
 		SettableParser parser = SettableParser.undefined();
 		SettableParser basic = SettableParser.undefined();
 
 		SettableParser generalExpression = SettableParser.undefined();
-		generalExpression.set((arithmeticExpression).or(context.variableParser()).or(context.valueParser()).or(GuardReference.parser(context)));
+		generalExpression.set((arithmeticExpression).or(context.variableParser()).or(context.valueParser()).or(GuardReference.parser(context, basic)));
 
 		org.petitparser.parser.Parser and = And.parser(basic);
 		org.petitparser.parser.Parser implies = Implies.parser(basic);
@@ -88,21 +92,36 @@ public abstract class Condition implements Expression<Boolean> {
 
 		org.petitparser.parser.Parser value = Boolean.getType().valueParser();
 		org.petitparser.parser.Parser variable = context.getSubContext(Boolean.getType()).variableParser();
+		org.petitparser.parser.Parser guardReference = GuardReference.parser(context, basic);
 
 		parser.set(and
 				.or(or)
 				.or(implies)
 				.or(basic));
 
-		basic.set(value
-				.or(variable)
-				.or(not)
-				.or(comparators)
-				.or(CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')'))
-						.map((List<Object> values) -> {
-							return values.get(1);
-						}))
-				);
+//		if(guardReferences) {
+			basic.set(value
+					.or(variable)
+					.or(guardReference)
+					.or(not)
+					.or(comparators)
+					.or(CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')'))
+							.map((List<Object> values) -> {
+								return values.get(1);
+							}))
+			);
+//		} else{
+//			basic.set(value
+//					.or(variable)
+//					.or(not)
+//					.or(comparators)
+//					.or(CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')'))
+//							.map((List<Object> values) -> {
+//								return values.get(1);
+//							}))
+//			);
+//		}
+
 
 		return parser;
 	}
