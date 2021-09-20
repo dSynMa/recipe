@@ -10,6 +10,7 @@ import recipe.lang.expressions.arithmetic.*;
 import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -75,7 +76,7 @@ public class And extends Condition {
 		if (lhsObject.equals(Condition.TRUE) && rhsObject.equals(Condition.TRUE)) {
 			return Condition.TRUE;
 		} else if(!lhsObject.equals(Condition.FALSE) || !rhsObject.equals(Condition.FALSE)){
-			return new Or(lhsObject, rhsObject);
+			return new And(lhsObject, rhsObject);
 		} else{
 			return Condition.FALSE;
 		}
@@ -84,10 +85,16 @@ public class And extends Condition {
 	public static org.petitparser.parser.Parser parser(Parser basicCondition) {
 		org.petitparser.parser.Parser parser =
 				(basicCondition)
-						.seq(CharacterParser.of('&').seq(CharacterParser.of('&').optional()).trim())
-						.seq(basicCondition)
+						.seq(((CharacterParser.of('&').seq(CharacterParser.of('&').optional()).trim())
+						.seq(basicCondition)).plus())
 						.map((List<Object> values) -> {
-							return new And((Expression<Boolean>) values.get(0), (Expression<Boolean>) values.get(2));
+							And and = null;
+							Expression<Boolean> current = (Expression<Boolean>) values.get(0);
+							for(int i = 0; i < ((ArrayList) values.get(1)).size(); i ++ ){
+								ArrayList val = (ArrayList) ((ArrayList) values.get(1)).get(i);
+								and = new And(current, (Expression<Boolean>) val.get(1));
+							}
+							return and;
 						});
 
 		return parser;

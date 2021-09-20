@@ -64,6 +64,8 @@ public class ConditionTest {
         assert r.isSuccess();
         r = parser.parse("cond");
         assert r.isSuccess();
+        r = parser.parse("!cond -> cond");
+        assert r.isSuccess();
         r = parser.parse("(cond)");
         assert r.isSuccess();
         r = parser.parse("!cond");
@@ -112,6 +114,10 @@ public class ConditionTest {
         assert r.isSuccess();
         r = parser.parse("!(cond & !cond) | !(((!(cond & cond))))");
         assert r.isSuccess();
+        r = parser.parse("cond & !cond && cond & cond");
+        assert r.isSuccess();
+        r = parser.parse("cond | !cond || cond | cond");
+        assert r.isSuccess();
     }
 
     @Test
@@ -131,6 +137,10 @@ public class ConditionTest {
         r = parser.parse("!(cond & !cond))");
         assert r.isFailure();
         r = parser.parse("!cond & !cond | cond");
+        assert r.isFailure();
+        r = parser.parse("cond & !cond && cond & cond || cond");
+        assert r.isFailure();
+        r = parser.parse("cond | !cond || cond | cond && cond");
         assert r.isFailure();
     }
 }
