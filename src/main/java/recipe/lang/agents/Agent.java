@@ -11,6 +11,7 @@ import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.predicate.And;
 import recipe.lang.process.*;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.process.Process;
@@ -271,7 +272,7 @@ public class Agent {
                         Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(4);
                         Expression<Boolean> receiveGuardCondition = (Expression<Boolean>) values.get(5);
                         Process repeat = (Process) values.get(6);
-                        State startState = new State("start");
+                        State startState = new State("0");
                         Set<Transition> transitions = repeat.asTransitionSystem(startState, startState);
                         Set<ProcessTransition> sendTransitions = new HashSet<>();
                         Set<ProcessTransition> receiveTransitions = new HashSet<>();
@@ -356,23 +357,85 @@ public class Agent {
     }
 
     public String toDOT(){
-        String dot = "digraph " + this.name + " {\n";
-
+        this.resolveIterationExitTransitions();
+        String dot = "";
+//        dot+= "digraph " + this.name + " {\n";
+        dot += "\tgraph [rankdir=LR,ranksep=4,nodesep=0.2];\n"
+        + "node [shape=circle];\n";
         for(State state : this.states){
-            dot += "\t" + state.toString() + ";\n";
-        }
-        for(Transition t : this.sendTransitions){
-            dot += "\t" + t.getSource() + " -> " + t.getDestination() + "[\"" + t.getLabel() + "\"]" + ";\n";
-        }
-        for(Transition t : this.receiveTransitions){
-            dot += "\t" + t.getSource() + " -> " + t.getDestination() + "[\"" + t.getLabel() + "\"]" + ";\n";
-        }
-        for(Transition t : this.iterationExitTransitions){
-            dot += "\t" + t.getSource() + " -> " + t.getDestination() + "[\"" + t.getLabel() + "\"]" + ";\n";
+            dot += "\t" +  state.toString() + ";\n";
         }
 
-        dot += "}";
+        dot += "\tinit [shape=point,style=invis];\n";
+
+        dot += "\tinit:e -> " +   this.initialState.toString() + ":w[penwidth=0;label=\"\"];\n";
+
+        for(Transition t : this.sendTransitions){
+            String sourceLabel = t.getSource().toString();
+            String destLabel = t.getDestination().toString();
+
+            if(t.getSource().equals(t.getDestination())){
+//                sourceLabel += ":w";
+//                destLabel += ":e";
+            }
+
+            dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + ((BasicProcess) t.getLabel()).getChannel() + "!\",labeltooltip=\"" + t.getLabel() + "\",width=1]" + ";\n";
+        }
+
+        for(Transition t : this.receiveTransitions){
+            String sourceLabel = t.getSource().toString();
+            String destLabel = t.getDestination().toString();
+
+            if(t.getSource().equals(t.getDestination())){
+//                sourceLabel += ":w";
+//                destLabel += ":e";
+            }
+
+            dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + ((BasicProcess) t.getLabel()).getChannel() + "?\",labeltooltip=\"" + t.getLabel() + "\",width=1]" + ";\n";
+        }
+
+        for(Transition t : this.iterationExitTransitions){
+            String sourceLabel = t.getSource().toString();
+            String destLabel = t.getDestination().toString();
+
+            if(t.getSource().equals(t.getDestination())){
+//                sourceLabel += ":w";
+//                destLabel += ":e";
+            }
+
+            dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + t.getLabel() + "\"]" + ";\n";
+        }
+
+//        dot += "}";
 
         return dot;
+    }
+
+    public void resolveIterationExitTransitions(){
+        HashSet<ProcessTransition> transitions = new HashSet();
+        transitions.addAll(sendTransitions);
+        transitions.addAll(receiveTransitions);
+
+        for(IterationExitTransition t : this.iterationExitTransitions){
+            for(ProcessTransition tt : transitions){
+                if(tt.source.equals(t.destination)){
+                    tt.source = t.source;
+                    tt.getLabel().setPsi(new And(tt.getLabel().getPsi(), t.getLabel()));
+                }
+            }
+        }
+
+        this.iterationExitTransitions.clear();
+    }
+
+    public void labelAllTransitions(){
+        HashSet<ProcessTransition> transitions = new HashSet(this.receiveTransitions);
+        transitions.addAll(this.sendTransitions);
+        Map<State, Set<ProcessTransition>> stateTransitionMap = getStateTransitionMap(transitions);
+        int seed = 0;
+
+        for(State state : stateTransitionMap.keySet()){
+
+        }
     }
 }
