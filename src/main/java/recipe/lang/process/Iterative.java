@@ -28,10 +28,10 @@ public class Iterative extends Process{
 
     public Set<Transition> asTransitionSystem(State start, State end){
         Set<Transition> ts = new HashSet<>();
-        State intermediateStart = new State(getSeed());
-        State intermediateEnd = new State(getSeed());
+//        State intermediateStart = new State(getSeed());
+//        State intermediateEnd = new State(getSeed());
 
-        Set<Transition> loop = a.asTransitionSystem(start, end);
+        Set<Transition> loop = a.asTransitionSystem(start, start);
 
         IterationExitTransition iterationExitTransition = new IterationExitTransition(start, end, new Not(a.entryCondition()));
 
