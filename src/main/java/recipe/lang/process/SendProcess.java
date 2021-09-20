@@ -87,12 +87,12 @@ public class SendProcess extends BasicProcess {
         Parser messageAssignment = Parsing.assignmentListParser(messageContext, localAndChannelAndCommunicationContext);
         Parser localAssignment = Parsing.assignmentListParser(localContext, localContext);
 
-        Parser parser = (CharacterParser.word().plus().trim()
-                        .seq(CharacterParser.of(':').trim()).flatten()).optional()
+        Parser parser = ((CharacterParser.word().plus().trim()).flatten()
+                        .seq(CharacterParser.of(':').trim()).flatten()).optional().flatten()
                         .seq(delimetedCondition)
                         .seq(localChannelVars.valueParser().or(localChannelVars.variableParser()))
-                        .seq(CharacterParser.of('!'))
-                        .seq(messageGuard)
+                        .seq(CharacterParser.of('!').trim())
+                        .seq(messageGuard.trim())
                         .seq((CharacterParser.of('(').trim()))
                         .seq(messageAssignment)
                         .seq((CharacterParser.of(')').trim()))
