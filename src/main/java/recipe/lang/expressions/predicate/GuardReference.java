@@ -6,14 +6,15 @@ import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Guard;
+import recipe.lang.utils.LazyParser;
+import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 
 public class GuardReference extends Condition {
@@ -61,35 +62,37 @@ public class GuardReference extends Condition {
         return new GuardReference(guardType, newParameterValues);
     }
 
-    public static org.petitparser.parser.Parser parser(TypingContext context) throws Exception {
-        Parser variable = context.variableParser();
-        Parser value = context.valueParser();
+    public static org.petitparser.parser.Parser parser(TypingContext context, Parser basicConditionParser) throws Exception {
+        Parser expression = basicConditionParser.or(ArithmeticExpression.typeParser(context));
+
         Parser guard = context.guardParser();
 
         Parser parser = (guard)
                 .seq(CharacterParser.of('(').trim())
-                //TODO parse also general expressions
-                .seq(((variable.or(value)).separatedBy(CharacterParser.of(',').trim())).optional(new ArrayList<Expression>()))
+                .seq(((expression).separatedBy(CharacterParser.of(',').trim()).trim()).optional())
+                .seq(CharacterParser.of(')').trim())
                 .map((List<Object> values) -> {
                     GuardReference guardReference = null;
                     String label = ((TypedVariable) values.get(0)).getName();
-                    List<Expression> paramVals = (List<Expression>) values.get(2);
-//                    List<String> varNames = new ArrayList<>();
-//                    for(int i = 0; i < params.size(); i++){
-//                        varNames.add(vars.get(i).getName());
-//                    }
+                    List<Object> paramValsUntyped = (List<Object>) values.get(2);
+                    paramValsUntyped.removeIf(x -> Objects.equals(x, Character.valueOf(',')));
+                    List<Expression> paramValsTyped = new ArrayList<>();
 
                     try{
                         Guard guardType = (Guard) context.get(label);
 //                                Guard.getGuardDefinition(label);
                         TypedVariable[] params = guardType.getParameters();
-                        for(int i = 0 ; i < paramVals.size(); i++){
-                            if(!paramVals.get(i).getType().equals(params[i].getType())){
-                                throw new MismatchingTypeException("Guard reference " + label + " is used with mismatching types of var: value is " + paramVals.get(i) + " but expected type " + params[i].getType() + ".");
+                        for(int i = 0 ; i < paramValsUntyped.size(); i++){
+                            if(!paramValsUntyped.get(i).equals(',')){
+                                Expression paramVal = (Expression) paramValsUntyped.get(i);
+                                paramValsTyped.add(paramVal);
+                                if(!(paramVal.isValidAssignmentFor(params[i]))) {
+                                    throw new MismatchingTypeException("Guard reference " + label + " is used with mismatching types of var: value is " + paramVal.getType() + " but expected type " + params[i].getType() + ".");
+                                }
                             }
                         }
 
-                        return new GuardReference(guardType, paramVals.toArray(new Expression[paramVals.size()]));
+                        return new GuardReference(guardType, paramValsTyped.toArray(new Expression[paramValsTyped.size()]));
                     } catch (Exception e){
                         e.printStackTrace();
                     }
@@ -98,5 +101,9 @@ public class GuardReference extends Condition {
                 });
 
         return parser;
+    }
+
+    public String toString(){
+        return guardType.name() + "(" + String.join(",", Arrays.stream(parametersValues).map((x) -> x.toString()).toArray(String[]::new)) + ")";
     }
 }
