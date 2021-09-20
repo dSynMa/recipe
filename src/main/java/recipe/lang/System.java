@@ -54,6 +54,8 @@ public class System{
     }
 
     public static Parser parser(){
+        Enum.clear();
+
         SettableParser parser = SettableParser.undefined();
 
 //        AtomicReference<TypingContext> channelContext = new AtomicReference<>(new TypingContext());
@@ -64,7 +66,7 @@ public class System{
         parser.set((labelledParser("channels", channelValues())
                         .mapWithSideEffects((List<String> values) -> {
                             try {
-                                if(values.contains(Config.broadcast)){
+                                if (values.contains(Config.broadcast)) {
                                     throw new ParsingException(Config.broadcast + " is a reserved keyword and defined implicit, there is no need to add it to declared channel values.");
                                 }
                                 //Do not remove this, enum stored in Enum.existing
@@ -81,65 +83,70 @@ public class System{
                             }
                             return values;
                         }))
-                .seq(labelledParser("message-structure", typedVariableList())
-                        .map((Map<String, Type> values) -> {
-                            messageContext.get().setAll(new TypingContext(values));
-                            return values;
-                        }))
-                .seq(labelledParser("communication-variables", typedVariableList())
-                        .map((Map<String, Type> values) -> {
-                            communicationContext.get().setAll(new TypingContext(values));
-                            return values;
-                        }))
-                .seq(guardDefinitionList(new TypingContext()) //TODO may want to range over channel values and communication values in future
-                        .map((Map<String, Type> values) -> {
-                            guardDefinitionsContext.get().setAll(new TypingContext(values));
-                            return values;
-                        }).optional())
-                .seq(new LazyParser<>(
-                        (Pair<Pair<TypingContext, TypingContext>,TypingContext> msgCmncGuardContext) ->
-                        {
-                            try {
-                                Parser agent = Agent.parser(msgCmncGuardContext.getLeft().getLeft(),
-                                        msgCmncGuardContext.getLeft().getRight(), msgCmncGuardContext.getRight()).plus();
-                                return agent;
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                            return null;
-                        },
-                        new Pair<>(new Pair<>(messageContext.get(), communicationContext.get()), guardDefinitionsContext.get())))
-                .seq(((StringParser.of("LTLSPEC")
-                        .or(StringParser.of("CTLSPEC"))
-                        .or(StringParser.of("INVARSPEC"))
-                        .or(StringParser.of("PSLSPEC"))
-                        .or(StringParser.of("COMPUTE"))
-                        .or(StringParser.of("SPEC"))
-                        .or(StringParser.of("PARSYNTH"))).flatten().seq(CharacterParser.any().plus()).flatten()).delimitedBy(CharacterParser.of(';')))
-                .map((List<Object> values) -> {
-                    Set<String> channels = new HashSet<>((List<String>) values.get(0));
-                    Map<String, Type> messageStructure = (Map<String, Type>) values.get(1);
-                    Map<String, Type> communicationVariables = (Map<String, Type>) values.get(2);
-                    Map<String, Type> guardDefinitions = (Map<String, Type>) values.get(3);
+                        .seq(labelledParser("message-structure", typedVariableList())
+                                .map((Map<String, Type> values) -> {
+                                    messageContext.get().setAll(new TypingContext(values));
+                                    return values;
+                                }))
+                        .seq(labelledParser("communication-variables", typedVariableList())
+                                .map((Map<String, Type> values) -> {
+                                    communicationContext.get().setAll(new TypingContext(values));
+                                    return values;
+                                }))
+                        .seq(guardDefinitionList(new TypingContext()) //TODO may want to range over channel values and communication values in future
+                                .map((Map<String, Type> values) -> {
+                                    guardDefinitionsContext.get().setAll(new TypingContext(values));
+                                    return values;
+                                }).optional())
+                        .seq(new LazyParser<>(
+                                (Pair<Pair<TypingContext, TypingContext>, TypingContext> msgCmncGuardContext) ->
+                                {
+                                    try {
+                                        Parser agent = Agent.parser(msgCmncGuardContext.getLeft().getLeft(),
+                                                msgCmncGuardContext.getLeft().getRight(), msgCmncGuardContext.getRight()).plus();
+                                        return agent;
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                    return null;
+                                },
+                                new Pair<>(new Pair<>(messageContext.get(), communicationContext.get()), guardDefinitionsContext.get())))
+                        .seq(((StringParser.of("LTLSPEC") //make all of this optional
+                                .or(StringParser.of("CTLSPEC"))
+                                .or(StringParser.of("INVARSPEC"))
+                                .or(StringParser.of("PSLSPEC"))
+                                .or(StringParser.of("COMPUTE"))
+                                .or(StringParser.of("SPEC"))
+                                .or(StringParser.of("PARSYNTH"))).flatten().seq(CharacterParser.any().plus()).flatten()).delimitedBy(CharacterParser.of(';')))
+                        .map((List<Object> values) -> {
+                            Set<String> channels = new HashSet<>((List<String>) values.get(0));
+                            Map<String, Type> messageStructure = (Map<String, Type>) values.get(1);
+                            Map<String, Type> communicationVariables = (Map<String, Type>) values.get(2);
+                            Map<String, Type> guardDefinitions = (Map<String, Type>) values.get(3);
 
-                    Set<Agent> agents = new HashSet<>((List<Agent>) values.get(4));
-                    List<String> specs;
-                    if(values.get(5) != null)
-                        specs = (List<String>) values.get(5);
-                    else
-                        specs = new ArrayList<>();
+                            Set<Agent> agents = new HashSet<>((List<Agent>) values.get(4));
+                            List<String> specs;
+                            if (values.get(5) != null)
+                                specs = (List<String>) values.get(5);
+                            else
+                                specs = new ArrayList<>();
 
-                    return new System(messageStructure, communicationVariables, guardDefinitions, agents, specs);
-                })
+                            return new System(messageStructure, communicationVariables, guardDefinitions, agents, specs);
+                        })
         );
 
         return parser;
     }
 
-    public String toDOT(){
-        String dot = "";
+    public List<String> toDOT(){
+        List<String> dot = new ArrayList<String>();
         for(Agent agent : this.agents){
-            dot += agent.toDOT() + "\n";
+            String digraph = "digraph \"" + agent.getName() + "\"{\n" + agent.toDOT() + "\n}";
+            digraph = digraph.replaceAll("\\\"", "\\\\\"");
+            digraph = digraph.replaceAll("\n\t", " ");
+            digraph = digraph.replaceAll("\n+", " ");
+            digraph = "{\"name\" : \"" + agent.getName() + "\", \"graph\" : \"" + digraph + "\"}";
+            dot.add(digraph);
         }
 
         return dot;
