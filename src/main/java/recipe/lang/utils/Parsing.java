@@ -227,11 +227,14 @@ public class Parsing {
         AtomicReference<TypingContext> typedVariableList = new AtomicReference<>(new TypingContext());
         org.petitparser.parser.Parser guardDefinitionParser = GuardDefinition.parser(typingContext);
 
-        org.petitparser.parser.Parser guardDefinitionListParser = guardDefinitionParser.separatedBy(CharacterParser.of('\n').star())
-                .map((List<GuardDefinition> values) -> {
+        org.petitparser.parser.Parser guardDefinitionListParser = guardDefinitionParser.separatedBy(CharacterParser.whitespace().star())
+                .map((List<Object> values) -> {
                     Map<String, Type> guardDefinitionContext = new HashMap<>();
-                    for(GuardDefinition v : values){
-                        guardDefinitionContext.put(v.getName(), v.getType());
+                    for(Object v : values){
+                        if(v.getClass().equals(GuardDefinition.class)) {
+                            GuardDefinition vv = (GuardDefinition) v;
+                            guardDefinitionContext.put(vv.getName(), vv.getType());
+                        }
                     }
 
                     return guardDefinitionContext;
