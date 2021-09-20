@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class GuardDefinition extends Definition {
+public class GuardDefinition extends Definition<Expression<Boolean>> {
     private Guard type;
 
     public GuardDefinition(Guard guardType, Expression<Boolean> expression) {

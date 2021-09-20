@@ -1,18 +1,17 @@
 package recipe.lang.definitions;
 
-import org.petitparser.parser.Parser;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedVariable;
 
-public abstract class Definition {
+public abstract class Definition<T> {
     private String name;
     private TypedVariable[] parameters;
-    private Expression expression;
+    private T template;
 
-    public Definition(String name, TypedVariable[] parameters, Expression expression) {
+    public Definition(String name, TypedVariable[] parameters, T expression) {
         this.name = name;
         this.parameters = parameters;
-        this.expression = expression;
+        this.template = expression;
     }
 
     public String getName() {
@@ -31,12 +30,12 @@ public abstract class Definition {
         this.parameters = parameters;
     }
 
-    public Expression getExpression() {
-        return expression;
+    public T getTemplate() {
+        return template;
     }
 
-    public void setExpression(Expression expression) {
-        this.expression = expression;
+    public void setTemplate(T template) {
+        this.template = template;
     }
 
 }

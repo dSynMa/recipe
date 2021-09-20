@@ -44,7 +44,7 @@ public class GuardReference extends Condition {
 
     @Override
     public Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, TypeCreationException, RelabellingTypeException {
-        Expression expression = store.getDefinition(this.guardType.name()).getExpression();
+        Expression expression = (Expression) store.getDefinition(this.guardType.name()).getTemplate();
         for(TypedVariable v : guardType.getParameters()){
             expression = expression.relabel(vv -> v);
         }
