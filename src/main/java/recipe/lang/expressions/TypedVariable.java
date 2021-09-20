@@ -4,11 +4,12 @@ import recipe.lang.exception.AttributeNotInStoreException;
 import recipe.lang.exception.AttributeTypeException;
 import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.store.Store;
+import recipe.lang.types.*;
 import recipe.lang.types.Enum;
-import recipe.lang.types.Guard;
+import recipe.lang.types.Integer;
 import recipe.lang.types.Process;
-import recipe.lang.types.Type;
 
+import java.lang.Boolean;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
@@ -63,6 +64,8 @@ public class TypedVariable<T extends Type> implements Expression<T> {
             return getType().equals(var.getType());
         } else if(getType().getClass().equals(Guard.class) && var.getType().getClass().equals(Guard.class)){
             return getType().equals(var.getType());
+        } else if(getType().getClass().equals(BoundedInteger.class) && var.getType().getClass().equals(Integer.class)) {
+            return Boolean.TRUE;
         } else if(getType().getClass().equals(Process.class) && var.getType().getClass().equals(Process.class)) {
             return getType().equals(var.getType());
         } else{
