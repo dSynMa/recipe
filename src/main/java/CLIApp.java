@@ -7,7 +7,7 @@ import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
 import recipe.analysis.ToNuXmv;
 
-public class App 
+public class CLIApp
 {
     public static void main( String[] args ) throws Exception
     {
