@@ -311,6 +311,15 @@ public class Parsing {
 
     public static boolean compatible(Expression lhs, Expression rhs){
         //TODO is this a correct implementation?
+        if(lhs.getType().getClass().equals(Enum.class) && rhs.getType().getClass().equals(Enum.class)){
+            Enum lhsEnum = (Enum) lhs.getType();
+            Enum rhsEnum = (Enum) rhs.getType();
+
+            if(lhsEnum.name().equals(Config.channelLabel) && rhsEnum.name().equals(Config.channelWithoutBroadcastLabel)
+                || rhsEnum.name().equals(Config.channelLabel) && lhsEnum.name().equals(Config.channelWithoutBroadcastLabel)){
+                return true;
+            }
+        }
         return rhs.isValidAssignmentFor(new TypedVariable(lhs.getType(), "vv")) ||
                 lhs.isValidAssignmentFor(new TypedVariable(rhs.getType(), "vv"));
     }
