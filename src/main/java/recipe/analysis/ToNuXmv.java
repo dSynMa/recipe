@@ -16,11 +16,12 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 public class ToNuXmv {
 
-    public static void nuxmvModelChecking(System system) throws Exception {
+    public static String nuxmvModelChecking(System system) throws Exception {
         BufferedWriter writer = new BufferedWriter(new FileWriter("translation.smv"));
         String script = transform(system);
         writer.write(script);
@@ -28,13 +29,16 @@ public class ToNuXmv {
         Runtime rt = Runtime.getRuntime();
         Process pr = rt.exec("nuxmv translation.smv");
 
+        AtomicReference<String> out = new AtomicReference<>("");
+
         new Thread(() -> {
             BufferedReader input = new BufferedReader(new InputStreamReader(pr.getInputStream()));
             String line = null;
 
             try {
                 while ((line = input.readLine()) != null) {
-                    java.lang.System.out.println(line);
+                    if(!line.startsWith("***") && !line.trim().equals(""))
+                        out.set(out.get() + line + "\n");
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -42,6 +46,8 @@ public class ToNuXmv {
         }).start();
 
         pr.waitFor();
+
+        return out.get();
     }
 
     public static String type(TypedVariable typedVariable){

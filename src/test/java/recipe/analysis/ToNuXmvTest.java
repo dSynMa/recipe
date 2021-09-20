@@ -31,7 +31,6 @@ public class ToNuXmvTest {
     @Test
     public void nuxmvLTL() throws Exception {
         String script = String.join("\n", Files.readAllLines(Paths.get("./example-current-syntax.txt")));
-
         Parser system = System.parser().end();
         Result r = system.parse(script);
         System s = r.get();
