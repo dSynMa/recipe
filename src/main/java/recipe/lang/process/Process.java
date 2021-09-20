@@ -19,7 +19,7 @@ public abstract class Process {
 
     public int getSeed(){
         stateSeed++;
-        return stateSeed - 1;
+        return stateSeed;
     }
 
     public abstract Set<Transition> asTransitionSystem(State start, State end);
