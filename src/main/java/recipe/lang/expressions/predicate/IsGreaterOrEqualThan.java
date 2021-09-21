@@ -84,7 +84,7 @@ public class IsGreaterOrEqualThan extends Condition {
 						.seq(StringParser.of(">=").trim())
 						.seq(arithmeticExpression)
 						.map((List<Object> values) -> {
-							return new IsGreaterOrEqualThan((ArithmeticExpression) values.get(0), (ArithmeticExpression) values.get(2));
+							return new IsGreaterOrEqualThan((Expression<Number>) values.get(0), (Expression<Number>) values.get(2));
 						});
 
 		return parser;

@@ -85,7 +85,7 @@ public class IsLessOrEqualThan extends Condition {
 						.seq(StringParser.of("<=").trim())
 						.seq(arithmeticExpression)
 						.map((List<Object> values) -> {
-							return new IsLessOrEqualThan((ArithmeticExpression) values.get(0), (ArithmeticExpression) values.get(2));
+							return new IsLessOrEqualThan((Expression<Number>) values.get(0), (Expression<Number>) values.get(2));
 						});
 
 		return parser;
