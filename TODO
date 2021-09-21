@@ -1,8 +1,3 @@
-- Agent templates (only take agent name, and init predicate as params)
--- system := Line | robot(name1, a == 6) | robot(name2, a == 9)
-- parse enums
-- multiple guard definitions
 - mention in dsynma webpage
-- send guards do not have to have brackets around them
 - documentation (make it clear each specification is checked separately (not conjunctively))
 - update github readme
