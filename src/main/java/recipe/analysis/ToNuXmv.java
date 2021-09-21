@@ -197,7 +197,7 @@ public class ToNuXmv {
                         String next = "";
                         SendProcess process = (SendProcess) t.getLabel();
 
-                        String channel = process.getChannel().relabel(v -> v.sameTypeWithName(agenti.getName() + "-" + v)).toString();
+                        String channel = process.getChannel().relabel(v -> v.sameTypeWithName(namei + "-" + v)).toString();
                         now += "" + namei + "-state" + " = " + namei + "-" + t.getSource();
                         now += " & (" + process.entryCondition().relabel(v -> v.sameTypeWithName(namei + "-" + v)) + ")";
 
