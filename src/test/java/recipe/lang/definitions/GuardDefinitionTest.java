@@ -2,6 +2,7 @@ package recipe.lang.definitions;
 
 import org.junit.Test;
 import org.petitparser.parser.Parser;
+import recipe.lang.types.Guard;
 import recipe.lang.utils.TypingContext;
 
 import javax.xml.transform.Result;
@@ -12,6 +13,7 @@ public class GuardDefinitionTest {
 
     @Test
     public void parser() {
+        Guard.clear();
         Parser parser = GuardDefinition.parser(new TypingContext());
 
         String script = "guard g(s : integer) := s > 5;";

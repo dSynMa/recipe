@@ -8,6 +8,7 @@ import recipe.lang.Config;
 import recipe.lang.exception.TypeCreationException;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
+import recipe.lang.types.Guard;
 import recipe.lang.types.Real;
 
 import java.util.ArrayList;
@@ -56,6 +57,7 @@ public class ParsingTest {
 
     @Test
     public void guardDefinitionList1() {
+        Guard.clear();
         String script = "guard g(a : int) := a == 5;";
 
         Parser parser = Parsing.guardDefinitionList(new TypingContext()).end();
