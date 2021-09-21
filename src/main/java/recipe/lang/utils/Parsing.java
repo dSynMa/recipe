@@ -242,7 +242,7 @@ public class Parsing {
     }
 
     public static Parser channelValues() {
-        Parser parser = (word().plus().flatten().separatedBy(CharacterParser.of(',').trim())).seq(CharacterParser.whitespace())
+        Parser parser = ((CharacterParser.lowerCase().seq(word().star())).flatten().separatedBy(CharacterParser.of(',').trim())).seq(CharacterParser.whitespace())
                 .map((List<Object> values) -> {
                     List<String> vals = new ArrayList<>();
 
