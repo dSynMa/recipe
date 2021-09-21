@@ -11,7 +11,6 @@ import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.expressions.predicate.And;
 import recipe.lang.process.*;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.process.Process;
@@ -31,14 +30,13 @@ public class Agent {
     private Set<State> states;  //control flow
     private Set<ProcessTransition> sendTransitions;
     private Set<ProcessTransition> receiveTransitions;
-    private Set<IterationExitTransition> iterationExitTransitions;
     private Set<Process> actions;
     private State initialState;
     private Expression<Boolean> receiveGuard;
     private Expression<Boolean> initialCondition;
 
     public Agent(String name) throws MismatchingTypeException {
-        this(name, new Store(), Condition.getTrue(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(name, new String()), new TypedValue<Boolean>(Boolean.getType(), "false"));
+        this(name, new Store(), Condition.getTrue(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(name, new String()), new TypedValue<Boolean>(Boolean.getType(), "false"));
     }
 
     public Agent(String name,
@@ -47,7 +45,6 @@ public class Agent {
                  Set<State> states,
                  Set<ProcessTransition> sendTransitions,
                  Set<ProcessTransition> receiveTransitions,
-                 Set<IterationExitTransition> iterationExitTransitions,
                  Set<Process> actions,
                  State initialState,
                  Expression<Boolean> receiveGuard) {
@@ -57,7 +54,6 @@ public class Agent {
         this.states = new HashSet<>(states);
         this.sendTransitions = new HashSet<>(sendTransitions);
         this.receiveTransitions = new HashSet<>(receiveTransitions);
-        this.iterationExitTransitions = new HashSet<>(iterationExitTransitions);
         this.actions = new HashSet<>(actions);
         this.initialState = initialState;
         this.receiveGuard = receiveGuard;
@@ -69,7 +65,6 @@ public class Agent {
                  Set<State> states,
                  Set<ProcessTransition> sendTransitions,
                  Set<ProcessTransition> receiveTransitions,
-                 Set<IterationExitTransition> iterationExitTransitions,
                  Set<Process> actions,
                  Map<TypedVariable, Expression> relabel,
                  State initialState) {
@@ -79,7 +74,6 @@ public class Agent {
         this.states = new HashSet<>(states);
         this.sendTransitions = new HashSet<>(sendTransitions);
         this.receiveTransitions = new HashSet<>(receiveTransitions);
-        this.iterationExitTransitions = new HashSet<>(iterationExitTransitions);
         this.actions = new HashSet<>(actions);
         this.relabel = relabel;
         this.initialState = initialState;
@@ -88,14 +82,6 @@ public class Agent {
     public String getName() {
         return this.name;
     }
-
-//    public TypedValue getValue(TypedVariable attribute) throws AttributeTypeException {
-//        return store.getValue(attribute);
-//    }
-//
-//    public void setValue(TypedVariable attribute, TypedValue value) throws AttributeTypeException {
-//        store.setValue(attribute, value);
-//    }
 
     public Store getStore() {
         return store;
@@ -176,14 +162,6 @@ public class Agent {
 
     public void setReceiveTransitions(Set<ProcessTransition> receiveTransitions) {
         this.receiveTransitions = receiveTransitions;
-    }
-
-    public Set<IterationExitTransition> getIterationExitTransitions() {
-        return iterationExitTransitions;
-    }
-
-    public void setIterationExitTransitions(Set<IterationExitTransition> iterationExitTransitions) {
-        this.iterationExitTransitions = iterationExitTransitions;
     }
 
     public Expression<Boolean> getInitialCondition() {
@@ -273,10 +251,10 @@ public class Agent {
                         Expression<Boolean> receiveGuardCondition = (Expression<Boolean>) values.get(5);
                         Process repeat = (Process) values.get(6);
                         State startState = new State("0");
+                        Process.stateSeed = 0;
                         Set<Transition> transitions = repeat.asTransitionSystem(startState, startState);
                         Set<ProcessTransition> sendTransitions = new HashSet<>();
                         Set<ProcessTransition> receiveTransitions = new HashSet<>();
-                        Set<IterationExitTransition> iterationExitTransitions = new HashSet<>();
 
                         Set<Process> actions = new HashSet<>();
                         transitions.forEach(tt -> {
@@ -289,8 +267,6 @@ public class Agent {
                                 }
 
                                 actions.add(t.getLabel());
-                            } else if(tt.getClass().equals(IterationExitTransition.class)) {
-                                iterationExitTransitions.add((IterationExitTransition) tt);
                             }
                         });
                         Set<State> states = new HashSet<>();
@@ -312,7 +288,6 @@ public class Agent {
                                 states,
                                 sendTransitions,
                                 receiveTransitions,
-                                iterationExitTransitions,
                                 actions,
                                 startState,
                                 receiveGuardCondition);
@@ -357,18 +332,22 @@ public class Agent {
     }
 
     public String toDOT(){
-        this.resolveIterationExitTransitions();
         String dot = "";
 //        dot+= "digraph " + this.name + " {\n";
         dot += "\tgraph [rankdir=LR,ranksep=4,nodesep=0.2];\n"
         + "node [shape=circle];\n";
         for(State state : this.states){
-            dot += "\t" +  state.toString() + ";\n";
+            if(state.equals(this.initialState)){
+                dot += "\t" +  state.toString() + "[peripheries=2];\n";
+            }
+            else{
+                dot += "\t" +  state.toString() + ";\n";
+            }
         }
 
-        dot += "\tinit [shape=point,style=invis];\n";
-
-        dot += "\tinit:e -> " +   this.initialState.toString() + ":w[penwidth=0;label=\"\"];\n";
+//        dot += "\tinit [shape=point,style=invis];\n";
+//
+//        dot += "\tinit -> " +   this.initialState.toString() + "[penwidth=0;label=\"\"];\n";
 
         for(Transition t : this.sendTransitions){
             String sourceLabel = t.getSource().toString();
@@ -378,6 +357,8 @@ public class Agent {
 //                sourceLabel += ":w";
 //                destLabel += ":e";
             }
+
+//            String edgeLabel = t.label.
 
             dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + ((BasicProcess) t.getLabel()).getChannel() + "!\",labeltooltip=\"" + t.getLabel() + "\",width=1]" + ";\n";
         }
@@ -394,39 +375,9 @@ public class Agent {
             dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + ((BasicProcess) t.getLabel()).getChannel() + "?\",labeltooltip=\"" + t.getLabel() + "\",width=1]" + ";\n";
         }
 
-        for(Transition t : this.iterationExitTransitions){
-            String sourceLabel = t.getSource().toString();
-            String destLabel = t.getDestination().toString();
-
-            if(t.getSource().equals(t.getDestination())){
-//                sourceLabel += ":w";
-//                destLabel += ":e";
-            }
-
-            dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + t.getLabel() + "\"]" + ";\n";
-        }
-
-//        dot += "}";
-
         return dot;
     }
 
-    public void resolveIterationExitTransitions(){
-        HashSet<ProcessTransition> transitions = new HashSet();
-        transitions.addAll(sendTransitions);
-        transitions.addAll(receiveTransitions);
-
-        for(IterationExitTransition t : this.iterationExitTransitions){
-            for(ProcessTransition tt : transitions){
-                if(tt.source.equals(t.destination)){
-                    tt.source = t.source;
-                    tt.getLabel().setPsi(new And(tt.getLabel().getPsi(), t.getLabel()));
-                }
-            }
-        }
-
-        this.iterationExitTransitions.clear();
-    }
 
     public void labelAllTransitions(){
         HashSet<ProcessTransition> transitions = new HashSet(this.receiveTransitions);
