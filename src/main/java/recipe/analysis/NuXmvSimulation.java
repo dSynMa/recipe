@@ -91,7 +91,7 @@ public class NuXmvSimulation {
     public Pair<Boolean, String> simulation_next(String constraint) throws IOException {
         if(!started) return simulation_pick_init_state(constraint);
 
-        String out = execute((symbolic ? "msat_" : "") + "simulate -k 1 -v -c \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
+        String out = execute((symbolic ? "msat_" : "") + "simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
         if(symbolic) {
             if (out.contains("UNSAT")) {
                 return new Pair<>(false, out.replaceAll("\r\n|\n", " ").split("\\*\\*\\*\\*")[0]);
