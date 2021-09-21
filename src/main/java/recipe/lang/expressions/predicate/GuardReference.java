@@ -2,6 +2,7 @@ package recipe.lang.expressions.predicate;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
+import recipe.lang.definitions.GuardDefinition;
 import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
@@ -104,6 +105,28 @@ public class GuardReference extends Condition {
     }
 
     public String toString(){
+        GuardDefinition guardDefinition = Guard.getDefinition(this.guardType.name());
+        Expression<Boolean> template = guardDefinition.getTemplate();
+        List params = List.of(guardDefinition.getType().getParameters());
+
+        try {
+            return template.relabel((x) -> {
+                if(params.contains(x)){
+                    return this.parametersValues[params.indexOf(x)];
+                } else {
+                    return x;
+                }
+            }).toString();
+        } catch (RelabellingTypeException e) {
+            e.printStackTrace();
+        } catch (MismatchingTypeException e) {
+            e.printStackTrace();
+        }
+
+        return toOriginalString();
+    }
+
+    public String toOriginalString(){
         return guardType.name() + "(" + String.join(",", Arrays.stream(parametersValues).map((x) -> x.toString()).toArray(String[]::new)) + ")";
     }
 }
