@@ -2,12 +2,9 @@ package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.agents.IterationExitTransition;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
-import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.Not;
 import recipe.lang.types.Boolean;
 
 import java.util.HashSet;
@@ -28,15 +25,11 @@ public class Iterative extends Process{
 
     public Set<Transition> asTransitionSystem(State start, State end){
         Set<Transition> ts = new HashSet<>();
-//        State intermediateStart = new State(getSeed());
-//        State intermediateEnd = new State(getSeed());
 
         Set<Transition> loop = a.asTransitionSystem(start, start);
 
-        IterationExitTransition iterationExitTransition = new IterationExitTransition(start, end, new Not(a.entryCondition()));
 
         ts.addAll(loop);
-        ts.add(iterationExitTransition);
         return ts;
     }
 

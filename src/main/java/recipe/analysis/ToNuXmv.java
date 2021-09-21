@@ -203,20 +203,7 @@ public class ToNuXmv {
 
                         sendNows.add(now);
 
-                        if (iterationExitTransitions != null && iterationExitTransitions.size() > 0) {
-                            Set<IterationExitTransition> destItExit = stateIterationExitTransitionMap.get(t.getDestination());
-                            List<String> exitConds = new ArrayList<>();
-                            next += "\n & case\n";
-                            for (IterationExitTransition tt : destItExit) {
-                                String exitCond = tt.getLabel().relabel(v -> v.sameTypeWithName(namei + "-" + v)).toString();
-                                exitConds.add(exitCond);
-                                next += "\t\t" + exitCond + " : next(" + namei + "-state" + ") = " + t.getDestination() + ");";
-                            }
-                            next += "\t\t TRUE : next(" + namei + "-state" + ") = " + namei + "-" + t.getDestination() + ");";
-                            next += "\n \tesac";
-                        } else {
-                            next += "\n & next(" + namei + "-state" + ") = " + namei + "-" + t.getDestination();
-                        }
+                        next += "\n & next(" + namei + "-state" + ") = " + namei + "-" + t.getDestination();
 
                         for (Map.Entry<String, Expression> entry : process.getUpdate().entrySet()) {
                             next += "\n & next(" + namei + "-" + entry.getKey() + ") = (" + entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + v)) + ")";
@@ -280,20 +267,7 @@ public class ToNuXmv {
                                             receiveNext += "\n & falsify-not-" + receiveName + "-" + receiveProcess.getLabel() + "";
                                         }
 
-                                        if (iterationExitTransitions != null && iterationExitTransitions.size() > 0) {
-                                            Set<IterationExitTransition> destItExit = stateIterationExitTransitionMap.get(t.getDestination());
-                                            List<String> exitConds = new ArrayList<>();
-                                            next += "\n & case\n";
-                                            for (IterationExitTransition tt : destItExit) {
-                                                String exitCond = tt.getLabel().relabel(v -> v.sameTypeWithName(receiveName + "-" + v)).toString();
-                                                exitConds.add(exitCond);
-                                                receiveNext += "\t\t" + exitCond + " : next(" + receiveName + "-state" + ") = " + t.getDestination() + ");";
-                                            }
-                                            receiveNext += "\t\t TRUE : next(" + receiveName + "-state" + ") = " + receiveName + "-" + t.getDestination() + ");";
-                                            receiveNext += "\n \tesac";
-                                        } else {
-                                            receiveNext += "\n & next(" + receiveName + "-state" + ") = " + receiveName + "-" + t.getDestination();
-                                        }
+                                        receiveNext += "\n & next(" + receiveName + "-state" + ") = " + receiveName + "-" + t.getDestination();
 
                                         receiveNext = receiveNext.replaceAll("^\n *&", "");
                                         transitionReceivePreds.add("(" + receiveNow + ") & " + indent(indent(indent("\n" + receiveNext))));
