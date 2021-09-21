@@ -5,6 +5,7 @@ import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.Config;
+import recipe.lang.exception.TypeCreationException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.definitions.GuardDefinition;
 import recipe.lang.expressions.TypedVariable;
@@ -221,10 +222,37 @@ public class Parsing {
         return typedVariableAssignmentList;
     }
 
+    public static Parser enumDefinitionParser(){
+        org.petitparser.parser.Parser enumDefinitionParser =
+                    StringParser.of("enum").trim()
+                            .seq(CharacterParser.lowerCase().seq(CharacterParser.word().star()).flatten().trim())
+                            .seq(CharacterParser.of('{').trim())
+                            .seq(CharacterParser.word().plus().trim().flatten().separatedBy(CharacterParser.of(',').trim()))
+                            .seq(CharacterParser.of('}').trim())
+                            .map((List<Object> values) -> {
+                                String enumName = ((String) values.get(1)).trim();
+                                List<String> enumValues = new ArrayList<>();
+                                for(Object v : (List<Object>) values.get(3)){
+                                    if(v.getClass().equals(String.class)){
+                                        enumValues.add(((String) v).trim());
+                                    }
+                                }
+                                Enum enumm = null;
+                                try {
+                                    enumm = new Enum(enumName, enumValues);
+                                } catch (TypeCreationException e) {
+                                    e.printStackTrace();
+                                }
+                                return enumm;
+                            });
+
+        return enumDefinitionParser;
+    }
+
     public static Parser guardDefinitionList(TypingContext typingContext){
         org.petitparser.parser.Parser guardDefinitionParser = GuardDefinition.parser(typingContext);
 
-        org.petitparser.parser.Parser guardDefinitionListParser = guardDefinitionParser.separatedBy(CharacterParser.whitespace().star())
+        org.petitparser.parser.Parser guardDefinitionListParser = (guardDefinitionParser).separatedBy(CharacterParser.whitespace().star())
                 .map((List<Object> values) -> {
                     Map<String, Type> guardDefinitionContext = new HashMap<>();
                     for(Object v : values){
