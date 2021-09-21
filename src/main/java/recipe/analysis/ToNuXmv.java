@@ -80,7 +80,8 @@ public class ToNuXmv {
         String init = "INIT\n";
         String trans = "";
 
-        List<Agent> agents = new ArrayList<>(system.getAgents());
+//        List<Agent> agents = new ArrayList<>(system.getAgents());
+        List<AgentInstance> agentInstances = new ArrayList<>(system.getAgentInstances());
         List<String> agentSendPreds = new ArrayList<>();
         Set<String> sendProcessNames = new HashSet<>();
         Set<String> receiveProcessNames = new HashSet<>();
@@ -99,48 +100,49 @@ public class ToNuXmv {
             keepFunctions.add(keep);
         }
 
-        for(int i = 0; i < agents.size(); i++) {
-            Agent agent = agents.get(i);
-            String name = agent.getName();
+        for(int i = 0; i < agentInstances.size(); i++) {
+            Agent agenti = agentInstances.get(i).getAgent();
+            String namei = agentInstances.get(i).getLabel();
 
-            String keep = "keep-all-not-" + name + " := TRUE";
-            String keepThis = "keep-all-" + name + " := TRUE";
-            for(int j = 0; j < agents.size(); j++) {
-                Agent agent1 = agents.get(j);
-                String name1 = agent1.getName();
+            String keep = "keep-all-not-" + namei + " := TRUE";
+            String keepThis = "keep-all-" + namei + " := TRUE";
+            for(int j = 0; j < agentInstances.size(); j++) {
+                Agent agentj = agentInstances.get(j).getAgent();
+                String namej = agentInstances.get(j).getLabel();
+
                 if(j != i){
-                    for(String var : agent1.getStore().getAttributes().keySet()){
-                        keep += " & next(" + name1 + "-" + var + ") = " + name1 + "-" + var;
+                    for(String var : agentj.getStore().getAttributes().keySet()){
+                        keep += " & next(" + namej + "-" + var + ") = " + namej + "-" + var;
                     }
-                    keep += " & next(" + name1 + ".state) = " + name1 + ".state";
+                    keep += " & next(" + namej + ".state) = " + namej + ".state";
                 }
             }
             keepFunctions.add(keep);
 
-            for(String var : agent.getStore().getAttributes().keySet()){
-                keepThis += " & next(" + name + "-" + var + ") = " + name + "-" + var;
-                keepAll += " & next(" + name + "-" + var + ") = " + name + "-" + var;
+            for(String var : agenti.getStore().getAttributes().keySet()){
+                keepThis += " & next(" + namei + "-" + var + ") = " + namei + "-" + var;
+                keepAll += " & next(" + namei + "-" + var + ") = " + namei + "-" + var;
             }
 
-            for(Transition t : agents.get(i).getReceiveTransitions()){
+            for(Transition t : agenti.getReceiveTransitions()){
                 String label = ((ReceiveProcess) t.getLabel()).getLabel();
                 if (label != null && !label.equals("")){
-                    keepThis += " & next(" + agents.get(i).getName() + "-" + label + ") = FALSE";
-                    keepAll += " & next(" + agents.get(i).getName() + "-" + label + ") = FALSE";
-                    receiveProcessNames.add(agents.get(i).getName() + "-" + label);
+                    keepThis += " & next(" + namei + "-" + label + ") = FALSE";
+                    keepAll += " & next(" + namei + "-" + label + ") = FALSE";
+                    receiveProcessNames.add(namei + "-" + label);
 
-                    String falsifyAllLabelsExceptThis = "falsify-not-" + agents.get(i).getName() + "-" + label + " := TRUE";
-                    for(Transition tt : agents.get(i).getReceiveTransitions()){
+                    String falsifyAllLabelsExceptThis = "falsify-not-" + namei + "-" + label + " := TRUE";
+                    for(Transition tt : agenti.getReceiveTransitions()){
                         String labell = ((ReceiveProcess) tt.getLabel()).getLabel();
                         if(!label.equals(labell) && label != null && !label.equals("")){
-                            falsifyAllLabelsExceptThis += " & next(" + agents.get(i).getName() + "-" + labell + ") = FALSE";
+                            falsifyAllLabelsExceptThis += " & next(" + namei + "-" + labell + ") = FALSE";
                         }
                     }
                     keepFunctions.add(falsifyAllLabelsExceptThis);
                 }
             }
 
-            keepAll += " & keep-all-" + name;
+            keepAll += " & keep-all-" + namei;
 
             keepFunctions.add(keepThis);
         }
@@ -153,31 +155,33 @@ public class ToNuXmv {
         List<String> sendNows = new ArrayList<>();
         List<String> receiveNows = new ArrayList<>();
 
-        for(int i = 0; i < agents.size(); i++) {
-            Agent agent = agents.get(i);
-            String name = agent.getName();
+        for(int i = 0; i < agentInstances.size(); i++) {
+            AgentInstance agentInstancei = agentInstances.get(i);
+            Agent agenti = agentInstancei.getAgent();
+            String namei = agentInstancei.getLabel();
 
-            Stream<String> allStates = agent.getStates().stream().map(s -> name + "-" + s.toString());
+            Stream<String> allStates = agenti.getStates().stream().map(s -> namei + "-" + s.toString());
             String stateList = String.join(",", allStates.toArray(String[]::new));
 
-            for (TypedVariable typedVariable : agent.getStore().getAttributes().values()) {
-                vars += "\t" + name + "-" + typedVariable.getName() + " : " + type(typedVariable) + ";\n";
+            for (TypedVariable typedVariable : agenti.getStore().getAttributes().values()) {
+                vars += "\t" + namei + "-" + typedVariable.getName() + " : " + type(typedVariable) + ";\n";
             }
 
-            vars += "\t" + name + ".state" + " : {" + stateList + "};\n";
-            init += "\t& " + name + ".state" + " = " + name + "-" + agent.getInitialState().toString() + "\n";
+            vars += "\t" + namei + ".state" + " : {" + stateList + "};\n";
+            init += "\t& " + namei + ".state" + " = " + namei + "-" + agenti.getInitialState().toString() + "\n";
 
-            init += "\t& " + agent.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(name + "-" + v)) + "\n";
+            init += "\t& " + agenti.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + v)) + "\n";
+            init += "\t& " + agentInstancei.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + v)) + "\n";
 
             Map<State, Set<ProcessTransition>> stateSendTransitionMap = new HashMap<>();
             Map<State, Set<ProcessTransition>> stateReceiveTransitionMap = new HashMap<>();
             Map<State, Set<IterationExitTransition>> stateIterationExitTransitionMap = new HashMap<>();
-            stateSendTransitionMap.putAll(agent.getStateTransitionMap(agent.getSendTransitions()));
-            stateReceiveTransitionMap.putAll(agent.getStateTransitionMap(agent.getReceiveTransitions()));
-            stateIterationExitTransitionMap.putAll(agent.getStateTransitionMap(agent.getIterationExitTransitions()));
+            stateSendTransitionMap.putAll(agenti.getStateTransitionMap(agenti.getSendTransitions()));
+            stateReceiveTransitionMap.putAll(agenti.getStateTransitionMap(agenti.getReceiveTransitions()));
+            stateIterationExitTransitionMap.putAll(agenti.getStateTransitionMap(agenti.getIterationExitTransitions()));
 
             List<String> stateSendPreds = new ArrayList<>();
-            for (State state : agent.getStates()) {
+            for (State state : agenti.getStates()) {
                 Set<ProcessTransition> sendTransitions = stateSendTransitionMap.get(state);
                 Set<ProcessTransition> receiveTransitions = stateReceiveTransitionMap.get(state);
                 Set<IterationExitTransition> iterationExitTransitions = stateIterationExitTransitionMap.get(state);
@@ -193,9 +197,9 @@ public class ToNuXmv {
                         String next = "";
                         SendProcess process = (SendProcess) t.getLabel();
 
-                        String channel = process.getChannel().relabel(v -> v.sameTypeWithName(agent.getName() + "-" + v)).toString();
-                        now += "" + name + ".state" + " = " + name + "-" + t.getSource();
-                        now += " & (" + process.entryCondition().relabel(v -> v.sameTypeWithName(name + "-" + v)) + ")";
+                        String channel = process.getChannel().relabel(v -> v.sameTypeWithName(agenti.getName() + "-" + v)).toString();
+                        now += "" + namei + ".state" + " = " + namei + "-" + t.getSource();
+                        now += " & (" + process.entryCondition().relabel(v -> v.sameTypeWithName(namei + "-" + v)) + ")";
 
                         sendNows.add(now);
 
@@ -204,38 +208,39 @@ public class ToNuXmv {
                             List<String> exitConds = new ArrayList<>();
                             next += "\n & case\n";
                             for (IterationExitTransition tt : destItExit) {
-                                String exitCond = tt.getLabel().relabel(v -> v.sameTypeWithName(name + "-" + v)).toString();
+                                String exitCond = tt.getLabel().relabel(v -> v.sameTypeWithName(namei + "-" + v)).toString();
                                 exitConds.add(exitCond);
-                                next += "\t\t" + exitCond + " : next(" + name + ".state" + ") = " + t.getDestination() + ");";
+                                next += "\t\t" + exitCond + " : next(" + namei + ".state" + ") = " + t.getDestination() + ");";
                             }
-                            next += "\t\t TRUE : next(" + name + ".state" + ") = " + name + "-" + t.getDestination() + ");";
+                            next += "\t\t TRUE : next(" + namei + ".state" + ") = " + namei + "-" + t.getDestination() + ");";
                             next += "\n \tesac";
                         } else {
-                            next += "\n & next(" + name + ".state" + ") = " + name + "-" + t.getDestination();
+                            next += "\n & next(" + namei + ".state" + ") = " + namei + "-" + t.getDestination();
                         }
 
                         for (Map.Entry<String, Expression> entry : process.getUpdate().entrySet()) {
-                            next += "\n & next(" + name + "-" + entry.getKey() + ") = (" + entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(name + "-" + v)) + ")";
+                            next += "\n & next(" + namei + "-" + entry.getKey() + ") = (" + entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + v)) + ")";
                         }
-                        for (String var : agent.getStore().getAttributes().keySet()) {
+                        for (String var : agenti.getStore().getAttributes().keySet()) {
                             if (!process.getUpdate().containsKey(var)) {
-                                next += "\n & " + "next(" + name + "-" + var + ") = " + name + "-" + var;
+                                next += "\n & " + "next(" + namei + "-" + var + ") = " + namei + "-" + var;
                             }
                         }
 
                         List<String> agentReceivePreds = new ArrayList<>();
 
-                        for (int j = 0; j < agents.size(); j++) {
+                        for (int j = 0; j < agentInstances.size(); j++) {
                             if (i != j) {
-                                Agent receiveAgent = agents.get(j);
-                                String receiveName = receiveAgent.getName();
+                                AgentInstance agentInstancej = agentInstances.get(j);
+                                Agent receiveAgent = agentInstancej.getAgent();
+                                String receiveName = agentInstancej.getLabel();
 
                                 String receiveGuard = receiveAgent.getReceiveGuard().relabel(v -> v.sameTypeWithName(v.toString().equals(Config.channelLabel) ? v.toString() : receiveName + "-" + v)).toString().replaceAll(Config.channelLabel, channel);
                                 receiveGuard = "(" + receiveGuard + ") | " + channel + " = " + broadcastChannel;
 
                                 String sendGuard = "(" + process.getMessageGuard().relabel(v -> {
                                     try {
-                                        return system.getCommunicationVariables().containsKey(v.getName()) ? receiveAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(receiveName + "-" + vv)) : v.sameTypeWithName(name + "-" + v);
+                                        return system.getCommunicationVariables().containsKey(v.getName()) ? receiveAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(receiveName + "-" + vv)) : v.sameTypeWithName(namei + "-" + v);
                                     } catch (RelabellingTypeException | MismatchingTypeException e) {
                                         e.printStackTrace();
                                     }
@@ -258,7 +263,7 @@ public class ToNuXmv {
 
                                         Map<String, Expression> relabelledMessage = new HashMap<>();
                                         for(Map.Entry<String, Expression> entry : process.getMessage().entrySet()){
-                                            relabelledMessage.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(name + "-" + ((TypedVariable) v).getName())));
+                                            relabelledMessage.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + ((TypedVariable) v).getName())));
                                         }
 
                                         for (Map.Entry<String, Expression> entry : receiveProcess.getUpdate().entrySet()) {
@@ -312,8 +317,8 @@ public class ToNuXmv {
                         String logic = now + indent(indent(indent(next))) + "\n" + indent("& (" + String.join("\n & ", agentReceivePreds)+ ")");
 
                         if(process.getLabel() != null) {
-                            define +=  "\t" + name + "-" + process.getLabel() + " := " + logic + ";\n";
-                            transitionSendPreds.add(name + "-" + process.getLabel());
+                            define +=  "\t" + namei + "-" + process.getLabel() + " := " + logic + ";\n";
+                            transitionSendPreds.add(namei + "-" + process.getLabel());
                         } else {
                             transitionSendPreds.add(logic);
                         }

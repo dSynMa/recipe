@@ -240,7 +240,7 @@ public class Agent {
                             e.printStackTrace();
                         }
                         return null;
-                    }, localContext.get())))
+                    }, localContext.get())).optional(Condition.getTrue()))
                     .seq(new LazyParser<>(((TypingContext localContext1) -> {
                         try {
                             return Parsing.relabellingParser(localContext1, communicationContext);
