@@ -13,10 +13,9 @@ import recipe.lang.types.Enum;
 import recipe.lang.types.Type;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class ToNuXmv {
@@ -175,17 +174,13 @@ public class ToNuXmv {
 
             Map<State, Set<ProcessTransition>> stateSendTransitionMap = new HashMap<>();
             Map<State, Set<ProcessTransition>> stateReceiveTransitionMap = new HashMap<>();
-            Map<State, Set<IterationExitTransition>> stateIterationExitTransitionMap = new HashMap<>();
             stateSendTransitionMap.putAll(agenti.getStateTransitionMap(agenti.getSendTransitions()));
             stateReceiveTransitionMap.putAll(agenti.getStateTransitionMap(agenti.getReceiveTransitions()));
-            stateIterationExitTransitionMap.putAll(agenti.getStateTransitionMap(agenti.getIterationExitTransitions()));
 
             List<String> stateSendPreds = new ArrayList<>();
             for (State state : agenti.getStates()) {
                 Set<ProcessTransition> sendTransitions = stateSendTransitionMap.get(state);
                 Set<ProcessTransition> receiveTransitions = stateReceiveTransitionMap.get(state);
-                Set<IterationExitTransition> iterationExitTransitions = stateIterationExitTransitionMap.get(state);
-
 
                 if (sendTransitions != null && sendTransitions.size() > 0) {
                     List<String> transitionSendPreds = new ArrayList<>();
@@ -234,6 +229,11 @@ public class ToNuXmv {
                                     return null;
                                 }) + ")";
 
+                                Map<String, Expression> relabelledMessage = new HashMap<>();
+                                for(Map.Entry<String, Expression> entry : process.getMessage().entrySet()){
+                                    relabelledMessage.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + ((TypedVariable) v).getName())));
+                                }
+
                                 String stateReceivePrd = "";
                                 Set<ProcessTransition> receiveAgentReceiveTransitions = receiveAgent.getReceiveTransitions();
                                 if (receiveAgentReceiveTransitions != null && receiveAgentReceiveTransitions.size() > 0) {
@@ -244,18 +244,35 @@ public class ToNuXmv {
                                         String receiveNow = "";
                                         String receiveNext = "";
                                         receiveNow += receiveName + "-state" + " = " + receiveName + "-" + state.toString();
-                                        receiveNow += "\n & " + receiveProcess.getPsi().relabel(v -> v.sameTypeWithName(receiveName + "-" + v)).toString();
+
+                                        AtomicReference<Boolean> stop = new AtomicReference<>(false);
+                                        Function<Expression, Expression> helper = (e) -> {
+                                            stop.set(true);
+                                            return e;
+                                        };
+
+                                        receiveNow += "\n & " + receiveProcess.getPsi().relabel(v -> process.getMessage().containsKey(((TypedVariable) v).getName())
+                                                                                                        ? relabelledMessage.get(((TypedVariable) v).getName())
+                                                                                                            : system.getMessageStructure().containsKey(((TypedVariable) v).getName())
+                                                                                                                ? helper.apply(v)
+                                                                                                                    : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v));
+
+                                        if(stop.get()) continue;
+
                                         receiveNow += "\n & (" + channel + " = " + broadcastChannel + " | " + channel + " = " + receiveProcess.getChannel().relabel(v -> v.sameTypeWithName(receiveName + "-" + v.toString().toLowerCase())).toString() + ")";
                                         receiveNows.add(receiveNow);
 
-                                        Map<String, Expression> relabelledMessage = new HashMap<>();
-                                        for(Map.Entry<String, Expression> entry : process.getMessage().entrySet()){
-                                            relabelledMessage.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + ((TypedVariable) v).getName())));
-                                        }
 
                                         for (Map.Entry<String, Expression> entry : receiveProcess.getUpdate().entrySet()) {
-                                            receiveNext += "\n & " + "next(" + receiveName + "-" + entry.getKey() + ") = " + entry.getValue().relabel(v -> system.getMessageStructure().containsKey(((TypedVariable) v).getName()) ? relabelledMessage.get(((TypedVariable) v).getName()) : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v));
+                                            receiveNext += "\n & " + "next(" + receiveName + "-" + entry.getKey() + ") = " + entry.getValue().relabel(v -> process.getMessage().containsKey(((TypedVariable) v).getName())
+                                                                                                                                ? relabelledMessage.get(((TypedVariable) v).getName())
+                                                                                                                                    : system.getMessageStructure().containsKey(((TypedVariable) v).getName())
+                                                                                                                                    ? helper.apply((TypedVariable) v)
+                                                                                                                                        : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v));
                                         }
+
+                                        if(stop.get()) continue;
+
                                         for (String var : receiveAgent.getStore().getAttributes().keySet()) {
                                             if (!receiveProcess.getUpdate().containsKey(var)) {
                                                 receiveNext += "\n & " + "next(" + receiveName + "-" + var + ") = " + receiveName + "-" + var;

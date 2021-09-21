@@ -44,4 +44,21 @@ public class ToNuXmvTest {
         assert r.isSuccess();
 
     }
+
+    @Test
+    public void transform2() throws Exception {
+        String script = String.join("\n", Files.readAllLines(Paths.get("./bigger-example.txt")));
+        Parser system = System.parser().end();
+        Result r = system.parse(script);
+        System s = r.get();
+        try {
+            String out = ToNuXmv.transform(s);
+            java.lang.System.out.println(out);
+        } catch (Exception e) {
+            e.printStackTrace();
+            assert r.isFailure();
+        }
+        assert r.isSuccess();
+
+    }
 }
