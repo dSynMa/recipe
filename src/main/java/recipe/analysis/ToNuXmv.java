@@ -316,7 +316,7 @@ public class ToNuXmv {
 
                         String logic = now + indent(indent(indent(next))) + "\n" + indent("& (" + String.join("\n & ", agentReceivePreds)+ ")");
 
-                        if(process.getLabel() != null) {
+                        if(process.getLabel() != null && !process.getLabel().equals("")) {
                             define +=  "\t" + namei + "-" + process.getLabel() + " := " + logic + ";\n";
                             transitionSendPreds.add(namei + "-" + process.getLabel());
                         } else {
