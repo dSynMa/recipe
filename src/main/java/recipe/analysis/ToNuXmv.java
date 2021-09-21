@@ -114,7 +114,7 @@ public class ToNuXmv {
                     for(String var : agentj.getStore().getAttributes().keySet()){
                         keep += " & next(" + namej + "-" + var + ") = " + namej + "-" + var;
                     }
-                    keep += " & next(" + namej + ".state) = " + namej + ".state";
+                    keep += " & next(" + namej + "-state) = " + namej + "-state";
                 }
             }
             keepFunctions.add(keep);
@@ -167,8 +167,8 @@ public class ToNuXmv {
                 vars += "\t" + namei + "-" + typedVariable.getName() + " : " + type(typedVariable) + ";\n";
             }
 
-            vars += "\t" + namei + ".state" + " : {" + stateList + "};\n";
-            init += "\t& " + namei + ".state" + " = " + namei + "-" + agenti.getInitialState().toString() + "\n";
+            vars += "\t" + namei + "-state" + " : {" + stateList + "};\n";
+            init += "\t& " + namei + "-state" + " = " + namei + "-" + agenti.getInitialState().toString() + "\n";
 
             init += "\t& " + agenti.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + v)) + "\n";
             init += "\t& " + agentInstancei.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + v)) + "\n";
@@ -198,7 +198,7 @@ public class ToNuXmv {
                         SendProcess process = (SendProcess) t.getLabel();
 
                         String channel = process.getChannel().relabel(v -> v.sameTypeWithName(agenti.getName() + "-" + v)).toString();
-                        now += "" + namei + ".state" + " = " + namei + "-" + t.getSource();
+                        now += "" + namei + "-state" + " = " + namei + "-" + t.getSource();
                         now += " & (" + process.entryCondition().relabel(v -> v.sameTypeWithName(namei + "-" + v)) + ")";
 
                         sendNows.add(now);
@@ -210,12 +210,12 @@ public class ToNuXmv {
                             for (IterationExitTransition tt : destItExit) {
                                 String exitCond = tt.getLabel().relabel(v -> v.sameTypeWithName(namei + "-" + v)).toString();
                                 exitConds.add(exitCond);
-                                next += "\t\t" + exitCond + " : next(" + namei + ".state" + ") = " + t.getDestination() + ");";
+                                next += "\t\t" + exitCond + " : next(" + namei + "-state" + ") = " + t.getDestination() + ");";
                             }
-                            next += "\t\t TRUE : next(" + namei + ".state" + ") = " + namei + "-" + t.getDestination() + ");";
+                            next += "\t\t TRUE : next(" + namei + "-state" + ") = " + namei + "-" + t.getDestination() + ");";
                             next += "\n \tesac";
                         } else {
-                            next += "\n & next(" + namei + ".state" + ") = " + namei + "-" + t.getDestination();
+                            next += "\n & next(" + namei + "-state" + ") = " + namei + "-" + t.getDestination();
                         }
 
                         for (Map.Entry<String, Expression> entry : process.getUpdate().entrySet()) {
@@ -256,7 +256,7 @@ public class ToNuXmv {
 
                                         String receiveNow = "";
                                         String receiveNext = "";
-                                        receiveNow += receiveName + ".state" + " = " + receiveName + "-" + state.toString();
+                                        receiveNow += receiveName + "-state" + " = " + receiveName + "-" + state.toString();
                                         receiveNow += "\n & " + receiveProcess.getPsi().relabel(v -> v.sameTypeWithName(receiveName + "-" + v)).toString();
                                         receiveNow += "\n & (" + channel + " = " + broadcastChannel + " | " + channel + " = " + receiveProcess.getChannel().relabel(v -> v.sameTypeWithName(receiveName + "-" + v.toString().toLowerCase())).toString() + ")";
                                         receiveNows.add(receiveNow);
@@ -287,12 +287,12 @@ public class ToNuXmv {
                                             for (IterationExitTransition tt : destItExit) {
                                                 String exitCond = tt.getLabel().relabel(v -> v.sameTypeWithName(receiveName + "-" + v)).toString();
                                                 exitConds.add(exitCond);
-                                                receiveNext += "\t\t" + exitCond + " : next(" + receiveName + ".state" + ") = " + t.getDestination() + ");";
+                                                receiveNext += "\t\t" + exitCond + " : next(" + receiveName + "-state" + ") = " + t.getDestination() + ");";
                                             }
-                                            receiveNext += "\t\t TRUE : next(" + receiveName + ".state" + ") = " + receiveName + "-" + t.getDestination() + ");";
+                                            receiveNext += "\t\t TRUE : next(" + receiveName + "-state" + ") = " + receiveName + "-" + t.getDestination() + ");";
                                             receiveNext += "\n \tesac";
                                         } else {
-                                            receiveNext += "\n & next(" + receiveName + ".state" + ") = " + receiveName + "-" + t.getDestination();
+                                            receiveNext += "\n & next(" + receiveName + "-state" + ") = " + receiveName + "-" + t.getDestination();
                                         }
 
                                         receiveNext = receiveNext.replaceAll("^\n *&", "");
