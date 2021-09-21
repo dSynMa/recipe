@@ -15,7 +15,7 @@ import java.util.Set;
 
 public abstract class Process {
 
-    private static int stateSeed = 0;
+    public static int stateSeed = 0;
 
     public int getSeed(){
         stateSeed++;
