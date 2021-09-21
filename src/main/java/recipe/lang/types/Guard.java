@@ -30,9 +30,10 @@ public class Guard extends Type {
         if(parameters == null){
             throw new TypeCreationException("Guard type initialised with null.");
         }
-        if(definitions.containsKey(label)){
-            throw new TypeCreationException("Guard with name " + label + " already exists.");
-        }
+        // If same, last one wins
+//        if(definitions.containsKey(label)){
+//            throw new TypeCreationException("Guard with name " + label + " already exists.");
+//        }
         this.label = label;
         this.parameters = parameters;
     }
