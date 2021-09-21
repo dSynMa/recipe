@@ -333,7 +333,6 @@ public class Agent {
 
     public String toDOT(){
         String dot = "";
-//        dot+= "digraph " + this.name + " {\n";
         dot += "\tgraph [rankdir=LR,ranksep=4,nodesep=0.2];\n"
         + "node [shape=circle];\n";
         for(State state : this.states){
@@ -345,34 +344,31 @@ public class Agent {
             }
         }
 
-//        dot += "\tinit [shape=point,style=invis];\n";
-//
-//        dot += "\tinit -> " +   this.initialState.toString() + "[penwidth=0;label=\"\"];\n";
-
         for(Transition t : this.sendTransitions){
             String sourceLabel = t.getSource().toString();
             String destLabel = t.getDestination().toString();
 
-            if(t.getSource().equals(t.getDestination())){
-//                sourceLabel += ":w";
-//                destLabel += ":e";
+
+            BasicProcess label = (BasicProcess) t.getLabel();
+            String textLabel = label.getLabel();
+            if(textLabel == null || textLabel.equals("")){
+                textLabel = label.getChannel() + "!";
             }
 
-//            String edgeLabel = t.label.
-
-            dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + ((BasicProcess) t.getLabel()).getChannel() + "!\",labeltooltip=\"" + t.getLabel() + "\",width=1]" + ";\n";
+            dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + textLabel + "\",labeltooltip=\"" + label + "\",width=1]" + ";\n";
         }
 
         for(Transition t : this.receiveTransitions){
             String sourceLabel = t.getSource().toString();
             String destLabel = t.getDestination().toString();
 
-            if(t.getSource().equals(t.getDestination())){
-//                sourceLabel += ":w";
-//                destLabel += ":e";
+            BasicProcess label = (BasicProcess) t.getLabel();
+            String textLabel = label.getLabel();
+            if(textLabel == null || textLabel.equals("")){
+                textLabel = label.getChannel() + "?";
             }
 
-            dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + ((BasicProcess) t.getLabel()).getChannel() + "?\",labeltooltip=\"" + t.getLabel() + "\",width=1]" + ";\n";
+            dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + textLabel + "\",labeltooltip=\"" + label + "\",width=1]" + ";\n";
         }
 
         return dot;
