@@ -1,6 +1,7 @@
 package recipe.lang.types;
 
 import org.petitparser.parser.Parser;
+import recipe.lang.definitions.GuardDefinition;
 import recipe.lang.exception.MismatchingTypeException;
 import recipe.lang.exception.TypeCreationException;
 import recipe.lang.expressions.TypedVariable;
@@ -13,17 +14,27 @@ import java.util.Map;
 public class Guard extends Type {
     private TypedVariable[] parameters;
     private String label;
+    private static Map<String, GuardDefinition> definitions = new HashMap<>();
+    public static void clear(){
+        definitions.clear();
+    }
+
+    public static void setDefinition(String label, GuardDefinition guardDefinition){
+        definitions.put(label, guardDefinition);
+    }
+    public static GuardDefinition getDefinition(String label){
+        return definitions.get(label);
+    }
 
     public Guard(String label, TypedVariable[] parameters) throws TypeCreationException{
         if(parameters == null){
             throw new TypeCreationException("Guard type initialised with null.");
         }
-//        if(existing.containsKey(label)){
-//            throw new TypeCreationException("Guard with name " + label + " already exists.");
-//        }
+        if(definitions.containsKey(label)){
+            throw new TypeCreationException("Guard with name " + label + " already exists.");
+        }
         this.label = label;
         this.parameters = parameters;
-//        existing.put(label, this);
     }
 
     public TypedVariable[] getParameters(){
