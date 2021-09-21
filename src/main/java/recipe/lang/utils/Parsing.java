@@ -10,10 +10,8 @@ import recipe.lang.definitions.GuardDefinition;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.types.Boolean;
-import recipe.lang.types.BoundedInteger;
+import recipe.lang.types.*;
 import recipe.lang.types.Enum;
-import recipe.lang.types.Type;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -224,7 +222,6 @@ public class Parsing {
     }
 
     public static Parser guardDefinitionList(TypingContext typingContext){
-        AtomicReference<TypingContext> typedVariableList = new AtomicReference<>(new TypingContext());
         org.petitparser.parser.Parser guardDefinitionParser = GuardDefinition.parser(typingContext);
 
         org.petitparser.parser.Parser guardDefinitionListParser = guardDefinitionParser.separatedBy(CharacterParser.whitespace().star())
@@ -234,6 +231,7 @@ public class Parsing {
                         if(v.getClass().equals(GuardDefinition.class)) {
                             GuardDefinition vv = (GuardDefinition) v;
                             guardDefinitionContext.put(vv.getName(), vv.getType());
+                            Guard.setDefinition(vv.getName(), vv);
                         }
                     }
 
@@ -259,12 +257,12 @@ public class Parsing {
         return parser;
     }
 
-    public static Parser labelledParser(String label, Parser parser){
+    public static Parser labelledParser(String label, String separatedBy, Parser parser) {
         return (StringParser.of(label).trim()
                 .map((Object v) -> {
                     return v;
                 }))
-                .seq(CharacterParser.of(':').trim())
+                .seq(StringParser.of(separatedBy).trim())
                 .seq(parser.trim()
                         .map((Object v) -> {
                             return v;
@@ -272,6 +270,10 @@ public class Parsing {
                 .map((List<Object> values) -> {
                     return values.get(2);
                 });
+    }
+
+    public static Parser labelledParser(String label, Parser parser){
+        return labelledParser(label, ":", parser);
     }
 
     public static Parser conditionalFail(java.lang.Boolean yes){
