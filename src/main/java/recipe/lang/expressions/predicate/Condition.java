@@ -57,70 +57,71 @@ public abstract class Condition implements Expression<Boolean> {
 	}
 
 	public static org.petitparser.parser.Parser parser(TypingContext context) throws Exception {
-		return parser(context, true);
-	}
-
-	public static org.petitparser.parser.Parser parser(TypingContext context, java.lang.Boolean guardReferences) throws Exception {
 		org.petitparser.parser.Parser arithmeticExpression = ArithmeticExpression.typeParser(context);
 
 		SettableParser parser = SettableParser.undefined();
 		SettableParser basic = SettableParser.undefined();
 
-		SettableParser generalExpression = SettableParser.undefined();
-		generalExpression.set((arithmeticExpression).or(context.variableParser()).or(context.valueParser()).or(GuardReference.parser(context, basic)));
+		org.petitparser.parser.Parser nonBooleanExpressions = arithmeticExpression.or(context.getComplementSubContext(Boolean.getType()).variableParser()).or(context.getComplementSubContext(Boolean.getType()).valueParser());
 
 		org.petitparser.parser.Parser and = And.parser(basic);
 		org.petitparser.parser.Parser implies = Implies.parser(basic);
 		org.petitparser.parser.Parser or = Or.parser(basic);
 		org.petitparser.parser.Parser not = Not.parser(basic);
 
-		org.petitparser.parser.Parser isEqualTo = IsEqualTo.parser(generalExpression);
-		org.petitparser.parser.Parser isNotEqualTo = IsNotEqualTo.parser(generalExpression);
+		org.petitparser.parser.Parser value = Boolean.getType().valueParser();
+		org.petitparser.parser.Parser variable = context.getSubContext(Boolean.getType()).variableParser();
+		org.petitparser.parser.Parser guardReference = GuardReference.parser(context, basic);
+
+
+		org.petitparser.parser.Parser nonBooleanIsEqualTo = IsEqualTo.parser(nonBooleanExpressions);
+		org.petitparser.parser.Parser nonBooleanIsNotEqualTo = IsNotEqualTo.parser(nonBooleanExpressions);
 
 		org.petitparser.parser.Parser isLessThan = IsLessThan.parser(arithmeticExpression);
 		org.petitparser.parser.Parser isLessOrEqualThan = IsLessOrEqualThan.parser(arithmeticExpression);
 		org.petitparser.parser.Parser isGreaterOrEqualThan = IsGreaterOrEqualThan.parser(arithmeticExpression);
 		org.petitparser.parser.Parser isGreaterThan = IsGreaterThan.parser(arithmeticExpression);
 
-		org.petitparser.parser.Parser comparators =
-				isEqualTo
-				.or(isNotEqualTo)
-				.or(isLessThan)
-				.or(isLessOrEqualThan)
-				.or(isGreaterOrEqualThan)
-				.or(isGreaterThan);
+		org.petitparser.parser.Parser nonBooleanComparators =
+				nonBooleanIsEqualTo
+						.or(nonBooleanIsNotEqualTo)
+						.or(isLessThan)
+						.or(isLessOrEqualThan)
+						.or(isGreaterOrEqualThan)
+						.or(isGreaterThan);
 
-		org.petitparser.parser.Parser value = Boolean.getType().valueParser();
-		org.petitparser.parser.Parser variable = context.getSubContext(Boolean.getType()).variableParser();
-		org.petitparser.parser.Parser guardReference = GuardReference.parser(context, basic);
+		SettableParser bracketedParser = SettableParser.undefined();
+
+		org.petitparser.parser.Parser comparatorExpressions = value.or(variable).or(guardReference).or(CharacterParser.of('(').seq(bracketedParser).seq(CharacterParser.of(')')));
+
+		org.petitparser.parser.Parser booleanIsEqualTo = IsEqualTo.parser(comparatorExpressions);
+		org.petitparser.parser.Parser booleanIsNotEqualTo = IsNotEqualTo.parser(comparatorExpressions);
+
+		org.petitparser.parser.Parser booleanComparators =
+				booleanIsEqualTo
+						.or(booleanIsNotEqualTo);
 
 		parser.set(and
 				.or(or)
 				.or(implies)
 				.or(basic));
 
-//		if(guardReferences) {
-			basic.set(value
-					.or(variable)
-					.or(guardReference)
-					.or(not)
-					.or(comparators)
-					.or(CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')'))
-							.map((List<Object> values) -> {
-								return values.get(1);
-							}))
-			);
-//		} else{
-//			basic.set(value
-//					.or(variable)
-//					.or(not)
-//					.or(comparators)
-//					.or(CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')'))
-//							.map((List<Object> values) -> {
-//								return values.get(1);
-//							}))
-//			);
-//		}
+		basic.set(booleanComparators
+				.or(nonBooleanComparators)
+				.or(value)
+				.or(variable)
+				.or(guardReference)
+				.or(not)
+				.or(CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')'))
+						.map((List<Object> values) -> {
+							return values.get(1);
+						}))
+		);
+
+		bracketedParser.set(CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')'))
+				.map((List<Object> values) -> {
+					return values.get(1);
+				}));
 
 
 		return parser;

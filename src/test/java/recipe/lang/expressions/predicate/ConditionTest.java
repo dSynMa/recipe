@@ -62,6 +62,12 @@ public class ConditionTest {
         Parser parser = Condition.parser(context).end();
         Result r = parser.parse("cond");
         assert r.isSuccess();
+        r = parser.parse("false");
+        assert r.isSuccess();
+        r = parser.parse("cond = false");
+        assert r.isSuccess();
+        r = parser.parse("1 < 2");
+        assert r.isSuccess();
         r = parser.parse("cond");
         assert r.isSuccess();
         r = parser.parse("!cond -> cond");
@@ -81,6 +87,8 @@ public class ConditionTest {
         r = parser.parse("(channel == A) | (A == channel)");
         assert r.isSuccess();
         r = parser.parse("(b > 3 & channel == A) | (b < 5 & channel == A)");
+        assert r.isSuccess();
+        r = parser.parse("(b > 3 & channel == A & (cond == true)) | (b < 5 & channel == A)");
         assert r.isSuccess();
         r = parser.parse("(channel == A) | false");
         assert r.isSuccess();

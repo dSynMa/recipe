@@ -104,6 +104,19 @@ public class TypingContext {
         return context;
     }
 
+    public TypingContext getComplementSubContext(Type type){
+        TypingContext context = new TypingContext();
+        for(Map.Entry<Type, Set<String>> entries : typeVars.entrySet()){
+            if(!type.getClass().isAssignableFrom(entries.getKey().getClass())) {
+                for(String val : entries.getValue()){
+                    context.set(val, varType.get(val));
+                }
+            }
+        }
+
+        return context;
+    }
+
     public static TypingContext union(TypingContext context1, TypingContext context2){
         TypingContext newContext = new TypingContext();
 
