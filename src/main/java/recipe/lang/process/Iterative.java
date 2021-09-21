@@ -43,7 +43,7 @@ public class Iterative extends Process{
 
     public static Parser parser(Parser processParser){
         Parser parser =
-                (StringParser.of("do").trim()).seq(processParser).seq(StringParser.of("od").trim())
+                (StringParser.of("repeat").trim()).seq(processParser).trim()
                         .map((List<Object> values) -> new Iterative((Process) values.get(1)));
 
         return parser;
