@@ -41,7 +41,16 @@ public class Server {
         String script = req.getQuery().get("script");
         try {
             recipe.lang.System system = recipe.lang.System.parser().parse(script).get();
-            return ToNuXmv.nuxmvModelChecking(system);
+            if(system.getLtlspec() == null || system.getLtlspec().size() == 0){
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("error", "No specifications to model check.");
+                return jsonObject.toString();
+            } else{
+                String out = ToNuXmv.nuxmvModelChecking(system);
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("result", out);
+                return jsonObject.toString();
+            }
         } catch (ParseError parseError){
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("error", parseError.getFailure().toString());
