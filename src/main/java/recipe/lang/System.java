@@ -176,4 +176,14 @@ public class System{
 
         return dot;
     }
+
+    public boolean isSymbolic(){
+        for(AgentInstance agentInstance : agentsInstances){
+            if(agentInstance.getAgent().isSymbolic()){
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

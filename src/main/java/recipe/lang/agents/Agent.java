@@ -374,7 +374,6 @@ public class Agent {
         return dot;
     }
 
-
     public void labelAllTransitions(){
         HashSet<ProcessTransition> transitions = new HashSet(this.receiveTransitions);
         transitions.addAll(this.sendTransitions);
@@ -384,5 +383,16 @@ public class Agent {
         for(State state : stateTransitionMap.keySet()){
 
         }
+    }
+
+    public boolean isSymbolic(){
+        for(TypedVariable tv : store.getAttributes().values()){
+            if(tv.getType().getClass().equals(recipe.lang.types.Integer.class)
+            || tv.getType().getClass().equals(recipe.lang.types.Real.class)){
+                return true;
+            }
+        }
+
+        return false;
     }
 }
