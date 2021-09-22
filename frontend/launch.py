@@ -1,0 +1,164 @@
+import time
+from urllib.parse import quote
+
+# import db as db
+from flask import Flask, render_template, request, session
+import json
+import urllib.request
+
+
+app = Flask(__name__)
+
+default_script = "".join(open("./example-script.txt").readlines())
+
+# class Simulation(db.Model):
+#     # step number
+#     id = db.Column(db.Integer, primary_key=True)
+#     name = db.Column(db.String(64), index=True)
+#     age = db.Column(db.Integer, index=True)
+#     address = db.Column(db.String(256))
+#     phone = db.Column(db.String(20))
+#     email = db.Column(db.String(120), index=True)
+
+
+def visualise_dot():
+    with urllib.request.urlopen('http://localhost:8082/toDOT') as response:
+        resp : str = response.read().decode("utf-8")
+        return json.loads(resp)
+
+
+def model_check():
+    with urllib.request.urlopen('http://localhost:8082/modelCheck') as response:
+        resp: str = response.read().decode("utf-8")
+        return json.loads(resp)
+
+
+def set_system(script):
+    params = {
+        'script': quote(script, safe='')
+    }
+    with urllib.request.urlopen('http://localhost:8082/setSystem?' + urllib.parse.urlencode(params)) as response:
+        resp: str = response.read().decode("utf-8")
+        return json.loads(resp)
+
+
+def simulate_init(script: str):
+    with urllib.request.urlopen('http://localhost:8082/simulateInit') as response:
+        resp: str = response.read().decode("utf-8")
+        return resp
+
+
+def simulate_next(constraint: str):
+    params = {
+        'constraint': quote(constraint,  safe='')
+    }
+    with urllib.request.urlopen('http://localhost:8082/simulateNext' + urllib.parse.urlencode(params)) as response:
+        resp: str = response.read().decode("utf-8")
+        return resp
+
+
+def jsonToTableHeader(stateObject):
+    jsonObject = json.loads(stateObject)
+
+    header2 = '<tr>\n'
+    header2 += "<th></th>\n"
+
+    header3 = '<tr>\n'
+    header3 += "<th></th>\n"
+
+    header = '<th>Steps</th>\n'
+    for object in jsonObject:
+        for attribute, value in object:
+            header += "<th>" + attribute + "</th>\n"
+            for att, val in value:
+                header2 += "<th>" + att + "</th>"
+                if "variables" in att:
+                    for varName, val in val:
+                        header3 += "<th>" + varName + "</th>"
+
+    for object in jsonObject:
+        for attribute, value in object:
+            header += "<th>" + attribute + "</th>\n"
+    header += "</tr>\n"
+
+
+    return "<tr>" + header + "</tr>" + "<tr>" + header2 + "</tr>" + "<tr>" + header3 + "</tr>"
+
+
+def jsonToTableRow(stateObject):
+    jsonObject = json.loads(stateObject)
+
+    body = '<tbody>\n'
+    body += '<tr>\n'
+    for object in jsonObject:
+        for attribute, value in object:
+            body += "<th>" + attribute + "</th>\n"
+    body += "</tr>\n"
+    body += "</tbody\n>"
+
+    return body
+
+
+@app.route("/", methods=['POST', 'GET'])
+def index():
+    print("index")
+    error = ''
+    mcresponse = ''
+    simresponse = list()
+    siminit = ''
+    code = default_script
+    mc = True
+    sim = False
+    visualise = ""
+
+    if len(request.form) > 0:
+        if 'code' in request.form.keys():
+            code = request.form['code']
+        if 'update' in request.form.keys() and request.form['update']:
+            response = set_system(code)
+            if 'error' in response:
+                error = response['error']
+            else:
+                visualise = visualise_dot()
+        else:
+            visualise = visualise_dot() # cache this
+        if 'mc' in request.form.keys() and request.form['mc']:
+            response = model_check()
+            if "error" in response:
+                error = response['error']
+            else:
+                mcresponse = response['result']
+            mc = True
+            sim = False
+        if 'sim' in request.form.keys() and request.form['sim']:
+            sim = True
+            mc = False
+            if not request.form['siminit']:
+                init = simulate_init()
+            siminit = 'True'
+            if "simresponse" in request.form:#) and request.form["simresponse"] != '[]':
+                prev = (request.form["simresponse"]).replace("\'{", "{").replace("\']", "]").replace("\'",'"').replace("'",'"')
+                simresponse = json.loads(prev)
+                constraints = request.form['constraints']
+                next = simulate_next(constraints).replace("\'",'"').replace("'",'"')
+                next = json.loads(next)
+                next.update({ "constraints" : constraints});
+                simresponse.append(next)
+            else:
+                simresponse = [simulate_next(request.form['constraints'])]
+
+
+    return render_template("index.html",
+                           code=code,
+                           sim=sim,
+                           mc=mc,
+                           visualise=visualise,
+                           mcresponse=mcresponse,
+                           simresponse=(simresponse),
+                           siminit=siminit,
+                           error=error,
+                           update=False)
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=8083)

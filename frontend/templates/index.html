@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+
+<head>
+	<title>ReCiPe Verification Tools</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+		integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+	<link rel="stylesheet" href="static/css/global.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+	<script src="https://visjs.github.io/vis-network/standalone/umd/vis-network.min.js"></script>
+	<script src="static/viz.js"></script>
+	<script src="static/full.render.js"></script>
+
+</head>
+
+<body>
+	<section class="container-fluid bg row">
+		<section class="col-lg-6 justify-content-center">
+			<form id="frm" class="form-container" method="post" action="{{ url_for('index') }}">
+				<div class="form-row">
+					<div class="col-md-12 mb-3">
+							<div class="col-md-12 mb-3">
+								<label for="validationServer01">ReCiPe script</label>
+								<textarea name="code"
+										   id="text-code"
+										   style="display:none;"
+										   required></textarea>
+								<div id="text-code-ace" class="form-control is-valid hidden"
+									 style="height:400px;"
+								></div>
+							</div>
+
+						{% if rescomp %}
+						<div id="errors-div">
+							<div class="col-md-12 mb-3"  style="hidden">
+								<label for="validationServer04">Compilation Errors</label>
+								<textarea name="debug" cols="30" rows="5" class="form-control is-invalid"
+									id="validationServer04" placeholder="" readonly>{{ error }}</textarea>
+							</div>
+						</div>
+						{% endif %}
+					</div>
+					<div class="col-md-12 mb-3">
+						<button id="draw"
+								class="btn btn-success"
+								type="submit"
+								title="Updates the version of the system under analysis according to the current code.">Update System</button>
+						<input type="hidden" name="update" id="draw-inp" value="false">
+						<span id="error" style="color:red"></span>
+
+						<div class="form-row">
+							<div class="col-md-12 mb-3">
+								<div id="mynetwork" class="form-control is-valid" style="height:520px; overflow-y: auto; overflow-x: auto;}">
+								</div>
+							</div>
+						</div>
+					</div>
+
+				</div>
+			</form>
+		</section>
+		<section class="col-lg-5">
+			<ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+				<li class="nav-item">
+					<a class="nav-link" id="pills-mc-tab" data-toggle="pill" href="#pills-mc" role="tab"
+						aria-controls="pills-mc" aria-selected="true">Model-checking</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" id="pills-sim-tab" data-toggle="pill" href="#pills-sim" role="tab"
+						aria-controls="pills-sim" aria-selected="false">Simulation</a>
+				</li>
+			</ul>
+			<div class="tab-content" id="pills-tabContent" style="height:50%; width: 100%">
+				<div class="tab-pane fade" id="pills-mc" role="tabpanel" aria-labelledby="pills-mc-tab" style="height:100%; width: 100%">
+					<form id="frm-mc" class="form-container" method="post" action="{{ url_for('index') }}"  style="height:100%; width: 100%">
+						<div class="form-row"  style="height:100%; width: 100%">
+							<div class="col-md-12 mb-3"  style="height:100%; width: 100%">
+								<input type="hidden" name="code" id="mc-code" value="{{ code }}">
+								<input type="hidden" name="mc" id="mc-input" value="false">
+								<button id="mc" class="btn btn-success" type="submit" title="Model check specifications in script using nuXmv">Model Check</button>
+								{% if mc and error%}
+								<span id="mcerror" style="color:red">{{error}}</span>
+								{% endif %}
+<!--							</div>-->
+<!--							<div class="col-md-12 mb-3">-->
+								<textarea name="mcresponse" readonly id="mc-response-text-area" style="height:90%; width: 100%" wrap="soft">{{ mcresponse }}</textarea>
+							</div>
+						</div>
+					</form>
+				</div>
+				<div class="tab-pane fade" id="pills-sim" role="tabpanel" aria-labelledby="pills-sim-tab">
+					<form id="frm-sim" class="form-container" method="post" action="{{ url_for('index') }}"  style="height:100%; width: 100%">
+						<div class="form-row"  style="height:100%; width: 100%">
+							<div class="col-md-12 mb-3"  style="height:100%; width: 100%">
+								<input type="hidden" name="siminit" id="sim-init" value="{{ siminit }}">
+								<input type="hidden" name="code" id="sim-code" value="{{ code }}">
+								<input type="hidden" name="sim" id="sim-input" value="false">
+								<label>Next State Constraint:</label>
+								<input name="constraints" id="sim-constraints" value="TRUE">
+								<span>(Write agent instance identifier and "-" before variable or label name, e.g. one-p && one-state = one-0.)</span>
+								<input type="hidden" name="simresponse" id="sim-response" value="{{ simresponse }}">
+								<div>
+									<button id="sim" class="btn btn-success" type="submit" title="Simulate using nuXmv">Next</button>
+									<button id="sim-reset" class="btn btn-success" type="submit" title="Reset Simulation">Reset</button>
+	<!--							</div>-->
+	<!--							<div class="col-md-12 mb-3">-->
+									<div id="sim-response-div" style="height:100%; width: 100%" wrap="soft">
+										{% if (simresponse|length) > 0 %}
+										<table>
+											<tr>
+												<td style="width: 20%">Step number</td>
+												<td style="width: 80%">State</td>
+											</tr>
+											{% for i in range(0,simresponse|length) %}
+											<tr>
+												<td style="width: 20%">{{i}}</td>
+												<td style="width: 80%">{{ simresponse[i] }}</td>
+											</tr>
+											{% endfor %}
+										</table>
+										{% endif %}
+									</div>
+
+								</div>
+							</div>
+						</div>
+					</form>
+				</div>
+			</div>
+		</section>
+	</section>
+
+		<script src="../static/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+		<script>
+			// The Ace editor needs divs instead of textareas
+			// So we hide the textarea and show a div instead
+			var editorElement = document.getElementById("text-code");
+
+			editorElement.classList.add("hidden");
+			document.getElementById("text-code-ace").classList.remove("hidden");
+
+			// Set up the editor
+			var editor = ace.edit("text-code-ace");
+			editor.setAutoScrollEditorIntoView(true);
+			var value = {{ code | tojson }};
+			editor.setValue(value, -1);
+			editor.setOption("wrap", true);
+			editor.setTheme("ace/theme/tomorrow");
+			editor.getSession().setMode("ace/mode/recipe");
+			editor.getSession().on('change', function() {
+			  $('#error').html("System may be uninitialised or not be up to date with script.")
+			})
+			this._bindKeys = function(){
+						 this.editor.commands.addCommands([
+							 {
+								 name : 'undo',
+								 bindKey : 'Ctrl-Z',
+								 exec : function(editor){
+									 editor.session.getUndoManager().undo();
+								 }
+							 },
+							 {
+								 name : 'redo',
+								 bindKey : 'Ctrl-Y',
+								 exec : function(editor){
+									 editor.session.getUndoManager().redo();
+								 }
+							 }
+						 ]);
+					 };
+
+			document.getElementById('text-code-ace').style.fontSize = '20px';
+
+			// Make sure we copy the content of the editor to the textarea before posting
+			// its content to the server
+			document.getElementById("draw").addEventListener("click", function () {
+				editorElement.innerHTML = editor.getValue();
+				document.getElementById('draw-inp').value = true;
+			});
+			editor.getSession().setUseWrapMode(true)
+
+		</script>
+		<script type="text/javascript">
+			// create a network
+			var container = document.getElementById('mynetwork');
+
+			try {
+					var data = {{ visualise | tojson }};
+					if(data.hasOwnProperty('error')){
+						$('#error').html(data.error);
+					} else if(data.hasOwnProperty('agents')){
+						for(var i = 0; i < data.agents.length; i++) {
+							var svg = (new Viz()).renderString(data.agents[i].graph);
+							name = data.agents[i].name
+							svg.then(function(value) { console.log(name); container.innerHTML += "<div title=\"" + name + "\">" + value + "</div>";  }, function(error) {console.log(error)});
+						}
+					}
+				}
+				catch (err) {
+				// set the cursor at the position where the error occurred
+					var match = /\(char (.*)\)/.exec(err);
+					if (match) {
+						var pos = Number(match[1]);
+					}
+
+					// show an error message
+					$('#error').html(err.toString());
+				}
+
+<!--			document.getElementById("draw").addEventListener("click", draw);-->
+		</script>
+		<script>
+			document.getElementById("mc").addEventListener("click", function(){
+				document.getElementById("mc-input").value = "true"
+				document.getElementById("mc-code").value = ace.edit("text-code-ace").getValue()
+			});
+			document.getElementById("sim").addEventListener("click", function(){
+				document.getElementById("sim-input").value = "true"
+				document.getElementById("sim-code").value = ace.edit("text-code-ace").getValue()
+			});
+		</script>
+		<script>
+			if({{ mc|tojson }}){
+				document.getElementById("pills-mc").className += " show";
+				document.getElementById("pills-mc").className += " active";
+				document.getElementById("pills-mc-tab").className += " active";
+			} else if({{ sim|tojson }}){
+				document.getElementById("pills-sim").className += " show";
+				document.getElementById("pills-sim").className += " active";
+				document.getElementById("pills-sim-tab").className += " active";
+			}
+		</script>
+
+		<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+			integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+			crossorigin="anonymous"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+			integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+			crossorigin="anonymous"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+			integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+			crossorigin="anonymous"></script>
+		<script>
+			$('#myTab a').on('click', function (e) {
+				e.preventDefault()
+				$(this).tab('show')
+			})
+		</script>
+
+	</form>
+</body>
+
+</html>
