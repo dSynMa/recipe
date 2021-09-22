@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class NuXmvSimulation {
+public class NuXmvInteraction {
 
     PipedInputStream in = new PipedInputStream();
     PipedOutputStream out = new PipedOutputStream(in);
@@ -26,9 +26,9 @@ public class NuXmvSimulation {
     boolean started = false;
     Path path;
 
-    public NuXmvSimulation(String nuxmvScript) throws IOException {
-        Files.delete(Path.of("./forSimulation.smv"));
-        path = Files.createFile(Path.of("./forSimulation.smv"));
+    public NuXmvInteraction(String nuxmvScript) throws IOException {
+        if(Files.exists(Path.of("./forInteraction.smv"))) Files.delete(Path.of("./forInteraction.smv"));
+        path = Files.createFile(Path.of("./forInteraction.smv"));
         Files.write(path, nuxmvScript.getBytes(StandardCharsets.UTF_8));
         process = startNuXmvThread();
     }
@@ -105,13 +105,13 @@ public class NuXmvSimulation {
         String out = execute((symbolic ? "msat_" : "") + "simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
         if(symbolic) {
             if (out.contains("UNSAT")) {
-                return new Pair<>(false, out.replaceAll("\r\n|\n", " ").split("\\*\\*\\*\\*")[0]);
+                return new Pair<>(false, out.replaceAll("\r\n|\n|nuXmv >", " ").split("\\*\\*\\*\\*")[0].trim());
             } else {
                 return new Pair<>(true, parseLastState(out)); //To parse next state
             }
         } else{
             if (out.contains("No future state exists")){
-                return new Pair<>(false, out.replaceAll("\r\n|\n", " ").split("\\*\\*\\*\\*")[0]);
+                return new Pair<>(false, out.replaceAll("\r\n|\n|nuXmv >", " ").split("\\*\\*\\*\\*")[0].trim());
             } else {
                 return new Pair<>(true, parseLastState(out)); //To parse next state
             }
@@ -126,21 +126,24 @@ public class NuXmvSimulation {
                 e.printStackTrace();
             }
         });
-
+        t.setDaemon(true);
         t.start();
         //waiting for initialisation
+        String out = new String(byteArrayOutputStream.toByteArray());
         while(nuxmvTurn.get()){}
         return t;
+    }
+
+    public void stopNuXmvThread() throws IOException {
+        this.process.interrupt();
     }
 
     static AtomicReference<Boolean> nuxmvTurn = new AtomicReference<>(true);
 
     public static void runNuXmv(Path path, InputStream inr, OutputStream outw) throws IOException {
         ProcessBuilder builder = new ProcessBuilder("nuxmv", "-int", path.toString());
-//        ProcessBuilder builder = new ProcessBuilder("nuxmv", "-source", "commands.txt", "-v", "1", "translation.smv");
         builder.redirectErrorStream(true);
-       Process process = builder.start();
-//        Process process = Runtime.getRuntime().exec("nuxmv -int " + path.toString());
+        Process process = builder.start();
         String ttt = Files.readString(path);
         BufferedInputStream out = (BufferedInputStream) process.getInputStream();
         OutputStream in = process.getOutputStream();
@@ -159,7 +162,7 @@ public class NuXmvSimulation {
                 outw.flush();
                 buffer = new byte[4000];
                 nuxmvTurn.set(false);
-                while(!nuxmvTurn.get()){}
+                while (!nuxmvTurn.get()) { }
             }
 
             int ni = inr.available();
@@ -190,14 +193,14 @@ public class NuXmvSimulation {
             return jsonObject;
         }
 
-        String agentStateRegex = "(^|\\n)[^=\\n\\^]+\\.[^\\n=]+=[^=\\n$]+(\\n|$)";
+        String agentStateRegex = "(^|\\n)[^=\\n\\^]+\\-state +=[^=\\n$]+(\\n|$)";
         Pattern compile = Pattern.compile(agentStateRegex, Pattern.MULTILINE);
         Matcher matcher = compile.matcher(nuxmvSimOutput);
 
         while(matcher.find()){
             String[] group = matcher.toMatchResult().group().split("=");
 
-            String[] left = group[0].split("\\.");
+            String[] left = group[0].split("-");
 
             String agent = left[0].trim();
             String var = left[1].trim();
@@ -221,6 +224,9 @@ public class NuXmvSimulation {
                 String[] left2 = group2[0].split("\\-");
 
                 String var2 = left2[1].trim();
+                if(var2.equals("state")){
+                    continue;
+                }
 
                 String val2 = group2[1].trim().replaceAll(agent + "\\-", "");
 
