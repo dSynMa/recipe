@@ -53,6 +53,17 @@ public class NuXmvSimulation {
         return out;
     }
 
+    public Pair<Boolean, String> symbolicModelCheck(String property, int steps) throws IOException {
+        String out = execute("go_msat");
+        while(out.startsWith("*** This is nuXmv")) out = execute("go_msat");
+        if(out.contains("file ")){
+            return new Pair<>(false, out);
+        }
+        out = execute("msat_check_ltlspec_bmc -p \"" + property + "\" -k " + steps);
+        out = out.replaceAll("nuXmv > ", "").trim();
+        started = true;
+        return new Pair<>(true, out);
+    }
     public Pair<Boolean, String> initialise() throws IOException {
         String out = execute("go");
         if(out.contains("Impossible to build a BDD FSM")){
