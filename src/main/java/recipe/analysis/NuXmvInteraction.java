@@ -22,7 +22,7 @@ public class NuXmvSimulation {
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
     Thread process;
-    boolean symbolic = false;
+    public boolean symbolic = false;
     boolean started = false;
     Path path;
 
