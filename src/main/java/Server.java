@@ -25,7 +25,7 @@ public class Server {
         String script = req.getQuery().get("script").trim();
         try {
             system = recipe.lang.System.parser().end().parse(script).get();
-            return "{}";
+            return "{\"symbolic\" : " + system.isSymbolic() + "}";
         } catch (ParseError parseError){
             return "{ \"error\" : \"" + parseError.getFailure().toString() + "\"}";
         } catch (Exception e) {
@@ -156,9 +156,15 @@ public class Server {
         nuXmvInteraction = null;
     }
 
+    static App app;
+
     public static void main(String[] args) throws Exception {
-        App app = Flak.createHttpApp(Integer.parseInt(args[0]));
+        app = Flak.createHttpApp(Integer.parseInt(args[0]));
         app.scan(new Server());
         app.start();
+    }
+
+    public static void stop(){
+        app.stop();
     }
 }

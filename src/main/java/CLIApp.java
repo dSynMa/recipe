@@ -1,8 +1,10 @@
 import org.apache.commons.cli.*;
 
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.Scanner;
 
 import org.json.JSONObject;
@@ -19,17 +21,23 @@ public class CLIApp
     {
         Options options = new Options();
 
-        Option input = new Option("i", "input", true, "recipe script file");
-        Option nuxmv = new Option("n", "smv", false, "output to smv file");
-        Option dot = new Option("d", "dot", false, "output agents DOT files");
-        Option mc = new Option("mc", "mc", false, "model checking");
-        Option simulation = new Option("sim", "simulate", false, "opens file in simulation mode");
+        Option input = new Option("i", "input", true, "info: input recipe script file\nargs: <recipe script>");
+        Option nuxmv = new Option("n", "smv", false, "info: output to smv file");
+        Option dot = new Option("d", "dot", false, "info: output agents DOT files");
+        Option mc = new Option("mc", "mc", false, "info: model checks input script file");
+        Option simulation = new Option("sim", "simulate", false, "info: opens file in simulation mode");
+        Option server = new Option("s", "server", true, "info: open server on given port\nargs: <port>");
+        Option frontend = new Option("f", "frontend", true, "info: opens front end and server on given ports\nargs: <server-port>,<frontend-port>");
+
         input.setRequired(true);
+
         options.addOption(input);
         options.addOption(nuxmv);
         options.addOption(dot);
         options.addOption(mc);
         options.addOption(simulation);
+        options.addOption(server);
+        options.addOption(frontend);
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -65,6 +73,29 @@ public class CLIApp
         } catch (Exception e){
             System.out.println(e.getMessage());
             return;
+        }
+
+        if(cmd.hasOption("f")){
+            String port = cmd.getOptionValue("f");
+            if(!port.matches(" *[0-9][0-9][0-9][0-9] *, *[0-9][0-9][0-9][0-9] *")){
+                System.out.println("-f option must be accompanied with two port numbers, i.e. an argument of the form \"8082,8083\"");
+            }
+            String[] fargs = port.split(" *, *");
+            String[] backendArgs = new String[1];
+            backendArgs[0] = fargs[0];
+            Server.main(backendArgs);
+            System.out.println("Launched server on http://localhost:" + fargs[0]);
+
+            Process exec = Runtime.getRuntime().exec("python3 ./frontend/launch.py " + fargs[1]);
+            System.out.println("Launched frontend on http://localhost:" + fargs[1]);
+
+            exec.getInputStream().transferTo(System.out);
+        }
+        else if(cmd.hasOption("s")){
+            String port = cmd.getOptionValue("s");
+            String[] argss = new String[0];
+            argss[0] = port;
+            Server.main(argss);
         }
 
         if(cmd.hasOption("smv")){

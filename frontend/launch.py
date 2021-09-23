@@ -1,3 +1,4 @@
+import sys
 import time
 from urllib.parse import quote
 
@@ -8,6 +9,8 @@ import urllib.request
 
 
 app = Flask(__name__)
+
+backend = "http://localhost:8082"
 
 default_script = "".join(open("./example-script.txt").readlines())
 
@@ -22,13 +25,13 @@ default_script = "".join(open("./example-script.txt").readlines())
 
 
 def visualise_dot():
-    with urllib.request.urlopen('http://localhost:8082/toDOT') as response:
+    with urllib.request.urlopen(backend + '/toDOT') as response:
         resp : str = response.read().decode("utf-8")
         return json.loads(resp)
 
 
 def model_check():
-    with urllib.request.urlopen('http://localhost:8082/modelCheck') as response:
+    with urllib.request.urlopen(backend + '/modelCheck') as response:
         resp: str = response.read().decode("utf-8")
         return json.loads(resp)
 
@@ -37,13 +40,13 @@ def set_system(script):
     params = {
         'script': quote(script, safe='')
     }
-    with urllib.request.urlopen('http://localhost:8082/setSystem?' + urllib.parse.urlencode(params)) as response:
+    with urllib.request.urlopen(backend + '/setSystem?' + urllib.parse.urlencode(params)) as response:
         resp: str = response.read().decode("utf-8")
         return json.loads(resp)
 
 
-def simulate_init(script: str):
-    with urllib.request.urlopen('http://localhost:8082/simulateInit') as response:
+def simulate_init():
+    with urllib.request.urlopen(backend + '/simulateInit') as response:
         resp: str = response.read().decode("utf-8")
         return resp
 
@@ -52,7 +55,7 @@ def simulate_next(constraint: str):
     params = {
         'constraint': quote(constraint,  safe='')
     }
-    with urllib.request.urlopen('http://localhost:8082/simulateNext' + urllib.parse.urlencode(params)) as response:
+    with urllib.request.urlopen(backend + '/simulateNext' + urllib.parse.urlencode(params)) as response:
         resp: str = response.read().decode("utf-8")
         return resp
 
@@ -110,6 +113,7 @@ def index():
     mc = True
     sim = False
     visualise = ""
+    symbolic = False
 
     if len(request.form) > 0:
         if 'code' in request.form.keys():
@@ -152,6 +156,7 @@ def index():
                            code=code,
                            sim=sim,
                            mc=mc,
+                           symbolic=symbolic,
                            visualise=visualise,
                            mcresponse=mcresponse,
                            simresponse=(simresponse),
@@ -161,4 +166,8 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8083)
+    if(len(sys.argv) != 2):
+        print("Please specify backend URL.")
+    else:
+        backend = sys.argv[0]
+        app.run(debug=True, port=8083)
