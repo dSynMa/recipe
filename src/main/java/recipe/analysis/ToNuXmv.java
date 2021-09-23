@@ -331,7 +331,13 @@ public class ToNuXmv {
         define += "\ttransition := " + trans;
         nuxmv += define;
         nuxmv += "CONSTANTS\n\t";
-        nuxmv +=  String.join(", ", Enum.getEnum(Config.channelLabel).getValues());
+        List<String> constants = new ArrayList<>();
+        for(String label : Enum.getEnumLabels()){
+            if(!label.equals(Config.channelWithoutBroadcastLabel)){
+                constants.addAll(Enum.getEnum(label).getValues());
+            }
+        }
+        nuxmv +=  String.join(", ", constants);
         nuxmv += ";\n";
 
 //        for(String name : sendProcessNames){
