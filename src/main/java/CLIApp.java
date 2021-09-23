@@ -1,11 +1,17 @@
 import org.apache.commons.cli.*;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Scanner;
 
+import org.json.JSONObject;
+import org.petitparser.context.ParseError;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
+import recipe.analysis.NuXmvInteraction;
 import recipe.analysis.ToNuXmv;
+import recipe.lang.utils.Pair;
 
 public class CLIApp
 {
@@ -14,13 +20,16 @@ public class CLIApp
         Options options = new Options();
 
         Option input = new Option("i", "input", true, "recipe script file");
-        Option nuxmv = new Option("n", "nuxmv", false, "model check nuxmv");
+        Option nuxmv = new Option("n", "smv", false, "output to smv file");
         Option dot = new Option("d", "dot", false, "output agents DOT files");
+        Option mc = new Option("mc", "mc", false, "model checking");
+        Option simulation = new Option("sim", "simulate", false, "opens file in simulation mode");
         input.setRequired(true);
-        nuxmv.setRequired(false);
         options.addOption(input);
         options.addOption(nuxmv);
         options.addOption(dot);
+        options.addOption(mc);
+        options.addOption(simulation);
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -35,23 +44,95 @@ public class CLIApp
             System.exit(1);
         }
 
-        String inputFilePath = cmd.getOptionValue("input");
+        Path inputFilePath = Path.of(cmd.getOptionValue("input"));
 
-        String script = String.join("\n", Files.readAllLines(Path.of(inputFilePath)));
+        String script = String.join("\n", Files.readAllLines(inputFilePath));
 
-        Parser system = recipe.lang.System.parser().end();
-        Result r = system.parse(script);
-        recipe.lang.System s = r.get();
+        String transform = "";
+        recipe.lang.System system = null;
+        try {
+            Parser systemParser = recipe.lang.System.parser().end();
+            Result r = systemParser.parse(script);
+            if(r.isFailure()){
+                System.out.println(r.getMessage());
+                System.out.println(r.getPosition());
+                System.out.println("Could not parse the following: \n" + script.substring(r.getPosition()));
+                return;
+            }
+            system = r.get();
 
-        if(cmd.hasOption("nuxmv")){
-            ToNuXmv.nuxmvModelChecking(s);
-        } else{
-            String transform = ToNuXmv.transform(s);
-            java.lang.System.out.println(transform);
+            transform = ToNuXmv.transform(system);
+        } catch (Exception e){
+            System.out.println(e.getMessage());
+            return;
         }
 
+        if(cmd.hasOption("smv")){
+            String name = inputFilePath.getFileName().toString().split("\\.")[0] + ".smv";
+            Files.write(Path.of(name), transform.getBytes(StandardCharsets.UTF_8));
+        }
         if(cmd.hasOption("dot")){
-            java.lang.System.out.println(s.toDOT());
+            String name = inputFilePath.getFileName().toString().split("\\.")[0] + ".dot";
+            Files.write(Path.of(name), system.toDOT());
         }
+        NuXmvInteraction nuXmvInteraction = null;
+        if(cmd.hasOption("mc")){
+            try {
+                if(system.getLtlspec() == null || system.getLtlspec().size() == 0){
+                    System.out.println("No specifications to model check.");
+                } else{
+                    String out = ToNuXmv.nuxmvModelChecking(system);
+                    if(out.equals("") || system.isSymbolic()){
+                        nuXmvInteraction = new NuXmvInteraction(ToNuXmv.transform(system));
+                        for(int i = 0; i < system.getLtlspec().size(); i++) {
+                            String spec = system.getLtlspec().get(i).replaceAll("^ *[^ ]+ +", "");
+                            Pair<Boolean, String> result = nuXmvInteraction.symbolicModelCheck(spec, 20);
+                            if(result.getLeft()) {
+                                out += spec + ":\n" + result.getRight() + "\n";
+                            } else{
+                                out += spec + " (error) :\n" + result.getRight() + "\n";
+                            }
+                        }
+                        nuXmvInteraction.stopNuXmvThread();
+                    }
+                    System.out.println(out);
+                }
+            } catch (ParseError parseError){
+                System.out.println(parseError.getFailure().toString());
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+        if(cmd.hasOption("sim")){
+            if(nuXmvInteraction == null){
+                nuXmvInteraction = new NuXmvInteraction(ToNuXmv.transform(system));
+            }
+            Pair<Boolean, String> initialise = nuXmvInteraction.initialise();
+            if(!initialise.getLeft()){
+                System.out.println(initialise.getRight());
+                return;
+            }
+            boolean exit = false;
+            Scanner scanner = new Scanner(System.in);
+            System.out.println("You have started simulation interactive mode, exit by pressing <ctrl+c>.");
+            System.out.println("Write any constraint you wish of the initial state and press <enter> to continue.");
+            String constraint = scanner.next();
+            Pair<Boolean, String> result = nuXmvInteraction.simulation_pick_init_state(constraint);
+            if(!result.getLeft()){
+                System.out.println(initialise.getRight());
+                return;
+            }
+
+            while (!exit){
+                System.out.println("Write any constraint you wish of the next state and press <enter> to continue.");
+                constraint = scanner.next();
+                result = nuXmvInteraction.simulation_next(constraint);
+                System.out.println(initialise.getRight());
+                if(!result.getLeft()){
+                    return;
+                }
+            }
+        }
+
     }
 }
