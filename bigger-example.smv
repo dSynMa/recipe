@@ -1,0 +1,604 @@
+MODULE main
+VAR
+	three-lnk : {a,empty,broadcast};
+	three-no : integer;
+	three-basgn : boolean;
+	three-brdy : integer;
+	three-btype : integer;
+	three-state : {three-3,three-2,three-0,three-1};
+	two-lnk : {a,empty,broadcast};
+	two-no : integer;
+	two-basgn : boolean;
+	two-brdy : integer;
+	two-btype : integer;
+	two-state : {two-3,two-2,two-0,two-1};
+	one-lnk : {a,empty,broadcast};
+	one-prd : integer;
+	one-stage : integer;
+	one-dsd : {x,y,z};
+	one-state : {one-1,one-0,one-2};
+DEFINE
+	keep-all-not-three := next(two-lnk) = two-lnk & next(two-no) = two-no & next(two-basgn) = two-basgn & next(two-brdy) = two-brdy & next(two-btype) = two-btype & next(two-state) = two-state & next(one-lnk) = one-lnk & next(one-prd) = one-prd & next(one-stage) = one-stage & next(one-dsd) = one-dsd & next(one-state) = one-state;
+	keep-all-three := next(three-lnk) = three-lnk & next(three-no) = three-no & next(three-basgn) = three-basgn & next(three-brdy) = three-brdy & next(three-btype) = three-btype;
+	keep-all-not-two := next(three-lnk) = three-lnk & next(three-no) = three-no & next(three-basgn) = three-basgn & next(three-brdy) = three-brdy & next(three-btype) = three-btype & next(three-state) = three-state & next(one-lnk) = one-lnk & next(one-prd) = one-prd & next(one-stage) = one-stage & next(one-dsd) = one-dsd & next(one-state) = one-state;
+	keep-all-two := next(two-lnk) = two-lnk & next(two-no) = two-no & next(two-basgn) = two-basgn & next(two-brdy) = two-brdy & next(two-btype) = two-btype;
+	keep-all-not-one := next(three-lnk) = three-lnk & next(three-no) = three-no & next(three-basgn) = three-basgn & next(three-brdy) = three-brdy & next(three-btype) = three-btype & next(three-state) = three-state & next(two-lnk) = two-lnk & next(two-no) = two-no & next(two-basgn) = two-basgn & next(two-brdy) = two-brdy & next(two-btype) = two-btype & next(two-state) = two-state;
+	keep-all-one := next(one-lnk) = one-lnk & next(one-prd) = one-prd & next(one-stage) = one-stage & next(one-dsd) = one-dsd;
+	keep-all := next(three-lnk) = three-lnk & next(three-no) = three-no & next(three-basgn) = three-basgn & next(three-brdy) = three-brdy & next(three-btype) = three-btype & keep-all-three & next(two-lnk) = two-lnk & next(two-no) = two-no & next(two-basgn) = two-basgn & next(two-brdy) = two-brdy & next(two-btype) = two-btype & keep-all-two & next(one-lnk) = one-lnk & next(one-prd) = one-prd & next(one-stage) = one-stage & next(one-dsd) = one-dsd & keep-all-one;
+	transition := ((three-state = three-1 & (three-no>=1)            
+             & next(three-state) = three-3
+             & next(three-no) = (0)
+             & next(three-basgn) = (TRUE)
+             & next(three-lnk) = three-lnk
+             & next(three-brdy) = three-brdy
+             & next(three-btype) = three-btype
+    & ((((broadcast=broadcast) | (broadcast=two-lnk)) | broadcast = broadcast)
+     & 
+        ((((two-btype=three-btype) & (!(two-basgn)))
+                & ((two-state = two-1
+                 & (2=1) & (two-brdy=1)
+                 & (broadcast = broadcast | broadcast = two-lnk)) &             
+                             next(two-brdy) = 2
+                             & next(two-lnk) = two-lnk
+                             & next(two-no) = two-no
+                             & next(two-basgn) = two-basgn
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-3
+                 | (two-state = two-1
+                 & (2=1) & (two-brdy=2)
+                 & (broadcast = broadcast | broadcast = two-lnk)) &             
+                             next(two-lnk) = empty
+                             & next(two-basgn) = FALSE
+                             & next(two-brdy) = 0
+                             & next(two-no) = two-no
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-3
+                 | (two-state = two-1
+                 & (2=2) & ((three-no - 1)=0)
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(two-no) = 0
+                             & next(two-lnk) = empty
+                             & next(two-basgn) = two-basgn
+                             & next(two-brdy) = two-brdy
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-3
+                 | (two-state = two-1
+                 & (2=1) & ((three-no - 1)>0)
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(two-no) = (three-no - 1)
+                             & next(two-lnk) = three-lnk
+                             & next(two-basgn) = two-basgn
+                             & next(two-brdy) = two-brdy
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-3
+                 | (two-state = two-1
+                 & 2=0
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(two-no) = (three-no - 1)
+                             & next(two-lnk) = three-lnk
+                             & next(two-basgn) = two-basgn
+                             & next(two-brdy) = two-brdy
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-3))    
+         | (!(((broadcast=broadcast) | (broadcast=two-lnk)) | broadcast = broadcast) & keep-all-two)    
+         | (broadcast = broadcast & !(((two-btype=three-btype) & (!(two-basgn)))) & keep-all-two)
+    )
+     & ((broadcast=broadcast) | broadcast = broadcast)
+     & 
+        ((((0=three-btype) & (!(FALSE)))
+                & (FALSE))    
+         | (!((broadcast=broadcast) | broadcast = broadcast) & keep-all-one)    
+         | (broadcast = broadcast & !(((0=three-btype) & (!(FALSE)))) & keep-all-one)
+    )))
+| (two-state = two-1 & (two-no>=1)            
+             & next(two-state) = two-3
+             & next(two-no) = (0)
+             & next(two-basgn) = (TRUE)
+             & next(two-lnk) = two-lnk
+             & next(two-brdy) = two-brdy
+             & next(two-btype) = two-btype
+    & ((((broadcast=broadcast) | (broadcast=three-lnk)) | broadcast = broadcast)
+     & 
+        ((((three-btype=two-btype) & (!(three-basgn)))
+                & ((three-state = three-1
+                 & (2=1) & (three-brdy=1)
+                 & (broadcast = broadcast | broadcast = three-lnk)) &             
+                             next(three-brdy) = 2
+                             & next(three-lnk) = three-lnk
+                             & next(three-no) = three-no
+                             & next(three-basgn) = three-basgn
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-3
+                 | (three-state = three-1
+                 & (2=1) & (three-brdy=2)
+                 & (broadcast = broadcast | broadcast = three-lnk)) &             
+                             next(three-lnk) = empty
+                             & next(three-basgn) = FALSE
+                             & next(three-brdy) = 0
+                             & next(three-no) = three-no
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-3
+                 | (three-state = three-1
+                 & (2=2) & ((two-no - 1)=0)
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(three-no) = 0
+                             & next(three-lnk) = empty
+                             & next(three-basgn) = three-basgn
+                             & next(three-brdy) = three-brdy
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-3
+                 | (three-state = three-1
+                 & (2=1) & ((two-no - 1)>0)
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(three-no) = (two-no - 1)
+                             & next(three-lnk) = two-lnk
+                             & next(three-basgn) = three-basgn
+                             & next(three-brdy) = three-brdy
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-3
+                 | (three-state = three-1
+                 & 2=0
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(three-no) = (two-no - 1)
+                             & next(three-lnk) = two-lnk
+                             & next(three-basgn) = three-basgn
+                             & next(three-brdy) = three-brdy
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-3))    
+         | (!(((broadcast=broadcast) | (broadcast=three-lnk)) | broadcast = broadcast) & keep-all-three)    
+         | (broadcast = broadcast & !(((three-btype=two-btype) & (!(three-basgn)))) & keep-all-three)
+    )
+     & ((broadcast=broadcast) | broadcast = broadcast)
+     & 
+        ((((0=two-btype) & (!(FALSE)))
+                & (FALSE))    
+         | (!((broadcast=broadcast) | broadcast = broadcast) & keep-all-one)    
+         | (broadcast = broadcast & !(((0=two-btype) & (!(FALSE)))) & keep-all-one)
+    )))
+| (one-state = one-1 & (one-stage=2)            
+             & next(one-state) = one-0
+             & next(one-stage) = (0)
+             & next(one-lnk) = one-lnk
+             & next(one-prd) = one-prd
+             & next(one-dsd) = one-dsd
+    & ((((one-lnk=broadcast) | (one-lnk=three-lnk)) | one-lnk = broadcast)
+     & 
+        (((three-brdy=one-stage)
+                & ((three-state = three-1
+                 & (1=1) & (three-brdy=1)
+                 & (one-lnk = broadcast | one-lnk = three-lnk)) &             
+                             next(three-brdy) = 2
+                             & next(three-lnk) = three-lnk
+                             & next(three-no) = three-no
+                             & next(three-basgn) = three-basgn
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-0
+                 | (three-state = three-1
+                 & (1=1) & (three-brdy=2)
+                 & (one-lnk = broadcast | one-lnk = three-lnk)) &             
+                             next(three-lnk) = empty
+                             & next(three-basgn) = FALSE
+                             & next(three-brdy) = 0
+                             & next(three-no) = three-no
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-0))    
+         | (!(((one-lnk=broadcast) | (one-lnk=three-lnk)) | one-lnk = broadcast) & keep-all-three)    
+         | (one-lnk = broadcast & !((three-brdy=one-stage)) & keep-all-three)
+    )
+     & (((one-lnk=broadcast) | (one-lnk=two-lnk)) | one-lnk = broadcast)
+     & 
+        (((two-brdy=one-stage)
+                & ((two-state = two-1
+                 & (1=1) & (two-brdy=1)
+                 & (one-lnk = broadcast | one-lnk = two-lnk)) &             
+                             next(two-brdy) = 2
+                             & next(two-lnk) = two-lnk
+                             & next(two-no) = two-no
+                             & next(two-basgn) = two-basgn
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-0
+                 | (two-state = two-1
+                 & (1=1) & (two-brdy=2)
+                 & (one-lnk = broadcast | one-lnk = two-lnk)) &             
+                             next(two-lnk) = empty
+                             & next(two-basgn) = FALSE
+                             & next(two-brdy) = 0
+                             & next(two-no) = two-no
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-0))    
+         | (!(((one-lnk=broadcast) | (one-lnk=two-lnk)) | one-lnk = broadcast) & keep-all-two)    
+         | (one-lnk = broadcast & !((two-brdy=one-stage)) & keep-all-two)
+    )))
+| (one-state = one-1 & (one-stage=2)            
+             & next(one-state) = one-0
+             & next(one-stage) = (0)
+             & next(one-lnk) = one-lnk
+             & next(one-prd) = one-prd
+             & next(one-dsd) = one-dsd
+    & ((((one-lnk=broadcast) | (one-lnk=three-lnk)) | one-lnk = broadcast)
+     & 
+        (((three-brdy=one-stage)
+                & ((three-state = three-1
+                 & (1=1) & (three-brdy=1)
+                 & (one-lnk = broadcast | one-lnk = three-lnk)) &             
+                             next(three-brdy) = 2
+                             & next(three-lnk) = three-lnk
+                             & next(three-no) = three-no
+                             & next(three-basgn) = three-basgn
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-0
+                 | (three-state = three-1
+                 & (1=1) & (three-brdy=2)
+                 & (one-lnk = broadcast | one-lnk = three-lnk)) &             
+                             next(three-lnk) = empty
+                             & next(three-basgn) = FALSE
+                             & next(three-brdy) = 0
+                             & next(three-no) = three-no
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-0))    
+         | (!(((one-lnk=broadcast) | (one-lnk=three-lnk)) | one-lnk = broadcast) & keep-all-three)    
+         | (one-lnk = broadcast & !((three-brdy=one-stage)) & keep-all-three)
+    )
+     & (((one-lnk=broadcast) | (one-lnk=two-lnk)) | one-lnk = broadcast)
+     & 
+        (((two-brdy=one-stage)
+                & ((two-state = two-1
+                 & (1=1) & (two-brdy=1)
+                 & (one-lnk = broadcast | one-lnk = two-lnk)) &             
+                             next(two-brdy) = 2
+                             & next(two-lnk) = two-lnk
+                             & next(two-no) = two-no
+                             & next(two-basgn) = two-basgn
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-0
+                 | (two-state = two-1
+                 & (1=1) & (two-brdy=2)
+                 & (one-lnk = broadcast | one-lnk = two-lnk)) &             
+                             next(two-lnk) = empty
+                             & next(two-basgn) = FALSE
+                             & next(two-brdy) = 0
+                             & next(two-no) = two-no
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-0))    
+         | (!(((one-lnk=broadcast) | (one-lnk=two-lnk)) | one-lnk = broadcast) & keep-all-two)    
+         | (one-lnk = broadcast & !((two-brdy=one-stage)) & keep-all-two)
+    )))
+| (one-state = one-0 & (one-stage=0)            
+             & next(one-state) = one-2
+             & next(one-stage) = (1)
+             & next(one-lnk) = one-lnk
+             & next(one-prd) = one-prd
+             & next(one-dsd) = one-dsd
+    & ((((broadcast=broadcast) | (broadcast=three-lnk)) | broadcast = broadcast)
+     & 
+        (((((!(three-basgn)) & ((one-prd=1) -> ((three-btype=1) | (three-btype=2)))) & ((one-prd=2) -> ((three-btype=1) | (three-btype=3))))
+                & ((three-state = three-0
+                 & (0=1) & (three-brdy=1)
+                 & (broadcast = broadcast | broadcast = three-lnk)) &             
+                             next(three-brdy) = 2
+                             & next(three-lnk) = three-lnk
+                             & next(three-no) = three-no
+                             & next(three-basgn) = three-basgn
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-2
+                 | (three-state = three-0
+                 & (0=1) & (three-brdy=2)
+                 & (broadcast = broadcast | broadcast = three-lnk)) &             
+                             next(three-lnk) = empty
+                             & next(three-basgn) = FALSE
+                             & next(three-brdy) = 0
+                             & next(three-no) = three-no
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-2
+                 | (three-state = three-0
+                 & (0=2) & (2=0)
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(three-no) = 0
+                             & next(three-lnk) = empty
+                             & next(three-basgn) = three-basgn
+                             & next(three-brdy) = three-brdy
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-2
+                 | (three-state = three-0
+                 & (0=1) & (2>0)
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(three-no) = 2
+                             & next(three-lnk) = one-lnk
+                             & next(three-basgn) = three-basgn
+                             & next(three-brdy) = three-brdy
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-2
+                 | (three-state = three-0
+                 & 0=0
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(three-no) = 2
+                             & next(three-lnk) = one-lnk
+                             & next(three-basgn) = three-basgn
+                             & next(three-brdy) = three-brdy
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-2))    
+         | (!(((broadcast=broadcast) | (broadcast=three-lnk)) | broadcast = broadcast) & keep-all-three)    
+         | (broadcast = broadcast & !((((!(three-basgn)) & ((one-prd=1) -> ((three-btype=1) | (three-btype=2)))) & ((one-prd=2) -> ((three-btype=1) | (three-btype=3))))) & keep-all-three)
+    )
+     & (((broadcast=broadcast) | (broadcast=two-lnk)) | broadcast = broadcast)
+     & 
+        (((((!(two-basgn)) & ((one-prd=1) -> ((two-btype=1) | (two-btype=2)))) & ((one-prd=2) -> ((two-btype=1) | (two-btype=3))))
+                & ((two-state = two-0
+                 & (0=1) & (two-brdy=1)
+                 & (broadcast = broadcast | broadcast = two-lnk)) &             
+                             next(two-brdy) = 2
+                             & next(two-lnk) = two-lnk
+                             & next(two-no) = two-no
+                             & next(two-basgn) = two-basgn
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-2
+                 | (two-state = two-0
+                 & (0=1) & (two-brdy=2)
+                 & (broadcast = broadcast | broadcast = two-lnk)) &             
+                             next(two-lnk) = empty
+                             & next(two-basgn) = FALSE
+                             & next(two-brdy) = 0
+                             & next(two-no) = two-no
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-2
+                 | (two-state = two-0
+                 & (0=2) & (2=0)
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(two-no) = 0
+                             & next(two-lnk) = empty
+                             & next(two-basgn) = two-basgn
+                             & next(two-brdy) = two-brdy
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-2
+                 | (two-state = two-0
+                 & (0=1) & (2>0)
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(two-no) = 2
+                             & next(two-lnk) = one-lnk
+                             & next(two-basgn) = two-basgn
+                             & next(two-brdy) = two-brdy
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-2
+                 | (two-state = two-0
+                 & 0=0
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(two-no) = 2
+                             & next(two-lnk) = one-lnk
+                             & next(two-basgn) = two-basgn
+                             & next(two-brdy) = two-brdy
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-2))    
+         | (!(((broadcast=broadcast) | (broadcast=two-lnk)) | broadcast = broadcast) & keep-all-two)    
+         | (broadcast = broadcast & !((((!(two-basgn)) & ((one-prd=1) -> ((two-btype=1) | (two-btype=2)))) & ((one-prd=2) -> ((two-btype=1) | (two-btype=3))))) & keep-all-two)
+    )))
+| (one-state = one-1 & (one-stage=2)            
+             & next(one-state) = one-0
+             & next(one-stage) = (0)
+             & next(one-lnk) = one-lnk
+             & next(one-prd) = one-prd
+             & next(one-dsd) = one-dsd
+    & ((((one-lnk=broadcast) | (one-lnk=three-lnk)) | one-lnk = broadcast)
+     & 
+        (((three-brdy=one-stage)
+                & ((three-state = three-1
+                 & (1=1) & (three-brdy=1)
+                 & (one-lnk = broadcast | one-lnk = three-lnk)) &             
+                             next(three-brdy) = 2
+                             & next(three-lnk) = three-lnk
+                             & next(three-no) = three-no
+                             & next(three-basgn) = three-basgn
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-0
+                 | (three-state = three-1
+                 & (1=1) & (three-brdy=2)
+                 & (one-lnk = broadcast | one-lnk = three-lnk)) &             
+                             next(three-lnk) = empty
+                             & next(three-basgn) = FALSE
+                             & next(three-brdy) = 0
+                             & next(three-no) = three-no
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-0))    
+         | (!(((one-lnk=broadcast) | (one-lnk=three-lnk)) | one-lnk = broadcast) & keep-all-three)    
+         | (one-lnk = broadcast & !((three-brdy=one-stage)) & keep-all-three)
+    )
+     & (((one-lnk=broadcast) | (one-lnk=two-lnk)) | one-lnk = broadcast)
+     & 
+        (((two-brdy=one-stage)
+                & ((two-state = two-1
+                 & (1=1) & (two-brdy=1)
+                 & (one-lnk = broadcast | one-lnk = two-lnk)) &             
+                             next(two-brdy) = 2
+                             & next(two-lnk) = two-lnk
+                             & next(two-no) = two-no
+                             & next(two-basgn) = two-basgn
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-0
+                 | (two-state = two-1
+                 & (1=1) & (two-brdy=2)
+                 & (one-lnk = broadcast | one-lnk = two-lnk)) &             
+                             next(two-lnk) = empty
+                             & next(two-basgn) = FALSE
+                             & next(two-brdy) = 0
+                             & next(two-no) = two-no
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-0))    
+         | (!(((one-lnk=broadcast) | (one-lnk=two-lnk)) | one-lnk = broadcast) & keep-all-two)    
+         | (one-lnk = broadcast & !((two-brdy=one-stage)) & keep-all-two)
+    )))
+| (one-state = one-0 & (one-stage=0)            
+             & next(one-state) = one-2
+             & next(one-stage) = (1)
+             & next(one-lnk) = one-lnk
+             & next(one-prd) = one-prd
+             & next(one-dsd) = one-dsd
+    & ((((broadcast=broadcast) | (broadcast=three-lnk)) | broadcast = broadcast)
+     & 
+        (((((!(three-basgn)) & ((one-prd=1) -> ((three-btype=1) | (three-btype=2)))) & ((one-prd=2) -> ((three-btype=1) | (three-btype=3))))
+                & ((three-state = three-0
+                 & (0=1) & (three-brdy=1)
+                 & (broadcast = broadcast | broadcast = three-lnk)) &             
+                             next(three-brdy) = 2
+                             & next(three-lnk) = three-lnk
+                             & next(three-no) = three-no
+                             & next(three-basgn) = three-basgn
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-2
+                 | (three-state = three-0
+                 & (0=1) & (three-brdy=2)
+                 & (broadcast = broadcast | broadcast = three-lnk)) &             
+                             next(three-lnk) = empty
+                             & next(three-basgn) = FALSE
+                             & next(three-brdy) = 0
+                             & next(three-no) = three-no
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-2
+                 | (three-state = three-0
+                 & (0=2) & (2=0)
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(three-no) = 0
+                             & next(three-lnk) = empty
+                             & next(three-basgn) = three-basgn
+                             & next(three-brdy) = three-brdy
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-2
+                 | (three-state = three-0
+                 & (0=1) & (2>0)
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(three-no) = 2
+                             & next(three-lnk) = one-lnk
+                             & next(three-basgn) = three-basgn
+                             & next(three-brdy) = three-brdy
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-2
+                 | (three-state = three-0
+                 & 0=0
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(three-no) = 2
+                             & next(three-lnk) = one-lnk
+                             & next(three-basgn) = three-basgn
+                             & next(three-brdy) = three-brdy
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-2))    
+         | (!(((broadcast=broadcast) | (broadcast=three-lnk)) | broadcast = broadcast) & keep-all-three)    
+         | (broadcast = broadcast & !((((!(three-basgn)) & ((one-prd=1) -> ((three-btype=1) | (three-btype=2)))) & ((one-prd=2) -> ((three-btype=1) | (three-btype=3))))) & keep-all-three)
+    )
+     & (((broadcast=broadcast) | (broadcast=two-lnk)) | broadcast = broadcast)
+     & 
+        (((((!(two-basgn)) & ((one-prd=1) -> ((two-btype=1) | (two-btype=2)))) & ((one-prd=2) -> ((two-btype=1) | (two-btype=3))))
+                & ((two-state = two-0
+                 & (0=1) & (two-brdy=1)
+                 & (broadcast = broadcast | broadcast = two-lnk)) &             
+                             next(two-brdy) = 2
+                             & next(two-lnk) = two-lnk
+                             & next(two-no) = two-no
+                             & next(two-basgn) = two-basgn
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-2
+                 | (two-state = two-0
+                 & (0=1) & (two-brdy=2)
+                 & (broadcast = broadcast | broadcast = two-lnk)) &             
+                             next(two-lnk) = empty
+                             & next(two-basgn) = FALSE
+                             & next(two-brdy) = 0
+                             & next(two-no) = two-no
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-2
+                 | (two-state = two-0
+                 & (0=2) & (2=0)
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(two-no) = 0
+                             & next(two-lnk) = empty
+                             & next(two-basgn) = two-basgn
+                             & next(two-brdy) = two-brdy
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-2
+                 | (two-state = two-0
+                 & (0=1) & (2>0)
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(two-no) = 2
+                             & next(two-lnk) = one-lnk
+                             & next(two-basgn) = two-basgn
+                             & next(two-brdy) = two-brdy
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-2
+                 | (two-state = two-0
+                 & 0=0
+                 & (broadcast = broadcast | broadcast = broadcast)) &             
+                             next(two-no) = 2
+                             & next(two-lnk) = one-lnk
+                             & next(two-basgn) = two-basgn
+                             & next(two-brdy) = two-brdy
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-2))    
+         | (!(((broadcast=broadcast) | (broadcast=two-lnk)) | broadcast = broadcast) & keep-all-two)    
+         | (broadcast = broadcast & !((((!(two-basgn)) & ((one-prd=1) -> ((two-btype=1) | (two-btype=2)))) & ((one-prd=2) -> ((two-btype=1) | (two-btype=3))))) & keep-all-two)
+    )))
+| (one-state = one-2 & (one-stage=1)            
+             & next(one-state) = one-1
+             & next(one-stage) = (2)
+             & next(one-lnk) = one-lnk
+             & next(one-prd) = one-prd
+             & next(one-dsd) = one-dsd
+    & ((((one-lnk=broadcast) | (one-lnk=three-lnk)) | one-lnk = broadcast)
+     & 
+        (((three-brdy=one-stage)
+                & ((three-state = three-2
+                 & (1=1) & (three-brdy=1)
+                 & (one-lnk = broadcast | one-lnk = three-lnk)) &             
+                             next(three-brdy) = 2
+                             & next(three-lnk) = three-lnk
+                             & next(three-no) = three-no
+                             & next(three-basgn) = three-basgn
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-1
+                 | (three-state = three-2
+                 & (1=1) & (three-brdy=2)
+                 & (one-lnk = broadcast | one-lnk = three-lnk)) &             
+                             next(three-lnk) = empty
+                             & next(three-basgn) = FALSE
+                             & next(three-brdy) = 0
+                             & next(three-no) = three-no
+                             & next(three-btype) = three-btype
+                             & next(three-state) = three-1))    
+         | (!(((one-lnk=broadcast) | (one-lnk=three-lnk)) | one-lnk = broadcast) & keep-all-three)    
+         | (one-lnk = broadcast & !((three-brdy=one-stage)) & keep-all-three)
+    )
+     & (((one-lnk=broadcast) | (one-lnk=two-lnk)) | one-lnk = broadcast)
+     & 
+        (((two-brdy=one-stage)
+                & ((two-state = two-2
+                 & (1=1) & (two-brdy=1)
+                 & (one-lnk = broadcast | one-lnk = two-lnk)) &             
+                             next(two-brdy) = 2
+                             & next(two-lnk) = two-lnk
+                             & next(two-no) = two-no
+                             & next(two-basgn) = two-basgn
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-1
+                 | (two-state = two-2
+                 & (1=1) & (two-brdy=2)
+                 & (one-lnk = broadcast | one-lnk = two-lnk)) &             
+                             next(two-lnk) = empty
+                             & next(two-basgn) = FALSE
+                             & next(two-brdy) = 0
+                             & next(two-no) = two-no
+                             & next(two-btype) = two-btype
+                             & next(two-state) = two-1))    
+         | (!(((one-lnk=broadcast) | (one-lnk=two-lnk)) | one-lnk = broadcast) & keep-all-two)    
+         | (one-lnk = broadcast & !((two-brdy=one-stage)) & keep-all-two)
+    ))));
+CONSTANTS
+	a, empty, broadcast;
+INIT
+	TRUE
+	& three-state = three-0
+	& ((((three-btype=1) & (three-lnk=empty)) & (three-basgn=FALSE)) & (three-brdy=0)) & (three-no=0)
+	& FALSE
+	& two-state = two-0
+	& ((((two-btype=1) & (two-lnk=empty)) & (two-basgn=FALSE)) & (two-brdy=0)) & (two-no=0)
+	& FALSE
+	& one-state = one-0
+	& ((one-stage=0) & (one-lnk=a)) & ((one-prd=1) | (one-prd=2))
+	& TRUE
+TRANS
+	transition | (!transition & keep-all)
