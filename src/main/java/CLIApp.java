@@ -81,9 +81,7 @@ public class CLIApp
                 System.out.println("-f option must be accompanied with two port numbers, i.e. an argument of the form \"8082,8083\"");
             }
             String[] fargs = port.split(" *, *");
-            String[] backendArgs = new String[1];
-            backendArgs[0] = fargs[0];
-            Server.main(backendArgs);
+            Server.start(fargs[0]);
             System.out.println("Launched server on http://localhost:" + fargs[0]);
 
             Process exec = Runtime.getRuntime().exec("python3 ./frontend/launch.py " + fargs[1]);
@@ -93,9 +91,7 @@ public class CLIApp
         }
         else if(cmd.hasOption("s")){
             String port = cmd.getOptionValue("s");
-            String[] argss = new String[0];
-            argss[0] = port;
-            Server.main(argss);
+            Server.start(port);
         }
 
         if(cmd.hasOption("smv")){

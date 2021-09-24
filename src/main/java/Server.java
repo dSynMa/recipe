@@ -158,8 +158,8 @@ public class Server {
 
     static App app;
 
-    public static void main(String[] args) throws Exception {
-        app = Flak.createHttpApp(Integer.parseInt(args[0]));
+    public static void start(String port) throws Exception {
+        app = Flak.createHttpApp(Integer.parseInt(port));
         app.scan(new Server());
         app.start();
     }
