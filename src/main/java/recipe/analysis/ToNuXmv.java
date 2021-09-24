@@ -7,6 +7,7 @@ import recipe.lang.exception.MismatchingTypeException;
 import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.predicate.GuardReference;
 import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
 import recipe.lang.types.Enum;
@@ -71,6 +72,8 @@ public class ToNuXmv {
     //      or when receive-guard is false
     //      (ch=broadcast & (!send_guard | no_broadcast_transition)) | !listening
     public static String transform(System system) throws Exception {
+        GuardReference.resolve = true;
+
         String nuxmv = "MODULE main\n";
         String vars = "VAR\n";
         String broadcastChannel = "broadcast";
@@ -358,6 +361,8 @@ public class ToNuXmv {
         nuxmv = nuxmv.replaceAll("\\*", broadcastChannel);
 
         nuxmv += String.join("\n", system.getLtlspec());
+
+        GuardReference.resolve = false;
 
         return nuxmv;
     }

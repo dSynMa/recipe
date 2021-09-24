@@ -21,6 +21,7 @@ import java.util.function.Function;
 public class GuardReference extends Condition {
     private Guard guardType;
     private Expression[] parametersValues;
+    public static boolean resolve = false;
 
     public GuardReference(Guard guardType, Expression[] parametersValues) throws MismatchingTypeException {
         this.guardType = guardType;
@@ -105,28 +106,28 @@ public class GuardReference extends Condition {
     }
 
     public String toString(){
-        GuardDefinition guardDefinition = Guard.getDefinition(this.guardType.name());
-        Expression<Boolean> template = guardDefinition.getTemplate();
-        List params = List.of(guardDefinition.getType().getParameters());
+        if(resolve) {
+            GuardDefinition guardDefinition = Guard.getDefinition(this.guardType.name());
+            Expression<Boolean> template = guardDefinition.getTemplate();
+            List params = List.of(guardDefinition.getType().getParameters());
 
-        try {
-            return template.relabel((x) -> {
-                if(params.contains(x)){
-                    return this.parametersValues[params.indexOf(x)];
-                } else {
-                    return x;
-                }
-            }).toString();
-        } catch (RelabellingTypeException e) {
-            e.printStackTrace();
-        } catch (MismatchingTypeException e) {
-            e.printStackTrace();
+            try {
+                return template.relabel((x) -> {
+                    if (params.contains(x)) {
+                        return this.parametersValues[params.indexOf(x)];
+                    } else {
+                        return x;
+                    }
+                }).toString();
+            } catch (RelabellingTypeException e) {
+                e.printStackTrace();
+            } catch (MismatchingTypeException e) {
+                e.printStackTrace();
+            }
+
+            return toString();
+        } else{
+            return guardType.name() + "(" + String.join(",", Arrays.stream(parametersValues).map((x) -> x.toString()).toArray(String[]::new)) + ")";
         }
-
-        return toOriginalString();
-    }
-
-    public String toOriginalString(){
-        return guardType.name() + "(" + String.join(",", Arrays.stream(parametersValues).map((x) -> x.toString()).toArray(String[]::new)) + ")";
     }
 }

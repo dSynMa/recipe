@@ -11,6 +11,7 @@ import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.predicate.GuardReference;
 import recipe.lang.process.*;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.process.Process;
@@ -332,6 +333,7 @@ public class Agent {
     }
 
     public String toDOT(){
+        GuardReference.resolve = false;
         String dot = "";
         dot += "\tgraph [rankdir=LR,ranksep=4,nodesep=0.2];\n"
         + "node [shape=circle];\n";
