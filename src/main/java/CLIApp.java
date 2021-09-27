@@ -1,13 +1,10 @@
 import org.apache.commons.cli.*;
 
-import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Locale;
 import java.util.Scanner;
 
-import org.json.JSONObject;
 import org.petitparser.context.ParseError;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
@@ -113,7 +110,7 @@ public class CLIApp
                         nuXmvInteraction = new NuXmvInteraction(ToNuXmv.transform(system));
                         for(int i = 0; i < system.getLtlspec().size(); i++) {
                             String spec = system.getLtlspec().get(i).replaceAll("^ *[^ ]+ +", "");
-                            Pair<Boolean, String> result = nuXmvInteraction.symbolicModelCheck(spec, 20);
+                            Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, 20);
                             if(result.getLeft()) {
                                 out += spec + ":\n" + result.getRight() + "\n";
                             } else{
