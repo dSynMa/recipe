@@ -8,126 +8,150 @@
 	<link rel="stylesheet" href="static/css/global.css">
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 	<script src="https://visjs.github.io/vis-network/standalone/umd/vis-network.min.js"></script>
+	<script src="https://visjs.github.io/vis-network/standalone/umd/vis-network.min.js"></script>
 	<script src="static/viz.js"></script>
 	<script src="static/full.render.js"></script>
 
 </head>
 
 <body>
-	<section class="container-fluid bg row">
-		<section class="col-lg-6 justify-content-center">
-			<form id="frm" class="form-container" method="post" action="{{ url_for('index') }}">
-				<div class="form-row">
-					<div class="col-md-12 mb-3">
-							<div class="col-md-12 mb-3">
-								<label for="validationServer01">ReCiPe script</label>
-								<textarea name="code"
-										   id="text-code"
-										   style="display:none;"
-										   required></textarea>
-								<div id="text-code-ace" class="form-control is-valid hidden"
-									 style="height:400px;"
-								></div>
-							</div>
+	<section class="container-fluid column" style="background: whitesmoke">
+		<div class="row">
+			<section class="bg col-lg-6 justify-content-center" style="padding-top: 56px;">
+				<form id="frm" class="form-container" method="post" action="{{ url_for('index') }}">
+								<div class="col-md-12 mb-3">
+									<label for="validationServer01">ReCiPe script</label>
+									<textarea name="code"
+											   id="text-code"
+											   style="display:none;"
+											   required></textarea>
+									<div id="text-code-ace" class="form-control is-valid hidden"
+										 style="height:400px;"
+									></div>
+								</div>
 
-						{% if rescomp %}
-						<div id="errors-div">
-							<div class="col-md-12 mb-3"  style="hidden">
-								<label for="validationServer04">Compilation Errors</label>
-								<textarea name="debug" cols="30" rows="5" class="form-control is-invalid"
-									id="validationServer04" placeholder="" readonly>{{ error }}</textarea>
-							</div>
-						</div>
-						{% endif %}
-					</div>
-					<div class="col-md-12 mb-3">
-						<button id="draw"
-								class="btn btn-success"
-								type="submit"
-								title="Updates the version of the system under analysis according to the current code.">Update System</button>
-						<input type="hidden" name="update" id="draw-inp" value="false">
-						<span id="error" style="color:red"></span>
-
-						<div class="form-row">
-							<div class="col-md-12 mb-3">
-								<div id="mynetwork" class="form-control is-valid" style="height:520px; overflow-y: auto; overflow-x: auto;}">
+							{% if rescomp %}
+							<div id="errors-div">
+								<div class="col-md-12 mb-3"  style="hidden">
+									<label for="validationServer04">Compilation Errors</label>
+									<textarea name="debug" cols="30" rows="5" class="form-control is-invalid"
+										id="validationServer04" placeholder="" readonly>{{ error }}</textarea>
 								</div>
 							</div>
-						</div>
-					</div>
-
-				</div>
-			</form>
-		</section>
-		<section class="col-lg-5">
-			<ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
-				<li class="nav-item">
-					<a class="nav-link" id="pills-mc-tab" data-toggle="pill" href="#pills-mc" role="tab"
-						aria-controls="pills-mc" aria-selected="true">Model-checking</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" id="pills-sim-tab" data-toggle="pill" href="#pills-sim" role="tab"
-						aria-controls="pills-sim" aria-selected="false">Simulation</a>
-				</li>
-			</ul>
-			<div class="tab-content" id="pills-tabContent" style="height:50%; width: 100%">
-				<div class="tab-pane fade" id="pills-mc" role="tabpanel" aria-labelledby="pills-mc-tab" style="height:100%; width: 100%">
-					<form id="frm-mc" class="form-container" method="post" action="{{ url_for('index') }}"  style="height:100%; width: 100%">
-						<div class="form-row"  style="height:100%; width: 100%">
-							<div class="col-md-12 mb-3"  style="height:100%; width: 100%">
-								<input type="hidden" name="code" id="mc-code" value="{{ code }}">
-								<input type="hidden" name="mc" id="mc-input" value="false">
-								<button id="mc" class="btn btn-success" type="submit" title="Model check specifications in script using nuXmv">Model Check</button>
-								{% if mc and error%}
-								<span id="mcerror" style="color:red">{{error}}</span>
-								{% endif %}
-<!--							</div>-->
-<!--							<div class="col-md-12 mb-3">-->
-								<textarea name="mcresponse" readonly id="mc-response-text-area" style="height:90%; width: 100%" wrap="soft">{{ mcresponse }}</textarea>
-							</div>
-						</div>
-					</form>
-				</div>
-				<div class="tab-pane fade" id="pills-sim" role="tabpanel" aria-labelledby="pills-sim-tab">
-					<form id="frm-sim" class="form-container" method="post" action="{{ url_for('index') }}"  style="height:100%; width: 100%">
-						<div class="form-row"  style="height:100%; width: 100%">
-							<div class="col-md-12 mb-3"  style="height:100%; width: 100%">
-								<input type="hidden" name="siminit" id="sim-init" value="{{ siminit }}">
-								<input type="hidden" name="code" id="sim-code" value="{{ code }}">
-								<input type="hidden" name="sim" id="sim-input" value="false">
-								<label>Next State Constraint:</label>
-								<input name="constraints" id="sim-constraints" value="TRUE">
-								<span>(Write agent instance identifier and "-" before variable or label name, e.g. one-p && one-state = one-0.)</span>
-								<input type="hidden" name="simresponse" id="sim-response" value="{{ simresponse }}">
-								<div>
-									<button id="sim" class="btn btn-success" type="submit" title="Simulate using nuXmv">Next</button>
-									<button id="sim-reset" class="btn btn-success" type="submit" title="Reset Simulation">Reset</button>
+							{% endif %}
+				</form>
+			</section>
+			<section class="bg col-lg-6">
+				<ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+					<li class="nav-item">
+						<a class="nav-link" id="pills-mc-tab" data-toggle="pill" href="#pills-mc" role="tab"
+							aria-controls="pills-mc" aria-selected="false">Model-checking</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" id="pills-sim-tab" data-toggle="pill" href="#pills-sim" role="tab"
+							aria-controls="pills-sim" aria-selected="false">Simulation</a>
+					</li>
+				</ul>
+				<div class="tab-content" id="pills-tabContent" style="height:50%; width: 100%">
+					<div class="tab-pane fade" id="pills-mc" role="tabpanel" aria-labelledby="pills-mc-tab" style="height:100%; width: 100%">
+						<form id="frm-mc" class="form-container" method="post" action="{{ url_for('index') }}"  style="height:100%; width: 100%">
+							<div class="form-row" style="height:100%; width: 100%">
+								<div class="col-md-12 mb-3"  style="height:100%; width: 100%">
+									<input type="hidden" name="code" id="mc-code" value="{{ code }}">
+									<input type="hidden" name="mc" id="mc-input" value="false">
+									<button id="mc" class="btn btn-success" type="submit" title="Model check specifications in script using nuXmv">Model Check</button>
+									{% if mc and error%}
+										<span id="mcerror" style="color:red">{{error}}</span>
+									{% endif %}
 	<!--							</div>-->
 	<!--							<div class="col-md-12 mb-3">-->
-									<div id="sim-response-div" style="height:100%; width: 100%" wrap="soft">
-										{% if (simresponse|length) > 0 %}
-										<table>
-											<tr>
-												<td style="width: 20%">Step number</td>
-												<td style="width: 80%">State</td>
-											</tr>
-											{% for i in range(0,simresponse|length) %}
-											<tr>
-												<td style="width: 20%">{{i}}</td>
-												<td style="width: 80%">{{ simresponse[i] }}</td>
-											</tr>
-											{% endfor %}
-										</table>
-										{% endif %}
-									</div>
+	<!--								<textarea name="mcresponse" readonly id="mc-response-text-area" style="height:90%; width: 100%" wrap="soft">{{ mcresponse }}</textarea>-->
+									{% if (mcresponse|length) > 0 %}
+									<div id="accordion" style="height: 337px; overflow: scroll; overflow-y: auto; overflow-x: auto;">
+										{% for i in range(mcresponse|length)%}
+										<span>Results:</span>
 
+										  <div class="card">
+											<div class="card-header" id="{{'heading-mc-' + (i|string)}}">
+											  <h5 class="mb-0">
+												<a class="btn btn-link" data-toggle="collapse" data-target="#{{'collapse-mc-' + (i|string)}}" aria-expanded="true" aria-controls="{{'collapse-mc-' + (i|string)}}"><!---
+												  --->{% if mcresponse[i]["result"] == "true" %}✔ {%endif%}{% if mcresponse[i]["result"] == "false" %}✖ {%endif%}{% if mcresponse[i]["result"] == "error" %}❓ {%endif%}{{ mcresponse[i]["spec"]}}
+												</a>
+											  </h5>
+											</div>
+
+											<div id="{{'collapse-mc-' + (i|string)}}" class="collapse" aria-labelledby="{{'heading-mc-' + (i|string)}}" data-parent="#accordion">
+											  <div class="card-body" style="white-space: pre-line">{% autoescape false %}{{ mcresponse[i]["output"]|safe }}{% endautoescape %}
+											  </div>
+											</div>
+										  </div>
+										{% endfor %}
+									</div>
+									{% endif %}
 								</div>
 							</div>
-						</div>
-					</form>
+						</form>
+					</div>
+					<div class="tab-pane fade" id="pills-sim" role="tabpanel" aria-labelledby="pills-sim-tab">
+						<form id="frm-sim" class="form-container" method="post" action="{{ url_for('index') }}"  style="height:100%; width: 100%">
+							<div class="form-row"  style="height:100%; width: 100%">
+								<div class="col-md-12 mb-3"  style="height:100%; width: 100%">
+									<input type="hidden" name="siminit" id="sim-init" value="{{ siminit }}">
+									<input type="hidden" name="code" id="sim-code" value="{{ code }}">
+									<input type="hidden" name="sim" id="sim-input" value="false">
+									<label>Next State Constraint:</label>
+									<input name="constraints" id="sim-constraints" value="TRUE">
+									<span>(Write agent instance identifier and "-" before variable or label name, e.g. one-p && one-state = one-0.)</span>
+									<input type="hidden" name="simresponse" id="sim-response" value="{{ simresponse }}">
+									<div>
+										<button id="sim" class="btn btn-success" type="submit" title="Simulate using nuXmv">Next</button>
+										<button id="sim-reset" class="btn btn-success" type="submit" title="Reset Simulation">Reset</button>
+		<!--							</div>-->
+		<!--							<div class="col-md-12 mb-3">-->
+										<div id="sim-response-div" style="height: 337px; width: 100%; overflow: scroll; overflow-y: auto; overflow-x: auto;" wrap="soft">
+											{% if (simresponse|length) > 0 %}
+											<table>
+												<tr>
+													<td style="width: 20%">Step number</td>
+													<td style="width: 80%">State</td>
+												</tr>
+												{% for i in range(0,simresponse|length) %}
+												<tr>
+													<td style="width: 20%">{{i}}</td>
+													<td style="width: 80%">{{ simresponse[i] }}</td>
+												</tr>
+												{% endfor %}
+											</table>
+											{% endif %}
+										</div>
+
+									</div>
+								</div>
+							</div>
+						</form>
+					</div>
 				</div>
-			</div>
-		</section>
+			</section>
+		<section class="bg col-lg-12 mb-3">
+			<form id="frm-vis" class="form-container" method="post" action="{{ url_for('index') }}"  style="height:100%; width: 100%">
+				<div class="form-row">
+					<button id="draw"
+							class="btn btn-success"
+							type="submit"
+							title="Updates the version of the system under analysis according to the current code.">Update System</button>
+					<input type="hidden" name="update" id="draw-inp" value="false">
+					<input type="hidden" name="code" id="vis-code" value="{{ code }}">
+					<input type="hidden" name="sim" id="vis-input" value="false">
+					<span id="error" style="color:red"></span>
+
+					<div class="col-md-12 mb-3">
+						<div id="mynetwork" class="form-control is-valid" style="height:520px; overflow-y: auto; overflow-x: auto;}">
+						</div>
+					</div>
+				</div>
+			</form>
+			</section>
+		</div>
 	</section>
 
 		<script src="../static/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
@@ -217,6 +241,9 @@
 			document.getElementById("sim").addEventListener("click", function(){
 				document.getElementById("sim-input").value = "true"
 				document.getElementById("sim-code").value = ace.edit("text-code-ace").getValue()
+			});
+			document.getElementById("draw").addEventListener("click", function(){
+				document.getElementById("vis-code").value = ace.edit("text-code-ace").getValue()
 			});
 		</script>
 		<script>

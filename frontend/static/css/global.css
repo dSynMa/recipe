@@ -1,8 +1,10 @@
 .bg{
-  background: whitesmoke;
-  width: 100%;
-  height: 100vh;
+    width: 100%;
+    padding-bottom: 40px;
+    background: whitesmoke;
+    height: fit-content;
 }
+
 .form-container{
   position: relative;
   top: 2vh;
@@ -49,4 +51,17 @@ thead th:nth-child(4) {
 th, td {
   padding: 8px;
   border: 1px solid black;
+}
+.card-body {
+    white-space: pre-line;
+    height: 300px;
+    overflow: scroll;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.form-container {
+    overflow: scroll;
+    overflow-y: auto;
+    overflow-x: auto;
 }

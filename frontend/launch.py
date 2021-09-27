@@ -55,7 +55,7 @@ def simulate_next(constraint: str):
     params = {
         'constraint': quote(constraint,  safe='')
     }
-    with urllib.request.urlopen(backend + '/simulateNext' + urllib.parse.urlencode(params)) as response:
+    with urllib.request.urlopen(backend + '/simulateNext?' + urllib.parse.urlencode(params)) as response:
         resp: str = response.read().decode("utf-8")
         return resp
 
@@ -106,7 +106,7 @@ def jsonToTableRow(stateObject):
 def index():
     print("index")
     error = ''
-    mcresponse = ''
+    mcresponse = []
     simresponse = list()
     siminit = ''
     code = default_script
@@ -131,13 +131,13 @@ def index():
             if "error" in response:
                 error = response['error']
             else:
-                mcresponse = response['result']
+                mcresponse = response['results']
             mc = True
             sim = False
-        if 'sim' in request.form.keys() and request.form['sim']:
+        if 'sim' in request.form.keys() and request.form['sim'] != 'false':
             sim = True
             mc = False
-            if not request.form['siminit']:
+            if 'siminit' in request.form and not request.form['siminit']:
                 init = simulate_init()
             siminit = 'True'
             if "simresponse" in request.form:#) and request.form["simresponse"] != '[]':
@@ -169,5 +169,5 @@ if __name__ == "__main__":
     if(len(sys.argv) != 2):
         print("Please specify backend URL.")
     else:
-        backend = sys.argv[0]
+        backend = sys.argv[1]
         app.run(debug=True, port=8083)
