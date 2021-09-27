@@ -139,13 +139,14 @@ public class System{
                                             return agentInstances;
                                         })
                         )
-                        .seq(((StringParser.of("LTLSPEC")
-                                .or(StringParser.of("CTLSPEC"))
-                                .or(StringParser.of("INVARSPEC"))
-                                .or(StringParser.of("PSLSPEC"))
-                                .or(StringParser.of("COMPUTE"))
-                                .or(StringParser.of("SPEC"))
-                                .or(StringParser.of("PARSYNTH"))).flatten().seq(CharacterParser.any().plus()).flatten()).delimitedBy(CharacterParser.of(';')).optional(new ArrayList<>()))
+                        .seq(((StringParser.of("LTLSPEC ")
+//                                .or(StringParser.of("CTLSPEC"))
+//                                .or(StringParser.of("INVARSPEC"))
+//                                .or(StringParser.of("PSLSPEC"))
+//                                .or(StringParser.of("COMPUTE"))
+//                                .or(StringParser.of("SPEC"))
+//                                .or(StringParser.of("PARSYNTH"))
+                        ).flatten().seq(CharacterParser.noneOf(";").plus()).flatten()).delimitedBy(CharacterParser.of(';').trim()).optional(new ArrayList<>()))
                         .map((List<Object> values) -> {
                             Set<String> channels = new HashSet<>((List<String>) values.get(0));
                             Map<String, Type> messageStructure = (Map<String, Type>) values.get(2);
@@ -153,7 +154,12 @@ public class System{
                             Map<String, Type> guardDefinitions = (Map<String, Type>) values.get(4);
                             Set<AgentInstance> agentInstances = new HashSet<>((List) values.get(6));
 
-                            List<String> specs = (List<String>) values.get(7);
+                            List<String> specs = new ArrayList<>();
+                            for(Object obj : (List<Object>) values.get(7)){
+                                if(obj.getClass().equals(String.class)){
+                                    specs.add(((String) obj).trim());
+                                }
+                            }
 
                             return new System(messageStructure, communicationVariables, guardDefinitions, agents.get(), agentInstances, specs);
                         })
