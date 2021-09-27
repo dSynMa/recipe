@@ -2,6 +2,7 @@ import flak.App;
 import flak.Flak;
 import flak.Request;
 import flak.annotations.Route;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.petitparser.context.ParseError;
 import recipe.analysis.NuXmvInteraction;
@@ -9,6 +10,8 @@ import recipe.analysis.ToNuXmv;
 import recipe.lang.System;
 import recipe.lang.types.Enum;
 import recipe.lang.utils.Pair;
+
+import java.util.Locale;
 
 public class Server {
     NuXmvInteraction nuXmvInteraction;
@@ -36,7 +39,7 @@ public class Server {
     @Route("/toDOT")
     public String toDOT(Request req) {
         if(system == null){
-            return "{ \"error\" : \"Set system by sending your script to \\setSystem.\"}";
+            return "{ \"error\" : \"Set system by sending your script to /setSystem.\"}";
         }
         try {
             String toReturn = "{ \"agents\": [" + String.join(",", system.toDOT()) + "]";
@@ -55,7 +58,7 @@ public class Server {
     @Route("/modelCheck")
     public String modelCheck(Request req) throws Exception {
         if(system == null){
-            return "{ \"error\" : \"Set system by sending your script to \\setSystem.\"}";
+            return "{ \"error\" : \"Set system by sending your script to /setSystem.\"}";
         }
 
         try {
@@ -65,21 +68,29 @@ public class Server {
                 return jsonObject.toString();
             } else{
                 JSONObject jsonObject = new JSONObject();
-                String out = ToNuXmv.nuxmvModelChecking(system);
-                if(out.equals("")){
-                    nuXmvInteraction = new NuXmvInteraction(ToNuXmv.transform(system));
-                    for(int i = 0; i < system.getLtlspec().size(); i++) {
-                        String spec = system.getLtlspec().get(i).replaceAll("^ *[^ ]+ +", "");
-                        Pair<Boolean, String> result = nuXmvInteraction.symbolicModelCheck(spec, 20);
-                        if(result.getLeft()) {
-                            out += spec + ":\n" + result.getRight() + "\n";
+                JSONArray array = new JSONArray();
+
+                nuXmvInteraction = new NuXmvInteraction(ToNuXmv.transform(system));
+                for(int i = 0; i < system.getLtlspec().size(); i++) {
+                    String spec = system.getLtlspec().get(i).replaceAll("LTLSPEC", "").trim();
+                    Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, 20);
+                    JSONObject resultJSON = new JSONObject();
+                    resultJSON.put("spec", spec);
+
+                    if(result.getLeft()) {
+                        if(result.getRight().toLowerCase(Locale.ROOT).contains("is false")){
+                            resultJSON.put("result", "false");
                         } else{
-                            out += spec + " (error) :\n" + result.getRight() + "\n";
+                            resultJSON.put("result", "true");
                         }
+                    } else{
+                        resultJSON.put("result", "error");
                     }
-                    nuXmvInteraction.stopNuXmvThread();
+                    resultJSON.put("output", result.getRight());
+                    array.put(resultJSON);
                 }
-                jsonObject.put("result", out);
+                jsonObject.put("results", array);
+                nuXmvInteraction.stopNuXmvThread();
                 return jsonObject.toString();
             }
         } catch (ParseError parseError){
@@ -94,7 +105,7 @@ public class Server {
     @Route("/simulateInit")
     public String simulateInit(Request req) throws Exception {
         if(system == null){
-            return "{ \"error\" : \"Set system by sending your script to \\setSystem.\"}";
+            return "{ \"error\" : \"Set system by sending your script to /setSystem.\"}";
         }
 
         try {
@@ -117,20 +128,10 @@ public class Server {
         }
     }
 
-//    @Route("/simulatePickState")
-//    public String simulatePickState() throws Exception {
-//        Pair<Boolean, String> out = nuXmvInteraction.simulation_pick_init_state();
-//        if(out.getLeft()){
-//            return NuXmvInteraction.outputToJSON(out.getRight()).toString();
-//        } else{
-//            return new JSONObject("{ error: " + out.getLeft() + "}").toString();
-//        }
-//    }
-
     @Route("/simulateNext")
     public String simulateNext(Request req) throws Exception {
         if(system == null){
-            return "{ \"error\" : \"Set system by sending your script to \\setSystem.\"}";
+            return "{ \"error\" : \"Set system by sending your script to /setSystem.\"}";
         }
         if(nuXmvInteraction == null) {
             String outp = simulateInit(req);
@@ -166,5 +167,11 @@ public class Server {
 
     public static void stop(){
         app.stop();
+    }
+
+    public static void main(String[] args) throws Exception {
+        app = Flak.createHttpApp(Integer.parseInt(args[0]));
+        app.scan(new Server());
+        app.start();
     }
 }

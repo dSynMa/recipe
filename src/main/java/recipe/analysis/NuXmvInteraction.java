@@ -53,20 +53,22 @@ public class NuXmvInteraction {
         return out;
     }
 
-    public Pair<Boolean, String> symbolicModelCheck(String property, int steps) throws IOException {
-        String out = execute("go_msat");
+    public Pair<Boolean, String> modelCheck(String property, int steps) throws IOException {
+        String out = execute("go" + (symbolic ? "_msat" : ""));
+        out = execute("go" + (symbolic ? "_msat" : ""));
         while(out.startsWith("*** This is nuXmv")) out = execute("go_msat");
         if(out.contains("file ")){
             return new Pair<>(false, out);
         }
-        out = execute("msat_check_ltlspec_bmc -p \"" + property + "\" -k " + steps);
+        out = execute(((symbolic ? "_msat" : "") + "check_ltlspec" + (symbolic ? "_bmc" : "") + " -p \"" + property + "\" "+ (symbolic ? "-k " + steps : "")));
         out = out.replaceAll("nuXmv > ", "").trim();
         started = true;
         return new Pair<>(true, out);
     }
+
     public Pair<Boolean, String> initialise() throws IOException {
         String out = execute("go");
-        if(out.contains("Impossible to build a BDD FSM")){
+        if(out.contains("Impossible to build a BDD FSM") || symbolic){
             out = execute("go_msat");
             if(!out.contains("file ")){
                 symbolic = true;
