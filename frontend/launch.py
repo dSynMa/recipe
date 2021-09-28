@@ -10,7 +10,7 @@ import urllib.request
 
 app = Flask(__name__)
 
-backend = "http://localhost:8082"
+backend = ""
 
 default_script = "".join(open("./example-script.txt").readlines())
 
@@ -45,8 +45,8 @@ def set_system(script):
         return json.loads(resp)
 
 
-def simulate_init():
-    with urllib.request.urlopen(backend + '/simulateInit') as response:
+def system_init():
+    with urllib.request.urlopen(backend + '/init') as response:
         resp: str = response.read().decode("utf-8")
         return resp
 
@@ -138,7 +138,7 @@ def index():
             sim = True
             mc = False
             if 'siminit' in request.form and not request.form['siminit']:
-                init = simulate_init()
+                init = system_init()
             siminit = 'True'
             if "simresponse" in request.form:#) and request.form["simresponse"] != '[]':
                 prev = (request.form["simresponse"]).replace("\'{", "{").replace("\']", "]").replace("\'",'"').replace("'",'"')
@@ -166,8 +166,8 @@ def index():
 
 
 if __name__ == "__main__":
-    if(len(sys.argv) != 2):
-        print("Please specify backend URL.")
+    if(len(sys.argv) != 3):
+        print("Please specify frontend port and backend URL.")
     else:
-        backend = sys.argv[1]
-        app.run(debug=True, port=8083)
+        backend = sys.argv[2]
+        app.run(debug=True, port=sys.argv[1])

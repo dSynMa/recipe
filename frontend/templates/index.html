@@ -20,7 +20,7 @@
 			<section class="bg col-lg-6 justify-content-center" style="padding-top: 56px;">
 				<form id="frm" class="form-container" method="post" action="{{ url_for('index') }}">
 								<div class="col-md-12 mb-3">
-									<label for="validationServer01">ReCiPe script</label>
+									<label for="validationServer01">ReCiPe model</label>
 									<textarea name="code"
 											   id="text-code"
 											   style="display:none;"
@@ -66,8 +66,7 @@
 	<!--							</div>-->
 	<!--							<div class="col-md-12 mb-3">-->
 	<!--								<textarea name="mcresponse" readonly id="mc-response-text-area" style="height:90%; width: 100%" wrap="soft">{{ mcresponse }}</textarea>-->
-									{% if (mcresponse|length) > 0 %}
-									<div id="accordion" style="height: 337px; overflow: scroll; overflow-y: auto; overflow-x: auto;">
+									<div id="accordion" style="height: 390px; overflow: scroll; overflow-y: auto; overflow-x: auto;">
 										{% for i in range(mcresponse|length)%}
 										<span>Results:</span>
 
@@ -87,7 +86,6 @@
 										  </div>
 										{% endfor %}
 									</div>
-									{% endif %}
 								</div>
 							</div>
 						</form>
@@ -108,7 +106,7 @@
 										<button id="sim-reset" class="btn btn-success" type="submit" title="Reset Simulation">Reset</button>
 		<!--							</div>-->
 		<!--							<div class="col-md-12 mb-3">-->
-										<div id="sim-response-div" style="height: 337px; width: 100%; overflow: scroll; overflow-y: auto; overflow-x: auto;" wrap="soft">
+										<div id="sim-response-div" style="height: 390px; width: 100%; overflow: scroll; overflow-y: auto; overflow-x: auto;" wrap="soft">
 											{% if (simresponse|length) > 0 %}
 											<table>
 												<tr>
