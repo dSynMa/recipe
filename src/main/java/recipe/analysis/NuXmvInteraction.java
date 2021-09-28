@@ -235,7 +235,7 @@ public class NuXmvInteraction {
                 vars.put(var2, val2);
             }
 
-            ((JSONObject) jsonObject.get(agent)).put("variables", vars);
+            ((JSONObject) jsonObject.get(agent)).put("local", vars);
         }
 
         return jsonObject;
