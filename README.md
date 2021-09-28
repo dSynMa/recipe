@@ -1,5 +1,17 @@
 # recipe
 
+### Language
+
+The language allows the definition of a set of agents that interact synchronously. Find an example of the language in ./example-current-syntax.txt.
+
+### LTL Model Checking
+
+For model checking add specifications at the end of the script in the form of `LTLSPEC <spec>;`. When making reference to the variables of an agent instance prefix them by the name of the agent in the following form `id-var`, similarly for their state: `id-state`, and any transition label.
+
+To check whether the system is stuck, the predicate `keep-all` can be queried, e.g. `F keep-all` will be true if the system eventually settles in a state (where from then on no variable values may change).
+
+When the agents use infinite-state variables the tool will use symbolic bounded model checking (using `msat`).
+
 ### Compilation
 
 This project was compiled and tested successfully with:
