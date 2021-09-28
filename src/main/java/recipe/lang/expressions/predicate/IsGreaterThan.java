@@ -46,7 +46,7 @@ public class IsGreaterThan extends Condition {
 
 	@Override
 	public String toString() {
-		return lhs + ">" + rhs.toString();
+		return lhs + " > " + rhs.toString();
 	}
 
 	@Override

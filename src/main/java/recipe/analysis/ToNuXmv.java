@@ -152,8 +152,6 @@ public class ToNuXmv {
         define += "\t" + String.join(";\n\t", keepFunctions) + ";\n";
         define += "\t" + keepAll + ";\n";
 
-        init += "\tTRUE\n";
-
         List<String> sendNows = new ArrayList<>();
         List<String> receiveNows = new ArrayList<>();
 
@@ -170,7 +168,12 @@ public class ToNuXmv {
             }
 
             vars += "\t" + namei + "-state" + " : {" + stateList + "};\n";
-            init += "\t& " + namei + "-state" + " = " + namei + "-" + agenti.getInitialState().toString() + "\n";
+
+            if(!init.equals("INIT\n")){
+                init += "\t& ";
+            }
+
+            init += namei + "-state" + " = " + namei + "-" + agenti.getInitialState().toString() + "\n";
 
             init += "\t& " + agenti.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + v)) + "\n";
             init += "\t& " + agentInstancei.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + v)) + "\n";
