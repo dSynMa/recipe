@@ -61,6 +61,13 @@ public class Server {
             return "{ \"error\" : \"Set system by sending your script to /setSystem.\"}";
         }
 
+        if(nuXmvInteraction == null){
+            String init = this.init(req);
+            if(init.contains("error")){
+                return init;
+            }
+        }
+
         try {
             if(system.getLtlspec() == null || system.getLtlspec().size() == 0){
                 JSONObject jsonObject = new JSONObject();
@@ -70,7 +77,6 @@ public class Server {
                 JSONObject jsonObject = new JSONObject();
                 JSONArray array = new JSONArray();
 
-                nuXmvInteraction = new NuXmvInteraction(ToNuXmv.transform(system));
                 for(int i = 0; i < system.getLtlspec().size(); i++) {
                     String spec = system.getLtlspec().get(i).replaceAll("LTLSPEC", "").trim();
                     Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, 20);
@@ -102,15 +108,14 @@ public class Server {
         }
     }
 
-    @Route("/simulateInit")
-    public String simulateInit(Request req) throws Exception {
+    @Route("/init")
+    public String init(Request req) throws Exception {
         if(system == null){
             return "{ \"error\" : \"Set system by sending your script to /setSystem.\"}";
         }
 
         try {
-            nuXmvInteraction = new NuXmvInteraction(ToNuXmv.transform(system));
-            nuXmvInteraction.symbolic = system.isSymbolic();
+            nuXmvInteraction = new NuXmvInteraction(system);
             Pair<Boolean, String> out = nuXmvInteraction.initialise();
             if(out.getLeft()){
                 return NuXmvInteraction.outputToJSON(out.getRight()).toString();
@@ -134,7 +139,7 @@ public class Server {
             return "{ \"error\" : \"Set system by sending your script to /setSystem.\"}";
         }
         if(nuXmvInteraction == null) {
-            String outp = simulateInit(req);
+            String outp = init(req);
             if(outp.contains("error")){
                 JSONObject jsonObject = new JSONObject();
                 jsonObject.put("error", outp);
@@ -163,6 +168,10 @@ public class Server {
         app = Flak.createHttpApp(Integer.parseInt(port));
         app.scan(new Server());
         app.start();
+    }
+
+    public static App app() {
+        return app;
     }
 
     public static void stop(){

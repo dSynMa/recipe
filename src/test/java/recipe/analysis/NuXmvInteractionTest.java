@@ -18,8 +18,8 @@ public class NuXmvInteractionTest {
     public static void init() throws Exception {
         Enum.clear();
         String script = String.join("\n", Files.readAllLines(Paths.get("./example-current-syntax.txt")));
-        String nuxmvScript = ToNuXmv.transform(System.parser().parse(script).get());
-        nuXmvInteraction = new NuXmvInteraction(nuxmvScript);
+        System system = System.parser().parse(script).get();
+        nuXmvInteraction = new NuXmvInteraction(system);
         nuXmvInteraction.initialise();
         nuXmvInteraction.simulation_next("TRUE");
         nuXmvInteraction.simulation_next("TRUE");

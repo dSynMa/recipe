@@ -107,10 +107,16 @@ public class CLIApp
                 } else{
                     String out = ToNuXmv.nuxmvModelChecking(system);
                     if(out.equals("") || system.isSymbolic()){
-                        nuXmvInteraction = new NuXmvInteraction(ToNuXmv.transform(system));
+                        nuXmvInteraction = new NuXmvInteraction(system);
                         for(int i = 0; i < system.getLtlspec().size(); i++) {
                             String spec = system.getLtlspec().get(i).replaceAll("^ *[^ ]+ +", "");
-                            Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, 20);
+                            int bound = 0;
+                            if(system.isSymbolic()){
+                                System.out.println("Specification is symbolic, thus bounded model checking will be used. Please specify an integer bound: ");
+                                Scanner scanner = new Scanner(System.in);
+                                bound = scanner.nextInt();
+                            }
+                            Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, bound);
                             if(result.getLeft()) {
                                 out += spec + ":\n" + result.getRight() + "\n";
                             } else{

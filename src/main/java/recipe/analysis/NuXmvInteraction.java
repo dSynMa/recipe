@@ -22,11 +22,14 @@ public class NuXmvInteraction {
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
     Thread process;
-    public boolean symbolic = false;
     boolean started = false;
+    boolean simulationStarted = false;
     Path path;
+    recipe.lang.System system;
 
-    public NuXmvInteraction(String nuxmvScript) throws IOException {
+    public NuXmvInteraction(recipe.lang.System system) throws Exception {
+        this.system = system;
+        String nuxmvScript = ToNuXmv.transform(system);
         if(Files.exists(Path.of("./forInteraction.smv"))) Files.delete(Path.of("./forInteraction.smv"));
         path = Files.createFile(Path.of("./forInteraction.smv"));
         Files.write(path, nuxmvScript.getBytes(StandardCharsets.UTF_8));
@@ -54,28 +57,20 @@ public class NuXmvInteraction {
     }
 
     public Pair<Boolean, String> modelCheck(String property, int steps) throws IOException {
-        String out = execute("go" + (symbolic ? "_msat" : ""));
-        out = execute("go" + (symbolic ? "_msat" : ""));
-        while(out.startsWith("*** This is nuXmv")) out = execute("go_msat");
-        if(out.contains("file ")){
-            return new Pair<>(false, out);
-        }
-        out = execute(((symbolic ? "_msat" : "") + "check_ltlspec" + (symbolic ? "_bmc" : "") + " -p \"" + property + "\" "+ (symbolic ? "-k " + steps : "")));
+        if(!started) return new Pair<>(false, "Not initialised.");
+        String out = execute(((system.isSymbolic() ? "_msat" : "") + "check_ltlspec" + (system.isSymbolic() ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() ? "-k " + steps : "")));
         out = out.replaceAll("nuXmv > ", "").trim();
-        started = true;
+        out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
         return new Pair<>(true, out);
     }
 
     public Pair<Boolean, String> initialise() throws IOException {
-        String out = execute("go");
-        if(out.contains("Impossible to build a BDD FSM") || symbolic){
-            out = execute("go_msat");
-            if(!out.contains("file ")){
-                symbolic = true;
-            }
-        }
+        String out = execute("go" + (system.isSymbolic() ? "_msat" : ""));
+        out = execute("go" + (system.isSymbolic() ? "_msat" : ""));
+        while(out.startsWith("*** This is nuXmv")) out = execute("go_msat");
 
         if(!out.contains("file ")) {
+            started = true;
             return new Pair<>(true, out);
         }
 
@@ -83,12 +78,13 @@ public class NuXmvInteraction {
     }
 
     public Pair<Boolean, String> simulation_pick_init_state(String constraint) throws IOException {
-        String out = execute((symbolic ? "msat_" : "") + "pick_state -v -c \"" + constraint + "\"");
+        if(!started) return new Pair<>(false, "Not initialised.");
+        String out = execute((system.isSymbolic() ? "msat_" : "") + "pick_state -v -c \"" + constraint + "\"");
         if(out.contains("No trace")){
             return new Pair<>(false, out);
         }
 
-        started = true;
+        simulationStarted = true;
         return new Pair<>(true, parseLastState(out));
     }
 
@@ -102,10 +98,11 @@ public class NuXmvInteraction {
     }
 
     public Pair<Boolean, String> simulation_next(String constraint) throws IOException {
-        if(!started) return simulation_pick_init_state(constraint);
+        if(!started) return new Pair<>(false, "Not initialised.");
+        if(!simulationStarted) return simulation_pick_init_state(constraint);
 
-        String out = execute((symbolic ? "msat_" : "") + "simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
-        if(symbolic) {
+        String out = execute((system.isSymbolic() ? "msat_" : "") + "simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
+        if(system.isSymbolic()) {
             if (out.contains("UNSAT")) {
                 return new Pair<>(false, out.replaceAll("\r\n|\n|nuXmv >", " ").split("\\*\\*\\*\\*")[0].trim());
             } else {
@@ -231,8 +228,6 @@ public class NuXmvInteraction {
                 }
 
                 String val2 = group2[1].trim().replaceAll(agent + "\\-", "");
-
-                vars.put(var2, val2);
             }
 
             ((JSONObject) jsonObject.get(agent)).put("local", vars);
