@@ -1,5 +1,6 @@
 package recipe.lang;
 
+import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
@@ -90,18 +91,18 @@ public class System{
                                 e.printStackTrace();
                             }
                             return values;
-                        }))
-                        .seq(Parsing.enumDefinitionParser().star())
+                        }).or(FailureParser.withMessage("Error in channels definition.")))
+                        .seq(Parsing.enumDefinitionParser().star().or(FailureParser.withMessage("Error in enum definitions.")))
                         .seq(labelledParser("message-structure", typedVariableList())
                                 .map((Map<String, Type> values) -> {
                                     messageContext.get().setAll(new TypingContext(values));
                                     return values;
-                                }))
+                                }).or(FailureParser.withMessage("Error in message-structure definition.")))
                         .seq(labelledParser("communication-variables", typedVariableList())
                                 .map((Map<String, Type> values) -> {
                                     communicationContext.get().setAll(new TypingContext(values));
                                     return values;
-                                }))
+                                }).or(FailureParser.withMessage("Error in communication-variables definition.")))
                         .seq(guardDefinitionList(new TypingContext()) //TODO may want to range over channel values and communication values in future
                                 .map((Map<String, Type> values) -> {
                                     guardDefinitionsContext.get().setAll(new TypingContext(values));
@@ -137,7 +138,7 @@ public class System{
                                             }
 
                                             return agentInstances;
-                                        })
+                                        }).or(FailureParser.withMessage("Error in system definition."))
                         )
                         .seq(((StringParser.of("LTLSPEC ")
 //                                .or(StringParser.of("CTLSPEC"))
