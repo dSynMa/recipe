@@ -18,7 +18,7 @@ public class CLIApp
     {
         Options options = new Options();
 
-        Option input = new Option("i", "input", true, "info: input recipe script file\nargs: <recipe script>");
+        Option input = new Option("i", "input", false, "info: input recipe script file\nargs: <recipe script>");
         Option nuxmv = new Option("n", "smv", false, "info: output to smv file");
         Option dot = new Option("d", "dot", false, "info: output agents DOT files");
         Option mc = new Option("mc", "mc", false, "info: model checks input script file");
@@ -49,6 +49,31 @@ public class CLIApp
             System.exit(1);
         }
 
+        if(cmd.hasOption("f")){
+            String port = cmd.getOptionValue("f");
+            if(!port.matches(" *[0-9][0-9][0-9][0-9] *, *[0-9][0-9][0-9][0-9] *")){
+                System.out.println("-f option must be accompanied with two port numbers, i.e. an argument of the form \"8082,8083\"");
+            }
+            String[] fargs = port.split(" *, *");
+            Server.start(fargs[0]);
+            System.out.println("Launched server on http://localhost:" + fargs[0]);
+
+            Process exec = Runtime.getRuntime().exec("python3 ./frontend/launch.py " + fargs[1] + " http://localhost:" + fargs[0]);
+            System.out.println("Launched frontend on http://localhost:" + fargs[1]);
+
+            exec.getInputStream().transferTo(System.out);
+        }
+        else if(cmd.hasOption("s")){
+            String port = cmd.getOptionValue("s");
+            Server.start(port);
+            Server.app().wait();
+            System.exit(1);
+        } else if(!cmd.hasOption("i")){
+            formatter.printHelp("recipe", options);
+
+            System.exit(1);
+        }
+
         Path inputFilePath = Path.of(cmd.getOptionValue("input"));
 
         String script = String.join("\n", Files.readAllLines(inputFilePath));
@@ -69,26 +94,7 @@ public class CLIApp
             transform = ToNuXmv.transform(system);
         } catch (Exception e){
             System.out.println(e.getMessage());
-            return;
-        }
-
-        if(cmd.hasOption("f")){
-            String port = cmd.getOptionValue("f");
-            if(!port.matches(" *[0-9][0-9][0-9][0-9] *, *[0-9][0-9][0-9][0-9] *")){
-                System.out.println("-f option must be accompanied with two port numbers, i.e. an argument of the form \"8082,8083\"");
-            }
-            String[] fargs = port.split(" *, *");
-            Server.start(fargs[0]);
-            System.out.println("Launched server on http://localhost:" + fargs[0]);
-
-            Process exec = Runtime.getRuntime().exec("python3 ./frontend/launch.py " + fargs[1]);
-            System.out.println("Launched frontend on http://localhost:" + fargs[1]);
-
-            exec.getInputStream().transferTo(System.out);
-        }
-        else if(cmd.hasOption("s")){
-            String port = cmd.getOptionValue("s");
-            Server.start(port);
+            System.exit(1);
         }
 
         if(cmd.hasOption("smv")){
@@ -135,7 +141,7 @@ public class CLIApp
         }
         if(cmd.hasOption("sim")){
             if(nuXmvInteraction == null){
-                nuXmvInteraction = new NuXmvInteraction(ToNuXmv.transform(system));
+                nuXmvInteraction = new NuXmvInteraction(system);
             }
             Pair<Boolean, String> initialise = nuXmvInteraction.initialise();
             if(!initialise.getLeft()){
