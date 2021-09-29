@@ -57,8 +57,13 @@ public class NuXmvInteraction {
     }
 
     public Pair<Boolean, String> modelCheck(String property, int steps) throws IOException {
-        if(!started) return new Pair<>(false, "Not initialised.");
-        String out = execute(((system.isSymbolic() ? "_msat" : "") + "check_ltlspec" + (system.isSymbolic() ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() ? "-k " + steps : "")));
+        if(!started){
+            Pair<Boolean, String> initialise = initialise();
+            if(!initialise.getLeft()){
+                return initialise;
+            }
+        }
+        String out = execute(((system.isSymbolic() ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() ? "-k " + steps : "")));
         out = out.replaceAll("nuXmv > ", "").trim();
         out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
         return new Pair<>(true, out);
@@ -78,7 +83,12 @@ public class NuXmvInteraction {
     }
 
     public Pair<Boolean, String> simulation_pick_init_state(String constraint) throws IOException {
-        if(!started) return new Pair<>(false, "Not initialised.");
+        if(!started){
+            Pair<Boolean, String> initialise = initialise();
+            if(!initialise.getLeft()){
+                return initialise;
+            }
+        }
         String out = execute((system.isSymbolic() ? "msat_" : "") + "pick_state -v -c \"" + constraint + "\"");
         if(out.contains("No trace")){
             return new Pair<>(false, out);
@@ -98,7 +108,12 @@ public class NuXmvInteraction {
     }
 
     public Pair<Boolean, String> simulation_next(String constraint) throws IOException {
-        if(!started) return new Pair<>(false, "Not initialised.");
+        if(!started){
+            Pair<Boolean, String> initialise = initialise();
+            if(!initialise.getLeft()){
+                return initialise;
+            }
+        }
         if(!simulationStarted) return simulation_pick_init_state(constraint);
 
         String out = execute((system.isSymbolic() ? "msat_" : "") + "simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
@@ -121,7 +136,7 @@ public class NuXmvInteraction {
         Thread t = new Thread(() -> {
             try {
                 runNuXmv(path, in, byteArrayOutputStream);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         });
