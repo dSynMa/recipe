@@ -18,7 +18,7 @@ public class CLIApp
     {
         Options options = new Options();
 
-        Option input = new Option("i", "input", false, "info: input recipe script file\nargs: <recipe script>");
+        Option input = new Option("i", "input", true, "info: input recipe script file\nargs: <recipe script>");
         Option nuxmv = new Option("n", "smv", false, "info: output to smv file");
         Option dot = new Option("d", "dot", false, "info: output agents DOT files");
         Option mc = new Option("mc", "mc", false, "info: model checks input script file");
