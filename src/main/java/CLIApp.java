@@ -26,7 +26,7 @@ public class CLIApp
         Option server = new Option("s", "server", true, "info: open server on given port\nargs: <port>");
         Option frontend = new Option("f", "frontend", true, "info: opens front end and server on given ports\nargs: <server-port>,<frontend-port>");
 
-        input.setRequired(true);
+//        input.setRequired(true);
 
         options.addOption(input);
         options.addOption(nuxmv);
@@ -74,7 +74,7 @@ public class CLIApp
             System.exit(1);
         }
 
-        Path inputFilePath = Path.of(cmd.getOptionValue("input"));
+        Path inputFilePath = Path.of(cmd.getOptionValue("i"));
 
         String script = String.join("\n", Files.readAllLines(inputFilePath));
 
