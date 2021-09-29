@@ -154,49 +154,67 @@ public class NuXmvInteraction {
 
     static AtomicReference<Boolean> nuxmvTurn = new AtomicReference<>(true);
 
-    public static void runNuXmv(Path path, InputStream inr, OutputStream outw) throws IOException {
-        ProcessBuilder builder = new ProcessBuilder("nuxmv", "-int", path.toString());
-        builder.redirectErrorStream(true);
-        Process process = builder.start();
-        String ttt = Files.readString(path);
-        BufferedInputStream out = (BufferedInputStream) process.getInputStream();
-        OutputStream in = process.getOutputStream();
+    public static void runNuXmv(Path path, InputStream inr, OutputStream outw) throws Exception {
+        String nuxmvPath = "";
+        if(Files.exists(Path.of("./nuxmv/bin/nuxmv")) || Files.exists(Path.of("./nuxmv/bin/nuxmv.exe"))){
+            nuxmvPath = "./nuxmv/bin/nuxmv";
+        } else if(Files.exists(Path.of("./bin/nuxmv")) || Files.exists(Path.of("./bin/nuxmv.exe"))){
+            nuxmvPath = "./bin/nuxmv";
+        } else {
+            nuxmvPath = "nuxmv";
+        }
 
-        byte[] buffer = new byte[4000];
-        while (isAlive(process)) {
-            String text = new String(buffer, 0, buffer.length);
-            int no = out.available();
+        ProcessBuilder builder = null;
+        try{
+            builder = new ProcessBuilder(nuxmvPath, "-int", path.toString());
+        } catch (Exception e){
+            if(e.getMessage().contains("The system cannot find the file specified")){
+                throw new Exception("Looked for nuxmv on PATH, in \"./nuxmv/bin/nuxmv\", and in \"./bin/nuxmv\" but could find any nuXmv executable.");
+            }
+            throw e;
+        } finally {
+            builder.redirectErrorStream(true);
+            Process process = builder.start();
+            String ttt = Files.readString(path);
+            BufferedInputStream out = (BufferedInputStream) process.getInputStream();
+            OutputStream in = process.getOutputStream();
+
+            byte[] buffer = new byte[4000];
+            while (isAlive(process)) {
+                String text = new String(buffer, 0, buffer.length);
+                int no = out.available();
 //            buffer = out.readNBytes(40);
 //            text = new String(out.readNBytes(160));
 
-            if (no > 0) {
-                int n = out.read(buffer, 0, Math.min(no, buffer.length));
-                text = new String(buffer, 0, Math.min(no, buffer.length));
-                outw.write(text.getBytes(StandardCharsets.UTF_8));
-                outw.flush();
-                buffer = new byte[4000];
-                nuxmvTurn.set(false);
-                while (!nuxmvTurn.get()) { }
+                if (no > 0) {
+                    int n = out.read(buffer, 0, Math.min(no, buffer.length));
+                    text = new String(buffer, 0, Math.min(no, buffer.length));
+                    outw.write(text.getBytes(StandardCharsets.UTF_8));
+                    outw.flush();
+                    buffer = new byte[4000];
+                    nuxmvTurn.set(false);
+                    while (!nuxmvTurn.get()) {
+                    }
+                }
+
+                int ni = inr.available();
+                if (ni > 0) {
+                    int n = inr.read(buffer, 0, Math.min(ni, buffer.length));
+                    text = new String(buffer, 0, n);
+                    in.write(buffer, 0, n);
+                    in.flush();
+                    buffer = new byte[4000];
+                }
+
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                }
+
             }
 
-            int ni = inr.available();
-            if (ni > 0) {
-                int n = inr.read(buffer, 0, Math.min(ni, buffer.length));
-                text = new String(buffer, 0, n);
-                in.write(buffer, 0, n);
-                in.flush();
-                buffer = new byte[4000];
-            }
-
-            try {
-                Thread.sleep(10);
-            }
-            catch (InterruptedException e) {
-            }
-
+            System.out.println(process.exitValue());
         }
-
-        System.out.println(process.exitValue());
     }
 
     public static JSONObject outputToJSON(String nuxmvSimOutput){
