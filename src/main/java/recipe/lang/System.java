@@ -12,10 +12,7 @@ import recipe.lang.exception.TypeCreationException;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Guard;
 import recipe.lang.types.Type;
-import recipe.lang.utils.LazyParser;
-import recipe.lang.utils.Pair;
-import recipe.lang.utils.Parsing;
-import recipe.lang.utils.TypingContext;
+import recipe.lang.utils.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -103,12 +100,13 @@ public class System{
                                     communicationContext.get().setAll(new TypingContext(values));
                                     return values;
                                 }).or(FailureParser.withMessage("Error in communication-variables definition.")))
-                        .seq(guardDefinitionList(new TypingContext()) //TODO may want to range over channel values and communication values in future
+                        .seq(new LazyParser<LazyTypingContext>((LazyTypingContext context) ->
+                                guardDefinitionList(context.resolve()) //TODO may want to range over channel values and communication values in future
                                 .map((Map<String, Type> values) -> {
                                     guardDefinitionsContext.get().setAll(new TypingContext(values));
                                     return values;
-                                }).optional())
-                        .seq(new LazyParser<>(
+                                }), new LazyTypingContext(communicationContext)))//.or(StringParser.of("agent").trim().and().seq(FailureParser.withMessage("Error in guard definition."))))
+                        .seq(StringParser.of("agent").trim().and().seq(new LazyParser<Pair<Pair<TypingContext, TypingContext>, TypingContext>>(
                                 (Pair<Pair<TypingContext, TypingContext>, TypingContext> msgCmncGuardContext) ->
                                 {
                                     try {
@@ -120,12 +118,13 @@ public class System{
                                     }
                                     return null;
                                 },
-                                new Pair<>(new Pair<>(messageContext.get(), communicationContext.get()), guardDefinitionsContext.get()))
-                                .map((List<Agent> agentss) -> {
-                                    agents.get().addAll(agentss);
+                                new Pair<>(new Pair<>(messageContext.get(), communicationContext.get()), guardDefinitionsContext.get())).trim().plus()
+                                .map((List agentss) -> {
+                                    agents.get().addAll((Collection<? extends Agent>) agentss.get(0));
                                     return agentss;
                                 })
-                        )
+//                                .or(FailureParser.withMessage("Error in agent definition."))
+                        ))
                         .seq(labelledParser("system", "=", new LazyParser<Boolean>((Boolean b) -> {
                             return AgentInstance.parser(agents.get()).separatedBy(CharacterParser.of('|'));
                         }, true))
@@ -138,7 +137,7 @@ public class System{
                                             }
 
                                             return agentInstances;
-                                        }).or(FailureParser.withMessage("Error in system definition."))
+                                        }).or(StringParser.of("system").and().seq(FailureParser.withMessage("Error in system definition.")))
                         )
                         .seq(((StringParser.of("LTLSPEC ")
 //                                .or(StringParser.of("CTLSPEC"))
