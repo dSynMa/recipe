@@ -52,6 +52,7 @@ public class NuXmvInteraction {
         out.flush();
         nuxmvTurn.set(true);
         while(nuxmvTurn.get()){}
+        byteArrayOutputStream.flush();
         String out = new String(byteArrayOutputStream.toByteArray());
         return out;
     }
@@ -261,6 +262,8 @@ public class NuXmvInteraction {
                 }
 
                 String val2 = group2[1].trim().replaceAll(agent + "\\-", "");
+
+                vars.put(var2, val2);
             }
 
             ((JSONObject) jsonObject.get(agent)).put("local", vars);
