@@ -48,15 +48,15 @@ public abstract class Process {
         builder.group()
                 .prefix(StringParser.of("rep").trim(), (List<Process> values) -> new Iterative(values.get(1)));
 
-        // choice is right- and left-associative
-        builder.group()
-                .right(of('+').trim(), (List<Process> values) -> new Choice(values.get(0), values.get(2)))
-                .left(of('+').trim(), (List<Process> values) -> new Choice(values.get(0), values.get(2)));
-
         // sequence is right- and left-associative
         builder.group()
                 .right(of(';').trim(), (List<Process> values) -> new Sequence(values.get(0), values.get(2)))
                 .left(of(';').trim(), (List<Process> values) -> new Sequence(values.get(0), values.get(2)));
+
+        // choice is right- and left-associative
+        builder.group()
+                .right(of('+').trim(), (List<Process> values) -> new Choice(values.get(0), values.get(2)))
+                .left(of('+').trim(), (List<Process> values) -> new Choice(values.get(0), values.get(2)));
 
         return builder.build();
     }
