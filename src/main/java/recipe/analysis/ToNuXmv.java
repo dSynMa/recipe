@@ -198,7 +198,8 @@ public class ToNuXmv {
                         String next = "";
                         SendProcess process = (SendProcess) t.getLabel();
 
-                        String channel = process.getChannel().relabel(v -> v.sameTypeWithName(namei + "-" + v)).toString();
+                        Expression<Enum> channelExpr = process.getChannel().relabel(v -> v.sameTypeWithName(namei + "-" + v));
+                        String channel = channelExpr.toString();
                         now += "" + namei + "-state" + " = " + namei + "-" + t.getSource();
                         now += " & (" + process.entryCondition().relabel(v -> v.sameTypeWithName(namei + "-" + v)) + ")";
 
@@ -223,16 +224,20 @@ public class ToNuXmv {
                                 Agent receiveAgent = agentInstancej.getAgent();
                                 String receiveName = agentInstancej.getLabel();
 
-                                String receiveGuard = receiveAgent.getReceiveGuard().relabel(v -> v.sameTypeWithName(v.toString().equals(Config.channelLabel) ? v.toString() : receiveName + "-" + v)).toString().replaceAll(Config.channelLabel, channel);
+                                String receiveGuard = receiveAgent.getReceiveGuard().relabel(v -> v.toString().equals(Config.channelLabel) ? channelExpr : v.sameTypeWithName(receiveName + "-" + v)).toString();
                                 receiveGuard = "(" + receiveGuard + ") | " + channel + " = " + broadcastChannel;
 
                                 String sendGuard = "(" + process.getMessageGuard().relabel(v -> {
-                                    try {
-                                        return system.getCommunicationVariables().containsKey(v.getName()) ? receiveAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(receiveName + "-" + vv)) : v.sameTypeWithName(namei + "-" + v);
-                                    } catch (RelabellingTypeException | MismatchingTypeException e) {
-                                        e.printStackTrace();
+                                    if(v.toString().equals(Config.channelLabel)){
+                                        return channelExpr;
+                                    } else {
+                                        try {
+                                            return system.getCommunicationVariables().containsKey(v.getName()) ? receiveAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(receiveName + "-" + vv)) : v.sameTypeWithName(namei + "-" + v);
+                                        } catch (RelabellingTypeException | MismatchingTypeException e) {
+                                            e.printStackTrace();
+                                        }
+                                        return null;
                                     }
-                                    return null;
                                 }) + ")";
 
                                 Map<String, Expression> relabelledMessage = new HashMap<>();
@@ -246,10 +251,11 @@ public class ToNuXmv {
                                     List<String> transitionReceivePreds = new ArrayList<>();
                                     for (Transition receiveTrans : receiveAgentReceiveTransitions) {
                                         ReceiveProcess receiveProcess = (ReceiveProcess) receiveTrans.getLabel();
+                                        State receiveSourceState = receiveTrans.getSource();
 
                                         String receiveNow = "";
                                         String receiveNext = "";
-                                        receiveNow += receiveName + "-state" + " = " + receiveName + "-" + state.toString();
+                                        receiveNow += receiveName + "-state" + " = " + receiveName + "-" + receiveSourceState.toString();
 
                                         AtomicReference<Boolean> stop = new AtomicReference<>(false);
                                         Function<Expression, Expression> helper = (e) -> {
@@ -265,7 +271,7 @@ public class ToNuXmv {
 
                                         if(stop.get()) continue;
 
-                                        receiveNow += "\n & (" + channel + " = " + broadcastChannel + " | " + channel + " = " + receiveProcess.getChannel().relabel(v -> v.sameTypeWithName(receiveName + "-" + v.toString().toLowerCase())).toString() + ")";
+                                        receiveNow += "\n & (" + channel + " = " + broadcastChannel + " | " + channel + " = " + receiveProcess.getChannel().relabel(v -> v.sameTypeWithName(receiveName + "-" + v.toString())).toString() + ")";
                                         receiveNows.add(receiveNow);
 
 
@@ -290,7 +296,7 @@ public class ToNuXmv {
                                             receiveNext += "\n & falsify-not-" + receiveName + "-" + receiveProcess.getLabel() + "";
                                         }
 
-                                        receiveNext += "\n & next(" + receiveName + "-state" + ") = " + receiveName + "-" + t.getDestination();
+                                        receiveNext += "\n & next(" + receiveName + "-state" + ") = " + receiveName + "-" + receiveTrans.getDestination();
 
                                         receiveNext = receiveNext.replaceAll("^\n *&", "");
                                         transitionReceivePreds.add("(" + receiveNow + ") & " + indent(indent(indent("\n" + receiveNext))));

@@ -56,12 +56,10 @@ public class GuardReference extends Condition {
     }
 
     @Override
-    public GuardReference relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
-        Expression[] newParameterValues = new Expression[parametersValues.length];
-        for(int i = 0; i < parametersValues.length; i++){
-            newParameterValues[i] = parametersValues[i].relabel(relabelling);
-        }
-        return new GuardReference(guardType, newParameterValues);
+    public Expression<Boolean> relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
+        Expression<Boolean> unpacked = this.unpack();
+
+        return unpacked.relabel(relabelling);
     }
 
     public static org.petitparser.parser.Parser parser(TypingContext context, SettableParser conditionParser) throws Exception {
@@ -111,20 +109,23 @@ public class GuardReference extends Condition {
         return parser;
     }
 
+    public Expression<Boolean> unpack() throws RelabellingTypeException, MismatchingTypeException {
+        GuardDefinition guardDefinition = Guard.getDefinition(this.guardType.name());
+        Expression<Boolean> template = guardDefinition.getTemplate();
+        List params = List.of(guardDefinition.getType().getParameters());
+        return template.relabel((x) -> {
+            if (params.contains(x)) {
+                return this.parametersValues[params.indexOf(x)];
+            } else {
+                return x;
+            }
+        });
+    }
+
     public String toString(){
         if(resolve) {
-            GuardDefinition guardDefinition = Guard.getDefinition(this.guardType.name());
-            Expression<Boolean> template = guardDefinition.getTemplate();
-            List params = List.of(guardDefinition.getType().getParameters());
-
             try {
-                return template.relabel((x) -> {
-                    if (params.contains(x)) {
-                        return this.parametersValues[params.indexOf(x)];
-                    } else {
-                        return x;
-                    }
-                }).toString();
+                return unpack().toString();
             } catch (RelabellingTypeException e) {
                 e.printStackTrace();
             } catch (MismatchingTypeException e) {

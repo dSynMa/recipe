@@ -146,7 +146,7 @@ public abstract class Condition implements Expression<Boolean> {
 		return condition;
 	}
 
-	public abstract Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException;
+	public abstract Expression<Boolean> relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException;
 
 	@Override
 	public int hashCode(){

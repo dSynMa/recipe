@@ -14,6 +14,7 @@ public interface Expression<T extends Type> {
     TypedValue<T> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException;
     Expression<T> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, TypeCreationException, RelabellingTypeException;
     Expression<T> relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException;
+
     Boolean isValidAssignmentFor(TypedVariable var);
 
     Type getType();
