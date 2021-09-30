@@ -1,0 +1,72 @@
+channels: c, empty, g1, g2
+enum rolevals {clnt, vm, mgr}
+enum msgvals {reserve, request, release, buy, connect, full}
+message-structure: MSG : msgvals, LNK : channel
+communication-variables: cv : rolevals
+guard g(r : rolevals, c : channel, m : channel) := (channel == *) && (cv == r) | (channel == c) && (cv == mgr) | (channel == m) ;
+
+agent Client
+    local: role : rolevals, cLink : channel, mLink : channel
+    init: cLink == c && mLink == empty && role==clnt
+    relabel:
+        cv <- role
+    receive-guard: (channel == *) | (channel == cLink)
+
+    repeat: (
+            (<TRUE> *! g(role,cLink,mLink)(MSG := reserve)[]
+            +
+            <cLink==c && MSG == reserve> *? [cLink := empty]
+            )
+            ;
+
+            (<TRUE> cLink! g(role,cLink,mLink)(MSG := request)[];
+             <mLink==empty && MSG == connect> cLink? [mLink := LNK];
+             <TRUE> *! g(role,cLink,mLink)(MSG := release)[];
+             <mLink!=empty> mLink! g(role,cLink,mLink)(MSG := buy)[mLink := empty]
+
+            +
+             <cLink==empty && MSG == release> *? [cLink := c]
+            )
+            )
+
+agent Manager
+    local: role : rolevals, cLink : channel, sLink : channel, fLink : channel
+    init: fLink == g1 && sLink == g2 && cLink == c && role==mgr
+    relabel:
+        cv <- role
+    receive-guard: (channel == *) | (channel == cLink) | (channel == fLink)
+
+    repeat: (
+            <MSG == request> cLink? [];
+            <TRUE> fLink! (TRUE)(MSG := request)[];
+            (
+             rep (<MSG == full> fLink? [];
+                  <TRUE> sLink! (TRUE)(MSG := request)[]
+                 )
+             +
+             <MSG == connect> cLink? []
+            )
+            )
+
+agent Machine
+    local: gLink : channel, pLink : channel, cLink : channel, asgn : bool
+    init: !asgn && (cLink == empty) 
+    relabel:
+        cv <- vm
+    receive-guard: (channel == *) 
+
+    repeat: (
+            <cLink==empty && MSG == request> gLink? [cLink:= c];
+            (
+             <cLink==c && !asgn> cLink! (TRUE)(MSG := connect, LNK := pLink)[cLink:= empty; asgn:= TRUE]
+             +
+             <cLink==c && asgn> gLink! (TRUE)(MSG := full)[cLink:= empty; asgn:= TRUE]
+             +
+             <cLink==c && MSG == connect> cLink? [cLink:= empty];
+             <MSG == buy> pLink? [cLink:= c]
+                 
+             +
+             <cLink==c && asgn && MSG == full> gLink? [cLink:= empty; asgn:= TRUE]
+            )
+            )
+system = Client(one,TRUE) | Manager(two,TRUE) | Machine(three,TRUE) 
