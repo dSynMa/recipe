@@ -81,6 +81,9 @@ public class IsLessThan extends Condition {
 	public static org.petitparser.parser.Parser parser(Parser arithmeticExpression) {
 		org.petitparser.parser.Parser parser =
 				(arithmeticExpression)
+						.map((Expression<Number> v) -> {
+							return v;
+						})
 						.seq(CharacterParser.of('<').trim())
 						.seq(arithmeticExpression)
 						.map((List<Object> values) -> {

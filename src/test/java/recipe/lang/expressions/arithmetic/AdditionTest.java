@@ -17,13 +17,13 @@ public class AdditionTest {
     }
 
     @Test
-    public void parser() {
+    public void parser() throws Exception {
         Parser parser = Addition.parser(new TypingContext()).end();
         Result r = parser.parse("6 + 9");
         assert r.isSuccess();
         r = parser.parse("6 + (9 + 8)");
         assert r.isSuccess();
         r = parser.parse("6 + 9 * 8");
-        assert r.isFailure();
+        assert r.isSuccess();
     }
 }

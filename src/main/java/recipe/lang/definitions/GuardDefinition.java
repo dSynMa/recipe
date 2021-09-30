@@ -2,6 +2,7 @@ package recipe.lang.definitions;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
+import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.exception.TypeCreationException;
 import recipe.lang.expressions.Expression;
@@ -32,8 +33,8 @@ public class GuardDefinition extends Definition<Expression<Boolean>> {
         AtomicReference<Guard> guarddef = new AtomicReference<>(null);
 
         Parser parser = (StringParser.of("guard").trim()
-                .seq(CharacterParser.word().plus().flatten())
-                .seq(CharacterParser.of('(').trim())
+                .seq(CharacterParser.noneOf("(").plus().flatten().or(FailureParser.withMessage("Error in guard definition name. Missing name?")))
+                .seq(CharacterParser.of('(').trim().or(FailureParser.withMessage("Error in guard definition name. Must have a (possibly empty) parameter list enclosed in round brackets.")))
                 .seq(Parsing.typedVariableList().map((Map<String, Type> typedVars) -> {
                     List<TypedVariable> params = new ArrayList<>();
                     for(Map.Entry<String, Type> typedVariable : typedVars.entrySet()){
@@ -41,8 +42,8 @@ public class GuardDefinition extends Definition<Expression<Boolean>> {
                         params.add(new TypedVariable(typedVariable.getValue(), typedVariable.getKey()));
                     }
                     return params.toArray(new TypedVariable[0]);
-                }))
-                .seq(CharacterParser.of(')').trim()))
+                }).trim().optional(new TypedVariable[0]))
+                .seq(CharacterParser.of(')').trim().or(FailureParser.withMessage("Error in guard definition name. Must have a (possibly empty) parameter list enclosed in round brackets."))))
                 .mapWithSideEffects((List<Object> values) -> {
                     Guard guardType =
                             null;
@@ -56,9 +57,9 @@ public class GuardDefinition extends Definition<Expression<Boolean>> {
                     return guardType;
                 })
                 .seq(StringParser.of(":=").trim())
-                .seq(new LazyParser<>((AtomicReference<Guard> guardDef) -> {
+                .seq(new LazyParser<AtomicReference<Guard>>((AtomicReference<Guard> guardDef) -> {
                     try {
-                        return guardDef.get().valueParser();
+                        return guardDef.get().valueParser(context);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }

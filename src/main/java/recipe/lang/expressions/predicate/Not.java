@@ -74,17 +74,6 @@ public class Not extends Condition {
 		}
 	}
 
-	public static org.petitparser.parser.Parser parser(Parser basicCondition) {
-		org.petitparser.parser.Parser parser =
-				CharacterParser.of('!').trim()
-						.seq(basicCondition)
-						.map((List<Object> values) -> {
-							return new Not((Expression<Boolean>) values.get(1));
-						});
-
-		return parser;
-	}
-
 	@Override
 	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
 		return new Not(this.arg.relabel(relabelling));

@@ -38,25 +38,4 @@ public class Sequence extends Process{
 
         return ts;
     }
-
-    public static Parser parser(Parser processParser){
-        Parser parser =
-                processParser
-                        .seq((CharacterParser.of(';').trim().seq(processParser).trim()).plus())
-                .map((List<Object> values) -> {
-                    Sequence seq = null;
-                    Process current = (Process) values.get(0);
-                    for(int i = 0; i < ((List) values.get(1)).size(); i++){
-                        ArrayList val = (ArrayList) ((ArrayList) values.get(1)).get(i);
-                        if (Process.class.isAssignableFrom(val.get(1).getClass())) {
-                            seq = new Sequence(current, (Process) val.get(1));
-                            current = seq;
-                        }
-
-                    }
-                    return seq;
-                });
-
-        return parser;
-    }
 }

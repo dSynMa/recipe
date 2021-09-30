@@ -10,6 +10,7 @@ import recipe.lang.utils.TypingContext;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class Guard extends Type {
     private TypedVariable[] parameters;
@@ -17,6 +18,10 @@ public class Guard extends Type {
     private static Map<String, GuardDefinition> definitions = new HashMap<>();
     public static void clear(){
         definitions.clear();
+    }
+
+    public static Set<String> definitonLabels(){
+        return definitions.keySet();
     }
 
     public static void setDefinition(String label, GuardDefinition guardDefinition){
@@ -56,9 +61,15 @@ public class Guard extends Type {
         return label;
     }
 
+    //TODO deal with below function
     @Override
     public Parser valueParser() throws Exception {
+        throw new Exception("Use Guard.valueParser(communicationContext) instead of Guard.valueParser()");
+    }
+
+    public Parser valueParser(TypingContext communicationContext) throws Exception {
         TypingContext context = new TypingContext();
+        context.setAll(communicationContext);
         for(TypedVariable v : parameters){
             context.set(v.getName(), v.getType());
         }

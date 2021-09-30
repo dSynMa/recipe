@@ -15,11 +15,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
-public class Multiplication extends ArithmeticExpression{
+public class Division extends ArithmeticExpression{
     Expression<Number> lhs;
     Expression<Number> rhs;
 
-    public Multiplication(Expression<Number> lhs, Expression<Number> rhs) {
+    public Division(Expression<Number> lhs, Expression<Number> rhs) {
         this.lhs = lhs;
         this.rhs = rhs;
     }
@@ -31,21 +31,21 @@ public class Multiplication extends ArithmeticExpression{
 
         BigDecimal lhsNo = new BigDecimal(lhsValue.getValue().toString());
         BigDecimal rhsNo = new BigDecimal(rhsValue.getType().toString());
-        return new TypedValue<Number>((Number) Real.getType(), lhsNo.multiply(rhsNo).toString());
+        return new TypedValue<Number>((Number) Real.getType(), lhsNo.divide(rhsNo).toString());
     }
 
     @Override
     public Expression<Number> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
-        return new Multiplication(lhs.close(store, CV), rhs.close(store, CV));
+        return new Division(lhs.close(store, CV), rhs.close(store, CV));
     }
 
     @Override
     public ArithmeticExpression relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
-        return new Multiplication(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
+        return new Division(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
     }
 
     @Override
     public String toString(){
-        return "(" + lhs.toString() + " * " + rhs.toString() + ")";
+        return "(" + lhs.toString() + " / " + rhs.toString() + ")";
     }
 }

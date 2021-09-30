@@ -1,6 +1,11 @@
 package recipe.lang.utils;
 
+import org.petitparser.parser.Parser;
+import org.petitparser.parser.primitive.EpsilonParser;
+import org.petitparser.parser.primitive.FailureParser;
+import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.Config;
+import recipe.lang.definitions.GuardDefinition;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.types.*;
 import recipe.lang.types.Boolean;
@@ -126,10 +131,23 @@ public class TypingContext {
         return newContext;
     }
 
-    public org.petitparser.parser.Parser guardParser(){
-        return Parsing.disjunctiveWordParser(varType.keySet().stream().filter(x -> varType.get(x).getClass().equals(Guard.class)).collect(Collectors.toUnmodifiableList()), (String parsed) -> {
-            return new TypedVariable(varType.get(parsed), parsed);
-        });
+    public org.petitparser.parser.Parser guardNameParser(){
+        Parser parser = null;
+
+        Set<String> labels = Guard.definitonLabels();
+        for(String v : labels){
+            if(parser == null){
+                parser = StringParser.of(v);
+            } else{
+                parser = parser.or(StringParser.of(v));
+            }
+        }
+
+        if(parser == null){
+            parser = FailureParser.withMessage("Expected to parse guard reference, but no guard definitions.");
+        }
+
+        return parser;
     }
 
     public org.petitparser.parser.Parser variableParser(){
@@ -139,13 +157,17 @@ public class TypingContext {
     }
 
     public org.petitparser.parser.Parser valueParser() throws Exception {
-        org.petitparser.parser.Parser parser = Boolean.getType().valueParser().or(Integer.getType().valueParser()).or(Real.getType().valueParser());
-        for(String enumType : Enum.getEnumLabels()){
-            if(!enumType.equals(Config.channelWithoutBroadcastLabel)) {
-                parser = parser.or(Enum.getEnum(enumType).valueParser());
+        if(this.varType.values().size() == 0) return new EpsilonParser();
+        Parser parser = null;
+        for(Type type : this.varType.values()){
+            if(parser == null){
+                parser = type.valueParser();
+            }
+            else{
+                parser = parser.or(type.valueParser());
             }
         }
-        //TODO add GuardReferences
+
         return parser;
     }
 }

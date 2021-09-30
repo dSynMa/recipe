@@ -13,7 +13,7 @@ import static org.junit.Assert.*;
 public class ArithmeticExpressionTest {
 
     @Test
-    public void parser() {
+    public void parser() throws Exception {
         TypingContext context = new TypingContext();
         context.set("v", Real.getType());
         Parser parser = ArithmeticExpression.parser(context).end();
@@ -35,10 +35,12 @@ public class ArithmeticExpressionTest {
         r = parser.parse("6 * (9 - (9 + 7))");
         assert r.isSuccess();
         r = parser.parse("6 * (9 - 9 + 7)");
-        assert r.isFailure();
+        assert r.isSuccess();
         r = parser.parse("6 * 9)");
         assert r.isFailure();
         r = parser.parse("6 * 9 + 4");
+        assert r.isSuccess();
+        r = parser.parse("false > true");
         assert r.isFailure();
     }
 }

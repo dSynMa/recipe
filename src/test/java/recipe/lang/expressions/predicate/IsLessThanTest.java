@@ -28,7 +28,7 @@ public class IsLessThanTest {
     }
 
     @Test
-    public void parser() {
+    public void parser() throws Exception {
         org.petitparser.parser.Parser parser = IsLessThan.parser(ArithmeticExpression.parser(new TypingContext()));
         Result r = parser.parse("6 < 7");
         assert r.isSuccess();

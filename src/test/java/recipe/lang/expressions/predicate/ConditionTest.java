@@ -6,6 +6,7 @@ import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
 import recipe.lang.Config;
 import recipe.lang.exception.TypeCreationException;
+import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Real;
@@ -65,6 +66,8 @@ public class ConditionTest {
         r = parser.parse("false");
         assert r.isSuccess();
         r = parser.parse("cond = false");
+        assert r.isSuccess();
+        r = IsLessThan.parser(ArithmeticExpression.parser(context)).parse("1 < 2");
         assert r.isSuccess();
         r = parser.parse("1 < 2");
         assert r.isSuccess();

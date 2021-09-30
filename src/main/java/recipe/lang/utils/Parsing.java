@@ -59,7 +59,7 @@ public class Parsing {
         return Condition.parser(context)
                 .or(ArithmeticExpression.parser(context))
                 .or(context.variableParser())
-                .or(context.valueParser());
+                .or(Enum.generalValueParser());
     }
 
     public static org.petitparser.parser.Parser assignmentListParser(TypingContext variableContext,
@@ -116,7 +116,7 @@ public class Parsing {
 
     public static Parser enumType(){
         //Lazy parser is needed to wait for the channels to be set
-        return new LazyParser<>((Object x) -> {
+        return new LazyParser<Object>((Object x) -> {
             List<String> labels = new ArrayList<>(recipe.lang.types.Enum.getEnumLabels());
             labels.remove(Config.channelWithoutBroadcastLabel);
             return disjunctiveStringParser(labels)
@@ -188,7 +188,7 @@ public class Parsing {
                     return value;
                 }))
                 .seq(StringParser.of(":=").trim())
-                .seq(new LazyParser<>((List<recipe.lang.types.Enum> enumList) -> {
+                .seq(new LazyParser<List<recipe.lang.types.Enum>>((List<recipe.lang.types.Enum> enumList) -> {
                     return enumList.get(0).valueParser();
                 },
                         enumType.get()))
@@ -206,7 +206,7 @@ public class Parsing {
                 });
 
         org.petitparser.parser.Parser typedVariableAssignment = numberVarParser.or(boolVarParser).or(enumVarParser);//.or(channelVarParser);
-        org.petitparser.parser.Parser typedVariableAssignmentList = (typedVariableAssignment.delimitedBy(CharacterParser.whitespace()))
+        org.petitparser.parser.Parser typedVariableAssignmentList = (typedVariableAssignment.plus().trim())
                 .map((List<Object> values) -> {
                     List<Object> delimitedTypedVariablesAssignment = values;
                     Map<String, TypedVariable> typedVariables = new HashMap<>();
@@ -249,10 +249,16 @@ public class Parsing {
         return enumDefinitionParser;
     }
 
-    public static Parser guardDefinitionList(TypingContext typingContext){
+    public static Parser guardDefinitionList(TypingContext typingContext) {
+        try {
+            if (!typingContext.get(Enum.getEnum(Config.channelLabel)).contains("channel"))
+                typingContext.set("channel", Enum.getEnum(Config.channelLabel));
+        } catch (Exception e){
+
+        }
         org.petitparser.parser.Parser guardDefinitionParser = GuardDefinition.parser(typingContext);
 
-        org.petitparser.parser.Parser guardDefinitionListParser = (guardDefinitionParser).separatedBy(CharacterParser.whitespace().star())
+        org.petitparser.parser.Parser guardDefinitionListParser = (guardDefinitionParser).plus()
                 .map((List<Object> values) -> {
                     Map<String, Type> guardDefinitionContext = new HashMap<>();
                     for(Object v : values){
@@ -290,7 +296,9 @@ public class Parsing {
                 .map((Object v) -> {
                     return v;
                 }))
-                .seq(StringParser.of(separatedBy).trim())
+                .seq(StringParser.of(separatedBy).trim().map((Object v) -> {
+                    return v;
+                }))
                 .seq(parser.trim()
                         .map((Object v) -> {
                             return v;
@@ -321,10 +329,10 @@ public class Parsing {
     }
 
     public static Parser relabellingParser(TypingContext localContext, TypingContext communicationContext) throws Exception {
-        return labelledParser("relabel", (Parsing.expressionParser(communicationContext).trim()
+        return labelledParser("relabel", (communicationContext.variableParser().trim()
                 .seq(StringParser.of("<-").trim())
-                .seq(Parsing.expressionParser(localContext)).delimitedBy(CharacterParser.whitespace())
-                )).map((List<Object> values) -> {
+                .seq(Parsing.expressionParser(localContext)).trim()).plus()
+                ).trim().map((List<Object> values) -> {
                     values.removeIf(v -> isWhitespace(v));
                     Map<TypedVariable, Expression> relabellingMap = new HashMap<>();
                     for(Object relabelObj : values){

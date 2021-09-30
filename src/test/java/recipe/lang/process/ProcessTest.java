@@ -49,5 +49,13 @@ public class ProcessTest {
         assert r.isSuccess();
         r = parser.parse("<v == 5> c!g (m1 := 1)[v := 6]");
         assert r.isSuccess();
+        r = parser.parse("(<v == 5> c!g (m1 := 1)[v := 6])");
+        assert r.isSuccess();
+        r = parser.parse("(<v == 5> c!g (m1 := 1)[v := 6]) ; (<v == 5> c!g (m1 := 1)[v := 6])");
+        assert r.isSuccess();
+        r = parser.parse("((<v == 5> c!g (m1 := 1)[v := 6]) + (<v == 5> c!g (m1 := 1)[v := 6])) ; (<v == 5> c!g (m1 := 1)[v := 6])");
+        assert r.isSuccess();
+        r = parser.parse("(<v == 5> c!g (m1 := 1)[v := 6] + <v == 5> c!g (m1 := 1)[v := 6]) ; (<v == 5> c!g (m1 := 1)[v := 6] + <v == 5> c!g (m1 := 1)[v := 6])");
+        assert r.isSuccess();
     }
 }

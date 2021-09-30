@@ -40,12 +40,4 @@ public class Iterative extends Process{
     public void addEntryCondition(Expression<Boolean> condition){
         a.addEntryCondition(condition);
     }
-
-    public static Parser parser(Parser processParser){
-        Parser parser =
-                (StringParser.of("rep").trim()).seq(processParser).trim()
-                        .map((List<Object> values) -> new Iterative((Process) values.get(1)));
-
-        return parser;
-    }
 }

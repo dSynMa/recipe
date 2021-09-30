@@ -1,5 +1,6 @@
 package recipe.lang.types;
 
+import org.petitparser.parser.Parser;
 import recipe.lang.exception.MismatchingTypeException;
 import recipe.lang.exception.TypeCreationException;
 import recipe.lang.expressions.TypedValue;
@@ -56,6 +57,7 @@ public class Enum extends Type {
         });
     }
 
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -76,5 +78,19 @@ public class Enum extends Type {
     @Override
     public String name(){
         return label;
+    }
+
+    public static Parser generalValueParser() throws Exception {
+        Parser parser = null;
+        for(String label : Enum.getEnumLabels()){
+            recipe.lang.types.Enum enumm = Enum.getEnum(label);
+            if (parser == null) {
+                parser = enumm.valueParser();
+            } else{
+                parser = parser.or(enumm.valueParser());
+            }
+        }
+
+        return parser;
     }
 }

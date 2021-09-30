@@ -1,6 +1,7 @@
 package recipe.lang.expressions.predicate;
 
 import org.petitparser.parser.Parser;
+import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.definitions.GuardDefinition;
 import recipe.lang.exception.*;
@@ -10,9 +11,8 @@ import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
+import recipe.lang.types.Enum;
 import recipe.lang.types.Guard;
-import recipe.lang.utils.LazyParser;
-import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
 import java.util.*;
@@ -64,18 +64,24 @@ public class GuardReference extends Condition {
         return new GuardReference(guardType, newParameterValues);
     }
 
-    public static org.petitparser.parser.Parser parser(TypingContext context, Parser basicConditionParser) throws Exception {
-        Parser expression = basicConditionParser.or(ArithmeticExpression.typeParser(context));
+    public static org.petitparser.parser.Parser parser(TypingContext context, SettableParser conditionParser) throws Exception {
+        Parser expression = conditionParser.or(ArithmeticExpression.parser(context))
+                .or(context.variableParser())
+                .or(Enum.generalValueParser());
 
-        Parser guard = context.guardParser();
+        Parser guard = context.guardNameParser();
 
-        Parser parser = (guard)
+        Parser parser = (guard.map((Object v) -> {
+            return v;
+        }))
                 .seq(CharacterParser.of('(').trim())
-                .seq(((expression).separatedBy(CharacterParser.of(',').trim()).trim()).optional())
+                .seq(((expression).separatedBy(CharacterParser.of(',').trim()).trim()).optional(new ArrayList<>()).map((Object v) -> {
+                    return v;
+                }))
                 .seq(CharacterParser.of(')').trim())
                 .map((List<Object> values) -> {
                     GuardReference guardReference = null;
-                    String label = ((TypedVariable) values.get(0)).getName();
+                    String label = (String) values.get(0);
                     List<Object> paramValsUntyped = (List<Object>) values.get(2);
                     paramValsUntyped.removeIf(x -> Objects.equals(x, Character.valueOf(',')));
                     List<Expression> paramValsTyped = new ArrayList<>();

@@ -48,22 +48,4 @@ public class Addition extends ArithmeticExpression{
     public String toString(){
         return "(" + lhs.toString() + " + " + rhs.toString() + ")";
     }
-
-    public static org.petitparser.parser.Parser parser(Parser basicArithmeticExpression) {
-        org.petitparser.parser.Parser parser =
-                (basicArithmeticExpression
-                .map((Object v) -> {
-                    return v;
-                }))
-                .seq(CharacterParser.of('+').trim())
-                .seq(basicArithmeticExpression
-                        .map((Object v) -> {
-                            return v;
-                        }))
-                .map((List<Object> values) -> {
-                    return new Addition((Expression<Number>) values.get(0), (Expression<Number>) values.get(2));
-                });
-
-        return parser;
-    }
 }

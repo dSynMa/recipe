@@ -3,6 +3,7 @@ package recipe.lang.expressions.arithmetic;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
+import org.petitparser.tools.ExpressionBuilder;
 import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
@@ -19,37 +20,39 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
+import static org.petitparser.parser.primitive.CharacterParser.digit;
+import static org.petitparser.parser.primitive.CharacterParser.of;
+
 public abstract class ArithmeticExpression implements Expression<Number> {
     public abstract TypedValue<Number> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException;
 
     public abstract Expression<Number> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException;
 
-    public static Parser typeParser(TypingContext context){
+    public static Parser typeParser(TypingContext context) throws Exception {
         return ArithmeticExpression.parser(context);
     }
 
-    public static org.petitparser.parser.Parser parser(TypingContext context) {
-        SettableParser parser = SettableParser.undefined();
-        SettableParser basic = SettableParser.undefined();
-        org.petitparser.parser.Parser addition = Addition.parser(basic);
-        org.petitparser.parser.Parser multiplication = Multiplication.parser(basic);
-        org.petitparser.parser.Parser subtraction = Subtraction.parser(basic);
+    public static org.petitparser.parser.Parser parser(TypingContext context) throws Exception {
+        ExpressionBuilder builder = new ExpressionBuilder();
+
         org.petitparser.parser.Parser value = Real.getType().valueParser().or(recipe.lang.types.Integer.getType().valueParser());
-        org.petitparser.parser.Parser variable = context.getSubContext(Real.getType()).variableParser();
+        org.petitparser.parser.Parser variable = context.getSubContext(Real.getType()).variableParser()
+                .or(context.getSubContext(recipe.lang.types.Integer.getType()).variableParser());
 
-        parser.set(addition
-                .or(multiplication)
-                .or(subtraction)
-                .or(basic));
+        builder.group()
+                .primitive(variable.or(value).trim())
+                .wrapper(of('(').trim(), of(')').trim(),
+                        (List<Expression<Number>> values) -> values.get(1));
 
-        basic.set(value
-                .or(variable)
-                .or((CharacterParser.of('(').trim()
-                        .seq(parser)
-                        .seq(CharacterParser.of(')')))
-                        .map((List<Object> values) -> values.get(1))));
+        // multiplication and addition are left-associative
+        builder.group()
+                .left(of('*').trim(), (List<ArithmeticExpression> values) -> new Multiplication(values.get(0), values.get(2)))
+                .left(of('/').trim(), (List<ArithmeticExpression> values) -> new Division(values.get(0), values.get(2)));
+        builder.group()
+                .left(of('+').trim(), (List<ArithmeticExpression> values) -> new Addition(values.get(0), values.get(2)))
+                .left(of('-').trim(), (List<ArithmeticExpression> values) -> new Subtraction(values.get(0), values.get(2)));
 
-        return parser;
+        return builder.build();
     }
 
     @Override

@@ -82,26 +82,6 @@ public class And extends Condition {
 		}
 	}
 
-	public static org.petitparser.parser.Parser parser(Parser basicCondition) {
-		org.petitparser.parser.Parser parser =
-				(basicCondition)
-						.seq(((CharacterParser.of('&').seq(CharacterParser.of('&').optional()).trim().flatten())
-						.seq(basicCondition).trim()).plus())
-						.map((List<Object> values) -> {
-							And and = null;
-							Expression<Boolean> current = (Expression<Boolean>) values.get(0);
-							for(int i = 0; i < ((List) values.get(1)).size(); i++){
-								ArrayList val = (ArrayList) ((ArrayList) values.get(1)).get(i);
-								and = new And(current, (Expression<Boolean>) val.get(1));
-								current = and;
-							}
-
-							return and;
-						});
-
-		return parser;
-	}
-
 	@Override
 	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
 		return new And(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
