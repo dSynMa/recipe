@@ -15,10 +15,7 @@ import recipe.lang.types.Enum;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
 
@@ -73,7 +70,9 @@ public class SendProcess extends BasicProcess {
 
         Parser delimetedCondition =
                 (CharacterParser.of('<').trim())
-                        .seq(localGuard)
+                        .seq(localGuard.map((Object value) -> {
+                            return value;
+                        }))
                         .seq(CharacterParser.of('>').trim())
                         .map((List<Object> values) -> {
                             return (Expression<Boolean>) values.get(1);
@@ -89,25 +88,28 @@ public class SendProcess extends BasicProcess {
 
         Parser parser = ((CharacterParser.word().plus().trim()).flatten()
                         .seq(CharacterParser.of(':').trim()).flatten()).optional().flatten()
-                        .seq(delimetedCondition)
-                        .seq(localChannelVars.valueParser().or(localChannelVars.variableParser()))
-                        .seq(CharacterParser.of('!').trim())
-                        .seq(messageGuard.trim())
+                        .seq(delimetedCondition.trim())
+                        .seq((((Enum.getEnum(Config.channelLabel).valueParser()).seq(StringParser.of("!").trim())).or(localChannelVars.variableParser().seq(StringParser.of("!").trim()))))
+                        .seq(messageGuard.trim().map((Object obj) -> {
+                            return obj;
+                        }))
                         .seq((CharacterParser.of('(').trim()))
-                        .seq(messageAssignment)
+                        .seq(messageAssignment.map((Object obj) -> {
+                            return obj;
+                        }))
                         .seq((CharacterParser.of(')').trim()))
                         .seq((CharacterParser.of('[').trim()))
-                        .seq(localAssignment)
+                        .seq(localAssignment.optional(new HashMap<String, Expression>()))
                         .seq((CharacterParser.of(']').trim()))
                         .map((List<Object> values) -> {
                             String label = ((String) values.get(0));
                             if(label != null) label = label.replace(":", "").trim();
                             int i = 1;
                             Expression<Boolean> psi = (Expression<Boolean>) values.get(i);
-                            Expression channel = (Expression) values.get(i+1);
-                            Expression<Boolean> guard = (Expression<Boolean>) values.get(i+3);
-                            Map<String, Expression> message = (Map<String, Expression>) values.get(i+5);
-                            Map<String, Expression> update = (Map<String, Expression>) values.get(i+8);
+                            Expression channel = (Expression) ((List) values.get(i+1)).get(0);
+                            Expression<Boolean> guard = (Expression<Boolean>) values.get(i+2);
+                            Map<String, Expression> message = (Map<String, Expression>) values.get(i+4);
+                            Map<String, Expression> update = (Map<String, Expression>) values.get(i+7);
                             SendProcess action = new SendProcess(label, psi, channel, message, update, guard);
                             return action;
                         });

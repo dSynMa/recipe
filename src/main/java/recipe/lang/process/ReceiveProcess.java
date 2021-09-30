@@ -2,6 +2,7 @@ package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
+import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.Config;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
@@ -14,10 +15,7 @@ import recipe.lang.types.Enum;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class ReceiveProcess extends BasicProcess {
 
@@ -67,18 +65,17 @@ public class ReceiveProcess extends BasicProcess {
         Parser parser = (CharacterParser.word().plus().trim()
                         .seq(CharacterParser.of(':').trim()).flatten()).optional()
                         .seq(delimetedCondition.trim())
-                        .seq(localChannelVars.valueParser().or(localChannelVars.variableParser()).trim())
-                        .seq(CharacterParser.of('?').trim())
+                        .seq((((Enum.getEnum(Config.channelLabel).valueParser()).seq(StringParser.of("?").trim())).or(localChannelVars.variableParser().seq(StringParser.of("?").trim()))))
                         .seq((CharacterParser.of('[').trim()))
-                        .seq(localAssignment)
+                        .seq(localAssignment.optional(new HashMap<String, Expression>()))
                         .seq((CharacterParser.of(']').trim()))
                         .map((List<Object> values) -> {
                             String label = ((String) values.get(0));
                             if(label != null) label = label.replace(":", "").trim();
                             int i = 1;
                             Expression<Boolean> psi = (Expression<Boolean>) values.get(i);
-                            Expression channel = (Expression) values.get(i+1);
-                            Map<String, Expression> update = (Map<String, Expression>) values.get(i+4);
+                            Expression channel = (Expression) ((List) values.get(i+1)).get(0);
+                            Map<String, Expression> update = (Map<String, Expression>) values.get(i+3);
                             ReceiveProcess action = new ReceiveProcess(label, psi, channel, update);
                             return action;
                         });

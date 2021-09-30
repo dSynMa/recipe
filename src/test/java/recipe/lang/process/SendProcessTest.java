@@ -45,5 +45,9 @@ public class SendProcessTest {
 
         Result r = parser.parse("<v == 5> c!g(m := 1)[v := 6]");
         assert r.isSuccess();
+        r = parser.parse("<true> c!g(m := 1)[v := 6]");
+        assert r.isSuccess();
+        r = parser.parse("<true> c!g(m := 1)[]");
+        assert r.isSuccess();
     }
 }
