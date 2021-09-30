@@ -43,7 +43,9 @@ public class AgentInstance {
 
     public static Parser parser(Set<Agent> agents){
         Map<String,Agent> agentNames = new HashMap<>();
-        agents.forEach((x) -> agentNames.put(x.getName(), x));
+        agents.forEach((x) -> {
+            agentNames.put(x.getName(), x);
+        });
 
         Map<String, Map<String, TypedVariable>> agentLocalVars = new HashMap<>();
         agents.forEach((x) -> agentLocalVars.put(x.getName(), x.getStore().getAttributes()));
@@ -62,7 +64,7 @@ public class AgentInstance {
 
         Parser parser = (agentParser.trim()
                 .seq(CharacterParser.of('(').trim())
-                .seq(CharacterParser.word().star().trim().flatten())
+                .seq(CharacterParser.word().plus().trim().flatten())
                 .seq(CharacterParser.of(',').trim())
                 .seq(new LazyParser<TypingContext>((TypingContext contextt) -> {
                     try {

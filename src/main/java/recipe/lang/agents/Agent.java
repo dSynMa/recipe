@@ -200,7 +200,7 @@ public class Agent {
         AtomicReference<String> nameString = new AtomicReference<>("");
 
         Parser name = word().plus().trim().flatten().map((String val) -> {
-            nameString.set(val);
+            nameString.set("agent " + val.trim());
             return val;
         });
 
@@ -217,34 +217,34 @@ public class Agent {
                                     vars.put(var.getKey(), new TypedVariable(var.getValue(), var.getKey()));
                                 }
                                 return vars;
-                            }).or(FailureParser.withMessage("Could not parse agent's " + nameString.get() + " local definition.")))
-                    .seq(Parsing.labelledParser("init", new LazyParser<>((TypingContext context) -> {
+                            }).or(LazyParser.failingParser(nameString, "Could not parse agent's local definition.")))
+                    .seq(Parsing.labelledParser("init", new LazyParser<TypingContext>((TypingContext context) -> {
                         try {
                             return Condition.parser(context);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
                         return null;
-                    }, localContext.get())).optional(Condition.getTrue()).or(FailureParser.withMessage("Could not parse agent's " + nameString.get() + " init definition.")))
-                    .seq(new LazyParser<>(((TypingContext localContext1) -> {
+                    }, localContext.get())).optional(Condition.getTrue()).or(LazyParser.failingParser(nameString, "Could not parse agent's init definition.")))
+                    .seq(new LazyParser<TypingContext>(((TypingContext localContext1) -> {
                         try {
                             return Parsing.relabellingParser(localContext1, communicationContext);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
                         return null;
-                    }), localContext.get()).trim().or(FailureParser.withMessage("Could not parse agent's " + nameString.get() + " relabel definition.")))
-                    .seq(new LazyParser<>(((Pair<TypingContext,TypingContext> guardAndLocalContext) -> {
+                    }), localContext.get()).trim().or(LazyParser.failingParser(nameString, "Could not parse agent's relabel definition.")))
+                    .seq(new LazyParser<Pair<TypingContext,TypingContext>>(((Pair<TypingContext,TypingContext> guardAndLocalContext) -> {
                         try {
                             return Parsing.receiveGuardParser(TypingContext.union(guardAndLocalContext.getLeft(), guardAndLocalContext.getRight()));
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
                         return null;
-                    }), new Pair(guardDefinitionContext, localContext.get())).or(FailureParser.withMessage("Could not parse agent's " + nameString.get() + " receive-guard definition.")))
-                    .seq(new LazyParser<>((Pair<TypingContext,TypingContext> guardAndLocalContext) -> {
+                    }), new Pair(guardDefinitionContext, localContext.get())).or(LazyParser.failingParser(nameString, "Could not parse agent's receive-guard definition.")))
+                    .seq(new LazyParser<Pair<TypingContext,TypingContext>>((Pair<TypingContext,TypingContext> guardAndLocalContext) -> {
                         return process.apply(TypingContext.union(guardAndLocalContext.getLeft(), guardAndLocalContext.getRight()));
-                    }, new Pair(guardDefinitionContext, localContext.get())).trim().or(FailureParser.withMessage("Could not parse agent's " + nameString.get() + " process definition.")))
+                    }, new Pair(guardDefinitionContext, localContext.get())).trim().or(LazyParser.failingParser(nameString, "Could not parse agent's process definition.")))
                 .map((List<Object> values) -> {
                     String agentName = ((String) values.get(1)).trim();
                     Map<String, TypedVariable> localVars = (Map<String, TypedVariable>) values.get(2);
