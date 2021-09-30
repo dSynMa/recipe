@@ -214,7 +214,7 @@ public class ParsingTest {
         TypingContext localContext = new TypingContext();
         localContext.set("b", Real.getType());
         localContext.set("c", Real.getType());
-        localContext.set("channel", channelWithoutBroadcastEnum);
+        localContext.set("channel", Enum.getEnum(Config.channelLabel));
 
         Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
@@ -231,8 +231,8 @@ public class ParsingTest {
         localContext.set("b", Real.getType());
         localContext.set("c", Real.getType());
 
-        localContext.set("channel", channelWithoutBroadcastEnum);
-        localContext.set("chVar", channelWithoutBroadcastEnum);
+        localContext.set("channel", Enum.getEnum(Config.channelLabel));
+        localContext.set("chVar", Enum.getEnum(Config.channelLabel));
 
         Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
@@ -249,8 +249,8 @@ public class ParsingTest {
         localContext.set("b", Real.getType());
         localContext.set("c", Real.getType());
 
-        localContext.set("channel", channelWithoutBroadcastEnum);
-        localContext.set("chVar", channelWithoutBroadcastEnum);
+        localContext.set("channel", Enum.getEnum(Config.channelLabel));
+        localContext.set("chVar", Enum.getEnum(Config.channelLabel));
 
         Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
