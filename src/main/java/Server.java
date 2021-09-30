@@ -28,6 +28,10 @@ public class Server {
         String script = req.getQuery().get("script").trim();
         try {
             system = recipe.lang.System.parser().end().parse(script).get();
+            if(nuXmvInteraction != null){
+                nuXmvInteraction.stopNuXmvThread();
+                nuXmvInteraction = null;
+            }
             return "{\"symbolic\" : " + system.isSymbolic() + "}";
         } catch (ParseError parseError){
             return "{ \"error\" : \"" + parseError.getFailure().toString() + "\"}";
