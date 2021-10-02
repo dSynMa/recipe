@@ -7,7 +7,7 @@ ace.define("ace/mode/recipe",["require","exports","module","ace/lib/oop","ace/mo
     var Behaviour = require("./behaviour").Behaviour;
       
     var RecipeHighlightRules = function() {
-        var keywords = "channels|message|structure|communication|guard|relabel|agent|repeat|channel|int|bool|real|commVar|rcvguard|local|spec|LTLSPEC|PSLSPEC|INVARIANT|SPEC";
+        var keywords = "channels|receive|rep|message|structure|communication|guard|relabel|agent|repeat|channel|chan|int|bool|real|local|spec|LTLSPEC|PSLSPEC|INVARIANT|SPEC";
     
         var builtinConstants = (
             "true|false|null"
