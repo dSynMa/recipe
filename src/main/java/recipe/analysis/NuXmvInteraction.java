@@ -190,7 +190,9 @@ public class NuXmvInteraction {
                 if (no > 0) {
                     int n = out.read(buffer, 0, Math.min(no, buffer.length));
                     text = new String(buffer, 0, Math.min(no, buffer.length));
+
                     outw.write(text.getBytes(StandardCharsets.UTF_8));
+                    outw.flush();
                     outw.flush();
                     buffer = new byte[4000];
                     nuxmvTurn.set(false);
@@ -208,7 +210,8 @@ public class NuXmvInteraction {
                 }
 
                 try {
-                    Thread.sleep(10);
+                    //TODO need to parse nuxmv output to see if it is ready, depends on command
+                    Thread.sleep(300);
                 } catch (InterruptedException e) {
                 }
 
