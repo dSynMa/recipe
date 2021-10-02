@@ -258,7 +258,7 @@ public class Parsing {
         }
         org.petitparser.parser.Parser guardDefinitionParser = GuardDefinition.parser(typingContext);
 
-        org.petitparser.parser.Parser guardDefinitionListParser = (guardDefinitionParser).plus()
+        org.petitparser.parser.Parser guardDefinitionListParser = (guardDefinitionParser).star()
                 .map((List<Object> values) -> {
                     Map<String, Type> guardDefinitionContext = new HashMap<>();
                     for(Object v : values){
