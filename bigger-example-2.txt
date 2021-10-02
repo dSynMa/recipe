@@ -58,15 +58,15 @@ agent Machine
     repeat: (
             <cLink==empty && MSG == request> gLink? [cLink:= c];
             (
-             <cLink==c && !asgn> cLink! (TRUE)(MSG := connect, LNK := pLink)[cLink:= empty; asgn:= TRUE]
+             <cLink==c && !asgn> cLink! (TRUE)(MSG := connect, LNK := pLink)[cLink:= empty, asgn:= TRUE]
              +
-             <cLink==c && asgn> gLink! (TRUE)(MSG := full)[cLink:= empty; asgn:= TRUE]
+             <cLink==c && asgn> gLink! (TRUE)(MSG := full)[cLink:= empty, asgn:= TRUE]
              +
              <cLink==c && MSG == connect> cLink? [cLink:= empty];
              <MSG == buy> pLink? [cLink:= c]
                  
              +
-             <cLink==c && asgn && MSG == full> gLink? [cLink:= empty; asgn:= TRUE]
+             <cLink==c && asgn && MSG == full> gLink? [cLink:= empty, asgn:= TRUE]
             )
             )
 system = Client(one,TRUE) | Manager(two,TRUE) | Machine(three,TRUE) 

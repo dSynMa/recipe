@@ -40,23 +40,23 @@ agent Robot
 
         repeat: (
                     <MSG == team> * ?
-                        [lnk:=LNK; no:=NO];
+                        [lnk:=LNK, no:=NO];
 
                     (
                         <MSG ==form & NO ==0> * ?
-                            [lnk:=empty; no:=0]
+                            [lnk:=empty, no:=0]
                     +
                         (rep <MSG ==assemble & (NO>0) > * ?
-                            [lnk:=LNK; no:=NO])
+                            [lnk:=LNK, no:=NO])
                     +
                       (  <no>=1> *! (type==btype & !asgn)
-                            (MSG :=form, NO := no-1, LNK := lnk)[basgn:=true; no:=0];
+                            (MSG :=form, NO := no-1, LNK := lnk)[basgn:=true, no:=0];
 
                         <MSG ==assemble & brdy==1> lnk ?
                             [brdy:=2];
 
                         <MSG ==assemble & brdy==2> lnk ?
-                            [brdy:=0; lnk:=empty; basgn:=false]
+                            [brdy:=0, lnk:=empty, basgn:=false]
                       )
                     )
 )

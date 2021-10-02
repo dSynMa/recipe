@@ -20,7 +20,7 @@ agent second
 		g <- a == 0
 	receive-guard:
 		(a < 5 & channel == ch1) | (a > 3 & channel == ch2)
-	repeat:(<true> ch1! (true) (d1 := a; d2 := true) [a:= a + 1]) + (q: <a == 0> ch1? [a := d1])
+	repeat:(<true> ch1! (true) (d1 := a, d2 := true) [a:= a + 1]) + (q: <a == 0> ch1? [a := d1])
 
 system = first(one, c == 6) | first(two, c == 7) | second(three, a == 9)
 
