@@ -22,12 +22,13 @@ public class IsEqualTo<T extends Type> extends Condition {
 	private Expression<T> rhs;
 
 	public IsEqualTo(Expression<T> lhs, Expression<T> rhs) throws MismatchingTypeException {
-		if(Parsing.compatible(lhs, rhs)){
+		//nuxmv will tell you about any mismatch
+//		if(Parsing.compatible(lhs, rhs)){
 			this.lhs = lhs;
 			this.rhs = rhs;
-		} else{
-			throw new MismatchingTypeException(lhs.toString() + " not comparable to " + rhs.toString());
-		}
+//		} else{
+//			throw new MismatchingTypeException(lhs.toString() + " not comparable to " + rhs.toString());
+//		}
 	}
 
 	@Override
@@ -85,11 +86,9 @@ public class IsEqualTo<T extends Type> extends Condition {
 						.map((List<Object> values) -> {
 							try {
 								return new IsEqualTo((Expression) values.get(0), (Expression) values.get(2));
-							} catch (MismatchingTypeException e) {
-								e.printStackTrace();
+							} catch (Exception e) {
+								return e;
 							}
-
-							return null;
 						});
 
 		return parser;

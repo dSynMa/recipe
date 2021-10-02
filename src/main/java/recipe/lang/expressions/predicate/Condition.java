@@ -117,19 +117,16 @@ public abstract class Condition implements Expression<Boolean> {
 				.right(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<Condition> values) -> {
 					try {
 						return new IsEqualTo(values.get(0), values.get(2));
-					} catch (MismatchingTypeException e) {
-						e.printStackTrace();
+					} catch (Exception e) {
+						return e;
 					}
-					return null;
 				})
 				.left(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<Condition> values) -> {
 					try {
 						return new IsEqualTo(values.get(0), values.get(2));
-					} catch (MismatchingTypeException e) {
-						e.printStackTrace();
+					} catch (Exception e) {
+						return e;
 					}
-
-					return null;
 				});
 
 		// is not equal to is left and right-associative
