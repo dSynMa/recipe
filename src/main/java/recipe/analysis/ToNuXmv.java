@@ -123,37 +123,45 @@ public class ToNuXmv {
 
             for(String var : agenti.getStore().getAttributes().keySet()){
                 keepThis += " & next(" + namei + "-" + var + ") = " + namei + "-" + var;
-                keepAll += " & next(" + namei + "-" + var + ") = " + namei + "-" + var;
+                keepThis += " & next(" + namei + "-state) = " + namei + "-state";
             }
+
+            String falsifyAllLabels = "falsify-not-" + namei + " := TRUE";
 
             for(Transition t : agenti.getReceiveTransitions()){
                 String label = ((ReceiveProcess) t.getLabel()).getLabel();
                 if (label != null && !label.equals("")){
                     keepThis += " & next(" + namei + "-" + label + ") = FALSE";
+                    falsifyAllLabels += " & next(" + namei + "-" + label + ") = FALSE";
                     keepAll += " & next(" + namei + "-" + label + ") = FALSE";
                     receiveProcessNames.add(namei + "-" + label);
 
                     String falsifyAllLabelsExceptThis = "falsify-not-" + namei + "-" + label + " := TRUE";
                     for(Transition tt : agenti.getReceiveTransitions()){
-                        String labell = ((ReceiveProcess) tt.getLabel()).getLabel();
-                        if(!label.equals(labell) && label != null && !label.equals("")){
-                            falsifyAllLabelsExceptThis += " & next(" + namei + "-" + labell + ") = FALSE";
+                        String receiveLabel = ((ReceiveProcess) tt.getLabel()).getLabel();
+                        if(receiveLabel != null && !receiveLabel.equals(label) &&!receiveLabel.equals("")){
+                            falsifyAllLabelsExceptThis += " & next(" + namei + "-" + receiveLabel + ") = FALSE";
                         }
                     }
                     keepFunctions.add(falsifyAllLabelsExceptThis);
                 }
             }
 
+            keepFunctions.add(falsifyAllLabels);
+
             keepAll += " & keep-all-" + namei;
 
             keepFunctions.add(keepThis);
         }
 
-        define += "\t" + String.join(";\n\t", keepFunctions) + ";\n";
+        if(keepFunctions.size() > 0)
+            define += "\t" + String.join(";\n\t", keepFunctions) + ";\n";
         define += "\t" + keepAll + ";\n";
 
         List<String> sendNows = new ArrayList<>();
-        List<String> receiveNows = new ArrayList<>();
+//        List<String> receiveNows = new ArrayList<>();
+
+        List<String> progress = new ArrayList<>();
 
         for(int i = 0; i < agentInstances.size(); i++) {
             AgentInstance agentInstancei = agentInstances.get(i);
@@ -194,16 +202,16 @@ public class ToNuXmv {
                     for (ProcessTransition t : sendTransitions) {
                         //conditions for activation in now (is in source, and local guard holds),
                         // and effects in next (update, next state, and other stuff for receipt)
-                        String now = "";
+                        String sendNow = "";
                         String next = "";
                         SendProcess process = (SendProcess) t.getLabel();
 
                         Expression<Enum> channelExpr = process.getChannel().relabel(v -> v.sameTypeWithName(namei + "-" + v));
                         String channel = channelExpr.toString();
-                        now += "" + namei + "-state" + " = " + namei + "-" + t.getSource();
-                        now += " & (" + process.entryCondition().relabel(v -> v.sameTypeWithName(namei + "-" + v)) + ")";
+                        sendNow += "" + namei + "-state" + " = " + namei + "-" + t.getSource();
+                        sendNow += " & (" + process.entryCondition().relabel(v -> v.sameTypeWithName(namei + "-" + v)) + ")";
 
-                        sendNows.add(now);
+                        sendNows.add(sendNow);
 
                         next += "\n & next(" + namei + "-state" + ") = " + namei + "-" + t.getDestination();
 
@@ -224,11 +232,13 @@ public class ToNuXmv {
                                 Agent receiveAgent = agentInstancej.getAgent();
                                 String receiveName = agentInstancej.getLabel();
 
+                                List<String> agentReceiveNows = new ArrayList<>();
+
                                 String receiveGuard = receiveAgent.getReceiveGuard().relabel(v -> v.toString().equals(Config.channelLabel) ? channelExpr : v.sameTypeWithName(receiveName + "-" + v)).toString();
                                 receiveGuard = "(" + receiveGuard + ") | " + channel + " = " + broadcastChannel;
 
                                 String sendGuard = "(" + process.getMessageGuard().relabel(v -> {
-                                    if(v.toString().equals(Config.channelLabel)){
+                                    if (v.toString().equals(Config.channelLabel)) {
                                         return channelExpr;
                                     } else {
                                         try {
@@ -241,7 +251,7 @@ public class ToNuXmv {
                                 }) + ")";
 
                                 Map<String, Expression> relabelledMessage = new HashMap<>();
-                                for(Map.Entry<String, Expression> entry : process.getMessage().entrySet()){
+                                for (Map.Entry<String, Expression> entry : process.getMessage().entrySet()) {
                                     relabelledMessage.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + ((TypedVariable) v).getName())));
                                 }
 
@@ -264,26 +274,26 @@ public class ToNuXmv {
                                         };
 
                                         receiveNow += "\n & " + receiveProcess.getPsi().relabel(v -> process.getMessage().containsKey(((TypedVariable) v).getName())
-                                                                                                        ? relabelledMessage.get(((TypedVariable) v).getName())
-                                                                                                            : system.getMessageStructure().containsKey(((TypedVariable) v).getName())
-                                                                                                                ? helper.apply(v)
-                                                                                                                    : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v));
+                                                ? relabelledMessage.get(((TypedVariable) v).getName())
+                                                : system.getMessageStructure().containsKey(((TypedVariable) v).getName())
+                                                ? helper.apply(v)
+                                                : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v));
 
-                                        if(stop.get()) continue;
+                                        if (stop.get()) continue;
 
                                         receiveNow += "\n & (" + channel + " = " + broadcastChannel + " | " + channel + " = " + receiveProcess.getChannel().relabel(v -> v.sameTypeWithName(receiveName + "-" + v.toString())).toString() + ")";
-                                        receiveNows.add(receiveNow);
+                                        agentReceiveNows.add(receiveNow);
 
 
                                         for (Map.Entry<String, Expression> entry : receiveProcess.getUpdate().entrySet()) {
                                             receiveNext += "\n & " + "next(" + receiveName + "-" + entry.getKey() + ") = " + entry.getValue().relabel(v -> process.getMessage().containsKey(((TypedVariable) v).getName())
-                                                                                                                                ? relabelledMessage.get(((TypedVariable) v).getName())
-                                                                                                                                    : system.getMessageStructure().containsKey(((TypedVariable) v).getName())
-                                                                                                                                    ? helper.apply((TypedVariable) v)
-                                                                                                                                        : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v));
+                                                    ? relabelledMessage.get(((TypedVariable) v).getName())
+                                                    : system.getMessageStructure().containsKey(((TypedVariable) v).getName())
+                                                    ? helper.apply((TypedVariable) v)
+                                                    : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v));
                                         }
 
-                                        if(stop.get()) continue;
+                                        if (stop.get()) continue;
 
                                         for (String var : receiveAgent.getStore().getAttributes().keySet()) {
                                             if (!receiveProcess.getUpdate().containsKey(var)) {
@@ -291,9 +301,11 @@ public class ToNuXmv {
                                             }
                                         }
 
-                                        if(receiveProcess.getLabel() != null && !receiveProcess.equals("")){
-                                            receiveNext += "\n & "  + "next(" + receiveName + "-" + receiveProcess.getLabel() + ") = TRUE";
+                                        if (receiveProcess.getLabel() != null && !receiveProcess.getLabel().equals("")) {
+                                            receiveNext += "\n & " + "next(" + receiveName + "-" + receiveProcess.getLabel() + ") = TRUE";
                                             receiveNext += "\n & falsify-not-" + receiveName + "-" + receiveProcess.getLabel() + "";
+                                        } else {
+                                            receiveNext += "\n & falsify-not-" + receiveName;
                                         }
 
                                         receiveNext += "\n & next(" + receiveName + "-state" + ") = " + receiveName + "-" + receiveTrans.getDestination();
@@ -302,22 +314,43 @@ public class ToNuXmv {
                                         transitionReceivePreds.add("(" + receiveNow + ") & " + indent(indent(indent("\n" + receiveNext))));
                                     }
 
-                                    stateReceivePrd += String.join("\n | ", transitionReceivePreds);
+                                    if(transitionReceivePreds.size() > 0)
+                                        stateReceivePrd = "(" + String.join(")\n | (", transitionReceivePreds) + ")";
+                                    else
+                                        stateReceivePrd = "FALSE";
 //                                    stateReceivePrd += "\n | ";
 //                                    stateReceivePrd += ("(!((" + agentReceiveGuard.get(receiveName) + ") & (" + sendGuard + ") & (" + String.join(") | (", receiveNows) + ")) & keep-all-" + receiveName + ")");
-                                } else{
-                                    stateReceivePrd += "FALSE";
+                                } else {
+                                    stateReceivePrd = "FALSE";
                                 }
 
-                                String agentReceivePred = "(" + receiveGuard + ")\n & \n" + indent("((" + sendGuard + "\n" + indent(indent("& (" + stateReceivePrd) + "))"));
+                                String agentReceivePred = indent("((" + receiveGuard) + ")\n & \n" + indent("(" + sendGuard + "\n" + indent(indent("& (" + stateReceivePrd) + ")))"));
                                 agentReceivePred += indent("\n | (!(" + receiveGuard + ") & keep-all-" + receiveName + ")");
                                 agentReceivePred += indent("\n | (" + channel + " = " + broadcastChannel + " & " + "!(" + sendGuard + ") & keep-all-" + receiveName + ")");
-                                agentReceivePred += "\n)";
-                                agentReceivePreds.add(agentReceivePred);
+//                                agentReceivePred += "\n)";
+                                agentReceivePreds.add("(" + agentReceivePred + ")");
+
+                                String receiveNowsDisj = "TRUE";
+                                if (agentReceiveNows.size() > 0) {
+                                    receiveNowsDisj = "(" + String.join(")\n | (", agentReceiveNows) + ")";
+                                }
+
+                                String progressReceivePred = "((" + indent(receiveGuard) + ")\n & \n" + indent("(" + sendGuard + "\n" + indent(indent("& (" + receiveNowsDisj) + ")))"));
+                                progressReceivePred += indent("\n | !(" + receiveGuard + ")");
+                                progressReceivePred += indent("\n | (" + channel + " = " + broadcastChannel + " & " + "!(" + sendGuard + "))");
+
+                                progress.add("(" + sendNow + ") & (" + progressReceivePred + ")");
+
                             }
                         }
 
-                        String logic = now + indent(indent(indent(next))) + "\n" + indent("& (" + String.join("\n & ", agentReceivePreds)+ ")");
+                        if(agentInstances.size() == 1)
+                            progress.add(sendNow);
+
+
+                        String logic = "(" + sendNow + indent(indent(indent(next))) + ")\n";
+                        if(agentReceivePreds.size() > 0)
+                            logic += indent("& (" + String.join("\n & ", agentReceivePreds)+ ")");
 
                         if(process.getLabel() != null && !process.getLabel().equals("")) {
                             define +=  "\t" + namei + "-" + process.getLabel() + " := " + logic + ";\n";
@@ -333,7 +366,10 @@ public class ToNuXmv {
             }
         }
 
-        trans += "((" + String.join(")\n| (", agentSendPreds) + "));\n";
+        if(agentSendPreds.size() > 0)
+            trans += "((" + String.join(")" + "\n| (", agentSendPreds) + "));\n";
+        else
+            trans += "FALSE;\n";
 //        trans += "\n\t\t| (!((" + String.join(") | (", sendNows) + ")) & keep-all))";
 
         for(String name : receiveProcessNames){
@@ -341,16 +377,21 @@ public class ToNuXmv {
         }
         nuxmv += vars;
         define += "\ttransition := " + trans;
+        if(progress.size() > 0)
+            define += "\tprogress := (" + String.join(")\n \t\t|\n(", progress) + ");\n";
+        else
+            define += "\tprogress := FALSE;\n";
         nuxmv += define;
-        nuxmv += "CONSTANTS\n\t";
         List<String> constants = new ArrayList<>();
         for(String label : Enum.getEnumLabels()){
             if(!label.equals(Config.channelWithoutBroadcastLabel)){
                 constants.addAll(Enum.getEnum(label).getValues());
             }
         }
-        nuxmv +=  String.join(", ", constants);
-        nuxmv += ";\n";
+        if(constants.size() > 0)
+            nuxmv += "CONSTANTS\n\t";
+            nuxmv +=  String.join(", ", constants);
+            nuxmv += ";\n";
 
 //        for(String name : sendProcessNames){
 //            init += "\t& " + name + " = " + "FALSE\n";
@@ -362,7 +403,7 @@ public class ToNuXmv {
 
         nuxmv += init;
         nuxmv += "TRANS\n";
-        nuxmv += "\ttransition | (!transition & keep-all)\n";
+        nuxmv += "\t(transition) | (!progress & keep-all)\n";
         nuxmv = nuxmv.replaceAll("&( |\n)*TRUE(( )*&( )*)( |\n)*", "");
         nuxmv = nuxmv.replaceAll("TRUE(( )*&( )*)", "");
 //        nuxmv = nuxmv.replaceAll("TRUE\n(\t& )", "\t");
