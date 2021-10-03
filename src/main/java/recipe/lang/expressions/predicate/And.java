@@ -70,15 +70,19 @@ public class And extends Condition {
 	}
 
 	@Override
-	public Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
-		Expression<Boolean> lhsObject = lhs.close(store, CV);
-		Expression<Boolean> rhsObject = rhs.close(store, CV);
+	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+		Expression<Boolean> lhsObject = lhs.close();
+		Expression<Boolean> rhsObject = rhs.close();
 		if (lhsObject.equals(Condition.TRUE) && rhsObject.equals(Condition.TRUE)) {
 			return Condition.TRUE;
-		} else if(!lhsObject.equals(Condition.FALSE) || !rhsObject.equals(Condition.FALSE)){
-			return new And(lhsObject, rhsObject);
-		} else{
+		} else if(lhsObject.equals(Condition.FALSE) || rhsObject.equals(Condition.FALSE)){
 			return Condition.FALSE;
+		} else if(lhsObject.equals(Condition.TRUE)){
+			return rhsObject;
+		} else if(rhsObject.equals(Condition.TRUE)){
+			return lhsObject;
+		} else {
+			return new And(lhsObject, rhsObject);
 		}
 	}
 

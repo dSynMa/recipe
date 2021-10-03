@@ -55,12 +55,12 @@ public class IsNotEqualTo extends Condition {
 	}
 
 	@Override
-	public Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
-		Expression lhsObject = lhs.close(store, CV);
-		Expression rhsObject = rhs.close(store, CV);
+	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+		Expression lhsObject = lhs.close();
+		Expression rhsObject = rhs.close();
 		if (lhsObject.equals(rhsObject)) {
 			return Condition.FALSE;
-		} else if(!lhsObject.getClass().equals(TypedValue.class) &&
+		} else if(!lhsObject.getClass().equals(TypedValue.class) ||
 				!rhsObject.getClass().equals(TypedValue.class)){
 			return new IsNotEqualTo(lhsObject, rhsObject);
 		} else{

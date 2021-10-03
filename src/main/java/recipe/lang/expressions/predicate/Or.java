@@ -69,15 +69,22 @@ public class Or extends Condition {
 	}
 
 	@Override
-	public Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
-		Expression<Boolean> lhsObject = lhs.close(store, CV);
-		Expression<Boolean> rhsObject = rhs.close(store, CV);
+	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+		Expression<Boolean> lhsObject = lhs.close();
+		Expression<Boolean> rhsObject = rhs.close();
 		if (lhsObject.equals(Condition.TRUE) || rhsObject.equals(Condition.TRUE)) {
 			return Condition.TRUE;
-		} else if(!lhsObject.equals(Condition.TRUE) && !rhsObject.equals(Condition.TRUE)){
-			return new Or(lhsObject, rhsObject);
-		} else{
+		} else if(lhsObject.getClass().equals(TypedValue.class) &&
+				rhsObject.getClass().equals(TypedValue.class)
+				&& !lhsObject.equals(Condition.FALSE)
+				&& !rhsObject.equals(Condition.FALSE)){
 			return Condition.FALSE;
+		} else if(lhsObject.equals(Condition.FALSE)){
+			return rhsObject;
+		} else if(rhsObject.equals(Condition.FALSE)){
+			return lhsObject;
+		} else {
+			return new Or(lhsObject, rhsObject);
 		}
 	}
 

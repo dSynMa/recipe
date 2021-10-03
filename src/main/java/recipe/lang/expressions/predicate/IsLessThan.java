@@ -65,12 +65,12 @@ public class IsLessThan extends Condition {
 	}
 
 	@Override
-	public Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
-		Expression<Number> lhsObject = lhs.close(store, CV);
-		Expression<Number> rhsObject = rhs.close(store, CV);
+	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+		Expression<Number> lhsObject = lhs.close();
+		Expression<Number> rhsObject = rhs.close();
 		if (lhsObject.equals(rhsObject)) {
 			return Condition.TRUE;
-		} else if(!lhsObject.getClass().equals(TypedValue.class) &&
+		} else if(!lhsObject.getClass().equals(TypedValue.class) ||
 				!rhsObject.getClass().equals(TypedValue.class)){
 			return new IsLessThan(lhsObject, rhsObject);
 		} else {

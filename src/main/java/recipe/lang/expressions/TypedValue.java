@@ -32,7 +32,7 @@ public class TypedValue<T extends Type> implements Expression<T> {
     }
 
     @Override
-    public Expression<T> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
+    public Expression<T> close() throws AttributeNotInStoreException, AttributeTypeException {
         return this;
     }
 

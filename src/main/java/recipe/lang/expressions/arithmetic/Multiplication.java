@@ -35,8 +35,19 @@ public class Multiplication extends ArithmeticExpression{
     }
 
     @Override
-    public Expression<Number> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
-        return new Multiplication(lhs.close(store, CV), rhs.close(store, CV));
+    public Expression<Number> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+        Expression<Number> lhsValue = lhs.close();
+        Expression<Number> rhsValue = rhs.close();
+
+        if (lhsValue.getClass().equals(TypedValue.class)
+                && rhsValue.getClass().equals(TypedValue.class)){
+            BigDecimal lhsNo = new BigDecimal(((TypedValue) lhsValue).getValue().toString());
+            BigDecimal rhsNo = new BigDecimal(((TypedValue) rhsValue).getValue().toString());
+            return new TypedValue<Number>((Number) Real.getType(), lhsNo.multiply(rhsNo).toString());
+        }
+        else {
+            return new Multiplication(lhs.close(), rhs.close());
+        }
     }
 
     @Override

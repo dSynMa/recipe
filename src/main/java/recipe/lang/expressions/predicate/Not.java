@@ -63,14 +63,14 @@ public class Not extends Condition {
 	}
 
 	@Override
-	public Expression<Boolean> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
-		Expression<Boolean> closure = arg.close(store, CV);
+	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+		Expression<Boolean> closure = arg.close();
 		if (closure.equals(Condition.FALSE)) {
 			return Condition.TRUE;
-		} else if(!closure.getClass().equals(TypedValue.class)){
-			return new Not(closure);
-		} else{
+		} else if (closure.equals(Condition.TRUE)) {
 			return Condition.FALSE;
+		} else{
+			return new Not(closure);
 		}
 	}
 

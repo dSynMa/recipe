@@ -26,7 +26,7 @@ import static org.petitparser.parser.primitive.CharacterParser.of;
 public abstract class ArithmeticExpression implements Expression<Number> {
     public abstract TypedValue<Number> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException;
 
-    public abstract Expression<Number> close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException;
+    public abstract Expression<Number> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException;
 
     public static Parser typeParser(TypingContext context) throws Exception {
         return ArithmeticExpression.parser(context);
