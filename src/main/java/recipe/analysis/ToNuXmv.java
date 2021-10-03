@@ -6,10 +6,13 @@ import recipe.lang.agents.*;
 import recipe.lang.exception.MismatchingTypeException;
 import recipe.lang.exception.RelabellingTypeException;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.GuardReference;
 import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
+import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Type;
 
@@ -50,7 +53,7 @@ public class ToNuXmv {
         return out.get();
     }
 
-    public static String type(TypedVariable typedVariable){
+    public static String nuxmvTypeOfTypedVar(TypedVariable typedVariable){
         Type type = typedVariable.getType();
         if(type.getClass().equals(Enum.class)){
             return "{" + String.join(",", ((Enum) type).getValues()) + "}";
@@ -64,13 +67,6 @@ public class ToNuXmv {
         return s;
     }
 
-    //Semantics: If there is an agent is listening to sent-on non-broadcast channel that does not have a mathcing transition then the sending cannot occur.
-    // - broadcast doesn t send on every channel
-    // - A broadcast channel is just a channel that cannot be blocked
-    // - keep-all-agent when no mathcing broadcast transition
-    //      or not satisfying the send guard,
-    //      or when receive-guard is false
-    //      (ch=broadcast & (!send_guard | no_broadcast_transition)) | !listening
     public static String transform(System system) throws Exception {
         GuardReference.resolve = true;
 
@@ -82,9 +78,10 @@ public class ToNuXmv {
         String init = "INIT\n";
         String trans = "";
 
-//        List<Agent> agents = new ArrayList<>(system.getAgents());
         List<AgentInstance> agentInstances = new ArrayList<>(system.getAgentInstances());
-        List<String> agentSendPreds = new ArrayList<>();
+        Map<String, List<String>> agentSendPreds = new HashMap<>();
+        Map<String, List<String>> agentSendProgressConds = new HashMap<>();
+
         Set<String> sendProcessNames = new HashSet<>();
         Set<String> receiveProcessNames = new HashSet<>();
         List<String> keepFunctions = new ArrayList<>();
@@ -158,219 +155,396 @@ public class ToNuXmv {
             define += "\t" + String.join(";\n\t", keepFunctions) + ";\n";
         define += "\t" + keepAll + ";\n";
 
-        List<String> sendNows = new ArrayList<>();
-//        List<String> receiveNows = new ArrayList<>();
 
         List<String> progress = new ArrayList<>();
 
-        for(int i = 0; i < agentInstances.size(); i++) {
-            AgentInstance agentInstancei = agentInstances.get(i);
-            Agent agenti = agentInstancei.getAgent();
-            String namei = agentInstancei.getLabel();
+        Map<Agent, Map<State, Set<ProcessTransition>>> agentStateSendTransitionMap = new HashMap<>();
+        Map<Agent, Map<State, Set<ProcessTransition>>> agentStateReceiveTransitionMap = new HashMap<>();
 
-            Stream<String> allStates = agenti.getStates().stream().map(s -> namei + "-" + s.toString());
+        for(Agent agent : system.getAgents()){
+            agentStateSendTransitionMap.put(agent, agent.getStateTransitionMap(agent.getSendTransitions()));
+            agentStateReceiveTransitionMap.put(agent, agent.getStateTransitionMap(agent.getReceiveTransitions()));
+        }
+
+
+        for(int i = 0; i < agentInstances.size(); i++) {
+            AgentInstance sendingAgentInstance = agentInstances.get(i);
+            Agent sendingAgent = sendingAgentInstance.getAgent();
+            String sendingAgentName = sendingAgentInstance.getLabel();
+
+            // Declare sendingAgent's states as nuxmv variables
+            Stream<String> allStates = sendingAgent.getStates().stream().map(s -> sendingAgentName + "-" + s.toString());
             String stateList = String.join(",", allStates.toArray(String[]::new));
 
-            for (TypedVariable typedVariable : agenti.getStore().getAttributes().values()) {
-                vars += "\t" + namei + "-" + typedVariable.getName() + " : " + type(typedVariable) + ";\n";
+            for (TypedVariable typedVariable : sendingAgent.getStore().getAttributes().values()) {
+                vars += "\t" + sendingAgentName + "-" + typedVariable.getName() + " : " + nuxmvTypeOfTypedVar(typedVariable) + ";\n";
             }
 
-            vars += "\t" + namei + "-state" + " : {" + stateList + "};\n";
+            vars += "\t" + sendingAgentName + "-state" + " : {" + stateList + "};\n";
+            ///////////////
 
+            // Initialise sendingAgent's states and init condition
             if(!init.equals("INIT\n")){
                 init += "\t& ";
             }
 
-            init += namei + "-state" + " = " + namei + "-" + agenti.getInitialState().toString() + "\n";
+            init += sendingAgentName + "-state" + " = " + sendingAgentName + "-" + sendingAgent.getInitialState().toString() + "\n";
 
-            init += "\t& " + agenti.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + v)) + "\n";
-            init += "\t& " + agentInstancei.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + v)) + "\n";
+            init += "\t& " + sendingAgent.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
+            init += "\t& " + sendingAgentInstance.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
+            ///////////////
 
-            Map<State, Set<ProcessTransition>> stateSendTransitionMap = new HashMap<>();
-            Map<State, Set<ProcessTransition>> stateReceiveTransitionMap = new HashMap<>();
-            stateSendTransitionMap.putAll(agenti.getStateTransitionMap(agenti.getSendTransitions()));
-            stateReceiveTransitionMap.putAll(agenti.getStateTransitionMap(agenti.getReceiveTransitions()));
 
-            List<String> stateSendPreds = new ArrayList<>();
-            for (State state : agenti.getStates()) {
-                Set<ProcessTransition> sendTransitions = stateSendTransitionMap.get(state);
-                Set<ProcessTransition> receiveTransitions = stateReceiveTransitionMap.get(state);
+            //For each state of the sending agents we are going to iterate over all of its possible send transitions
+            // We shall create predicates for each send transition, and then disjunct them.
+            for (State state : sendingAgent.getStates()) {
+                Set<ProcessTransition> sendTransitions = agentStateSendTransitionMap.get(sendingAgent).get(state);
+
+                String sendStateIsCurrentState = sendingAgentName + "-state" + " = " + sendingAgentName + "-" + state;
 
                 if (sendTransitions != null && sendTransitions.size() > 0) {
                     List<String> transitionSendPreds = new ArrayList<>();
+                    List<String> transitionSendProgressCond = new ArrayList<>();
 
                     for (ProcessTransition t : sendTransitions) {
                         //conditions for activation in now (is in source, and local guard holds),
                         // and effects in next (update, next state, and other stuff for receipt)
-                        String sendNow = "";
-                        String next = "";
-                        SendProcess process = (SendProcess) t.getLabel();
+                        List<String> sendTriggeredIf = new ArrayList<>();
+                        List<String> sendEffects = new ArrayList<>();
 
-                        Expression<Enum> channelExpr = process.getChannel().relabel(v -> v.sameTypeWithName(namei + "-" + v));
-                        String channel = channelExpr.toString();
-                        sendNow += "" + namei + "-state" + " = " + namei + "-" + t.getSource();
-                        sendNow += " & (" + process.entryCondition().relabel(v -> v.sameTypeWithName(namei + "-" + v)) + ")";
+                        SendProcess sendingProcess = (SendProcess) t.getLabel();
 
-                        sendNows.add(sendNow);
+                        Expression<Enum> sendingOnThisChannelVarOrVal = sendingProcess
+                                .getChannel()
+                                .relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v));
 
-                        next += "\n & next(" + namei + "-state" + ") = " + namei + "-" + t.getDestination();
+                        // add the guard of the sendingProcess to the guards required for the send to trigger
+                        sendTriggeredIf.add(sendingProcess.getPsi()
+                                                                .relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).close().toString());
 
-                        for (Map.Entry<String, Expression> entry : process.getUpdate().entrySet()) {
-                            next += "\n & next(" + namei + "-" + entry.getKey() + ") = (" + entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + v)) + ")";
+                        // add next state to send effects
+                        sendEffects.add("next(" + sendingAgentName + "-state" + ") = " + sendingAgentName + "-" + t.getDestination());
+
+                        // Add updates to send effects
+                        for (Map.Entry<String, Expression> entry : sendingProcess.getUpdate().entrySet()) {
+                            sendEffects.add("next(" + sendingAgentName + "-" + entry.getKey() + ") = (" + entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)).close() + ")");
                         }
-                        for (String var : agenti.getStore().getAttributes().keySet()) {
-                            if (!process.getUpdate().containsKey(var)) {
-                                next += "\n & " + "next(" + namei + "-" + var + ") = " + namei + "-" + var;
+                        for (String var : sendingAgent.getStore().getAttributes().keySet()) {
+                            if (!sendingProcess.getUpdate().containsKey(var)) {
+                                sendEffects.add("next(" + sendingAgentName + "-" + var + ") = " + sendingAgentName + "-" + var);
                             }
                         }
 
+                        // relabelling message var names
+                        Map<String, Expression> relabelledMessage = new HashMap<>();
+                        for (Map.Entry<String, Expression> entry : sendingProcess.getMessage().entrySet()) {
+                            relabelledMessage.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + ((TypedVariable) v).getName())).close());
+                        }
+
+                        //Now we will iterate over all other agents, and for every receive transition,
+                        // we create predicates for when the above send transition can trigger the receive transition.
                         List<String> agentReceivePreds = new ArrayList<>();
+                        List<String> agentReceiveProgressConds = new ArrayList<>();
 
                         for (int j = 0; j < agentInstances.size(); j++) {
                             if (i != j) {
-                                AgentInstance agentInstancej = agentInstances.get(j);
-                                Agent receiveAgent = agentInstancej.getAgent();
-                                String receiveName = agentInstancej.getLabel();
+                                AgentInstance receivingAgentInstance = agentInstances.get(j);
+                                Agent receiveAgent = receivingAgentInstance.getAgent();
+                                String receiveName = receivingAgentInstance.getLabel();
 
-                                List<String> agentReceiveNows = new ArrayList<>();
+                                Expression<Boolean> receiveGuardExpr = receiveAgent.getReceiveGuard()
+                                        .relabel(v -> v.toString().equals(Config.channelLabel)
+                                                ? sendingOnThisChannelVarOrVal
+                                                : v.sameTypeWithName(receiveName + "-" + v));
+                                receiveGuardExpr = receiveGuardExpr.close();
 
-                                String receiveGuard = receiveAgent.getReceiveGuard().relabel(v -> v.toString().equals(Config.channelLabel) ? channelExpr : v.sameTypeWithName(receiveName + "-" + v)).toString();
-                                receiveGuard = "(" + receiveGuard + ") | " + channel + " = " + broadcastChannel;
+                                String receiveGuard;
+                                if (receiveGuardExpr.equals(Condition.getFalse())) continue;
 
-                                String sendGuard = "(" + process.getMessageGuard().relabel(v -> {
+                                if (sendingOnThisChannelVarOrVal.toString().equals(Config.broadcast))
+                                    //then sending channel is broadcast and we always want to listen to broadcasts
+                                    receiveGuard = "TRUE";
+                                else if (receiveGuardExpr.toString().equals("FALSE")) {
+                                    receiveGuard = "FALSE";
+                                } else if(sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)){
+                                    receiveGuard = "(" + receiveGuardExpr + ")";
+                                } else {
+                                    receiveGuard = "(" + receiveGuardExpr + ") | " + sendingOnThisChannelVarOrVal + " = " + broadcastChannel;
+                                }
+
+                                //relabelling sendGuard
+                                Expression<Boolean> sendGuardExpr = sendingProcess.getMessageGuard().relabel(v -> {
+                                    //if v is just the special variable we use in our syntax to refer to the current
+                                    // channel being sent on, then replace it with the sending transitions channel reference
                                     if (v.toString().equals(Config.channelLabel)) {
-                                        return channelExpr;
+                                        return sendingOnThisChannelVarOrVal;
                                     } else {
                                         try {
-                                            return system.getCommunicationVariables().containsKey(v.getName()) ? receiveAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(receiveName + "-" + vv)) : v.sameTypeWithName(namei + "-" + v);
+                                            //relabelling cvs to those of the receiving agents
+                                            return system.getCommunicationVariables().containsKey(v.getName())
+                                                    ? receiveAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(receiveName + "-" + vv))
+                                                    : v.sameTypeWithName(sendingAgentName + "-" + v);
                                         } catch (RelabellingTypeException | MismatchingTypeException e) {
                                             e.printStackTrace();
                                         }
+                                        //TODO deal with errors appropriately
                                         return null;
                                     }
-                                }) + ")";
+                                }).close();
 
-                                Map<String, Expression> relabelledMessage = new HashMap<>();
-                                for (Map.Entry<String, Expression> entry : process.getMessage().entrySet()) {
-                                    relabelledMessage.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(namei + "-" + ((TypedVariable) v).getName())));
+
+                                Map<String, List<String>> receiveAgentReceivePreds = new HashMap<>();
+                                Map<String, List<String>> receiveAgentReceiveProgressConds = new HashMap<>();
+                                for (State receiveAgentState : receiveAgent.getStates()) {
+
+                                    Set<ProcessTransition> receiveAgentReceiveTransitions = agentStateReceiveTransitionMap.get(receiveAgent).get(receiveAgentState);
+
+                                    String receiveStateIsCurrentState = receiveName + "-state" + " = " + receiveName + "-" + receiveAgentState.toString();
+
+                                    if (receiveAgentReceiveTransitions != null && receiveAgentReceiveTransitions.size() > 0) {
+
+                                        List<String> transitionReceivePreds = new ArrayList<>();
+                                        List<String> transitionReceiveProgressConds = new ArrayList<>();
+                                        for (Transition receiveTrans : receiveAgentReceiveTransitions) {
+                                            ReceiveProcess receiveProcess = (ReceiveProcess) receiveTrans.getLabel();
+                                            State receiveSourceState = receiveTrans.getSource();
+
+                                            List<String> receiveTransTriggeredIf = new ArrayList<>();
+                                            List<String> receiveTransEffects = new ArrayList<>();
+
+                                            //This is a hack to allow us to stop considering this transition
+                                            // when the incoming message does not contain all message vars required
+                                            // for this transition
+                                            AtomicReference<java.lang.Boolean> stop = new AtomicReference<java.lang.Boolean>(false);
+                                            Function<Expression, Expression> stopHelper = (e) -> {
+                                                stop.set(true);
+                                                return e;
+                                            };
+
+                                            // relabel the transition guard
+                                            //     for message vars with the relabelled sending Agent messages and
+                                            //     for local vars with the name of the agent
+                                            Expression<recipe.lang.types.Boolean> receiveTransitionGuard = receiveProcess.getPsi()
+                                                    .relabel(v -> sendingProcess.getMessage().containsKey(((TypedVariable) v).getName())
+                                                            ? relabelledMessage.get(((TypedVariable) v).getName())
+                                                            : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
+                                                            ? stopHelper.apply(v)
+                                                            : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v)));
+                                            receiveTransitionGuard = receiveTransitionGuard.close();
+
+                                            ////stop considering this transition if the incoming message does not contain all message vars required
+                                            if (stop.get()) continue;
+                                            ////////////////////////
+
+                                            // if the receiveTransitionGuard has evaluated to false, then we can stop.
+                                            if (receiveTransitionGuard.equals(Condition.getFalse()))
+                                                continue;
+                                            else
+                                                receiveTransTriggeredIf.add(receiveTransitionGuard.toString());
+
+
+                                            Expression<Enum> receivingOnThisChannelVarOrVal = receiveProcess.getChannel()
+                                                    .relabel(v -> v.sameTypeWithName(receiveName + "-" + v.toString()));
+
+                                            // if the sending and receiving transition channels are both values,
+                                            // and they are not the same values then this transition can stop being
+                                            // considered
+                                            if (receivingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
+                                                    && sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
+                                                    && !sendingOnThisChannelVarOrVal.equals(receivingOnThisChannelVarOrVal))
+                                                continue;
+                                            else
+                                                receiveTransTriggeredIf.add(sendingOnThisChannelVarOrVal + " = " + receivingOnThisChannelVarOrVal);
+//                                            agentReceiveNows.add(receiveNow);
+
+                                            //for each variable update, if the updates uses a message variable that is
+                                            // not set by the send transition, then exit
+                                            // else relabel variables appropriately
+                                            for (Map.Entry<String, Expression> entry : receiveProcess.getUpdate().entrySet()) {
+                                                receiveTransEffects
+                                                        .add("next(" + receiveName + "-" + entry.getKey() + ") = "
+                                                                + entry.getValue().relabel(v ->
+                                                                sendingProcess.getMessage().containsKey(((TypedVariable) v).getName())
+                                                                        ? relabelledMessage.get(((TypedVariable) v).getName())
+                                                                        : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
+                                                                        ? stopHelper.apply((TypedVariable) v)
+                                                                        : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v))));
+                                            }
+
+                                            //stop considering this transition if update uses a message variable
+                                            // that is not set by the send transition
+                                            if (stop.get()) continue;
+                                            ///////
+
+                                            // keep the same variables for variables not mentioned in the update
+                                            for (String var : receiveAgent.getStore().getAttributes().keySet()) {
+                                                if (!receiveProcess.getUpdate().containsKey(var)) {
+                                                    receiveTransEffects.add("next(" + receiveName + "-" + var + ") = " + receiveName + "-" + var);
+                                                }
+                                            }
+
+                                            //if the receive transition is labelled, then set it's next value as true
+                                            // and set all other labels of this agents as false
+                                            if (receiveProcess.getLabel() != null && !receiveProcess.getLabel().equals("")) {
+                                                receiveTransEffects.add("next(" + receiveName + "-" + receiveProcess.getLabel() + ") = TRUE");
+                                                receiveTransEffects.add("falsify-not-" + receiveName + "-" + receiveProcess.getLabel() + "");
+                                            } else {
+                                                // if the transition is not labelled, then when it is taken no label
+                                                // should be set as true
+                                                receiveTransEffects.add("falsify-not-" + receiveName);
+                                            }
+
+                                            // set the transition destination state as the next state
+                                            receiveTransEffects.add("next(" + receiveName + "-state" + ") = " + receiveName + "-" + receiveTrans.getDestination());
+
+                                            transitionReceivePreds.add("(" + String.join(")\n \t\t& (", receiveTransTriggeredIf) + ") & "
+                                                    + "(" + String.join(")\n \t\t& (", receiveTransEffects) + ")");
+
+                                            transitionReceiveProgressConds.add("(" + String.join(")\n \t\t& (", receiveTransTriggeredIf) + ")");
+                                        }
+
+                                        if(transitionReceivePreds.size() > 0) {
+                                            receiveAgentReceivePreds.put(receiveStateIsCurrentState, transitionReceivePreds);
+                                            receiveAgentReceiveProgressConds.put(receiveStateIsCurrentState, transitionReceiveProgressConds);
+                                        }
+                                    }
                                 }
 
-                                String stateReceivePrd = "";
-                                Set<ProcessTransition> receiveAgentReceiveTransitions = receiveAgent.getReceiveTransitions();
-                                if (receiveAgentReceiveTransitions != null && receiveAgentReceiveTransitions.size() > 0) {
-                                    List<String> transitionReceivePreds = new ArrayList<>();
-                                    for (Transition receiveTrans : receiveAgentReceiveTransitions) {
-                                        ReceiveProcess receiveProcess = (ReceiveProcess) receiveTrans.getLabel();
-                                        State receiveSourceState = receiveTrans.getSource();
+                                List<String> currentAgentReceivePreds = new ArrayList<>();
+                                List<String> currentAgentProgressConds = new ArrayList<>();
 
-                                        String receiveNow = "";
-                                        String receiveNext = "";
-                                        receiveNow += receiveName + "-state" + " = " + receiveName + "-" + receiveSourceState.toString();
+                                //TRANSITION SEMANTICS
 
-                                        AtomicReference<Boolean> stop = new AtomicReference<>(false);
-                                        Function<Expression, Expression> helper = (e) -> {
-                                            stop.set(true);
-                                            return e;
-                                        };
+                                //This checks that the receive guard holds, the transition relation holds, and the send guard holds
+                                // otherwise a disjunct is not added to the above lists
+                                if (receiveAgentReceivePreds.size() > 0
+                                        && !receiveGuard.equals("FALSE")
+                                        && !sendGuardExpr.toString().equals("FALSE")) {
+                                    //Compute transition predicate (and progress predicate) for current agent
+                                    List<String> stateTransitionPreds = new ArrayList<>();
+                                    List<String> stateTransitionProgressConds = new ArrayList<>();
 
-                                        receiveNow += "\n & " + receiveProcess.getPsi().relabel(v -> process.getMessage().containsKey(((TypedVariable) v).getName())
-                                                ? relabelledMessage.get(((TypedVariable) v).getName())
-                                                : system.getMessageStructure().containsKey(((TypedVariable) v).getName())
-                                                ? helper.apply(v)
-                                                : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v));
-
-                                        if (stop.get()) continue;
-
-                                        receiveNow += "\n & (" + channel + " = " + broadcastChannel + " | " + channel + " = " + receiveProcess.getChannel().relabel(v -> v.sameTypeWithName(receiveName + "-" + v.toString())).toString() + ")";
-                                        agentReceiveNows.add(receiveNow);
-
-
-                                        for (Map.Entry<String, Expression> entry : receiveProcess.getUpdate().entrySet()) {
-                                            receiveNext += "\n & " + "next(" + receiveName + "-" + entry.getKey() + ") = " + entry.getValue().relabel(v -> process.getMessage().containsKey(((TypedVariable) v).getName())
-                                                    ? relabelledMessage.get(((TypedVariable) v).getName())
-                                                    : system.getMessageStructure().containsKey(((TypedVariable) v).getName())
-                                                    ? helper.apply((TypedVariable) v)
-                                                    : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v));
-                                        }
-
-                                        if (stop.get()) continue;
-
-                                        for (String var : receiveAgent.getStore().getAttributes().keySet()) {
-                                            if (!receiveProcess.getUpdate().containsKey(var)) {
-                                                receiveNext += "\n & " + "next(" + receiveName + "-" + var + ") = " + receiveName + "-" + var;
-                                            }
-                                        }
-
-                                        if (receiveProcess.getLabel() != null && !receiveProcess.getLabel().equals("")) {
-                                            receiveNext += "\n & " + "next(" + receiveName + "-" + receiveProcess.getLabel() + ") = TRUE";
-                                            receiveNext += "\n & falsify-not-" + receiveName + "-" + receiveProcess.getLabel() + "";
-                                        } else {
-                                            receiveNext += "\n & falsify-not-" + receiveName;
-                                        }
-
-                                        receiveNext += "\n & next(" + receiveName + "-state" + ") = " + receiveName + "-" + receiveTrans.getDestination();
-
-                                        receiveNext = receiveNext.replaceAll("^\n *&", "");
-                                        transitionReceivePreds.add("(" + receiveNow + ") & " + indent(indent(indent("\n" + receiveNext))));
+                                    for (Map.Entry<String, List<String>> entry : receiveAgentReceivePreds.entrySet()) {
+                                        stateTransitionPreds.add(entry.getKey() + " & ("
+                                                + String.join(")\n \t\t| (", entry.getValue()) + ")");
+                                    }
+                                    for (Map.Entry<String, List<String>> entry : receiveAgentReceiveProgressConds.entrySet()) {
+                                        stateTransitionProgressConds.add(entry.getKey() + " & ("
+                                                + String.join(")\n \t\t| (", entry.getValue()) + ")");
                                     }
 
-                                    if(transitionReceivePreds.size() > 0)
-                                        stateReceivePrd = "(" + String.join(")\n | (", transitionReceivePreds) + ")";
-                                    else
-                                        stateReceivePrd = "FALSE";
-//                                    stateReceivePrd += "\n | ";
-//                                    stateReceivePrd += ("(!((" + agentReceiveGuard.get(receiveName) + ") & (" + sendGuard + ") & (" + String.join(") | (", receiveNows) + ")) & keep-all-" + receiveName + ")");
-                                } else {
-                                    stateReceivePrd = "FALSE";
+                                    String transitionPred = "(" + String.join(")\n \t\t| (", stateTransitionPreds) + ")";
+                                    String transitionProgressCond = "(" + String.join(")\n \t\t| (", stateTransitionProgressConds) + ")";
+
+                                    if (receiveGuard.equals("TRUE") && sendGuardExpr.toString().equals("TRUE")) {
+                                        currentAgentReceivePreds.add(transitionPred);
+                                        currentAgentProgressConds.add(transitionProgressCond);
+                                    } else if (receiveGuard.equals("TRUE")) {
+                                        currentAgentReceivePreds.add("(" + transitionPred + ")\n \t\t& (" + sendGuardExpr + ")");
+                                        currentAgentProgressConds.add("(" + transitionProgressCond + ")\n \t\t& (" + sendGuardExpr + ")");
+                                    } else if (sendGuardExpr.toString().equals("TRUE")) {
+                                        currentAgentReceivePreds.add("(" + receiveGuard + ")\n \t\t& (" + transitionPred + ")");
+                                        currentAgentProgressConds.add("(" + receiveGuard + ")\n \t\t& (" + transitionProgressCond + ")");
+                                    } else {
+                                        currentAgentReceivePreds.add("(" + receiveGuard + ")\n \t\t& (" + transitionPred + ")\n \t\t& (" + sendGuardExpr + ")");
+                                        currentAgentProgressConds.add("(" + receiveGuard + ")\n \t\t& (" + transitionProgressCond + ")\n \t\t& (" + sendGuardExpr + ")");
+                                    }
                                 }
 
-                                String agentReceivePred = indent("((" + receiveGuard) + ")\n & \n" + indent("(" + sendGuard + "\n" + indent(indent("& (" + stateReceivePrd) + ")))"));
-                                agentReceivePred += indent("\n | (!(" + receiveGuard + ") & keep-all-" + receiveName + ")");
-                                agentReceivePred += indent("\n | (" + channel + " = " + broadcastChannel + " & " + "!(" + sendGuard + ") & keep-all-" + receiveName + ")");
-//                                agentReceivePred += "\n)";
-                                agentReceivePreds.add("(" + agentReceivePred + ")");
-
-                                String receiveNowsDisj = "TRUE";
-                                if (agentReceiveNows.size() > 0) {
-                                    receiveNowsDisj = "(" + String.join(")\n | (", agentReceiveNows) + ")";
+                                //if receiveguard is false then the whole predicate is true
+                                if (receiveGuard.equals("FALSE")){
+                                    currentAgentReceivePreds.clear();
+                                    currentAgentReceivePreds.add("keep-all-" + receiveName);
+                                    currentAgentProgressConds.clear();
+                                    currentAgentProgressConds.add("TRUE");
+                                }
+                                // if it is true then this disjunct is false (so add nothing)
+                                else if(receiveGuard.equals("TRUE")){
+                                    //do nothing
+                                }
+                                // otherwise add the receiveguard
+                                else{
+                                    currentAgentReceivePreds.add("!(" + receiveGuard + ") & keep-all-" + receiveName);
+                                    currentAgentProgressConds.add("!(" + receiveGuard + ")");
                                 }
 
-                                String progressReceivePred = "((" + indent(receiveGuard) + ")\n & \n" + indent("(" + sendGuard + "\n" + indent(indent("& (" + receiveNowsDisj) + ")))"));
-                                progressReceivePred += indent("\n | !(" + receiveGuard + ")");
-                                progressReceivePred += indent("\n | (" + channel + " = " + broadcastChannel + " & " + "!(" + sendGuard + "))");
+                                if(sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
+                                        && sendingOnThisChannelVarOrVal.toString().equals(Config.broadcast)
+                                        && sendGuardExpr.toString().equals("FALSE")){
+                                    currentAgentReceivePreds.clear();
+                                    currentAgentReceivePreds.add("keep-all-" + receiveName);
+                                    currentAgentProgressConds.clear();
+                                    currentAgentProgressConds.add("TRUE");
+                                } else if((sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
+                                        && !sendingOnThisChannelVarOrVal.toString().equals(Config.broadcast))
+                                        || sendGuardExpr.toString().equals("TRUE")){
+                                    //do nothing, disjunct does not hold
+                                } else{
+                                    if(sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
+                                            && sendingOnThisChannelVarOrVal.toString().equals(Config.broadcast)){
+                                        currentAgentReceivePreds.add("!(" + sendGuardExpr.toString() + ") & " + "keep-all-" + receiveName);
+                                        currentAgentProgressConds.add("!(" + sendGuardExpr.toString() + ")");
+                                    } else if(sendGuardExpr.toString().equals("FALSE")){
+                                        currentAgentReceivePreds.add(sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel + " & " + "keep-all-" + receiveName);
+                                        currentAgentProgressConds.add(sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel);
+                                    } else{
+                                        currentAgentReceivePreds.add(sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel + " & !(" + sendGuardExpr.toString() + ") & " + "keep-all-" + receiveName);
+                                        currentAgentProgressConds.add(sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel + " & !(" + sendGuardExpr.toString() + ")");
+                                    }
+                                }
 
-                                progress.add("(" + sendNow + ") & (" + progressReceivePred + ")");
+                                if(currentAgentReceivePreds.size() == 0){
+                                    currentAgentReceivePreds.add("FALSE");
+                                    currentAgentProgressConds.add("FALSE");
+                                }
 
-                            }
+                                agentReceivePreds.add("(" + String.join(")\n \t\t| (", currentAgentReceivePreds) + ")");
+                                agentReceiveProgressConds.add("(" + String.join(")\n \t\t| (", currentAgentProgressConds) + ")");
+
+                            }//end if(i != j)
+                        }//for loop over agents for receive
+
+                        String sendTriggeredIfPred = "(" + String.join(")\n \t\t& (", sendTriggeredIf) + ")";
+                        String sendEffectsPred = "(" + String.join(")\n \t\t& (", sendEffects) + ")";
+
+                        String agentSendPred = "(" + sendTriggeredIfPred + ")\n \t\t& (" + sendEffectsPred + ")";
+                        String agentSendProgressCond = "(" + sendTriggeredIfPred + ")\n";
+                        if(agentReceivePreds.size() > 0) {
+                            agentSendPred += "\n \t\t& (" + String.join(")\n \t\t& (", agentReceivePreds) + ")";
+                            agentSendProgressCond += "\n \t\t& (" + String.join(")\n \t\t& (", agentReceiveProgressConds) + ")";
                         }
 
-                        if(agentInstances.size() == 1)
-                            progress.add(sendNow);
-
-
-                        String logic = "(" + sendNow + indent(indent(indent(next))) + ")\n";
-                        if(agentReceivePreds.size() > 0)
-                            logic += indent("& (" + String.join("\n & ", agentReceivePreds)+ ")");
-
-                        if(process.getLabel() != null && !process.getLabel().equals("")) {
-                            define +=  "\t" + namei + "-" + process.getLabel() + " := " + logic + ";\n";
-                            transitionSendPreds.add(namei + "-" + process.getLabel());
+                        if(sendingProcess.getLabel() != null && !sendingProcess.getLabel().equals("")) {
+                            define +=  "\t" + sendingAgentName + "-" + sendingProcess.getLabel() + " := " + agentSendPred + ";\n";
+                            transitionSendPreds.add(sendingAgentName + "-" + sendingProcess.getLabel());
                         } else {
-                            transitionSendPreds.add(logic);
+                            transitionSendPreds.add(agentSendPred);
                         }
-                    }
-                    stateSendPreds.addAll(transitionSendPreds);
-                }
 
-                agentSendPreds.addAll(stateSendPreds);
+                        transitionSendProgressCond.add(agentSendProgressCond);
+                    }
+                    agentSendPreds.put(sendStateIsCurrentState, transitionSendPreds);
+                    agentSendProgressConds.put(sendStateIsCurrentState, transitionSendProgressCond);
+                }//endif
             }
         }
 
-        if(agentSendPreds.size() > 0)
-            trans += "((" + String.join(")" + "\n| (", agentSendPreds) + "));\n";
+        if(agentSendPreds.size() > 0) {
+            List<String> stateTransitionPreds = new ArrayList<>();
+            List<String> stateTransitionProgressConds = new ArrayList<>();
+            for (Map.Entry<String, List<String>> entry : agentSendPreds.entrySet()) {
+                stateTransitionPreds.add(entry.getKey() + "\n \t\t& ((" + String.join(")\n \t\t| (", entry.getValue()) + "))");
+            }
+            for (Map.Entry<String, List<String>> entry : agentSendProgressConds.entrySet()) {
+                stateTransitionProgressConds.add(entry.getKey() + "\n \t\t& ((" + String.join(")\n \t\t| (", entry.getValue()) + "))");
+            }
+
+            trans += "(" + String.join(")\n \t\t| (", stateTransitionPreds) + ");\n";
+
+            progress = stateTransitionProgressConds;
+        }
         else
             trans += "FALSE;\n";
-//        trans += "\n\t\t| (!((" + String.join(") | (", sendNows) + ")) & keep-all))";
 
         for(String name : receiveProcessNames){
             vars += "\t" + name + " : " + "boolean;\n";
@@ -378,7 +552,7 @@ public class ToNuXmv {
         nuxmv += vars;
         define += "\ttransition := " + trans;
         if(progress.size() > 0)
-            define += "\tprogress := (" + String.join(")\n \t\t|\n(", progress) + ");\n";
+            define += "\tprogress := (" + String.join(")\n \t\t| (", progress) + ");\n";
         else
             define += "\tprogress := FALSE;\n";
         nuxmv += define;
@@ -403,7 +577,7 @@ public class ToNuXmv {
 
         nuxmv += init;
         nuxmv += "TRANS\n";
-        nuxmv += "\t(transition) | (!progress & keep-all)\n";
+        nuxmv += "\t(transition)\n \t\t| (!progress & keep-all)\n";
         nuxmv = nuxmv.replaceAll("&( |\n)*TRUE(( )*&( )*)( |\n)*", "");
         nuxmv = nuxmv.replaceAll("TRUE(( )*&( )*)", "");
 //        nuxmv = nuxmv.replaceAll("TRUE\n(\t& )", "\t");
