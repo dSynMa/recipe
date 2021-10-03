@@ -12,10 +12,7 @@ import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Integer;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class TypingContext {
@@ -49,6 +46,23 @@ public class TypingContext {
             }
 
             typeVars.get(type).add(name);
+        }
+    }
+
+    public TypingContext(List<TypedVariable> varss){
+        types = new HashSet<>();
+        this.varType = new HashMap<>();
+        typeVars = new HashMap<>();
+        for(TypedVariable v : varss){
+            Type type = v.getType();
+            String name = v.getName();
+            if(!typeVars.containsKey(type)){
+                typeVars.put(type, new HashSet<>());
+                types.add(type);
+            }
+
+            typeVars.get(type).add(name);
+            varType.put(name, type);
         }
     }
 

@@ -156,10 +156,10 @@ public class Parsing {
         org.petitparser.parser.Parser typedVariableList = (typedVariable.separatedBy(CharacterParser.of(',').trim()))
                 .map((List<Object> values) -> {
                     List<Object> delimitedTypedVariables = values;
-                    Map<String, Type> typedVariables = new HashMap<>();
+                    List<TypedVariable> typedVariables = new ArrayList<>();
                     for (int i = 0; i < delimitedTypedVariables.size(); i += 2) {
                         TypedVariable typedVar = (TypedVariable) delimitedTypedVariables.get(i);
-                        typedVariables.put(typedVar.getName(), typedVar.getType());
+                        typedVariables.add(typedVar);
                     }
                     return typedVariables;
                 });

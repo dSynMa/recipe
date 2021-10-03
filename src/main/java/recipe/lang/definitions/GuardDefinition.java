@@ -35,13 +35,8 @@ public class GuardDefinition extends Definition<Expression<Boolean>> {
         Parser parser = (StringParser.of("guard").trim()
                 .seq(CharacterParser.noneOf("(").plus().flatten().or(FailureParser.withMessage("Error in guard definition name. Missing name?")))
                 .seq(CharacterParser.of('(').trim().or(FailureParser.withMessage("Error in guard definition name. Must have a (possibly empty) parameter list enclosed in round brackets.")))
-                .seq(Parsing.typedVariableList().map((Map<String, Type> typedVars) -> {
-                    List<TypedVariable> params = new ArrayList<>();
-                    for(Map.Entry<String, Type> typedVariable : typedVars.entrySet()){
-                        contextHere.get().set(typedVariable.getKey(), typedVariable.getValue());
-                        params.add(new TypedVariable(typedVariable.getValue(), typedVariable.getKey()));
-                    }
-                    return params.toArray(new TypedVariable[0]);
+                .seq(Parsing.typedVariableList().map((List<TypedVariable> typedVars) -> {
+                    return typedVars.toArray(new TypedVariable[0]);
                 }).trim().optional(new TypedVariable[0]))
                 .seq(CharacterParser.of(')').trim().or(FailureParser.withMessage("Error in guard definition name. Must have a (possibly empty) parameter list enclosed in round brackets."))))
                 .mapWithSideEffects((List<Object> values) -> {

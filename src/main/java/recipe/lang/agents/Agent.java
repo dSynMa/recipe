@@ -210,11 +210,11 @@ public class Agent {
         parser.set((StringParser.of("agent").trim().or(FailureParser.withMessage("Could not parse agent definition.")))
                     .seq(name.or(FailureParser.withMessage("Could not parse agent name.")))
                     .seq(Parsing.labelledParser("local", Parsing.typedVariableList())
-                            .mapWithSideEffects((Map<String, Type> values) -> {
+                            .mapWithSideEffects((List<TypedVariable> values) -> {
                                 localContext.get().setAll(new TypingContext(values));
                                 Map<String, TypedVariable> vars = new HashMap();
-                                for(Map.Entry<String, Type> var : values.entrySet()){
-                                    vars.put(var.getKey(), new TypedVariable(var.getValue(), var.getKey()));
+                                for(TypedVariable var : values){
+                                    vars.put(var.getName(), new TypedVariable(var.getType(), var.getName()));
                                 }
                                 return vars;
                             }).or(LazyParser.failingParser(nameString, "Could not parse agent's local definition.")))

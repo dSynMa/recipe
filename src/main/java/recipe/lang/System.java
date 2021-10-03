@@ -9,6 +9,7 @@ import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.exception.ParsingException;
 import recipe.lang.exception.TypeCreationException;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Guard;
 import recipe.lang.types.Type;
@@ -91,12 +92,12 @@ public class System{
                         }).or(FailureParser.withMessage("Error in channels definition.")))
                         .seq(Parsing.enumDefinitionParser().star().or(FailureParser.withMessage("Error in enum definitions.")))
                         .seq(labelledParser("message-structure", typedVariableList())
-                                .map((Map<String, Type> values) -> {
+                                .map((List<TypedVariable> values) -> {
                                     messageContext.get().setAll(new TypingContext(values));
                                     return values;
                                 }).or(FailureParser.withMessage("Error in message-structure definition.")))
                         .seq(labelledParser("communication-variables", typedVariableList())
-                                .map((Map<String, Type> values) -> {
+                                .map((List<TypedVariable> values) -> {
                                     communicationContext.get().setAll(new TypingContext(values));
                                     return values;
                                 }).or(FailureParser.withMessage("Error in communication-variables definition.")))
@@ -149,8 +150,8 @@ public class System{
                         ).flatten().seq(CharacterParser.noneOf(";").plus()).flatten()).delimitedBy(CharacterParser.of(';').trim()).optional(new ArrayList<>()))
                         .map((List<Object> values) -> {
                             Set<String> channels = new HashSet<>((List<String>) values.get(0));
-                            Map<String, Type> messageStructure = (Map<String, Type>) values.get(2);
-                            Map<String, Type> communicationVariables = (Map<String, Type>) values.get(3);
+                            Map<String, Type> messageStructure = messageContext.get().getVarType();
+                            Map<String, Type> communicationVariables = communicationContext.get().getVarType();
                             Map<String, Type> guardDefinitions = (Map<String, Type>) values.get(4);
                             Set<AgentInstance> agentInstances = new HashSet<>((List) values.get(6));
 
