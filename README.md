@@ -4,6 +4,8 @@
 
 The language allows the definition of a set of agents that interact synchronously. Find an example of the language in ./example-current-syntax.txt.
 
+1. Transition labels can be referred to in the LTL specifications. They will hold in the state after the transition was executed.
+
 ### LTL Model Checking
 
 For model checking add specifications at the end of the script in the form of `LTLSPEC <spec>;`. When making reference to the variables of an agent instance prefix them by the name of the agent in the following form `id-var`, similarly for their state: `id-state`, and any transition label.

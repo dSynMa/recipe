@@ -1,3 +1,6 @@
+-in visualisation make sure graphs appear in order they appear in system
+- sanity check to check if nuxmv is available
 - mention in dsynma webpage
 - documentation (make it clear each specification is checked separately (not conjunctively))
 - update github readme
+- add list of unusable keywords (progress, prog, keep-all etc)
