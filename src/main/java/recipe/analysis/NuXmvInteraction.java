@@ -211,7 +211,7 @@ public class NuXmvInteraction {
 
                 try {
                     //TODO need to parse nuxmv output to see if it is ready, depends on command
-                    Thread.sleep(300);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                 }
 
