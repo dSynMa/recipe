@@ -3,7 +3,7 @@ enum rolevals {clnt, vm, mgr}
 enum msgvals {reserve, request, release, buy, connect, full}
 message-structure: MSG : msgvals, LNK : channel
 communication-variables: cv : rolevals
-guard g(r : rolevals, c : channel, m : channel) := (channel == *) && (cv == r) | (channel == c) && (cv == mgr) | (channel == m) ;
+guard g(r : rolevals, cc : channel, m : channel) := (channel == *) && (cv == r) | (channel == cc) && (cv == mgr) | (channel == m) ;
 
 agent Client
     local: role : rolevals, cLink : channel, mLink : channel
@@ -19,10 +19,10 @@ agent Client
             )
             ;
 
-            (<TRUE> cLink! g(role,cLink,mLink)(MSG := request)[];
+            ((<cLink!=empty> cLink! g(role,cLink,mLink)(MSG := request)[];
              <mLink==empty && MSG == connect> cLink? [mLink := LNK];
              <TRUE> *! g(role,cLink,mLink)(MSG := release)[];
-             <mLink!=empty> mLink! g(role,cLink,mLink)(MSG := buy)[mLink := empty]
+             <mLink!=empty> mLink! g(role,cLink,mLink)(MSG := buy)[mLink := empty])
 
             +
              <cLink==empty && MSG == release> *? [cLink := c]
@@ -69,4 +69,4 @@ agent Machine
              <cLink==c && asgn && MSG == full> gLink? [cLink:= empty, asgn:= TRUE]
             )
             )
-system = Client(one,TRUE) | Manager(two,TRUE) | Machine(three,TRUE) 
+system = Client(one,TRUE) | Client(clienttwo,TRUE) | Manager(two,TRUE) | Machine(three,TRUE)
