@@ -71,9 +71,9 @@ public class NuXmvInteraction {
     }
 
     public Pair<Boolean, String> initialise(boolean simulate) throws IOException {
-        String out = execute("go" + (system.isSymbolic() ? "_msat" : ""));
-        out = execute("go" + (system.isSymbolic() | simulate ? "_msat" : ""));
-        while(out.startsWith("*** This is nuXmv")) out = execute("go" + (system.isSymbolic() | simulate ? "_msat" : ""));
+        String out = execute("go" + ((system.isSymbolic() | simulate) ? "_msat" : ""));
+        out = execute("go" + ((system.isSymbolic() | simulate) ? "_msat" : ""));
+        while(out.startsWith("*** This is nuXmv")) out = execute("go" + ((system.isSymbolic() | simulate) ? "_msat" : ""));
 
         if(!out.contains("file ")) {
             started = true;
