@@ -120,14 +120,7 @@ public class Server {
 
         try {
             nuXmvInteraction = new NuXmvInteraction(system);
-            Pair<Boolean, String> out = nuXmvInteraction.initialise();
-            if(out.getLeft()){
-                return NuXmvInteraction.outputToJSON(out.getRight()).toString();
-            } else{
-                JSONObject jsonObject = new JSONObject();
-                jsonObject.put("error", out.getRight());
-                return jsonObject.toString();
-            }
+            return "{}";
         } catch (ParseError parseError){
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("error", parseError.getFailure().toString());

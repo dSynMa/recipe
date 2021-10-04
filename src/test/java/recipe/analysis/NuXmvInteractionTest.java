@@ -20,7 +20,6 @@ public class NuXmvInteractionTest {
         String script = String.join("\n", Files.readAllLines(Paths.get("./example-current-syntax.txt")));
         System system = System.parser().parse(script).get();
         nuXmvInteraction = new NuXmvInteraction(system);
-        nuXmvInteraction.initialise();
         nuXmvInteraction.simulation_next("TRUE");
         nuXmvInteraction.simulation_next("TRUE");
     }

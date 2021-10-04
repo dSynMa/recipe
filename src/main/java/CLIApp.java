@@ -143,11 +143,7 @@ public class CLIApp
             if(nuXmvInteraction == null){
                 nuXmvInteraction = new NuXmvInteraction(system);
             }
-            Pair<Boolean, String> initialise = nuXmvInteraction.initialise();
-            if(!initialise.getLeft()){
-                System.out.println(initialise.getRight());
-                return;
-            }
+
             boolean exit = false;
             Scanner scanner = new Scanner(System.in);
             System.out.println("You have started simulation interactive mode, exit by pressing <ctrl+c>.");
@@ -155,7 +151,7 @@ public class CLIApp
             String constraint = scanner.next();
             Pair<Boolean, String> result = nuXmvInteraction.simulation_pick_init_state(constraint);
             if(!result.getLeft()){
-                System.out.println(initialise.getRight());
+                System.out.println(result.getRight());
                 return;
             }
 
@@ -163,7 +159,7 @@ public class CLIApp
                 System.out.println("Write any constraint you wish of the next state and press <enter> to continue.");
                 constraint = scanner.next();
                 result = nuXmvInteraction.simulation_next(constraint);
-                System.out.println(initialise.getRight());
+                System.out.println(result.getRight());
                 if(!result.getLeft()){
                     return;
                 }

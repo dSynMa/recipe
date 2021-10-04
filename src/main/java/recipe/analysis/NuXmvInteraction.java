@@ -59,7 +59,7 @@ public class NuXmvInteraction {
 
     public Pair<Boolean, String> modelCheck(String property, int steps) throws IOException {
         if(!started){
-            Pair<Boolean, String> initialise = initialise();
+            Pair<Boolean, String> initialise = initialise(false);
             if(!initialise.getLeft()){
                 return initialise;
             }
@@ -70,10 +70,10 @@ public class NuXmvInteraction {
         return new Pair<>(true, out);
     }
 
-    public Pair<Boolean, String> initialise() throws IOException {
+    public Pair<Boolean, String> initialise(boolean simulate) throws IOException {
         String out = execute("go" + (system.isSymbolic() ? "_msat" : ""));
-        out = execute("go" + (system.isSymbolic() ? "_msat" : ""));
-        while(out.startsWith("*** This is nuXmv")) out = execute("go_msat");
+        out = execute("go" + (system.isSymbolic() | simulate ? "_msat" : ""));
+        while(out.startsWith("*** This is nuXmv")) out = execute("go" + (system.isSymbolic() | simulate ? "_msat" : ""));
 
         if(!out.contains("file ")) {
             started = true;
@@ -85,12 +85,12 @@ public class NuXmvInteraction {
 
     public Pair<Boolean, String> simulation_pick_init_state(String constraint) throws IOException {
         if(!started){
-            Pair<Boolean, String> initialise = initialise();
+            Pair<Boolean, String> initialise = initialise(true);
             if(!initialise.getLeft()){
                 return initialise;
             }
         }
-        String out = execute((system.isSymbolic() ? "msat_" : "") + "pick_state -v -c \"" + constraint + "\"");
+        String out = execute("msat_pick_state -v -c \"" + constraint + "\"");
         if(out.contains("No trace")){
             return new Pair<>(false, out);
         }
@@ -110,26 +110,18 @@ public class NuXmvInteraction {
 
     public Pair<Boolean, String> simulation_next(String constraint) throws IOException {
         if(!started){
-            Pair<Boolean, String> initialise = initialise();
+            Pair<Boolean, String> initialise = initialise(true);
             if(!initialise.getLeft()){
                 return initialise;
             }
         }
         if(!simulationStarted) return simulation_pick_init_state(constraint);
 
-        String out = execute((system.isSymbolic() ? "msat_" : "") + "simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
-        if(system.isSymbolic()) {
-            if (out.contains("UNSAT")) {
-                return new Pair<>(false, out.replaceAll("\r\n|\n|nuXmv >", " ").split("\\*\\*\\*\\*")[0].trim());
-            } else {
-                return new Pair<>(true, parseLastState(out)); //To parse next state
-            }
-        } else{
-            if (out.contains("No future state exists")){
-                return new Pair<>(false, out.replaceAll("\r\n|\n|nuXmv >", " ").split("\\*\\*\\*\\*")[0].trim());
-            } else {
-                return new Pair<>(true, parseLastState(out)); //To parse next state
-            }
+        String out = execute("msat_simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
+        if (out.contains("UNSAT")) {
+            return new Pair<>(false, out.replaceAll("\r\n|\n|nuXmv >", " ").split("\\*\\*\\*\\*")[0].trim());
+        } else {
+            return new Pair<>(true, parseLastState(out)); //To parse next state
         }
     }
 
