@@ -149,14 +149,7 @@ public class NuXmvInteraction {
     static AtomicReference<Boolean> nuxmvTurn = new AtomicReference<>(true);
 
     public static void runNuXmv(Path path, InputStream inr, OutputStream outw) throws Exception {
-        String nuxmvPath = "";
-        if(Files.exists(Path.of("./nuxmv/bin/nuxmv")) || Files.exists(Path.of("./nuxmv/bin/nuxmv.exe"))){
-            nuxmvPath = "./nuxmv/bin/nuxmv";
-        } else if(Files.exists(Path.of("./bin/nuxmv")) || Files.exists(Path.of("./bin/nuxmv.exe"))){
-            nuxmvPath = "./bin/nuxmv";
-        } else {
-            nuxmvPath = "nuxmv";
-        }
+        String nuxmvPath = Config.getNuxmvPath();
 
         ProcessBuilder builder = null;
         try{

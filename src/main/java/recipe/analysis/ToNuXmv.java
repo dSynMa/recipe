@@ -1,6 +1,6 @@
 package recipe.analysis;
 
-import recipe.lang.Config;
+import recipe.Config;
 import recipe.lang.System;
 import recipe.lang.agents.*;
 import recipe.lang.exception.MismatchingTypeException;
@@ -30,7 +30,7 @@ public class ToNuXmv {
         writer.write(script);
         writer.close();
         Runtime rt = Runtime.getRuntime();
-        Process pr = rt.exec("nuxmv translation.smv");
+        Process pr = rt.exec(Config.getNuxmvPath() + " translation.smv");
 
         AtomicReference<String> out = new AtomicReference<>("");
 
