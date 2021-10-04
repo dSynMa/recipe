@@ -119,7 +119,7 @@ public class NuXmvInteraction {
 
         String out = execute("msat_simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
         if (out.contains("UNSAT")) {
-            return new Pair<>(false, out.replaceAll("\r\n|\n|nuXmv >", " ").split("\\*\\*\\*\\*")[0].trim());
+            return new Pair<>(false, "No reachable states.");
         } else {
             return new Pair<>(true, parseLastState(out)); //To parse next state
         }
