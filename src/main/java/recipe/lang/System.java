@@ -5,6 +5,7 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
+import recipe.Config;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.exception.ParsingException;

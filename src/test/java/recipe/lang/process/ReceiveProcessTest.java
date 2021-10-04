@@ -4,7 +4,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
-import recipe.lang.Config;
+import recipe.Config;
 import recipe.lang.exception.TypeCreationException;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Real;
@@ -12,8 +12,6 @@ import recipe.lang.utils.TypingContext;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.Assert.*;
 
 public class ReceiveProcessTest {
     static List<String> channels;

@@ -3,7 +3,7 @@ package recipe.lang.process;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.Config;
+import recipe.Config;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;

@@ -4,16 +4,10 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.EpsilonParser;
 import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.Config;
-import recipe.lang.definitions.GuardDefinition;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.types.*;
-import recipe.lang.types.Boolean;
-import recipe.lang.types.Enum;
-import recipe.lang.types.Integer;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class TypingContext {
     Set<Type> types;

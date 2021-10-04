@@ -4,7 +4,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
-import recipe.lang.Config;
+import recipe.Config;
 import recipe.lang.exception.TypeCreationException;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;

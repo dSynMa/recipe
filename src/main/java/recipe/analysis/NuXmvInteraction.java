@@ -1,5 +1,6 @@
 package recipe.analysis;
 
+import recipe.Config;
 import recipe.lang.utils.Pair;
 
 import org.json.*;
