@@ -360,8 +360,10 @@ public class Agent {
             BasicProcess label = (BasicProcess) t.getLabel();
             String textLabel = label.getLabel();
             if(textLabel == null || textLabel.equals("")){
-                textLabel = label.getChannel() + "!";
+                textLabel = label.getChannel().toString();
             }
+
+            textLabel += "!";
 
             dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + textLabel + "\",labeltooltip=\"" + label + "\",width=1]" + ";\n";
         }
@@ -373,8 +375,9 @@ public class Agent {
             BasicProcess label = (BasicProcess) t.getLabel();
             String textLabel = label.getLabel();
             if(textLabel == null || textLabel.equals("")){
-                textLabel = label.getChannel() + "?";
+                textLabel = label.getChannel().toString();
             }
+            textLabel += "?";
 
             dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + textLabel + "\",labeltooltip=\"" + label + "\",width=1]" + ";\n";
         }
