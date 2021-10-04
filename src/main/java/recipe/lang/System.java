@@ -65,6 +65,7 @@ public class System{
         SettableParser parser = SettableParser.undefined();
 
 //        AtomicReference<TypingContext> channelContext = new AtomicReference<>(new TypingContext());
+        AtomicReference<String> error = new AtomicReference<>("");
         AtomicReference<TypingContext> messageContext = new AtomicReference<>(new TypingContext());
         AtomicReference<TypingContext> communicationContext = new AtomicReference<>(new TypingContext());
         AtomicReference<TypingContext> guardDefinitionsContext = new AtomicReference<>(new TypingContext());
@@ -124,8 +125,13 @@ public class System{
                                     agents.get().addAll((Collection<? extends Agent>) agentss.get(0));
                                     return agentss;
                                 })
-//                                .or(FailureParser.withMessage("Error in agent definition."))
-                        ))
+//
+                        ).or(StringParser.of("agent").trim().and()
+                                .seq((CharacterParser.word().star().seq(CharacterParser.whitespace()).flatten())
+                                        .map((String val) -> {
+                                            error.set(val);
+                                            return val;
+                                        }).seq(FailureParser.withMessage("Error in agent " + error.get() + " definition.")))))
                         .seq(labelledParser("system", "=", new LazyParser<Boolean>((Boolean b) -> {
                             return AgentInstance.parser(agents.get()).separatedBy(CharacterParser.of('|'));
                         }, true))
