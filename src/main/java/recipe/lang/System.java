@@ -18,6 +18,7 @@ import recipe.lang.utils.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import static recipe.lang.utils.Parsing.*;
 import static recipe.lang.utils.Parsing.typedVariableList;
@@ -114,7 +115,7 @@ public class System{
                                 {
                                     try {
                                         Parser agent = Agent.parser(msgCmncGuardContext.getLeft().getLeft(),
-                                                msgCmncGuardContext.getLeft().getRight(), msgCmncGuardContext.getRight()).plus();
+                                                msgCmncGuardContext.getLeft().getRight(), msgCmncGuardContext.getRight()).plus();//.seq((StringParser.of("system").trim()).and());
                                         return agent;
                                     } catch (Exception e) {
                                         e.printStackTrace();
@@ -123,18 +124,18 @@ public class System{
                                 },
                                 new Pair<>(new Pair<>(messageContext.get(), communicationContext.get()), guardDefinitionsContext.get())).trim().plus()
                                 .map((List agentss) -> {
-                                    agents.get().addAll((Collection<? extends Agent>) agentss.get(0));
+                                    agentss.stream().flatMap(x -> x instanceof Agent ? Stream.of(x) : ((List) x).stream()).forEach((y) -> agents.get().add((Agent) y));
                                     return agentss;
                                 })
 //
-                        ).or(StringParser.of("agent").trim().and()
+                        ).or(StringParser.of("agent").trim()
                                 .seq((CharacterParser.word().star().seq(CharacterParser.whitespace()).flatten())
                                         .map((String val) -> {
                                             error.set(val);
                                             return val;
                                         }).seq(FailureParser.withMessage("Error in agent " + error.get() + " definition.")))))
                         .seq(labelledParser("system", "=", new LazyParser<Boolean>((Boolean b) -> {
-                            return AgentInstance.parser(agents.get()).separatedBy(CharacterParser.of('|'));
+                            return AgentInstance.parser(agents.get()).separatedBy(CharacterParser.of('|').trim());
                         }, true))
                                         .map((List<Object> values) -> {
                                             List<AgentInstance> agentInstances = new ArrayList<>();
