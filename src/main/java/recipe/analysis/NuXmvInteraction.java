@@ -10,6 +10,8 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
@@ -35,6 +37,7 @@ public class NuXmvInteraction {
         path = Files.createFile(Path.of("./forInteraction.smv"));
         Files.write(path, nuxmvScript.getBytes(StandardCharsets.UTF_8));
         process = startNuXmvThread();
+//        execute("\n");
     }
 
     public static boolean isAlive(Process p) {
@@ -53,14 +56,14 @@ public class NuXmvInteraction {
         out.flush();
         nuxmvTurn.set(true);
         while(nuxmvTurn.get()){}
-        byteArrayOutputStream.flush();
+//        byteArrayOutputStream.flush();
         String out = new String(byteArrayOutputStream.toByteArray());
         return out;
     }
 
     public Pair<Boolean, String> modelCheck(String property, Boolean bmc, int steps) throws IOException {
         if(!started){
-            Pair<Boolean, String> initialise = initialise(false || bmc);
+            Pair<Boolean, String> initialise = initialise(bmc);
             if(!initialise.getLeft()){
                 return initialise;
             }
@@ -73,8 +76,8 @@ public class NuXmvInteraction {
 
     public Pair<Boolean, String> initialise(boolean simulateOrBMC) throws IOException {
         String out = execute("go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
-        out = execute("go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
-        while(out.startsWith("*** This is nuXmv")) out = execute("go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
+//        out = execute("go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
+//        while(out.startsWith("*** This is nuXmv")) out = execute("go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
 
         if(!out.contains("file ")) {
             started = true;
@@ -167,6 +170,8 @@ public class NuXmvInteraction {
             OutputStream in = process.getOutputStream();
 
             byte[] buffer = new byte[4000];
+            List<String> textt = new ArrayList<>();
+
             while (isAlive(process)) {
                 String text = new String(buffer, 0, buffer.length);
                 int no = out.available();
@@ -177,12 +182,18 @@ public class NuXmvInteraction {
                     int n = out.read(buffer, 0, Math.min(no, buffer.length));
                     text = new String(buffer, 0, Math.min(no, buffer.length));
 
-                    outw.write(text.getBytes(StandardCharsets.UTF_8));
-                    outw.flush();
-                    outw.flush();
-                    buffer = new byte[4000];
-                    nuxmvTurn.set(false);
-                    while (!nuxmvTurn.get()) {
+                    if(text.trim().replaceAll(" ", "").toLowerCase(Locale.ROOT).endsWith("nuxmv>")) {
+                        textt.add(text);
+                        outw.write(String.join("", textt).getBytes(StandardCharsets.UTF_8));
+                        outw.flush();
+                        outw.flush();
+                        textt.clear();
+                        buffer = new byte[4000];
+                        nuxmvTurn.set(false);
+                        while (!nuxmvTurn.get()) {
+                        }
+                    } else{
+                        textt.add(text);
                     }
                 }
 
@@ -197,7 +208,7 @@ public class NuXmvInteraction {
 
                 try {
                     //TODO need to parse nuxmv output to see if it is ready, depends on command
-                    Thread.sleep(1000);
+                    Thread.sleep(10);
                 } catch (InterruptedException e) {
                 }
 
