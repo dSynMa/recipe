@@ -18,7 +18,7 @@
 	<section class="container-fluid column" style="background: whitesmoke">
 		<div class="row">
 			<section class="bg col-lg-6 justify-content-center" style="padding-top: 56px;">
-				<form id="frm" class="form-container" method="post" action="{{ url_for('index') }}">
+				<form id="frm" class="form-container" method="post" action="{{ url_for('index') }}" style="height: 510px">
 								<div class="col-md-12 mb-3">
 									<label for="validationServer01">R-Check model</label>
 									<textarea name="code"
@@ -53,15 +53,31 @@
 					</li>
 				</ul>
 				<div class="tab-content" id="pills-tabContent" style="height:50%; width: 100%">
-					<div class="tab-pane fade" id="pills-mc" role="tabpanel" aria-labelledby="pills-mc-tab" style="height:100%; width: 100%">
+					<div class="tab-pane fade" id="pills-mc" role="tabpanel" aria-labelledby="pills-mc-tab" style="height:510px; width: 100%">
 						<form id="frm-mc" class="form-container" method="post" action="{{ url_for('index') }}"  style="height:100%; width: 100%">
 							<div class="form-row" style="height:100%; width: 100%">
 								<div class="col-md-12 mb-3"  style="height:100%; width: 100%">
 									<input type="hidden" name="code" id="mc-code" value="{{ code }}">
 									<input type="hidden" name="mc" id="mc-input" value="false">
-									<button id="mc" class="btn btn-success" type="submit" title="Model check specifications in script using nuXmv">Model Check</button>
-									<label><input type="checkbox" name="bmc" id="mc-bmc" value="false">Use bounded model checking
-									<input type="number" name="bmc-bound" id="mc-bmc-bound" placeholder="bound"></label>
+									<input type="hidden" name="bmc" id="mc-bmc" value="false">
+
+									<div class="input-group mb-3">
+										<div class="input-group-prepend">
+											<button id="mc" class="btn btn-success" type="submit" title="Model check specifications in script using nuXmv">Model Check</button>
+										</div>
+										<div class="input-group-prepend">
+											<button type="button" class="btn btn-lg btn-primary" disabled >BMC</button>
+											<div class="input-group-text">
+												<input type="checkbox" name="bmc" id="mc-bmc-checkbox" value="false">
+											</div>
+
+											<input type="number" name="bmc-bound" id="mc-bmc-bound" placeholder="no?" min="1" max="100">
+										</div>
+
+									</div>
+
+<!--									<label><input type="checkbox" name="bmc" id="mc-bmc" value="false">Use bounded model checking-->
+<!--									<input type="number" name="bmc-bound" id="mc-bmc-bound" placeholder="bound"></label>-->
 									{% if mc and error%}
 										<span id="mcerror" style="color:red">{{error}}</span>
 									{% endif %}
@@ -93,7 +109,7 @@
 							</div>
 						</form>
 					</div>
-					<div class="tab-pane fade" id="pills-sim" role="tabpanel" aria-labelledby="pills-sim-tab">
+					<div class="tab-pane fade" id="pills-sim" role="tabpanel" aria-labelledby="pills-sim-tab" style="height: 510px">
 						<form id="frm-sim" class="form-container" method="post" action="{{ url_for('index') }}"  style="height:100%; width: 100%">
 							<div class="form-row"  style="height:100%; width: 100%">
 								<div class="col-md-12 mb-3"  style="height:100%; width: 100%">
@@ -259,8 +275,8 @@
 			}
 		</script>
 		<script>
-			document.getElementById('mc-bmc').addEventListener("click", function(){
-				document.getElementById("mc-bmc").value = document.getElementById('mc-bmc').checked
+			document.getElementById('mc-bmc-checkbox').addEventListener("click", function(){
+				document.getElementById("mc-bmc").value = document.getElementById('mc-bmc-checkbox').checked
 			});
 		</script>
 		<script>
