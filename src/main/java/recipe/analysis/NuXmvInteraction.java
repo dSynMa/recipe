@@ -25,7 +25,8 @@ public class NuXmvInteraction {
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
     Thread process;
-    boolean started = false;
+    boolean go = false;
+    boolean go_msat = false;
     boolean simulationStarted = false;
     Path path;
     recipe.lang.System system;
@@ -52,22 +53,29 @@ public class NuXmvInteraction {
 
     public String execute(String command) throws IOException{
         byteArrayOutputStream.reset();
+        byteArrayOutputStream.flush();
         out.write((command + "\n").getBytes());
         out.flush();
         nuxmvTurn.set(true);
         while(nuxmvTurn.get()){}
-//        byteArrayOutputStream.flush();
+        byteArrayOutputStream.flush();
         String out = new String(byteArrayOutputStream.toByteArray());
         return out;
     }
 
     public Pair<Boolean, String> modelCheck(String property, Boolean bmc, int steps) throws IOException {
-        if(!started){
+        if(bmc && !go_msat){
+            Pair<Boolean, String> initialise = initialise(bmc);
+            if(!initialise.getLeft()){
+                return initialise;
+            }
+        } else if(!bmc && !go){
             Pair<Boolean, String> initialise = initialise(bmc);
             if(!initialise.getLeft()){
                 return initialise;
             }
         }
+
         String out = execute(((system.isSymbolic() || bmc ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() || bmc ? "-k " + steps : "")));
         out = out.replaceAll("nuXmv > ", "").trim();
         out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
@@ -80,7 +88,9 @@ public class NuXmvInteraction {
 //        while(out.startsWith("*** This is nuXmv")) out = execute("go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
 
         if(!out.contains("file ")) {
-            started = true;
+            if(simulateOrBMC)
+                go_msat = true;
+            else go = true;
             return new Pair<>(true, out);
         }
 
@@ -88,13 +98,16 @@ public class NuXmvInteraction {
     }
 
     public Pair<Boolean, String> simulation_pick_init_state(String constraint) throws IOException {
-        if(!started){
+        if(!go_msat){
             Pair<Boolean, String> initialise = initialise(true);
+            initialise = initialise(true);
             if(!initialise.getLeft()){
                 return initialise;
             }
         }
-        String out = execute("msat_pick_state -v -c \"" + constraint + "\"");
+        String out = "";
+        while(out.toLowerCase(Locale.ROOT).replaceAll("( *\\*\\*\\*[^\n]*\n)|(nuxmv *>)", "").trim().equals(""))
+            out = execute("msat_pick_state -v -c \"" + constraint + "\"");
         if(out.contains("No trace")){
             return new Pair<>(false, out);
         }
@@ -113,7 +126,7 @@ public class NuXmvInteraction {
     }
 
     public Pair<Boolean, String> simulation_next(String constraint) throws IOException {
-        if(!started){
+        if(!go_msat){
             Pair<Boolean, String> initialise = initialise(true);
             if(!initialise.getLeft()){
                 return initialise;
@@ -121,7 +134,9 @@ public class NuXmvInteraction {
         }
         if(!simulationStarted) return simulation_pick_init_state(constraint);
 
-        String out = execute("msat_simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
+        String out = "";
+        while(out.toLowerCase(Locale.ROOT).replaceAll("( *\\*\\*\\*[^\n]*\n)|(nuxmv *>)", "").trim().equals(""))
+            out = execute("msat_simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
         if (out.contains("UNSAT")) {
             return new Pair<>(false, "No reachable states.");
         } else {
