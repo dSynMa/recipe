@@ -10,6 +10,8 @@ import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.GuardReference;
+import recipe.lang.expressions.predicate.Not;
+import recipe.lang.expressions.predicate.Or;
 import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
 import recipe.lang.types.Boolean;
@@ -298,115 +300,134 @@ public class ToNuXmv {
                                 for (State receiveAgentState : receiveAgent.getStates()) {
 
                                     Set<ProcessTransition> receiveAgentReceiveTransitions = agentStateReceiveTransitionMap.get(receiveAgent).get(receiveAgentState);
+                                    if(receiveAgentReceiveTransitions == null){
+                                        receiveAgentReceiveTransitions = new HashSet<>();
+                                    }
+
+                                    //adding dummy braodcast transition
+                                    Expression<Boolean> cond = null;
+                                    for (Transition receiveTrans : receiveAgentReceiveTransitions) {
+                                        ReceiveProcess receiveProcess = (ReceiveProcess) receiveTrans.getLabel();
+                                        if(receiveProcess.getChannel().toString().equals(Config.broadcast)){
+                                            if(cond == null){
+                                                cond = receiveProcess.getPsi();
+                                            } else{
+                                                cond = new Or(cond, receiveProcess.getPsi());
+                                            }
+                                        }
+                                    }
+
+                                    if(cond == null)
+                                        cond = Condition.getTrue();
+
+                                    ProcessTransition dummyBroadcast = new ProcessTransition(receiveAgentState, receiveAgentState,
+                                            new ReceiveProcess("", new Not(cond), new TypedValue(Enum.getEnum(Config.channelLabel), Config.broadcast), new HashMap<>()));
+                                    receiveAgentReceiveTransitions.add(dummyBroadcast);
 
                                     String receiveStateIsCurrentState = receiveName + "-state" + " = " + receiveName + "-" + receiveAgentState.toString();
 
-                                    if (receiveAgentReceiveTransitions != null && receiveAgentReceiveTransitions.size() > 0) {
+                                    List<String> transitionReceivePreds = new ArrayList<>();
+                                    List<String> transitionReceiveProgressConds = new ArrayList<>();
+                                    for (Transition receiveTrans : receiveAgentReceiveTransitions) {
+                                        ReceiveProcess receiveProcess = (ReceiveProcess) receiveTrans.getLabel();
 
-                                        List<String> transitionReceivePreds = new ArrayList<>();
-                                        List<String> transitionReceiveProgressConds = new ArrayList<>();
-                                        for (Transition receiveTrans : receiveAgentReceiveTransitions) {
-                                            ReceiveProcess receiveProcess = (ReceiveProcess) receiveTrans.getLabel();
-                                            State receiveSourceState = receiveTrans.getSource();
+                                        List<String> receiveTransTriggeredIf = new ArrayList<>();
+                                        List<String> receiveTransEffects = new ArrayList<>();
 
-                                            List<String> receiveTransTriggeredIf = new ArrayList<>();
-                                            List<String> receiveTransEffects = new ArrayList<>();
+                                        //This is a hack to allow us to stop considering this transition
+                                        // when the incoming message does not contain all message vars required
+                                        // for this transition
+                                        AtomicReference<java.lang.Boolean> stop = new AtomicReference<java.lang.Boolean>(false);
+                                        Function<Expression, Expression> stopHelper = (e) -> {
+                                            stop.set(true);
+                                            return e;
+                                        };
 
-                                            //This is a hack to allow us to stop considering this transition
-                                            // when the incoming message does not contain all message vars required
-                                            // for this transition
-                                            AtomicReference<java.lang.Boolean> stop = new AtomicReference<java.lang.Boolean>(false);
-                                            Function<Expression, Expression> stopHelper = (e) -> {
-                                                stop.set(true);
-                                                return e;
-                                            };
+                                        // relabel the transition guard
+                                        //     for message vars with the relabelled sending Agent messages and
+                                        //     for local vars with the name of the agent
+                                        Expression<recipe.lang.types.Boolean> receiveTransitionGuard = receiveProcess.getPsi()
+                                                .relabel(v -> sendingProcess.getMessage().containsKey(((TypedVariable) v).getName())
+                                                        ? relabelledMessage.get(((TypedVariable) v).getName())
+                                                        : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
+                                                        ? stopHelper.apply(v)
+                                                        : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v)));
+                                        receiveTransitionGuard = receiveTransitionGuard.close();
 
-                                            // relabel the transition guard
-                                            //     for message vars with the relabelled sending Agent messages and
-                                            //     for local vars with the name of the agent
-                                            Expression<recipe.lang.types.Boolean> receiveTransitionGuard = receiveProcess.getPsi()
-                                                    .relabel(v -> sendingProcess.getMessage().containsKey(((TypedVariable) v).getName())
-                                                            ? relabelledMessage.get(((TypedVariable) v).getName())
-                                                            : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
-                                                            ? stopHelper.apply(v)
-                                                            : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v)));
-                                            receiveTransitionGuard = receiveTransitionGuard.close();
+                                        ////stop considering this transition if the incoming message does not contain all message vars required
+                                        if (stop.get()) continue;
+                                        ////////////////////////
 
-                                            ////stop considering this transition if the incoming message does not contain all message vars required
-                                            if (stop.get()) continue;
-                                            ////////////////////////
-
-                                            // if the receiveTransitionGuard has evaluated to false, then we can stop.
-                                            if (receiveTransitionGuard.equals(Condition.getFalse()))
-                                                continue;
-                                            else
-                                                receiveTransTriggeredIf.add(receiveTransitionGuard.toString());
+                                        // if the receiveTransitionGuard has evaluated to false, then we can stop.
+                                        if (receiveTransitionGuard.equals(Condition.getFalse()))
+                                            continue;
+                                        else
+                                            receiveTransTriggeredIf.add(receiveTransitionGuard.toString());
 
 
-                                            Expression<Enum> receivingOnThisChannelVarOrVal = receiveProcess.getChannel()
-                                                    .relabel(v -> v.sameTypeWithName(receiveName + "-" + v.toString()));
+                                        Expression<Enum> receivingOnThisChannelVarOrVal = receiveProcess.getChannel()
+                                                .relabel(v -> v.sameTypeWithName(receiveName + "-" + v.toString()));
 
-                                            // if the sending and receiving transition channels are both values,
-                                            // and they are not the same values then this transition can stop being
-                                            // considered
-                                            if (receivingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
-                                                    && sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
-                                                    && !sendingOnThisChannelVarOrVal.equals(receivingOnThisChannelVarOrVal))
-                                                continue;
-                                            else
-                                                receiveTransTriggeredIf.add(sendingOnThisChannelVarOrVal + " = " + receivingOnThisChannelVarOrVal);
+                                        // if the sending and receiving transition channels are both values,
+                                        // and they are not the same values then this transition can stop being
+                                        // considered
+                                        if (receivingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
+                                                && sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
+                                                && !sendingOnThisChannelVarOrVal.equals(receivingOnThisChannelVarOrVal))
+                                            continue;
+                                        else
+                                            receiveTransTriggeredIf.add(sendingOnThisChannelVarOrVal + " = " + receivingOnThisChannelVarOrVal);
 //                                            agentReceiveNows.add(receiveNow);
 
-                                            //for each variable update, if the updates uses a message variable that is
-                                            // not set by the send transition, then exit
-                                            // else relabel variables appropriately
-                                            for (Map.Entry<String, Expression> entry : receiveProcess.getUpdate().entrySet()) {
-                                                receiveTransEffects
-                                                        .add("next(" + receiveName + "-" + entry.getKey() + ") = "
-                                                                + entry.getValue().relabel(v ->
-                                                                sendingProcess.getMessage().containsKey(((TypedVariable) v).getName())
-                                                                        ? relabelledMessage.get(((TypedVariable) v).getName())
-                                                                        : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
-                                                                        ? stopHelper.apply((TypedVariable) v)
-                                                                        : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v))));
-                                            }
-
-                                            //stop considering this transition if update uses a message variable
-                                            // that is not set by the send transition
-                                            if (stop.get()) continue;
-                                            ///////
-
-                                            // keep the same variables for variables not mentioned in the update
-                                            for (String var : receiveAgent.getStore().getAttributes().keySet()) {
-                                                if (!receiveProcess.getUpdate().containsKey(var)) {
-                                                    receiveTransEffects.add("next(" + receiveName + "-" + var + ") = " + receiveName + "-" + var);
-                                                }
-                                            }
-
-                                            //if the receive transition is labelled, then set it's next value as true
-                                            // and set all other labels of this agents as false
-                                            if (receiveProcess.getLabel() != null && !receiveProcess.getLabel().equals("")) {
-                                                receiveTransEffects.add("next(" + receiveName + "-" + receiveProcess.getLabel() + ") = TRUE");
-                                                receiveTransEffects.add("falsify-not-" + receiveName + "-" + receiveProcess.getLabel() + "");
-                                            } else {
-                                                // if the transition is not labelled, then when it is taken no label
-                                                // should be set as true
-                                                receiveTransEffects.add("falsify-not-" + receiveName);
-                                            }
-
-                                            // set the transition destination state as the next state
-                                            receiveTransEffects.add("next(" + receiveName + "-state" + ") = " + receiveName + "-" + receiveTrans.getDestination());
-
-                                            transitionReceivePreds.add("(" + String.join(")\n \t\t& (", receiveTransTriggeredIf) + ") & "
-                                                    + "(" + String.join(")\n \t\t& (", receiveTransEffects) + ")");
-
-                                            transitionReceiveProgressConds.add("(" + String.join(")\n \t\t& (", receiveTransTriggeredIf) + ")");
+                                        //for each variable update, if the updates uses a message variable that is
+                                        // not set by the send transition, then exit
+                                        // else relabel variables appropriately
+                                        for (Map.Entry<String, Expression> entry : receiveProcess.getUpdate().entrySet()) {
+                                            receiveTransEffects
+                                                    .add("next(" + receiveName + "-" + entry.getKey() + ") = "
+                                                            + entry.getValue().relabel(v ->
+                                                            sendingProcess.getMessage().containsKey(((TypedVariable) v).getName())
+                                                                    ? relabelledMessage.get(((TypedVariable) v).getName())
+                                                                    : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
+                                                                    ? stopHelper.apply((TypedVariable) v)
+                                                                    : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v))));
                                         }
 
-                                        if(transitionReceivePreds.size() > 0) {
-                                            receiveAgentReceivePreds.put(receiveStateIsCurrentState, transitionReceivePreds);
-                                            receiveAgentReceiveProgressConds.put(receiveStateIsCurrentState, transitionReceiveProgressConds);
+                                        //stop considering this transition if update uses a message variable
+                                        // that is not set by the send transition
+                                        if (stop.get()) continue;
+                                        ///////
+
+                                        // keep the same variables for variables not mentioned in the update
+                                        for (String var : receiveAgent.getStore().getAttributes().keySet()) {
+                                            if (!receiveProcess.getUpdate().containsKey(var)) {
+                                                receiveTransEffects.add("next(" + receiveName + "-" + var + ") = " + receiveName + "-" + var);
+                                            }
                                         }
+
+                                        //if the receive transition is labelled, then set it's next value as true
+                                        // and set all other labels of this agents as false
+                                        if (receiveProcess.getLabel() != null && !receiveProcess.getLabel().equals("")) {
+                                            receiveTransEffects.add("next(" + receiveName + "-" + receiveProcess.getLabel() + ") = TRUE");
+                                            receiveTransEffects.add("falsify-not-" + receiveName + "-" + receiveProcess.getLabel() + "");
+                                        } else {
+                                            // if the transition is not labelled, then when it is taken no label
+                                            // should be set as true
+                                            receiveTransEffects.add("falsify-not-" + receiveName);
+                                        }
+
+                                        // set the transition destination state as the next state
+                                        receiveTransEffects.add("next(" + receiveName + "-state" + ") = " + receiveName + "-" + receiveTrans.getDestination());
+
+                                        transitionReceivePreds.add("(" + String.join(")\n \t\t& (", receiveTransTriggeredIf) + ") & "
+                                                + "(" + String.join(")\n \t\t& (", receiveTransEffects) + ")");
+
+                                        transitionReceiveProgressConds.add("(" + String.join(")\n \t\t& (", receiveTransTriggeredIf) + ")");
+                                    }
+
+                                    if(transitionReceivePreds.size() > 0) {
+                                        receiveAgentReceivePreds.put(receiveStateIsCurrentState, transitionReceivePreds);
+                                        receiveAgentReceiveProgressConds.put(receiveStateIsCurrentState, transitionReceiveProgressConds);
                                     }
                                 }
 
