@@ -152,7 +152,7 @@ public class System{
 //                                .or(StringParser.of("COMPUTE"))
 //                                .or(StringParser.of("SPEC"))
 //                                .or(StringParser.of("PARSYNTH"))
-                        ).flatten().seq(CharacterParser.noneOf(";").plus()).flatten()).delimitedBy(CharacterParser.of(';').trim()).optional(new ArrayList<>()))
+                        ).flatten().seq(CharacterParser.noneOf(";").plus()).flatten()).delimitedBy((CharacterParser.of(';').or(CharacterParser.of('\n'))).trim()).optional(new ArrayList<>()))
                         .map((List<Object> values) -> {
                             Set<String> channels = new HashSet<>((List<String>) values.get(0));
                             Map<String, Type> messageStructure = messageContext.get().getVarType();
@@ -163,9 +163,13 @@ public class System{
                             List<String> specs = new ArrayList<>();
                             for(Object obj : (List<Object>) values.get(7)){
                                 if(obj.getClass().equals(String.class)){
-                                    specs.add(((String) obj).trim());
+                                    String[] spec = ((String) obj).split("(?=LTLSPEC)");
+                                    specs.addAll(List.of(spec));
                                 }
                             }
+
+                            specs.removeIf(x -> x.trim().equals(""));
+                            specs.forEach(x -> x.trim());
 
                             return new System(messageStructure, communicationVariables, guardDefinitions, agents.get(), agentInstances, specs);
                         })
