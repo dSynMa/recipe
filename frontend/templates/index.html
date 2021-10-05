@@ -69,9 +69,9 @@
 	<!--							<div class="col-md-12 mb-3">-->
 	<!--								<textarea name="mcresponse" readonly id="mc-response-text-area" style="height:90%; width: 100%" wrap="soft">{{ mcresponse }}</textarea>-->
 									<div id="accordion" style="height: 390px; overflow: scroll; overflow-y: auto; overflow-x: auto;">
-										{% for i in range(mcresponse|length)%}
+										{% if (mcresponse|length) > 0 %}
 										<span>Results:</span>
-
+										{% for i in range(mcresponse|length)%}
 										  <div class="card">
 											<div class="card-header" id="{{'heading-mc-' + (i|string)}}">
 											  <h5 class="mb-0">
@@ -87,6 +87,7 @@
 											</div>
 										  </div>
 										{% endfor %}
+										{% endif %}
 									</div>
 								</div>
 							</div>
