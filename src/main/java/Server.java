@@ -62,7 +62,7 @@ public class Server {
     @Route("/modelCheck")
     public String modelCheck(Request req) throws Exception {
         if(system == null){
-            return "{ \"error\" : \"Set system by sending your script to /setSystem.\"}";
+            return "{ \"error\" : \"Compile system first.\"}";
         }
 
         if(nuXmvInteraction == null){
