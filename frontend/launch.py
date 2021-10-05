@@ -108,7 +108,6 @@ def jsonToTableRow(stateObject):
 
 @app.route("/", methods=['POST', 'GET'])
 def index():
-    print("index")
     error = ''
     mcresponse = []
     simresponse = list()
