@@ -45,7 +45,6 @@ public class AgentTest {
         channels.add("A");
         channels.add("B");
 
-        new Enum(Config.channelWithoutBroadcastLabel, channels);
         List<String> channelsWithBroadcast = new ArrayList<>(channels);
         channelsWithBroadcast.add("*");
         new Enum(Config.channelLabel, channelsWithBroadcast);

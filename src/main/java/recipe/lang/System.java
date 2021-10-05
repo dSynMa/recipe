@@ -79,15 +79,12 @@ public class System{
                                 if (values.contains(Config.broadcast)) {
                                     throw new ParsingException(Config.broadcast + " is a reserved keyword and defined implicit, there is no need to add it to declared channel values.");
                                 }
-                                //Do not remove this, enum stored in Enum.existing
-                                new Enum(Config.channelWithoutBroadcastLabel, values);
 
                                 List<String> valuesWithBroadcast = new ArrayList<>(values);
                                 valuesWithBroadcast.add(Config.broadcast);
+                                //do not remove, stored inside Enum
                                 Enum channelEnum = new Enum(Config.channelLabel, valuesWithBroadcast);
-//                                for(String v : valuesWithBroadcast){
-//                                    channelContext.get().set(v, channelEnum);
-//                                }
+
                             } catch (TypeCreationException | ParsingException e) {
                                 e.printStackTrace();
                             }

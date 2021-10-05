@@ -5,7 +5,6 @@ import java.nio.file.Path;
 
 public class Config {
     public static final String channelLabel = "channel";
-    public static final String channelWithoutBroadcastLabel = "channelsWithoutBroadcast";
     public static final String broadcast = "*";
 
     public static String getNuxmvPath() {

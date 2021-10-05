@@ -118,7 +118,6 @@ public class Parsing {
         //Lazy parser is needed to wait for the channels to be set
         return new LazyParser<Object>((Object x) -> {
             List<String> labels = new ArrayList<>(recipe.lang.types.Enum.getEnumLabels());
-            labels.remove(Config.channelWithoutBroadcastLabel);
             return disjunctiveStringParser(labels)
                     .map((String value) -> {
                         try {
@@ -346,8 +345,7 @@ public class Parsing {
     public static Parser receiveGuardParser(TypingContext localContext) throws Exception {
         TypingContext receiveGuardContext = TypingContext.union(localContext, new TypingContext());
 
-        //Broadcast channel cannot be mentioned in receive guard
-        receiveGuardContext.set("channel", Enum.getEnum(Config.channelWithoutBroadcastLabel));
+        receiveGuardContext.set("channel", Enum.getEnum(Config.channelLabel));
 
         return labelledParser("receive-guard", Condition.parser(receiveGuardContext))
                 .map((Expression<recipe.lang.types.Boolean> cond) -> {
@@ -361,8 +359,7 @@ public class Parsing {
             Enum lhsEnum = (Enum) lhs.getType();
             Enum rhsEnum = (Enum) rhs.getType();
 
-            if(lhsEnum.name().equals(Config.channelLabel) && rhsEnum.name().equals(Config.channelWithoutBroadcastLabel)
-                || rhsEnum.name().equals(Config.channelLabel) && lhsEnum.name().equals(Config.channelWithoutBroadcastLabel)){
+            if(lhsEnum.name().equals(Config.channelLabel) && rhsEnum.name().equals(Config.channelLabel)){
                 return true;
             }
         }

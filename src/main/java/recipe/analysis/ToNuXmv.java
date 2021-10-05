@@ -298,7 +298,6 @@ public class ToNuXmv {
                                 Map<String, List<String>> receiveAgentReceivePreds = new HashMap<>();
                                 Map<String, List<String>> receiveAgentReceiveProgressConds = new HashMap<>();
                                 for (State receiveAgentState : receiveAgent.getStates()) {
-
                                     Set<ProcessTransition> receiveAgentReceiveTransitions = agentStateReceiveTransitionMap.get(receiveAgent).get(receiveAgentState);
                                     if(receiveAgentReceiveTransitions == null){
                                         receiveAgentReceiveTransitions = new HashSet<>();
@@ -579,9 +578,7 @@ public class ToNuXmv {
         nuxmv += define;
         List<String> constants = new ArrayList<>();
         for(String label : Enum.getEnumLabels()){
-            if(!label.equals(Config.channelWithoutBroadcastLabel)){
-                constants.addAll(Enum.getEnum(label).getValues());
-            }
+            constants.addAll(Enum.getEnum(label).getValues());
         }
         if(constants.size() > 0)
             nuxmv += "CONSTANTS\n\t";

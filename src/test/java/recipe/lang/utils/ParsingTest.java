@@ -16,7 +16,6 @@ import java.util.List;
 
 public class ParsingTest {
     static List<String> channels;
-    static Enum channelWithoutBroadcastEnum;
     static Enum channel;
 
     @BeforeClass
@@ -25,7 +24,6 @@ public class ParsingTest {
         channels = new ArrayList<>();
         channels.add("A");
 
-        channelWithoutBroadcastEnum = new Enum(Config.channelWithoutBroadcastLabel, channels);
         List<String> channelsWithBroadcast = new ArrayList<>(channels);
         channelsWithBroadcast.add("*");
 
@@ -100,7 +98,7 @@ public class ParsingTest {
 
         TypingContext channelContext = new TypingContext();
 
-        channelContext.set("c", channelWithoutBroadcastEnum);
+        channelContext.set("c", channel);
 
         Parser parser = Parsing.typedAssignmentList(channelContext).end();
 
