@@ -80,7 +80,7 @@ public class ToNuXmv {
         String init = "INIT\n";
         String trans = "";
 
-        List<AgentInstance> agentInstances = new ArrayList<>(system.getAgentInstances());
+        List<AgentInstance> agentInstances = system.getAgentInstances();
         Map<String, List<String>> agentSendPreds = new HashMap<>();
         Map<String, List<String>> agentSendProgressConds = new HashMap<>();
 

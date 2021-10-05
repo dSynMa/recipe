@@ -28,7 +28,7 @@ public class System{
     Map<String, Type> communicationVariables;
     Map<String, Type> guardDefinitions;
     Set<Agent> agents;
-    Set<AgentInstance> agentsInstances;
+    List<AgentInstance> agentsInstances;
 
     public List<String> getLtlspec() {
         return specs;
@@ -47,11 +47,11 @@ public class System{
     public Set<Agent> getAgents() {
         return agents;
     }
-    public Set<AgentInstance> getAgentInstances() {
+    public List<AgentInstance> getAgentInstances() {
         return agentsInstances;
     }
 
-    public System(Map<String, Type> messageStructure, Map<String, Type> communicationVariables, Map<String, Type> guardDefinitions, Set<Agent> agents, Set<AgentInstance> agentsInstances, List<String> specs) {
+    public System(Map<String, Type> messageStructure, Map<String, Type> communicationVariables, Map<String, Type> guardDefinitions, Set<Agent> agents, List<AgentInstance> agentsInstances, List<String> specs) {
         this.messageStructure = messageStructure;
         this.communicationVariables = communicationVariables;
         this.guardDefinitions = guardDefinitions;
@@ -158,7 +158,7 @@ public class System{
                             Map<String, Type> messageStructure = messageContext.get().getVarType();
                             Map<String, Type> communicationVariables = communicationContext.get().getVarType();
                             Map<String, Type> guardDefinitions = (Map<String, Type>) values.get(4);
-                            Set<AgentInstance> agentInstances = new HashSet<>((List) values.get(6));
+                            List<AgentInstance> agentInstances = (List) values.get(6);
 
                             List<String> specs = new ArrayList<>();
                             for(Object obj : (List<Object>) values.get(7)){
