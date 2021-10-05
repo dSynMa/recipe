@@ -58,23 +58,23 @@ public class NuXmvInteraction {
         return out;
     }
 
-    public Pair<Boolean, String> modelCheck(String property, int steps) throws IOException {
+    public Pair<Boolean, String> modelCheck(String property, Boolean bmc, int steps) throws IOException {
         if(!started){
-            Pair<Boolean, String> initialise = initialise(false);
+            Pair<Boolean, String> initialise = initialise(false || bmc);
             if(!initialise.getLeft()){
                 return initialise;
             }
         }
-        String out = execute(((system.isSymbolic() ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() ? "-k " + steps : "")));
+        String out = execute(((system.isSymbolic() || bmc ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() || bmc ? "-k " + steps : "")));
         out = out.replaceAll("nuXmv > ", "").trim();
-        out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
+        out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
         return new Pair<>(true, out);
     }
 
-    public Pair<Boolean, String> initialise(boolean simulate) throws IOException {
-        String out = execute("go" + ((system.isSymbolic() | simulate) ? "_msat" : ""));
-        out = execute("go" + ((system.isSymbolic() | simulate) ? "_msat" : ""));
-        while(out.startsWith("*** This is nuXmv")) out = execute("go" + ((system.isSymbolic() | simulate) ? "_msat" : ""));
+    public Pair<Boolean, String> initialise(boolean simulateOrBMC) throws IOException {
+        String out = execute("go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
+        out = execute("go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
+        while(out.startsWith("*** This is nuXmv")) out = execute("go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
 
         if(!out.contains("file ")) {
             started = true;

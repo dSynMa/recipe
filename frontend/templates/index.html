@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/html">
+<html lang="en" xmlns="http://www.w3.org/1999/html" xmlns="http://www.w3.org/1999/html">
 
 <head>
 	<title>ReCiPe Verification Tools</title>
@@ -20,7 +20,7 @@
 			<section class="bg col-lg-6 justify-content-center" style="padding-top: 56px;">
 				<form id="frm" class="form-container" method="post" action="{{ url_for('index') }}">
 								<div class="col-md-12 mb-3">
-									<label for="validationServer01">ReCiPe model</label>
+									<label for="validationServer01">R-Check model</label>
 									<textarea name="code"
 											   id="text-code"
 											   style="display:none;"
@@ -60,6 +60,8 @@
 									<input type="hidden" name="code" id="mc-code" value="{{ code }}">
 									<input type="hidden" name="mc" id="mc-input" value="false">
 									<button id="mc" class="btn btn-success" type="submit" title="Model check specifications in script using nuXmv">Model Check</button>
+									<label><input type="checkbox" name="bmc" id="mc-bmc" value="false">Use bounded model checking
+									<input type="number" name="bmc-bound" id="mc-bmc-bound" placeholder="bound"></label>
 									{% if mc and error%}
 										<span id="mcerror" style="color:red">{{error}}</span>
 									{% endif %}
@@ -136,7 +138,7 @@
 					<button id="draw"
 							class="btn btn-success"
 							type="submit"
-							title="Updates the version of the system under analysis according to the current code.">Update System</button>
+							title="Updates the version of the system under analysis according to the current code.">Compile</button>
 					<input type="hidden" name="update" id="draw-inp" value="false">
 					<input type="hidden" name="code" id="vis-code" value="{{ code }}">
 					<input type="hidden" name="sim" id="vis-input" value="false">
@@ -254,6 +256,11 @@
 				document.getElementById("pills-sim").className += " active";
 				document.getElementById("pills-sim-tab").className += " active";
 			}
+		</script>
+		<script>
+			document.getElementById('mc-bmc').addEventListener("click", function(){
+				document.getElementById("mc-bmc").value = document.getElementById('mc-bmc').checked
+			});
 		</script>
 
 		<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"

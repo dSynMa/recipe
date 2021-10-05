@@ -22,6 +22,7 @@ public class CLIApp
         Option nuxmv = new Option("n", "smv", false, "info: output to smv file");
         Option dot = new Option("d", "dot", false, "info: output agents DOT files");
         Option mc = new Option("mc", "mc", false, "info: model checks input script file");
+        Option bmc = new Option("bmc", "bmc", true, "info: bounded model checks input script file\nargs: bound (by default 10)");
         Option simulation = new Option("sim", "simulate", false, "info: opens file in simulation mode");
         Option server = new Option("s", "server", true, "info: open server on given port\nargs: <port>");
         Option frontend = new Option("f", "frontend", true, "info: opens front end and server on given ports\nargs: <server-port>,<frontend-port>");
@@ -32,6 +33,7 @@ public class CLIApp
         options.addOption(nuxmv);
         options.addOption(dot);
         options.addOption(mc);
+        options.addOption(bmc);
         options.addOption(simulation);
         options.addOption(server);
         options.addOption(frontend);
@@ -118,11 +120,11 @@ public class CLIApp
                             String spec = system.getLtlspec().get(i).replaceAll("^ *[^ ]+ +", "");
                             int bound = 0;
                             if(system.isSymbolic()){
-                                System.out.println("Specification is symbolic, thus bounded model checking will be used. Please specify an integer bound: ");
+                                System.out.println("Specification is symbolic, and thus bounded model checking will be used. Please specify an integer bound: ");
                                 Scanner scanner = new Scanner(System.in);
                                 bound = scanner.nextInt();
                             }
-                            Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, bound);
+                            Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, false, bound);
                             if(result.getLeft()) {
                                 out += spec + ":\n" + result.getRight() + "\n";
                             } else{
@@ -131,6 +133,38 @@ public class CLIApp
                         }
                         nuXmvInteraction.stopNuXmvThread();
                     }
+                    System.out.println(out);
+                }
+            } catch (ParseError parseError){
+                System.out.println(parseError.getFailure().toString());
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+        if(cmd.hasOption("bmc")){
+            try {
+                if(system.getLtlspec() == null || system.getLtlspec().size() == 0){
+                    System.out.println("No specifications to model check.");
+                } else{
+                    String out = "";
+                    nuXmvInteraction = new NuXmvInteraction(system);
+                    for(int i = 0; i < system.getLtlspec().size(); i++) {
+                        String spec = system.getLtlspec().get(i).replaceAll("^ *[^ ]+ +", "");
+                        int bound = 10;
+                        try{
+                            bound = Integer.parseInt(cmd.getOptionValue("bmc"));
+                        } catch (Exception e){
+                            System.out.println(cmd.getOptionValue("bmc") + " is not a valid bound. Using a bound of 10.");
+                        }
+
+                        Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, true, bound);
+                        if(result.getLeft()) {
+                            out += spec + ":\n" + result.getRight() + "\n";
+                        } else{
+                            out += spec + " (error) :\n" + result.getRight() + "\n";
+                        }
+                    }
+                        nuXmvInteraction.stopNuXmvThread();
                     System.out.println(out);
                 }
             } catch (ParseError parseError){

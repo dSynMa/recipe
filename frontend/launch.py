@@ -30,8 +30,12 @@ def visualise_dot():
         return json.loads(resp)
 
 
-def model_check():
-    with urllib.request.urlopen(backend + '/modelCheck') as response:
+def model_check(bmc : bool, bound : int):
+    params = {
+        'bmc': quote(str(bmc),  safe=''),
+        'bound': quote(str(bound),  safe='')
+    }
+    with urllib.request.urlopen(backend + '/modelCheck?' + urllib.parse.urlencode(params)) as response:
         resp: str = response.read().decode("utf-8")
         return json.loads(resp)
 
@@ -127,7 +131,15 @@ def index():
         else:
             visualise = visualise_dot() # cache this
         if 'mc' in request.form.keys() and request.form['mc']:
-            response = model_check()
+            if 'bmc' in request.form.keys():
+                bmc = request.form['bmc']
+            else:
+                bmc = False
+            if 'bmc-bound' in request.form.keys():
+                bound = request.form['bmc-bound']
+            else:
+                bound = 10
+            response = model_check(bmc, bound)
             if "error" in response:
                 error = response['error']
             else:

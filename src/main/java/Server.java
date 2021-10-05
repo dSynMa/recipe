@@ -81,9 +81,22 @@ public class Server {
                 JSONObject jsonObject = new JSONObject();
                 JSONArray array = new JSONArray();
 
+                boolean bounded = false;
+                int bound = 10;
+                if(!req.getQuery().get("bmc").equals("")
+                        && !req.getQuery().get("bmc").toLowerCase(Locale.ROOT).trim().equals("false")){
+                    bounded = true;
+                    if(!req.getQuery().get("bound").equals("")){
+                        try {
+                            bound = Integer.parseInt(req.getQuery().get("bound"));
+                        } catch (Exception e){
+                        }
+                    }
+                }
+
                 for(int i = 0; i < system.getLtlspec().size(); i++) {
                     String spec = system.getLtlspec().get(i).replaceAll("LTLSPEC", "").trim();
-                    Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, 20);
+                    Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, bounded, bound);
                     JSONObject resultJSON = new JSONObject();
                     resultJSON.put("spec", spec);
 
