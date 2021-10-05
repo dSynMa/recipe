@@ -134,7 +134,7 @@ def index():
                 bmc = request.form['bmc']
             else:
                 bmc = False
-            if 'bmc-bound' in request.form.keys():
+            if 'bmc-bound' in request.form.keys() & request.form['bmc-bound'] != '':
                 bound = request.form['bmc-bound']
             else:
                 bound = 10
