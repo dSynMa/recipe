@@ -90,16 +90,24 @@ public class NuXmvInteraction {
 
         Predicate<String> finished = (x) ->{
             if(bmc){
-                return x.contains("no counterexample found with bound " + steps)
-                        || x.contains("as demonstrated by the ");
+                if(x.contains("no counterexample found with bound " + steps)
+                        || x.replaceAll(" |\n|\r|\t|\\(|\\)", "").contains(property.trim().replaceAll(" |\n|\r|\t|\\(|\\)", "") + "is")) {
+                    return true;
+                } else{
+                    return false;
+                }
             } else{
-                return x.contains("is true") || x.contains("is false");
+                if(x.replaceAll(" |\n|\r|\t|\\(|\\)", "").contains(property.trim().replaceAll(" |\n|\r|\t|\\(|\\)", "") + "is")) {
+                    return true;
+                } else{
+                    return false;
+                }
             }
         };
 
         String out = "";
-        while(out.toLowerCase(Locale.ROOT).replaceAll("( *\\*\\*\\*[^\n]*\n)|(nuxmv *>)", "").trim().equals(""))
-            out = execute(finished, ((system.isSymbolic() || bmc ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() || bmc ? "-k " + steps : "")));
+//        while(out.toLowerCase(Locale.ROOT).replaceAll("( *\\*\\*\\*[^\n]*\n)|(nuxmv *>)", "").trim().equals(""))
+        out = execute(finished, ((system.isSymbolic() || bmc ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() || bmc ? "-k " + steps : "")));
         out = out.replaceAll("nuXmv > ", "").trim();
         out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
         return new Pair<>(true, out);
