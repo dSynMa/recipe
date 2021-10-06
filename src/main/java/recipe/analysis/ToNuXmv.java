@@ -10,8 +10,6 @@ import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.GuardReference;
-import recipe.lang.expressions.predicate.Not;
-import recipe.lang.expressions.predicate.Or;
 import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
 import recipe.lang.types.Boolean;
@@ -249,7 +247,6 @@ public class ToNuXmv {
                                 receiveGuardExpr = receiveGuardExpr.close();
 
                                 String receiveGuard;
-                                if (receiveGuardExpr.equals(Condition.getFalse())) continue;
 
                                 if (sendingOnThisChannelVarOrVal.toString().equals(Config.broadcast))
                                     //then sending channel is broadcast and we always want to listen to broadcasts
@@ -290,26 +287,6 @@ public class ToNuXmv {
                                     if(receiveAgentReceiveTransitions == null){
                                         receiveAgentReceiveTransitions = new HashSet<>();
                                     }
-
-                                    //adding dummy braodcast transition
-                                    Expression<Boolean> cond = null;
-                                    for (Transition receiveTrans : receiveAgentReceiveTransitions) {
-                                        ReceiveProcess receiveProcess = (ReceiveProcess) receiveTrans.getLabel();
-                                        if(receiveProcess.getChannel().toString().equals(Config.broadcast)){
-                                            if(cond == null){
-                                                cond = receiveProcess.getPsi();
-                                            } else{
-                                                cond = new Or(cond, receiveProcess.getPsi());
-                                            }
-                                        }
-                                    }
-
-                                    if(cond == null)
-                                        cond = Condition.getTrue();
-
-                                    ProcessTransition dummyBroadcast = new ProcessTransition(receiveAgentState, receiveAgentState,
-                                            new ReceiveProcess("", new Not(cond), new TypedValue(Enum.getEnum(Config.channelLabel), Config.broadcast), new HashMap<>()));
-                                    receiveAgentReceiveTransitions.add(dummyBroadcast);
 
                                     String receiveStateIsCurrentState = receiveName + "-state" + " = " + receiveName + "-" + receiveAgentState.toString();
 
@@ -423,6 +400,25 @@ public class ToNuXmv {
                                 List<String> currentAgentReceivePreds = new ArrayList<>();
                                 List<String> currentAgentProgressConds = new ArrayList<>();
 
+
+                                for(State explicitState : receiveAgent.getStates()) {
+                                    String stateCond = receiveName + "-state = " + receiveName + "-" + explicitState.toString();
+                                    String noExplicitTransition = sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel;
+                                    if (receiveAgentReceivePreds.containsKey(stateCond)
+                                            && !(receiveAgentReceivePreds.get(stateCond) == null)){
+                                            List<String> receiveTransPreds = receiveAgentReceivePreds.get(stateCond);
+                                            List<String> receiveTransProgressConds = receiveAgentReceiveProgressConds.get(stateCond);
+                                        if (receiveTransPreds.size() > 0) {
+                                            currentAgentReceivePreds.add(stateCond + " & " + noExplicitTransition + " & keep-all-" + receiveName + " & !(" + String.join(" | ", receiveTransPreds) + ")");
+                                            currentAgentProgressConds.add(stateCond + " & " + noExplicitTransition + " & !(" + String.join(" | ", receiveTransProgressConds) + ")");
+                                        }
+                                    }
+                                    else {
+                                        currentAgentReceivePreds.add(stateCond + " & " + noExplicitTransition + " & keep-all-" + receiveName);
+                                        currentAgentProgressConds.add(stateCond + " & " + noExplicitTransition);
+                                    }
+                                }
+
                                 //TRANSITION SEMANTICS
 
                                 //This checks that the receive guard holds, the transition relation holds, and the send guard holds
@@ -459,12 +455,15 @@ public class ToNuXmv {
                                         currentAgentReceivePreds.add("(" + receiveGuard + ")\n \t\t& (" + transitionPred + ")\n \t\t& (" + sendGuardExpr + ")");
                                         currentAgentProgressConds.add("(" + receiveGuard + ")\n \t\t& (" + transitionProgressCond + ")\n \t\t& (" + sendGuardExpr + ")");
                                     }
+                                } else if(receiveAgentReceivePreds.size() > 0){
+                                    throw new Exception("receiveAgentReceivePreds is empty");
                                 }
 
                                 //if receiveguard is false then the whole predicate is true
                                 if (receiveGuard.equals("FALSE")){
                                     currentAgentReceivePreds.clear();
                                     currentAgentReceivePreds.add("keep-all-" + receiveName);
+
                                     currentAgentProgressConds.clear();
                                     currentAgentProgressConds.add("TRUE");
                                 }
@@ -503,13 +502,15 @@ public class ToNuXmv {
                                     }
                                 }
 
+
                                 if(currentAgentReceivePreds.size() == 0){
-                                    currentAgentReceivePreds.add("FALSE");
-                                    currentAgentProgressConds.add("FALSE");
+                                    throw new Exception("currentAgentReceivePreds is empty");
+//                                    currentAgentReceivePreds.add("FALSE");
+//                                    currentAgentProgressConds.add("FALSE");
                                 }
 
-                                agentReceivePreds.add("(" + String.join(")\n \t\t| (", currentAgentReceivePreds) + ")");
-                                agentReceiveProgressConds.add("(" + String.join(")\n \t\t| (", currentAgentProgressConds) + ")");
+                                agentReceivePreds.add("(" + String.join(")\n\n \t\t| (", currentAgentReceivePreds) + ")");
+                                agentReceiveProgressConds.add("(" + String.join(")\n\n \t\t| (", currentAgentProgressConds) + ")");
 
                             }//end if(i != j)
                         }//for loop over agents for receive
@@ -520,11 +521,14 @@ public class ToNuXmv {
                         String agentSendPred = "(" + sendTriggeredIfPred + ")\n \t\t& (" + sendEffectsPred + ")";
                         String agentSendProgressCond = "(" + sendTriggeredIfPred + ")\n";
                         if(agentReceivePreds.size() > 0) {
-                            agentSendPred += "\n \t\t& (" + String.join(")\n \t\t& (", agentReceivePreds) + ")";
-                            agentSendProgressCond += "\n \t\t& (" + String.join(")\n \t\t& (", agentReceiveProgressConds) + ")";
+                            agentSendPred += "\n \t\t& (" + String.join(")\n\n \t\t& (", agentReceivePreds) + ")";
+                            agentSendProgressCond += "\n \t\t& (" + String.join(")\n\n \t\t& (", agentReceiveProgressConds) + ")";
                         }
 
                         if(sendingProcess.getLabel() != null && !sendingProcess.getLabel().equals("")) {
+                            if((sendingAgentName + "-" + sendingProcess.getLabel()).equals("client2-sRelease")){
+                                java.lang.System.out.println();
+                            }
                             define +=  "\t" + sendingAgentName + "-" + sendingProcess.getLabel() + " := " + agentSendPred + ";\n";
                             transitionSendPreds.add(sendingAgentName + "-" + sendingProcess.getLabel());
                         } else {
@@ -543,13 +547,13 @@ public class ToNuXmv {
             List<String> stateTransitionPreds = new ArrayList<>();
             List<String> stateTransitionProgressConds = new ArrayList<>();
             for (Map.Entry<String, List<String>> entry : agentSendPreds.entrySet()) {
-                stateTransitionPreds.add(entry.getKey() + "\n \t\t& ((" + String.join(")\n \t\t| (", entry.getValue()) + "))");
+                stateTransitionPreds.add(entry.getKey() + "\n\n \t\t& ((" + String.join(")\n\n \t\t| (", entry.getValue()) + "))");
             }
             for (Map.Entry<String, List<String>> entry : agentSendProgressConds.entrySet()) {
-                stateTransitionProgressConds.add(entry.getKey() + "\n \t\t& ((" + String.join(")\n \t\t| (", entry.getValue()) + "))");
+                stateTransitionProgressConds.add(entry.getKey() + "\n\n \t\t& ((" + String.join(")\n\n \t\t| (", entry.getValue()) + "))");
             }
 
-            trans += "(" + String.join(")\n \t\t| (", stateTransitionPreds) + ");\n";
+            trans += "(" + String.join(")\n\n \t\t| (", stateTransitionPreds) + ");\n";
 
             progress = stateTransitionProgressConds;
         }
