@@ -105,20 +105,7 @@ public class ToNuXmv {
             Agent agenti = agentInstances.get(i).getAgent();
             String namei = agentInstances.get(i).getLabel();
 
-            String keep = "keep-all-not-" + namei + " := TRUE";
             String keepThis = "keep-all-" + namei + " := TRUE";
-            for(int j = 0; j < agentInstances.size(); j++) {
-                Agent agentj = agentInstances.get(j).getAgent();
-                String namej = agentInstances.get(j).getLabel();
-
-                if(j != i){
-                    for(String var : agentj.getStore().getAttributes().keySet()){
-                        keep += " & next(" + namej + "-" + var + ") = " + namej + "-" + var;
-                    }
-                    keep += " & next(" + namej + "-state) = " + namej + "-state";
-                }
-            }
-            keepFunctions.add(keep);
 
             for(String var : agenti.getStore().getAttributes().keySet()){
                 keepThis += " & next(" + namei + "-" + var + ") = " + namei + "-" + var;
