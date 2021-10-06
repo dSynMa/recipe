@@ -274,6 +274,11 @@ public class NuXmvInteraction {
             String[] left = group[0].split("-");
 
             String agent = left[0].trim();
+
+            if(agent.startsWith("falsify") || agent.startsWith("keep")){
+                continue;
+            }
+
             String var = left[1].trim();
 
             String val = group[1].trim().replaceAll(agent + "\\-", "");
