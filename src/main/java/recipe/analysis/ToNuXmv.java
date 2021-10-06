@@ -248,6 +248,7 @@ public class ToNuXmv {
                         List<String> agentReceivePreds = new ArrayList<>();
                         List<String> agentReceiveProgressConds = new ArrayList<>();
 
+                        agentInstanceReceiveLoop:
                         for (int j = 0; j < agentInstances.size(); j++) {
                             if (i != j) {
                                 AgentInstance receivingAgentInstance = agentInstances.get(j);
@@ -327,6 +328,8 @@ public class ToNuXmv {
 
                                     List<String> transitionReceivePreds = new ArrayList<>();
                                     List<String> transitionReceiveProgressConds = new ArrayList<>();
+
+                                    receiveTransLoop:
                                     for (Transition receiveTrans : receiveAgentReceiveTransitions) {
                                         ReceiveProcess receiveProcess = (ReceiveProcess) receiveTrans.getLabel();
 
@@ -354,12 +357,12 @@ public class ToNuXmv {
                                         receiveTransitionGuard = receiveTransitionGuard.close();
 
                                         ////stop considering this transition if the incoming message does not contain all message vars required
-                                        if (stop.get()) continue;
+                                        if (stop.get()) continue receiveTransLoop;
                                         ////////////////////////
 
                                         // if the receiveTransitionGuard has evaluated to false, then we can stop.
                                         if (receiveTransitionGuard.equals(Condition.getFalse()))
-                                            continue;
+                                            continue receiveTransLoop;
                                         else
                                             receiveTransTriggeredIf.add(receiveTransitionGuard.toString());
 
@@ -373,7 +376,7 @@ public class ToNuXmv {
                                         if (receivingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
                                                 && sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
                                                 && !sendingOnThisChannelVarOrVal.equals(receivingOnThisChannelVarOrVal))
-                                            continue;
+                                            continue receiveTransLoop;
                                         else
                                             receiveTransTriggeredIf.add(sendingOnThisChannelVarOrVal + " = " + receivingOnThisChannelVarOrVal);
 //                                            agentReceiveNows.add(receiveNow);
@@ -394,7 +397,7 @@ public class ToNuXmv {
 
                                         //stop considering this transition if update uses a message variable
                                         // that is not set by the send transition
-                                        if (stop.get()) continue;
+                                        if (stop.get()) continue receiveTransLoop;
                                         ///////
 
                                         // keep the same variables for variables not mentioned in the update
