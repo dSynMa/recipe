@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -51,20 +52,27 @@ public class NuXmvInteraction {
         }
     }
 
-    public String execute(String command) throws IOException{
+    public String execute(Predicate<String> isFinished, String command) throws IOException{
+        String outText = "";
         byteArrayOutputStream.reset();
         byteArrayOutputStream.flush();
         byteArrayOutputStream.flush();
         out.write((command + "\n").getBytes());
         out.flush();
-        nuxmvTurn.set(true);
-        while(nuxmvTurn.get()){}
-        byteArrayOutputStream.flush();
-        byteArrayOutputStream.flush();
-        String out = new String(byteArrayOutputStream.toByteArray());
-        byteArrayOutputStream.flush();
-        byteArrayOutputStream.reset();
-        return out;
+
+        while (!isFinished.test(outText)) {
+            nuxmvTurn.set(true);
+            while (nuxmvTurn.get()) {
+            }
+            byteArrayOutputStream.flush();
+            byteArrayOutputStream.flush();
+            outText += new String(byteArrayOutputStream.toByteArray());
+            byteArrayOutputStream.flush();
+            byteArrayOutputStream.reset();
+            out.write(("\n").getBytes());
+            out.flush();
+        }
+        return outText;
     }
 
     public Pair<Boolean, String> modelCheck(String property, Boolean bmc, int steps) throws IOException {
@@ -80,18 +88,25 @@ public class NuXmvInteraction {
             }
         }
 
+        Predicate<String> finished = (x) ->{
+            if(bmc){
+                return x.contains("no counterexample found with bound " + steps)
+                        || x.contains("as demonstrated by the ");
+            } else{
+                return x.contains("is true") || x.contains("is false");
+            }
+        };
+
         String out = "";
         while(out.toLowerCase(Locale.ROOT).replaceAll("( *\\*\\*\\*[^\n]*\n)|(nuxmv *>)", "").trim().equals(""))
-            out = execute(((system.isSymbolic() || bmc ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() || bmc ? "-k " + steps : "")));
+            out = execute(finished, ((system.isSymbolic() || bmc ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() || bmc ? "-k " + steps : "")));
         out = out.replaceAll("nuXmv > ", "").trim();
         out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
         return new Pair<>(true, out);
     }
 
     public Pair<Boolean, String> initialise(boolean simulateOrBMC) throws IOException {
-        String out = execute("go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
-//        out = execute("go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
-//        while(out.startsWith("*** This is nuXmv")) out = execute("go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
+        String out = execute((x) -> x.trim().endsWith("nuXmv >"),"go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
 
         if(!out.contains("file ")) {
             if(simulateOrBMC)
@@ -113,8 +128,8 @@ public class NuXmvInteraction {
         }
         String out = "";
         while(out.toLowerCase(Locale.ROOT).replaceAll("( *\\*\\*\\*[^\n]*\n)|(nuxmv *>)", "").trim().equals(""))
-            out = execute("msat_pick_state -v -c \"" + constraint + "\"");
-        execute("\n");
+            out = execute((x) -> x.trim().endsWith("nuXmv >"), "msat_pick_state -v -c \"" + constraint + "\"");
+//        execute("\n");
         if(out.contains("No trace")){
             return new Pair<>(false, out);
         }
@@ -143,7 +158,7 @@ public class NuXmvInteraction {
 
         String out = "";
         while(out.toLowerCase(Locale.ROOT).replaceAll("( *\\*\\*\\*[^\n]*\n)|(nuxmv *>)", "").trim().equals(""))
-            out = execute("msat_simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
+            out = execute((x) -> x.trim().endsWith("nuXmv >"), "msat_simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
         if (out.contains("UNSAT")) {
             return new Pair<>(false, "No reachable states.");
         } else {
