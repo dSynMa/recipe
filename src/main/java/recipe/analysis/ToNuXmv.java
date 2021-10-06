@@ -409,7 +409,7 @@ public class ToNuXmv {
                                             List<String> receiveTransPreds = receiveAgentReceivePreds.get(stateCond);
                                             List<String> receiveTransProgressConds = receiveAgentReceiveProgressConds.get(stateCond);
                                         if (receiveTransPreds.size() > 0) {
-                                            currentAgentReceivePreds.add(stateCond + " & " + noExplicitTransition + " & keep-all-" + receiveName + " & !(" + String.join(" | ", receiveTransPreds) + ")");
+                                            currentAgentReceivePreds.add(stateCond + " & " + noExplicitTransition + " & keep-all-" + receiveName + " & !(" + String.join(" | ", receiveTransProgressConds) + ")");
                                             currentAgentProgressConds.add(stateCond + " & " + noExplicitTransition + " & !(" + String.join(" | ", receiveTransProgressConds) + ")");
                                         }
                                     }
