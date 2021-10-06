@@ -63,6 +63,7 @@ public class NuXmvInteraction {
         byteArrayOutputStream.flush();
         String out = new String(byteArrayOutputStream.toByteArray());
         byteArrayOutputStream.flush();
+        byteArrayOutputStream.reset();
         return out;
     }
 
@@ -79,7 +80,9 @@ public class NuXmvInteraction {
             }
         }
 
-        String out = execute(((system.isSymbolic() || bmc ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() || bmc ? "-k " + steps : "")));
+        String out = "";
+        while(out.toLowerCase(Locale.ROOT).replaceAll("( *\\*\\*\\*[^\n]*\n)|(nuxmv *>)", "").trim().equals(""))
+            out = execute(((system.isSymbolic() || bmc ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() || bmc ? "-k " + steps : "")));
         out = out.replaceAll("nuXmv > ", "").trim();
         out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
         return new Pair<>(true, out);
@@ -200,6 +203,7 @@ public class NuXmvInteraction {
                 if (no > 0) {
                     int n = out.read(buffer, 0, Math.min(no, buffer.length));
                     text = new String(buffer, 0, Math.min(no, buffer.length));
+                    Thread.sleep(10);
 
                     if(text.trim().replaceAll(" ", "").toLowerCase(Locale.ROOT).endsWith("nuxmv>")) {
                         textt.add(text);
