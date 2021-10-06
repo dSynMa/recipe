@@ -54,12 +54,15 @@ public class NuXmvInteraction {
     public String execute(String command) throws IOException{
         byteArrayOutputStream.reset();
         byteArrayOutputStream.flush();
+        byteArrayOutputStream.flush();
         out.write((command + "\n").getBytes());
         out.flush();
         nuxmvTurn.set(true);
         while(nuxmvTurn.get()){}
         byteArrayOutputStream.flush();
+        byteArrayOutputStream.flush();
         String out = new String(byteArrayOutputStream.toByteArray());
+        byteArrayOutputStream.flush();
         return out;
     }
 
@@ -108,6 +111,7 @@ public class NuXmvInteraction {
         String out = "";
         while(out.toLowerCase(Locale.ROOT).replaceAll("( *\\*\\*\\*[^\n]*\n)|(nuxmv *>)", "").trim().equals(""))
             out = execute("msat_pick_state -v -c \"" + constraint + "\"");
+        execute("\n");
         if(out.contains("No trace")){
             return new Pair<>(false, out);
         }
