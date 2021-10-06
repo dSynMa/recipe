@@ -254,21 +254,33 @@
 			document.getElementById("mc").addEventListener("click", function(){
 				document.getElementById("mc-input").value = "true"
 				document.getElementById("mc-code").value = ace.edit("text-code-ace").getValue()
+				document.getElementById("sim").disabled = true;
+				document.getElementById("draw").disabled = true;
+				document.getElementById("reset").disabled = true;
 				document.getElementById("mc").disabled = true;
 				document.getElementById("mc").form.submit();
 			});
 			document.getElementById("sim").addEventListener("click", function(){
 				document.getElementById("sim-input").value = "true"
 				document.getElementById("sim-code").value = ace.edit("text-code-ace").getValue()
+				document.getElementById("mc").disabled = true;
+				document.getElementById("draw").disabled = true;
+				document.getElementById("reset").disabled = true;
 				document.getElementById("sim").disabled = true;
 				document.getElementById("sim").form.submit();
 			});
 			document.getElementById("draw").addEventListener("click", function(){
 				document.getElementById("vis-code").value = ace.edit("text-code-ace").getValue()
+				document.getElementById("mc").disabled = true;
+				document.getElementById("sim").disabled = true;
+				document.getElementById("reset").disabled = true;
 				document.getElementById("draw").disabled = true;
 				document.getElementById("draw").form.submit();
 			});
 			document.getElementById("reset").addEventListener("click", function(){
+				document.getElementById("mc").disabled = true;
+				document.getElementById("sim").disabled = true;
+				document.getElementById("draw").disabled = true;
 				document.getElementById("reset").disabled = true;
 				document.getElementById("reset").form.submit();
 			});
