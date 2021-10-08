@@ -79,4 +79,4 @@ agent Machine
  
 system = Client(client1,TRUE) | Client(client2,TRUE) | Client(client3,TRUE) |  Manager(manager,TRUE) | Machine(machine1,gLink==g1 && pLink==vmm1) | Machine(machine2,gLink==g1 && pLink==vmm2) | Machine(machine3,gLink==g2 && pLink==vmm3)
  
-LTLSPEC G ( (F(client1-mLink!=empty) & F (client2-mLink!=empty) & F (client3-mLink!=empty)) -> F (client1-sSolve | client2-sSolve | client3-sSolve));
+LTLSPEC (F(client1-mLink!=empty) & F (client2-mLink!=empty) & F (client3-mLink!=empty)) -> F (client1-sSolve | client2-sSolve | client3-sSolve);
