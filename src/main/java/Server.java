@@ -162,7 +162,7 @@ public class Server {
         String sendTransitionLabel = req.getQuery().get("constraint");
         Pair<Boolean, String> out = nuXmvInteraction.simulation_next(sendTransitionLabel);
         if(out.getLeft()){
-            return NuXmvInteraction.outputToJSON(out.getRight()).toString();
+            return nuXmvInteraction.outputToJSON(out.getRight()).toString();
         } else{
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("error", out.getRight());

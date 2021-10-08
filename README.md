@@ -12,6 +12,12 @@ To check whether the system is stuck, the predicate `keep-all` can be queried, e
 
 When the agents use infinite-state variables the tool will use symbolic bounded model checking (using `msat`).
 
+### Simulation
+
+Simulation is performed using nuXmv, with a symbolic model.
+
+Simulation will show changes in variables in the next state only, with the exception of receive label variables which are only shown when they are true. Send labels do not appear in the simulation output since they are defined as nuXmv predicate definitions rather than as variables.
+
 ### Compilation
 
 This project was compiled and tested successfully with:

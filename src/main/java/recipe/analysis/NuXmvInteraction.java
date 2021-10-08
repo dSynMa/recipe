@@ -1,6 +1,7 @@
 package recipe.analysis;
 
 import recipe.Config;
+import recipe.lang.agents.ProcessTransition;
 import recipe.lang.utils.Pair;
 
 import org.json.*;
@@ -10,9 +11,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -265,7 +264,7 @@ public class NuXmvInteraction {
         }
     }
 
-    public static JSONObject outputToJSON(String nuxmvSimOutput){
+    public JSONObject outputToJSON(String nuxmvSimOutput){
         JSONObject jsonObject = new JSONObject();
 
         if(nuxmvSimOutput.toLowerCase(Locale.ROOT).contains("keep-all = true")){
@@ -273,10 +272,20 @@ public class NuXmvInteraction {
             return jsonObject;
         }
 
+        Set<String> receiveLabels = new HashSet<>();
+        system.getAgentInstances().forEach(ag -> {
+            for (ProcessTransition receiveTransition : ag.getAgent().getReceiveTransitions()) {
+                String label = receiveTransition.getLabel().getLabel();
+                if(label != null && !label.equals(""))
+                    receiveLabels.add(ag.getLabel() + "-" + receiveTransition.getLabel().getLabel());
+            }
+        });
+
         String agentStateRegex = "(^|\\n)[^=\\n\\^]+\\-[^=\\n\\^]+ =[^=\\n$]+(\\n|$)";
         Pattern compile = Pattern.compile(agentStateRegex, Pattern.MULTILINE);
         Matcher matcher = compile.matcher(nuxmvSimOutput);
 
+        match:
         while(matcher.find()){
             String[] group = matcher.toMatchResult().group().split("=");
 
@@ -291,6 +300,10 @@ public class NuXmvInteraction {
             String var = left[1].trim();
 
             String val = group[1].trim().replaceAll(agent + "\\-", "");
+
+            if(receiveLabels.contains(group[0].trim()) && val.equals("FALSE")){
+                continue match;
+            }
 
             if (!jsonObject.has(agent)){
                 jsonObject.put(agent, new JSONObject());
