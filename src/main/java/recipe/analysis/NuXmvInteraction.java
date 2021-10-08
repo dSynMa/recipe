@@ -134,8 +134,7 @@ public class NuXmvInteraction {
                 return initialise;
             }
         }
-        String out = execute((x) -> x.trim().endsWith("nuXmv >"), "msat_pick_state -v -c \"" + constraint + "\"");
-//        execute("\n");
+        String out = execute((x) -> !x.trim().toLowerCase(Locale.ROOT).replaceAll("( |nuxmv *>)", "").equals("") && x.trim().endsWith("nuXmv >"), "msat_pick_state -v -c \"" + constraint + "\"");
         if(out.contains("No trace")){
             return new Pair<>(false, out);
         }
@@ -162,7 +161,7 @@ public class NuXmvInteraction {
         }
         if(!simulationStarted) return simulation_pick_init_state(constraint);
 
-        String out = execute((x) -> x.trim().endsWith("nuXmv >"), "msat_simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
+        String out = execute((x) -> !x.trim().toLowerCase(Locale.ROOT).replaceAll("( |nuxmv *>)", "").equals("") && x.trim().endsWith("nuXmv >"), "msat_simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
         if (out.contains("UNSAT")) {
             return new Pair<>(false, "No reachable states.");
         } else {
