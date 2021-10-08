@@ -1,5 +1,5 @@
 import sys
-import time
+import re
 from urllib.parse import quote
 
 # import db as db
@@ -106,6 +106,30 @@ def jsonToTableRow(stateObject):
     return body
 
 
+def labelGraph(visualise, simState):
+    agents = []
+    for agentDOT in visualise["agents"]:
+        graph = agentDOT["graph"]
+        name = agentDOT["name"]
+        if name in simState:
+            if "state" in simState[name]:
+                state = simState[name]["state"]
+                graph = re.sub(";[\r\n ]*[^;]+[\r\n ]*\[color=red\][\r\n ]*;",
+                                           ";",
+                                           graph)
+                graph = re.sub("}[ \n\r\t]*", "", graph)
+                graph += state + "[color=red];}";
+        agent = {}
+        agent["name"] = name
+        agent["graph"] = graph
+        agents.append(agent)
+
+    data = {}
+    data["agents"] = agents
+
+    return json.dumps(data)
+
+
 @app.route("/", methods=['POST', 'GET'])
 def index():
     error = ''
@@ -154,14 +178,15 @@ def index():
             if "simresponse" in request.form:#) and request.form["simresponse"] != '[]':
                 prev = (request.form["simresponse"]).replace("\'{", "{").replace("\']", "]").replace("\'",'"').replace("'",'"')
                 simresponse = json.loads(prev)
-                constraints = request.form['constraints']
-                next = simulate_next(constraints).replace("\'",'"').replace("'",'"')
-                next = json.loads(next)
-                next.update({ "constraints" : constraints});
-                simresponse.append(next)
             else:
-                simresponse = [simulate_next(request.form['constraints'])]
-
+                simresponse = []
+            constraints = request.form['constraints']
+            next = simulate_next(constraints).replace("\'",'"').replace("'",'"')
+            next = json.loads(next)
+            simvisualise = request.form["simvisualise"].replace("\"", "\\\"").replace("\'", "\"")
+            visualise=json.loads(labelGraph(json.loads(simvisualise), next))
+            next.update({ "constraints" : constraints});
+            simresponse.append(next)
 
     return render_template("index.html",
                            code=code,

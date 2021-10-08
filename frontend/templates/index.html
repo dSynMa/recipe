@@ -114,6 +114,7 @@
 							<div class="form-row"  style="height:100%; width: 100%">
 								<div class="col-md-12 mb-3"  style="height:100%; width: 100%">
 									<input type="hidden" name="siminit" id="sim-init" value="{{ siminit }}">
+									<input type="hidden" name="simvisualise" id="sim-visualise" value="{{ visualise }}">
 									<input type="hidden" name="code" id="sim-code" value="{{ code }}">
 									<input type="hidden" name="sim" id="sim-input" value="false">
 									<label>Next State Constraint:</label>
@@ -256,7 +257,7 @@
 				document.getElementById("mc-code").value = ace.edit("text-code-ace").getValue()
 				document.getElementById("sim").disabled = true;
 				document.getElementById("draw").disabled = true;
-				document.getElementById("reset").disabled = true;
+				document.getElementById("sim-reset").disabled = true;
 				document.getElementById("mc").disabled = true;
 				document.getElementById("mc").form.submit();
 			});
@@ -265,7 +266,7 @@
 				document.getElementById("sim-code").value = ace.edit("text-code-ace").getValue()
 				document.getElementById("mc").disabled = true;
 				document.getElementById("draw").disabled = true;
-				document.getElementById("reset").disabled = true;
+				document.getElementById("sim-reset").disabled = true;
 				document.getElementById("sim").disabled = true;
 				document.getElementById("sim").form.submit();
 			});
@@ -273,16 +274,16 @@
 				document.getElementById("vis-code").value = ace.edit("text-code-ace").getValue()
 				document.getElementById("mc").disabled = true;
 				document.getElementById("sim").disabled = true;
-				document.getElementById("reset").disabled = true;
+				document.getElementById("sim-reset").disabled = true;
 				document.getElementById("draw").disabled = true;
 				document.getElementById("draw").form.submit();
 			});
-			document.getElementById("reset").addEventListener("click", function(){
+			document.getElementById("sim-reset").addEventListener("click", function(){
 				document.getElementById("mc").disabled = true;
 				document.getElementById("sim").disabled = true;
 				document.getElementById("draw").disabled = true;
-				document.getElementById("reset").disabled = true;
-				document.getElementById("reset").form.submit();
+				document.getElementById("sim-reset").disabled = true;
+				document.getElementById("sim-reset").form.submit();
 			});
 		</script>
 		<script>
@@ -306,22 +307,14 @@
 			textarea.scrollTop = textarea.scrollHeight;
 		</script>
 
-		<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
-			integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
-			crossorigin="anonymous"></script>
+		<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
 			integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
 			crossorigin="anonymous"></script>
 		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
 			integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
 			crossorigin="anonymous"></script>
-		<script>
-			$('#myTab a').on('click', function (e) {
-				e.preventDefault()
-				$(this).tab('show')
-			});
-		</script>
-
 	</form>
 </body>
 
