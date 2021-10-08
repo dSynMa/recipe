@@ -12,8 +12,10 @@ app = Flask(__name__)
 
 backend = ""
 
-default_script = "".join(open("./example-script.txt").readlines())
-
+try:
+    default_script = "".join(open("./example.rcp").readlines())
+except:
+    default_script = ""
 # class Simulation(db.Model):
 #     # step number
 #     id = db.Column(db.Integer, primary_key=True)
