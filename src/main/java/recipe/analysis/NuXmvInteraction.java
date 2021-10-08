@@ -67,6 +67,7 @@ public class NuXmvInteraction {
             byteArrayOutputStream.flush();
             byteArrayOutputStream.flush();
             outText += new String(byteArrayOutputStream.toByteArray());
+            outText = outText.replaceAll("(^|\\r|\\n)+\\*\\*\\*[^\\n|$]*($|\\r|\\n)+", "");
             byteArrayOutputStream.flush();
             byteArrayOutputStream.reset();
             out.write(("\n").getBytes());

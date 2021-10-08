@@ -186,7 +186,7 @@ public class System{
             digraph = digraph.replaceAll("\\\"", "\\\\\"");
             digraph = digraph.replaceAll("\n\t", " ");
             digraph = digraph.replaceAll("\n+", " ");
-            digraph = "{\"name\" : \"" + agent.getName() + "\", \"graph\" : \"" + digraph + "\"}";
+            digraph = "{\"name\" : \"" + agentInstance.getLabel() + "\", \"graph\" : \"" + digraph + "\"}";
             dot.add(digraph);
         }
 

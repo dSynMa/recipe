@@ -11,6 +11,8 @@ import recipe.lang.System;
 import recipe.lang.types.Enum;
 import recipe.lang.utils.Pair;
 
+import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.Locale;
 
 public class Server {
@@ -128,7 +130,7 @@ public class Server {
     @Route("/init")
     public String init(Request req) throws Exception {
         if(system == null){
-            return "{ \"error\" : \"Set system by sending your script to /setSystem.\"}";
+            return "{ \"error\" : \"Compile system first.\"}";
         }
 
         try {
@@ -146,16 +148,17 @@ public class Server {
     @Route("/simulateNext")
     public String simulateNext(Request req) throws Exception {
         if(system == null){
-            return "{ \"error\" : \"Set system by sending your script to /setSystem.\"}";
+            return "{ \"error\" : \"Compile system first.\"}";
         }
         if(nuXmvInteraction == null) {
             String outp = init(req);
             if(outp.contains("error")){
                 JSONObject jsonObject = new JSONObject();
                 jsonObject.put("error", outp);
-                return jsonObject.toString();            }
+                return jsonObject.toString();
+            }
         }
-        //if keep-all then return stuck
+
         String sendTransitionLabel = req.getQuery().get("constraint");
         Pair<Boolean, String> out = nuXmvInteraction.simulation_next(sendTransitionLabel);
         if(out.getLeft()){
@@ -174,10 +177,20 @@ public class Server {
 
     static App app;
 
-    public static void start(String port) throws Exception {
-        app = Flak.createHttpApp(Integer.parseInt(port));
+    public static int freePort() throws IOException {
+        ServerSocket s = new ServerSocket(0);
+        int port = s.getLocalPort();
+        s.close();
+
+        return port;
+    }
+
+    public static String start() throws Exception {
+        int port = freePort();
+        app = Flak.createHttpApp(port);
         app.scan(new Server());
         app.start();
+        return app.getRootUrl();
     }
 
     public static App app() {
@@ -189,8 +202,6 @@ public class Server {
     }
 
     public static void main(String[] args) throws Exception {
-        app = Flak.createHttpApp(Integer.parseInt(args[0]));
-        app.scan(new Server());
-        app.start();
+       java.lang.System.out.println("Server started on: " + start());
     }
 }
