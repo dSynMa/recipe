@@ -5,6 +5,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Scanner;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.petitparser.context.ParseError;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
@@ -53,6 +55,7 @@ public class CLIApp
             String serverURL = Server.start();
             int frontEndPort = Server.freePort();
             Process exec = Runtime.getRuntime().exec("python3 ./frontend/launch.py " + frontEndPort + " " + serverURL);
+            System.out.println("Launched backend on " + serverURL);
             System.out.println("Launched frontend on http://localhost:" + frontEndPort);
 
             exec.getInputStream().transferTo(System.out);
@@ -90,8 +93,16 @@ public class CLIApp
                 Files.write(Path.of(name), transform.getBytes(StandardCharsets.UTF_8));
             }
             if (cmd.hasOption("dot")) {
-                String name = inputFilePath.getFileName().toString().split("\\.")[0] + ".dot";
-                Files.write(Path.of(name), system.toDOT());
+                String filename = inputFilePath.getFileName().toString().split("\\.")[0];
+                if(!Files.exists(Path.of(filename))) {
+                    Files.createDirectory(Path.of(filename));
+                }
+                JSONArray json = new JSONArray(system.toDOT());
+                for(int i = 0; i < json.length(); i++){
+                    String agentName = new JSONObject(json.getString(i)).getString("name");
+                    String agentDot = new JSONObject(json.getString(i)).getString("graph");
+                    Files.write(Path.of(filename + "/" + agentName + ".dot"), agentDot.getBytes(StandardCharsets.UTF_8));
+                }
             }
             NuXmvInteraction nuXmvInteraction = null;
             if (cmd.hasOption("mc")) {

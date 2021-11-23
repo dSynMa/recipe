@@ -106,8 +106,31 @@ public class NuXmvInteraction {
         };
 
         String out = "";
-//        while(out.toLowerCase(Locale.ROOT).replaceAll("( *\\*\\*\\*[^\n]*\n)|(nuxmv *>)", "").trim().equals(""))
         out = execute(finished, ((system.isSymbolic() || bmc ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() || bmc ? "-k " + steps : "")));
+        out = out.replaceAll("nuXmv > ", "").trim();
+        out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
+        return new Pair<>(true, out);
+    }
+
+    public Pair<Boolean, String> modelCheckic3(String property, int steps) throws IOException {
+        if(!go_msat){
+            Pair<Boolean, String> initialise = initialise(true);
+            if(!initialise.getLeft()){
+                return initialise;
+            }
+        }
+        execute((x) -> x.trim().endsWith("nuXmv >"),"build_boolean_model");
+
+        Predicate<String> finished = (x) -> {
+                if(x.replaceAll(" |\n|\r|\t|\\(|\\)", "").contains(property.trim().replaceAll(" |\n|\r|\t|\\(|\\)", "") + "is")) {
+                    return true;
+                } else{
+                    return false;
+                }
+        };
+
+        String out = "";
+        out = execute(finished, ("check_ltlspec_ic3" + " -p \"" + property + "\" "+ (steps != -1 ? "-k " + steps : "")));
         out = out.replaceAll("nuXmv > ", "").trim();
         out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
         return new Pair<>(true, out);
@@ -116,9 +139,11 @@ public class NuXmvInteraction {
     public Pair<Boolean, String> initialise(boolean simulateOrBMC) throws IOException {
         String out = execute((x) -> x.trim().endsWith("nuXmv >"),"go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
 
-        if(!out.contains("file ")) {
-            if(simulateOrBMC)
+        if(!out.contains(" file ")) {
+            if(simulateOrBMC) {
                 go_msat = true;
+                out = execute((x) -> x.trim().endsWith("nuXmv >"), "build_boolean_model");
+            }
             else go = true;
             return new Pair<>(true, out);
         }
@@ -135,7 +160,7 @@ public class NuXmvInteraction {
             }
         }
         String out = execute((x) -> !x.trim().toLowerCase(Locale.ROOT).replaceAll("( |nuxmv *>)", "").equals("") && x.trim().endsWith("nuXmv >"), "msat_pick_state -v -c \"" + constraint + "\"");
-        if(out.contains("No trace")){
+        if(out.contains(" file ") || out.contains("No trace")){
             return new Pair<>(false, out);
         }
 
@@ -161,7 +186,7 @@ public class NuXmvInteraction {
         }
         if(!simulationStarted) return simulation_pick_init_state(constraint);
 
-        String out = execute((x) -> !x.trim().toLowerCase(Locale.ROOT).replaceAll("( |nuxmv *>)", "").equals("") && x.trim().endsWith("nuXmv >"), "msat_simulate -k 1 -v -t \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
+        String out = execute((x) -> !x.trim().toLowerCase(Locale.ROOT).replaceAll("( |nuxmv *>)", "").equals("") && x.trim().endsWith("nuXmv >"), "msat_simulate -k 1 -v -c \"" + constraint + "\"").replaceAll("(nuXmv >)", "").trim();
         if (out.contains("UNSAT")) {
             return new Pair<>(false, "No reachable states.");
         } else {

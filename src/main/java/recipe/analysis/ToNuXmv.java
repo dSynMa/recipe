@@ -68,6 +68,10 @@ public class ToNuXmv {
     }
 
     public static String transform(System system) throws Exception {
+        return transform(system, false);
+    }
+
+    public static String transform(System system, boolean sendTagsAsVars) throws Exception {
         GuardReference.resolve = true;
 
         String nuxmv = "MODULE main\n";
@@ -216,6 +220,7 @@ public class ToNuXmv {
                         for (Map.Entry<String, Expression> entry : sendingProcess.getUpdate().entrySet()) {
                             sendEffects.add("next(" + sendingAgentName + "-" + entry.getKey() + ") = (" + entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)).close() + ")");
                         }
+                        //keep variable values not mentioned in the update
                         for (String var : sendingAgent.getStore().getAttributes().keySet()) {
                             if (!sendingProcess.getUpdate().containsKey(var)) {
                                 sendEffects.add("next(" + sendingAgentName + "-" + var + ") = " + sendingAgentName + "-" + var);
