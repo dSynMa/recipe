@@ -2,7 +2,7 @@
 <html lang="en" xmlns="http://www.w3.org/1999/html" xmlns="http://www.w3.org/1999/html">
 
 <head>
-	<title>ReCiPe Verification Tools</title>
+	<title>R-Check Verification Toolkit</title>
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
 		integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 	<link rel="stylesheet" href="static/css/global.css">
@@ -60,18 +60,28 @@
 									<input type="hidden" name="code" id="mc-code" value="{{ code }}">
 									<input type="hidden" name="mc" id="mc-input" value="false">
 									<input type="hidden" name="bmc" id="mc-bmc" value="false">
+									<input type="hidden" name="ic3" id="mc-ic3" value="false">
+									<input type="hidden" name="simresponse" id="mc-simresponse" value={{ simresponse }}>
 
 									<div class="input-group mb-3">
 										<div class="input-group-prepend">
 											<button id="mc" class="btn btn-success" type="submit" title="Model check specifications in script using nuXmv">Model Check</button>
 										</div>
 										<div class="input-group-prepend">
-											<button type="button" class="btn btn-lg btn-primary" disabled >BMC</button>
-											<div class="input-group-text">
-												<input type="checkbox" name="bmc" id="mc-bmc-checkbox" value="false">
+											<div class="dropdown">
+											  	<select id="mc-select" style="height: 100%" aria-label="Model checking type">
+												  <option value="0" selected>Finite-State BDD-Based MC</option>
+												  <option value="1">ic3</option>
+												  <option value="2">BMC</option>
+												</select>
 											</div>
 
-											<input type="number" name="bmc-bound" id="mc-bmc-bound" placeholder="no?" required value="5" min="1" max="100">
+<!--											<button type="button" class="btn btn-lg btn-primary" disabled >BMC</button>-->
+<!--											<div class="input-group-text">-->
+<!--												<input type="checkbox" name="bmc" id="mc-bmc-checkbox" value="false">-->
+<!--											</div>-->
+
+											<input type="number" name="bmc-bound" id="mc-bmc-bound" placeholder="bound (-1 for no bound)" required value="5" min="-1" max="100">
 										</div>
 
 									</div>
@@ -117,12 +127,14 @@
 									<input type="hidden" name="simvisualise" id="sim-visualise" value="{{ visualise }}">
 									<input type="hidden" name="code" id="sim-code" value="{{ code }}">
 									<input type="hidden" name="sim" id="sim-input" value="false">
+									<input type="hidden" name="mcresponse" id="sim-mcresponse">
+
 									<label>Next State Constraint:</label>
 									<input name="constraints" id="sim-constraints" value="TRUE">
 									<span>(Write agent instance identifier and "-" before variable or label name, e.g. one-p && one-state = one-0.)</span>
 									<input type="hidden" name="simresponse" id="sim-response" value="{{ simresponse }}">
 									<div>
-										<button id="sim" class="btn btn-success" type="submit" title="Simulate using nuXmv">Next</button>
+										<button id="sim" class="btn btn-success" type="submit" title="Simulate using nuXmv">{% if (simresponse|length) == 0 %}Start{% else %}Next{% endif %}</button>
 										<button id="sim-reset" class="btn btn-success" type="submit" title="Reset Simulation">Reset</button>
 		<!--							</div>-->
 		<!--							<div class="col-md-12 mb-3">-->
@@ -222,6 +234,21 @@
 			editor.getSession().setUseWrapMode(true)
 
 		</script>
+			<script>
+				document.getElementById("mc-select").onchange = function(){
+														 if(this.selectedIndex == 0){
+															 document.getElementById("mc-ic3").value = "false";
+															 document.getElementById("mc-ic3").value = "false";
+															 document.getElementById("mc-bmc").value = "false";
+														 } else if(this.selectedIndex == 1){
+															 document.getElementById("mc-ic3").value = "true";
+															 document.getElementById("mc-bmc").value = "false";
+														 } else if(this.selectedIndex == 2){
+															 document.getElementById("mc-ic3").value = "false";
+															 document.getElementById("mc-bmc").value = "true";
+														 }
+													}
+			</script>
 		<script type="text/javascript">
 			// create a network
 			var container = document.getElementById('mynetwork');
@@ -234,7 +261,7 @@
 						for(var i = 0; i < data.agents.length; i++) {
 							var svg = (new Viz()).renderString(data.agents[i].graph);
 							name = data.agents[i].name
-							svg.then(function(value) { console.log(name); container.innerHTML += "<div title=\"" + name + "\">" + value + "</div>";  }, function(error) {console.log(error)});
+							svg.then(function(value) { console.log(name); container.innerHTML += "<div title=\"" + name + "\" style=\"display: inline-block\">" + value + "</div>";  }, function(error) {console.log(error)});
 						}
 					}
 				}
@@ -264,6 +291,7 @@
 			document.getElementById("sim").addEventListener("click", function(){
 				document.getElementById("sim-input").value = "true"
 				document.getElementById("sim-code").value = ace.edit("text-code-ace").getValue()
+				document.getElementById("sim-mcresponse").value = "{{ mcresponse }}"
 				document.getElementById("mc").disabled = true;
 				document.getElementById("draw").disabled = true;
 				document.getElementById("sim-reset").disabled = true;
@@ -297,17 +325,17 @@
 				document.getElementById("pills-sim-tab").className += " active";
 			}
 		</script>
-		<script>
-			document.getElementById('mc-bmc-checkbox').addEventListener("click", function(){
-				document.getElementById("mc-bmc").value = document.getElementById('mc-bmc-checkbox').checked
-			});
-		</script>
+<!--		<script>-->
+<!--			document.getElementById('mc-bmc-checkbox').addEventListener("click", function(){-->
+<!--				document.getElementById("mc-bmc").value = document.getElementById('mc-bmc-checkbox').checked-->
+<!--			});-->
+<!--		</script>-->
 		<script>
 			var textarea = document.getElementById('sim-response-div');
 			textarea.scrollTop = textarea.scrollHeight;
 		</script>
 
-		<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+		<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
 			integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"

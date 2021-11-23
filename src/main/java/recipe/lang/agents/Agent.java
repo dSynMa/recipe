@@ -341,7 +341,7 @@ public class Agent {
     public String toDOT(){
         GuardReference.resolve = false;
         String dot = "";
-        dot += "\tgraph [rankdir=LR,ranksep=0.2,nodesep=0.2];\n"
+        dot += "\tgraph [rankdir=TB,ranksep=0.2,nodesep=0.2];\n"
         + "node [shape=circle];\n";
         for(State state : this.states){
             if(state.equals(this.initialState)){

@@ -1,6 +1,7 @@
 import sys
 import re
 from urllib.parse import quote
+import html
 
 # import db as db
 from flask import Flask, render_template, request, session
@@ -32,8 +33,22 @@ def visualise_dot():
         return json.loads(resp)
 
 
-def model_check(bmc : bool, bound : int):
+@app.route("/mc", methods=['POST', 'GET'])
+def mc():
+    bmc = request.args.get("bmc")
+    bound = request.args.get("bound")
     params = {
+        'bmc': quote(str(bmc),  safe=''),
+        'bound': quote(str(bound),  safe='')
+    }
+    with urllib.request.urlopen(backend + '/modelCheck?' + urllib.parse.urlencode(params)) as response:
+        resp: str = response.read().decode("utf-8")
+        return json.loads(resp)
+
+
+def model_check(ic3 : bool, bmc : bool, bound : int):
+    params = {
+        'ic3': quote(str(ic3),  safe=''),
         'bmc': quote(str(bmc),  safe=''),
         'bound': quote(str(bound),  safe='')
     }
@@ -160,11 +175,15 @@ def index():
                 bmc = request.form['bmc']
             else:
                 bmc = False
+            if 'ic3' in request.form.keys():
+                ic3 = request.form['ic3']
+            else:
+                ic3 = False
             if 'bmc-bound' in request.form.keys():
                 bound = request.form['bmc-bound']
             else:
                 bound = 10
-            response = model_check(bmc, bound)
+            response = model_check(ic3, bmc, bound)
             if "error" in response:
                 error = response['error']
             else:
@@ -187,8 +206,10 @@ def index():
             next = json.loads(next)
             simvisualise = request.form["simvisualise"].replace("\"", "\\\"").replace("\'", "\"")
             visualise=json.loads(labelGraph(json.loads(simvisualise), next))
-            next.update({ "constraints" : constraints});
+            next.update({ "constraints" : constraints})
             simresponse.append(next)
+            mcresponsestr = html.unescape(request.form["mcresponse"]).replace("\'", '"').replace("\n", "\\n").replace("\r", "\\r")
+            mcresponse = json.loads(mcresponsestr)
 
     return render_template("index.html",
                            code=code,
