@@ -1,18 +1,11 @@
-- sanity check to check if nuxmv is available
 - mention in dsynma webpage
-- documentation (make it clear each specification is checked separately (not conjunctively))
-- update github readme
 - add list of unusable keywords (progress, prog, keep-all etc)
 - save model and open model, save dot/png file
 - resizing of boxes
 - highlight constants and variables differently
 - only for model checking: ignore receive transition labels not mentioned in the specifications (if specifications mention different receive labels, create different models)
-- Update paper translation function
 - for simulation, send transition labels as variables; and untagged transitions marked by arbitrary labels that are not shown to user, but used to highlight transitions in dot file
 - trace visualisation as sequence diagrams
-- use ic3 engine for infinite-state model checking
-- DONE on start Next button is Start button
-- DONE visualise graphs vertically rather than horizontally
-- DONE return DOT file better
-- DONE keep model checking results after tab change to simulate
-- DOING migrate frontend to reactjs (so page does not need to be relaoded fully)
+- deploy to server (add timeouts to model checking)
+
+- LTOL: add support for LTOL
