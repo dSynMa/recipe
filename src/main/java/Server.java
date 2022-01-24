@@ -145,26 +145,27 @@ public class Server {
                 boolean ic3 = false;
                 boolean bounded = false;
                 int bound = 10;
-                if(!req.getQuery().get("bmc").equals("")
+                if(req.getQuery().get("bmc") != null && !req.getQuery().get("bmc").equals("")
                         && !req.getQuery().get("bmc").toLowerCase(Locale.ROOT).trim().equals("false")){
                     bounded = true;
-                    if(!req.getQuery().get("bound").equals("")){
+                    if(req.getQuery().get("bound") != null && !req.getQuery().get("bound").equals("")){
                         try {
                             bound = Integer.parseInt(req.getQuery().get("bound"));
                         } catch (Exception e){
                         }
                     }
                 }
-                else if(!req.getQuery().get("ic3").equals("")
+                else if(req.getQuery().get("ic3") != null && !req.getQuery().get("ic3").equals("")
                         && !req.getQuery().get("ic3").toLowerCase(Locale.ROOT).trim().equals("false")){
                     ic3 = true;
-                    if(!req.getQuery().get("bound").equals("")){
+                    if(req.getQuery().get("bound") != null && !req.getQuery().get("bound").equals("")){
                         try {
+                            bounded = true;
                             bound = Integer.parseInt(req.getQuery().get("bound"));
                         } catch (Exception e){
                         }
                     } else{
-                        bound = 1;
+                        bound = -1;
                     }
                 }
 
@@ -172,7 +173,7 @@ public class Server {
                     String spec = system.getLtlspec().get(i).replaceAll("LTLSPEC", "").trim();
                     Pair<Boolean, String> result;
                     if(ic3){
-                        result = nuXmvInteraction.modelCheckic3(spec, bound);
+                        result = nuXmvInteraction.modelCheckic3(spec, bounded, bound);
                     }
                     else {
                         result = nuXmvInteraction.modelCheck(spec, bounded, bound);
@@ -309,7 +310,8 @@ public class Server {
     }
 
     public static String start() throws Exception {
-        int port = freePort();
+//        int port = freePort();
+        int port = 54044;
         app = Flak.createHttpApp(port);
         app.scan(new Server());
         cors();

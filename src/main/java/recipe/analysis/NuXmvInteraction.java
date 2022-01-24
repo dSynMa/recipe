@@ -112,7 +112,7 @@ public class NuXmvInteraction {
         return new Pair<>(true, out);
     }
 
-    public Pair<Boolean, String> modelCheckic3(String property, int steps) throws IOException {
+    public Pair<Boolean, String> modelCheckic3(String property, boolean bounded, int steps) throws IOException {
         if(!go_msat){
             Pair<Boolean, String> initialise = initialise(true);
             if(!initialise.getLeft()){
@@ -130,7 +130,7 @@ public class NuXmvInteraction {
         };
 
         String out = "";
-        out = execute(finished, ("check_ltlspec_ic3" + " -p \"" + property + "\" "+ (steps != -1 ? "-k " + steps : "")));
+        out = execute(finished, ("check_ltlspec_ic3" + " -p \"" + property + "\" "+ (bounded ? "-k " + steps : "")));
         out = out.replaceAll("nuXmv > ", "").trim();
         out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
         return new Pair<>(true, out);

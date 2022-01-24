@@ -1,5 +1,6 @@
 import org.apache.commons.cli.*;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,6 +17,12 @@ import recipe.lang.utils.Pair;
 
 public class CLIApp
 {
+    static boolean isWindows() {
+        return System.getProperty("os.name").toLowerCase().contains("win");
+    }
+
+    static String npm = isWindows() ? "npm.cmd" : "npm";
+
     public static void main( String[] args ) throws Exception
     {
         Options options = new Options();
@@ -53,10 +60,12 @@ public class CLIApp
 
         if(cmd.hasOption("gui")){
             String serverURL = Server.start();
-            int frontEndPort = Server.freePort();
-            Process exec = Runtime.getRuntime().exec("python3 ./frontend/launch.py " + frontEndPort + " " + serverURL);
-            System.out.println("Launched backend on " + serverURL);
-            System.out.println("Launched frontend on http://localhost:" + frontEndPort);
+            ProcessBuilder processBuilder = new ProcessBuilder();
+            File dir = new File(System.getProperty("user.dir") + File.separator + "frontend-react");
+
+            processBuilder.directory(dir);
+            processBuilder.command(npm, "start");
+            Process exec = processBuilder.start();
 
             exec.getInputStream().transferTo(System.out);
         } else if(!cmd.hasOption("i")){
