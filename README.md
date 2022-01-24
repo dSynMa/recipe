@@ -23,8 +23,8 @@ Simulation will show changes in variables in the next state only, with the excep
 This project was compiled and tested successfully with:
 1. Java 15
 2. [nuXmv 2.0.0](https://nuxmv.fbk.eu/)
-3. python 3.9.7 (for the frontend)
-4. Maven 4
+3. Maven 4
+4. NPM (to use frontend)
 
 We suggest using the same or similar versions for compilation and running. Check pom.xml for the right versions.
 
@@ -35,9 +35,9 @@ For compilation to a single jar file simple run `mvn clean package`, and the jar
 
 We assume that the following commands are available from the environment PATH variable:
 1. `nuxmv` (for analysis and simulation)
-2. `python3` (for the GUI).
+2. `npm' (for frontend)
 
-Or  for the case of nuxmv:
+Or for the case of nuxmv:
 
 The folder you downloaded from nuXmv developer site should be renamed `nuxmv` be placed in `./nuxmv/bin/`
 
@@ -60,7 +60,7 @@ After compilation, run the jar, e.g.`java -jar ./target/rcheck-0.1.jar` with the
 
 and with the following to run the GUI app:
 ```
- -g,--gui           info: opens gui, the gui app is a webapp
+ -g,--gui           info: opens gui, (make sure 'npm install' is called in ./frontend-react before, and that ports 54044 and 3000 are free)
  ```
  
  For example, when you are in the main folder "rcheck" of the artefact submission, you can do the following:
@@ -68,17 +68,31 @@ and with the following to run the GUI app:
  Go to https://nuxmv.fbk.eu and download nuXmv for command line of your operating system.
  You will get a folder and you should name it nuXmv and place it in the main folder ./rcheck
  
- Now execute the following commands.
- 
+ Now you can execute the following commands to work with the GUI web interface for the first time, which will be served on http://localhost:3000:
+
+```
+ cd ./frontend-react
+ npm install
+ cd ..
+```
+
+Only execute the above commands once to build the web interface, and then you execute the following command to build the R-CHECK excutable:
+ ```
  mvn clean
  mvn install
- java -jar ./target/rcheck-0.1.jar -g         
- 
-The option -g is to work on the GUI web app, you can open a browser and go to the address http://localhost:portnumber. Choose the port number that you get when you execute the previous command.
- 
- If you want to work directly with the command line tool, you have to supply the file  -i and specify what you want to do with it.
+  ```
+
+Then you can run the following to access R-CHECK's functionality through the web interface:
+```
+java -jar ./target/rcheck-0.1.jar -g
+```
+
+ If you want to work directly with the command line tool, you have to supply the file input file with `-i' and specify what you want to do with it.
  
 For the simulation from the command line, you can specify a constraint or you can just type "TRUE" to see a possible execution. 
 
-Example: java -jar ./target/rcheck-0.1.jar -i example.rcp -sim
- 
+Example: 
+
+```
+java -jar ./target/rcheck-0.1.jar -i example.rcp -sim
+``` 
