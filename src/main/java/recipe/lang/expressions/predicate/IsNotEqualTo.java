@@ -2,13 +2,14 @@ package recipe.lang.expressions.predicate;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.store.Store;
+import recipe.lang.types.Boolean;
+import recipe.lang.types.Type;
 
 import java.util.List;
 import java.util.Set;
@@ -20,15 +21,9 @@ public class IsNotEqualTo extends Condition {
 	private Expression rhs;
 
 	public IsNotEqualTo(Expression lhs, Expression rhs) {
-		super(PredicateType.ISNOTEQUAL);
 		this.lhs = lhs;
 		this.rhs = rhs;
 	}
-//	public IsEqualTo(Attribute<?> attribute, Object value) {
-//		super(Condition.PredicateType.ISEQUAL);
-//		this.lhs = new BooleanVariable(attribute.getName());
-//		this.rhs = new BooleanValue(value);
-//	}
 
 	@Override
 	public boolean equals(Object obj) {
@@ -44,11 +39,11 @@ public class IsNotEqualTo extends Condition {
 
 	@Override
 	public String toString() {
-		return "{" + lhs + "!=" + rhs + "}";
+		return lhs + " != " + rhs;
 	}
 
 	@Override
-	public BooleanValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException {
+	public TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException {
 		Expression lhsValue = lhs.valueIn(store);
 		Expression rhsValue = rhs.valueIn(store);
 
@@ -60,13 +55,13 @@ public class IsNotEqualTo extends Condition {
 	}
 
 	@Override
-	public Condition close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
-		Expression lhsObject = lhs.close(store, CV);
-		Expression rhsObject = rhs.close(store, CV);
+	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+		Expression lhsObject = lhs.close();
+		Expression rhsObject = rhs.close();
 		if (lhsObject.equals(rhsObject)) {
 			return Condition.FALSE;
-		} else if(!lhsObject.getClass().equals(BooleanValue.class) &&
-				!rhsObject.getClass().equals(BooleanValue.class)){
+		} else if(!lhsObject.getClass().equals(TypedValue.class) ||
+				!rhsObject.getClass().equals(TypedValue.class)){
 			return new IsNotEqualTo(lhsObject, rhsObject);
 		} else{
 			return Condition.TRUE;
@@ -86,7 +81,7 @@ public class IsNotEqualTo extends Condition {
 	}
 
 	@Override
-	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
 		return new IsNotEqualTo(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
 	}
 }

@@ -1,2 +1,11 @@
-1. Process templates
-2. Agent templates
+- mention in dsynma webpage
+- add list of unusable keywords (progress, prog, keep-all etc)
+- save model and open model, save dot/png file
+- resizing of boxes
+- highlight constants and variables differently
+- only for model checking: ignore receive transition labels not mentioned in the specifications (if specifications mention different receive labels, create different models)
+- for simulation, send transition labels as variables; and untagged transitions marked by arbitrary labels that are not shown to user, but used to highlight transitions in dot file
+- trace visualisation as sequence diagrams
+- deploy to server (add timeouts to model checking)
+
+- LTOL: add support for LTOL

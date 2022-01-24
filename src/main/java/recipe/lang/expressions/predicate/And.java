@@ -2,25 +2,25 @@ package recipe.lang.expressions.predicate;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
-import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.*;
 import recipe.lang.store.Store;
+import recipe.lang.types.Boolean;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
 public class And extends Condition {
 
-	private Condition lhs;
-	private Condition rhs;
+	private Expression<Boolean> lhs;
+	private Expression<Boolean> rhs;
 
-	public And(Condition lhs, Condition rhs) {
-		super(Condition.PredicateType.AND);
+	public And(Expression<Boolean> lhs, Expression<Boolean> rhs) {
 		if ((lhs == null) || (rhs == null)) {
 			throw new NullPointerException();
 		}
@@ -48,16 +48,16 @@ public class And extends Condition {
 		return "(" + lhs.toString() + ") & (" + rhs.toString() + ")";
 	}
 
-	public Expression getLhs() {
+	public Expression<Boolean> getLhs() {
 		return lhs;
 	}
 
-	public Expression getRhs() {
+	public Expression<Boolean> getRhs() {
 		return rhs;
 	}
 
 	@Override
-	public BooleanValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException {
+	public TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException {
 		Expression lhsObject = lhs.valueIn(store);
 		Expression rhsObject = rhs.valueIn(store);
 		if (lhsObject.equals(Condition.TRUE) && rhsObject.equals(Condition.TRUE)) {
@@ -70,32 +70,24 @@ public class And extends Condition {
 	}
 
 	@Override
-	public Condition close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
-		Condition lhsObject = lhs.close(store, CV);
-		Condition rhsObject = rhs.close(store, CV);
+	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+		Expression<Boolean> lhsObject = lhs.close();
+		Expression<Boolean> rhsObject = rhs.close();
 		if (lhsObject.equals(Condition.TRUE) && rhsObject.equals(Condition.TRUE)) {
 			return Condition.TRUE;
-		} else if(!lhsObject.equals(Condition.FALSE) || !rhsObject.equals(Condition.FALSE)){
-			return new Or(lhsObject, rhsObject);
-		} else{
+		} else if(lhsObject.equals(Condition.FALSE) || rhsObject.equals(Condition.FALSE)){
 			return Condition.FALSE;
+		} else if(lhsObject.equals(Condition.TRUE)){
+			return rhsObject;
+		} else if(rhsObject.equals(Condition.TRUE)){
+			return lhsObject;
+		} else {
+			return new And(lhsObject, rhsObject);
 		}
 	}
 
-	public static org.petitparser.parser.Parser parser(Parser basicCondition) {
-		org.petitparser.parser.Parser parser =
-				(basicCondition)
-						.seq(CharacterParser.of('&').seq(CharacterParser.of('&').optional()).trim())
-						.seq(basicCondition)
-						.map((List<Object> values) -> {
-							return new And((Condition) values.get(0), (Condition) values.get(2));
-						});
-
-		return parser;
-	}
-
 	@Override
-	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
 		return new And(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
 	}
 }

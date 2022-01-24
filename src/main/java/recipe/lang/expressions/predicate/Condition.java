@@ -2,17 +2,19 @@ package recipe.lang.expressions.predicate;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
-import org.petitparser.parser.primitive.CharacterParser;
-import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.exception.RelabellingTypeException;
+import org.petitparser.parser.primitive.StringParser;
+import org.petitparser.tools.ExpressionBuilder;
+import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.*;
-import recipe.lang.expressions.channels.ChannelExpression;
-import recipe.lang.expressions.strings.StringExpression;
+import recipe.lang.process.*;
+import recipe.lang.process.Process;
 import recipe.lang.store.Store;
-import recipe.lang.utils.Parsing;
+import recipe.lang.types.Boolean;
+import recipe.lang.types.Enum;
+import recipe.lang.types.Type;
 import recipe.lang.utils.TypingContext;
 
 import java.util.List;
@@ -20,108 +22,141 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
-public abstract class Condition implements Expression {
+import static org.petitparser.parser.primitive.CharacterParser.of;
 
-	public enum PredicateType {
-		FALSE, TRUE, ISEQUAL, ISNOTEQUAL, ISGTR, ISGEQ, ISLEQ, ISLES, AND, OR, NOT, VAR
+public abstract class Condition implements Expression<Boolean> {
+	static TypedValue<Boolean> TRUE;
+	static TypedValue<Boolean> FALSE;
+
+	static {
+		try {
+			TRUE = new TypedValue<Boolean>(Boolean.getType(), "TRUE");
+			FALSE = new TypedValue<Boolean>(Boolean.getType(), "FALSE");
+		} catch (MismatchingTypeException e) {
+			e.printStackTrace();
+		}
 	}
 
-	public static final BooleanValue TRUE = new BooleanValue(true);
-	public static final BooleanValue FALSE = new BooleanValue(false);
+	public static TypedValue<Boolean> getTrue(){
+		return TRUE;
+	}
 
-	private PredicateType type;
 
-	public boolean isSatisfiedBy(Store store) throws AttributeTypeException, AttributeNotInStoreException{
-		BooleanValue value = valueIn(store);
-		if(value.equals(TRUE)){
+	public static TypedValue<Boolean> getFalse(){
+		return FALSE;
+	}
+
+	public boolean isSatisfiedBy(Store store) throws AttributeTypeException, AttributeNotInStoreException, MismatchingTypeException {
+		TypedValue value = valueIn(store);
+		if(value.getValue().equals(true)){
 			return true;
 		} else{
 			return false;
 		}
 	}
 
-	public Condition(PredicateType type) {
-		this.type = type;
-	}
+	public abstract TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException;
+	public abstract Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, TypeCreationException, RelabellingTypeException;
 
-	public PredicateType getType() {
-		return this.type;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj) {
-			return true;
-		}
-		if (obj == null) {
-			return false;
-		}
-		if (obj instanceof Condition) {
-			return this.type == ((Condition) obj).type;
-		}
-		return false;
-	}
-
-	public abstract BooleanValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
-	public abstract Condition close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
-
-	public static Parser typeParser(TypingContext context){
+	public static Parser typeParser(TypingContext context) throws Exception {
 		return Condition.parser(context);
 	}
 
-	public static org.petitparser.parser.Parser parser(TypingContext context) {
-		org.petitparser.parser.Parser arithmeticExpression = ArithmeticExpression.typeParser(context);
-		org.petitparser.parser.Parser channelExpression = ChannelExpression.typeParser(context);
-		org.petitparser.parser.Parser stringExpression = StringExpression.typeParser(context);
+	public static org.petitparser.parser.Parser parser(TypingContext context) throws Exception {
+		SettableParser condition = SettableParser.undefined();
 
-		SettableParser parser = SettableParser.undefined();
-		SettableParser basic = SettableParser.undefined();
+		Parser primitiveBoolean = context.getSubContext(Boolean.getType()).variableParser()
+				.or(Boolean.getType().valueParser())
+				.or(GuardReference.parser(context, condition));
 
-		SettableParser expression = SettableParser.undefined();
-		expression.set((arithmeticExpression).or(channelExpression).or(stringExpression));
+		Parser arithmeticOrEnums = ArithmeticExpression.parser(context);
 
-		org.petitparser.parser.Parser and = And.parser(basic);
-		org.petitparser.parser.Parser or = Or.parser(basic);
-		org.petitparser.parser.Parser not = Not.parser(basic);
+		for(String label : Enum.getEnumLabels()){
+			recipe.lang.types.Enum enumm = Enum.getEnum(label);
+			TypingContext enumTypingContext = context.getSubContext(enumm);
 
-		org.petitparser.parser.Parser isEqualTo = IsEqualTo.parser(expression);
-		org.petitparser.parser.Parser isNotEqualTo = IsNotEqualTo.parser(expression);
+			arithmeticOrEnums = arithmeticOrEnums.or(enumTypingContext.variableParser()).or(enumm.valueParser());
+		}
 
-		org.petitparser.parser.Parser isLessThan = IsLessThan.parser(arithmeticExpression);
-		org.petitparser.parser.Parser isLessOrEqualThan = IsLessOrEqualThan.parser(arithmeticExpression);
-		org.petitparser.parser.Parser isGreaterOrEqualThan = IsGreaterOrEqualThan.parser(arithmeticExpression);
-		org.petitparser.parser.Parser isGreaterThan = IsGreaterThan.parser(arithmeticExpression);
+		ExpressionBuilder builder = new ExpressionBuilder();
+		builder.group()
+				.primitive(IsEqualTo.parser(arithmeticOrEnums)
+						.or(IsNotEqualTo.parser(arithmeticOrEnums))
+						.or(IsGreaterOrEqualThan.parser(ArithmeticExpression.parser(context)))
+						.or(IsGreaterThan.parser(ArithmeticExpression.parser(context)))
+						.or(IsLessOrEqualThan.parser(ArithmeticExpression.parser(context)))
+						.or(IsLessThan.parser(ArithmeticExpression.parser(context)))
+						.or(primitiveBoolean).trim())
+				.wrapper(of('(').trim(), of(')').trim(),
+						(List<Expression<Boolean>> values) -> values.get(1));
 
-		org.petitparser.parser.Parser comparators =
-				isEqualTo
-				.or(isNotEqualTo)
-				.or(isLessThan)
-				.or(isLessOrEqualThan)
-				.or(isGreaterOrEqualThan)
-				.or(isGreaterThan);
+		// negation is a prefix
+		builder.group()
+				.prefix(of('!').trim(), (List<Condition> values) -> new Not(values.get(1)));
 
-		org.petitparser.parser.Parser value = BooleanValue.parser();
-		org.petitparser.parser.Parser variable = BooleanVariable.parser(context);
+		// repetition is a prefix operator
+		builder.group()
+				.prefix(StringParser.of("rep").trim(), (List<Process> values) -> new Iterative(values.get(1)));
 
-		parser.set(and
-				.or(or)
-				.or(basic));
+		// conjunction is right- and left-associative
+		builder.group()
+				.right(of('&').plus().trim(), (List<Condition> values) -> new And(values.get(0), values.get(2)))
+				.left(of('&').plus().trim(), (List<Condition> values) -> new And(values.get(0), values.get(2)));
 
-		basic.set(value
-				.or(variable)
-				.or(not)
-				.or(comparators)
-				.or(CharacterParser.of('(').trim().seq(parser).seq(CharacterParser.of(')'))
-						.map((List<Object> values) -> values.get(1)))
-				);
+		// disjunction is right- and left-associative
+		builder.group()
+				.right(of('|').plus().trim(), (List<Condition> values) -> new Or(values.get(0), values.get(2)))
+				.left(of('|').plus().trim(), (List<Condition> values) -> new Or(values.get(0), values.get(2)));
 
-		return parser;
+		// implication is right-associative
+		builder.group()
+				.right(StringParser.of("->").plus().trim(), (List<Condition> values) -> new Implies(values.get(0), values.get(2)));
+
+		// iff is left and right-associative
+		builder.group()
+				.right(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<Condition> values) -> {
+					try {
+						return new IsEqualTo(values.get(0), values.get(2));
+					} catch (Exception e) {
+						return e;
+					}
+				})
+				.left(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<Condition> values) -> {
+					try {
+						return new IsEqualTo(values.get(0), values.get(2));
+					} catch (Exception e) {
+						return e;
+					}
+				});
+
+		// is not equal to is left and right-associative
+		builder.group()
+				.right(StringParser.of("!=").trim(), (List<Condition> values) -> {
+					return new IsNotEqualTo(values.get(0), values.get(2));
+				})
+				.left(StringParser.of("!=").trim(), (List<Condition> values) -> {
+					return new IsNotEqualTo(values.get(0), values.get(2));
+				});
+
+		condition.set(builder.build());
+
+		return condition;
 	}
 
-	public abstract Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException;
+	public abstract Expression<Boolean> relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException;
 
 	@Override
 	public int hashCode(){
 		return Objects.hash(this.toString());
+	}
+
+	@Override
+	public java.lang.Boolean isValidAssignmentFor(TypedVariable var){
+		return var.getType().equals(Boolean.getType());
+	}
+
+	@Override
+	public Type getType(){
+		return Boolean.getType();
 	}
 }

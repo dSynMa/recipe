@@ -1,16 +1,15 @@
 package recipe.lang.expressions.predicate;
 
 import org.petitparser.parser.Parser;
-import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.expressions.arithmetic.NumberValue;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.store.Store;
+import recipe.lang.types.Boolean;
+import recipe.lang.types.Number;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -19,19 +18,13 @@ import java.util.function.Function;
 
 public class IsLessOrEqualThan extends Condition {
 
-	private ArithmeticExpression lhs;
-	private ArithmeticExpression rhs;
+	private Expression<Number> lhs;
+	private Expression<Number> rhs;
 
-	public IsLessOrEqualThan(ArithmeticExpression lhs, ArithmeticExpression rhs) {
-		super(Condition.PredicateType.ISLEQ);
+	public IsLessOrEqualThan(Expression<Number> lhs, Expression<Number> rhs) {
 		this.lhs = lhs;
 		this.rhs = rhs;
 	}
-//	public IsLessOrEqualThan(Attribute<?> attribute, Number value) {
-//		super(Condition.PredicateType.ISLEQ);
-//		this.lhs = new Variable(attribute.getName());
-//		this.rhs = new Value(value);
-//	}
 
 	@Override
 	public boolean equals(Object obj) {
@@ -53,16 +46,16 @@ public class IsLessOrEqualThan extends Condition {
 	
 	@Override
 	public String toString() {
-		return lhs + "<=" + rhs.toString();
+		return lhs + " <= " + rhs.toString();
 	}
 
 	@Override
-	public BooleanValue valueIn(Store store) throws AttributeTypeException, AttributeNotInStoreException {
-		NumberValue lhsValue = lhs.valueIn(store);
-		NumberValue rhsValue = rhs.valueIn(store);
+	public TypedValue<Boolean> valueIn(Store store) throws AttributeTypeException, AttributeNotInStoreException, MismatchingTypeException {
+		TypedValue<Number> lhsValue = lhs.valueIn(store);
+		TypedValue<Number> rhsValue = rhs.valueIn(store);
 
-		Number lhsNo = lhsValue.value;
-		Number rhsNo = rhsValue.value;
+		Number lhsNo = (Number) lhsValue.getValue();
+		Number rhsNo = (Number) rhsValue.getValue();
 
 		if(0 <= new BigDecimal(lhsNo.toString()).compareTo(new BigDecimal(rhsNo.toString()))) {
 			return Condition.TRUE;
@@ -72,17 +65,18 @@ public class IsLessOrEqualThan extends Condition {
 	}
 
 	@Override
-	public Condition close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
-		ArithmeticExpression lhsObject = lhs.close(store, CV);
-		ArithmeticExpression rhsObject = rhs.close(store, CV);
+	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+		Expression<Number> lhsObject = lhs.close();
+		Expression<Number> rhsObject = rhs.close();
 		if (lhsObject.equals(rhsObject)) {
 			return Condition.TRUE;
-		} else if(!lhsObject.getClass().equals(NumberValue.class) ||
-				!rhsObject.getClass().equals(NumberValue.class)){
+		} else if(!lhsObject.getClass().equals(TypedValue.class) ||
+				!rhsObject.getClass().equals(TypedValue.class)) {
 			return new IsLessOrEqualThan(lhsObject, rhsObject);
-		} else{
+		} else {
 			return Condition.FALSE;
 		}
+
 	}
 
 	public static org.petitparser.parser.Parser parser(Parser arithmeticExpression) {
@@ -91,14 +85,14 @@ public class IsLessOrEqualThan extends Condition {
 						.seq(StringParser.of("<=").trim())
 						.seq(arithmeticExpression)
 						.map((List<Object> values) -> {
-							return new IsLessOrEqualThan((ArithmeticExpression) values.get(0), (ArithmeticExpression) values.get(2));
+							return new IsLessOrEqualThan((Expression<Number>) values.get(0), (Expression<Number>) values.get(2));
 						});
 
 		return parser;
 	}
 
 	@Override
-	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
 		return new IsLessOrEqualThan(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
 	}
 }

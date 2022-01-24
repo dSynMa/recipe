@@ -1,0 +1,49 @@
+MODULE main
+VAR
+	first-b : 0..12;
+	first-c : 0..12;
+	first.state : {first-start};
+	second-a : 0..12;
+	second.state : {second-start};
+DEFINE
+	keep-all-not-first := next(second-a) = second-a & next(second.state) = second.state;
+	keep-all-first := next(first-b) = first-b & next(first-c) = first-c;
+	keep-all-not-second := next(first-b) = first-b & next(first-c) = first-c & next(first.state) = first.state;
+	keep-all-second := next(second-a) = second-a;
+	keep-all := next(first-b) = first-b & next(first-c) = first-c & next(first.state) = first.state & next(second-a) = second-a & next(second.state) = second.state;
+	transition := ((first.state = first-start & (first-b=0)            
+             & next(first.state) = first-start
+             & next(first-b) = ((first-b + 1))
+             & next(first-c) = first-c
+    & (((((second-a<5) & (ch3=ch3)) | ((second-a>3) & (ch3=ch2))) | ch3 = broadcast)
+     & 
+        (((first-c=second-a)
+                & ((second.state = second-start
+                 & second-a>3
+                 & (ch3 = broadcast | ch3 = ch1)) &             
+                             (next(second-a) = (first-b + 1))
+                             & next(second.state) = second-start))    
+         | (!((((second-a<5) & (ch3=ch3)) | ((second-a>3) & (ch3=ch2))) | ch3 = broadcast) & keep-all-second)    
+         | (ch3 = broadcast & !((first-c=second-a)) & keep-all-second)
+    )))
+| (second.state = second-start & (TRUE)            
+             & next(second.state) = second-start
+             & next(second-a) = ((second-a + 1))
+    & (((TRUE) | ch1 = broadcast)
+     & 
+        (((TRUE)
+                & (FALSE))    
+         | (!((TRUE) | ch1 = broadcast) & keep-all-first)    
+         | (ch1 = broadcast & !((TRUE)) & keep-all-first)
+    ))));
+CONSTANTS
+	ch1, ch2, ch3, broadcast;
+INIT
+	TRUE
+	& first.state = first-start
+	& first-b = 0
+	& first-c = 0
+	& second.state = second-start
+	& second-a = 0
+TRANS
+	transition | (!transition & keep-all)

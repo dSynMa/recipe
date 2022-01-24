@@ -1,9 +1,7 @@
 package recipe.lang.utils;
 
 import org.junit.Test;
-import recipe.lang.expressions.channels.ChannelValue;
-
-import static org.junit.Assert.*;
+import recipe.lang.types.Boolean;
 
 public class TypingContextTest {
 
@@ -11,9 +9,9 @@ public class TypingContextTest {
     public void setAll() {
         TypingContext context = new TypingContext();
         TypingContext context1 = new TypingContext();
-        context.set("A", new ChannelValue("A"));
+        context.set("A", Boolean.getType());
         context1.setAll(context);
 
-        assert context1.get("A").equals(new ChannelValue("A"));
+        assert context1.get("A").equals(Boolean.getType());
     }
 }

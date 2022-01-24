@@ -3,13 +3,16 @@ package recipe.lang.expressions.arithmetic;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
-import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.exception.RelabellingTypeException;
+import org.petitparser.tools.ExpressionBuilder;
+import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.types.Boolean;
+import recipe.lang.types.Number;
 import recipe.lang.store.Store;
+import recipe.lang.types.Real;
+import recipe.lang.types.Type;
 import recipe.lang.utils.TypingContext;
 
 import java.util.List;
@@ -17,45 +20,56 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
-public abstract class ArithmeticExpression implements Expression {
-    public abstract NumberValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException;
+import static org.petitparser.parser.primitive.CharacterParser.digit;
+import static org.petitparser.parser.primitive.CharacterParser.of;
 
-    public abstract ArithmeticExpression close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException;
+public abstract class ArithmeticExpression implements Expression<Number> {
+    public abstract TypedValue<Number> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException;
 
-    public static Parser typeParser(TypingContext context){
+    public abstract Expression<Number> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException;
+
+    public static Parser typeParser(TypingContext context) throws Exception {
         return ArithmeticExpression.parser(context);
     }
 
-    public static org.petitparser.parser.Parser parser(TypingContext context) {
-        SettableParser parser = SettableParser.undefined();
-        SettableParser basic = SettableParser.undefined();
-        org.petitparser.parser.Parser addition = Addition.parser(basic);
-        org.petitparser.parser.Parser multiplication = Multiplication.parser(basic);
-        org.petitparser.parser.Parser subtraction = Subtraction.parser(basic);
-        org.petitparser.parser.Parser value = NumberValue.parser();
-        org.petitparser.parser.Parser variable = NumberVariable.parser(context);
+    public static org.petitparser.parser.Parser parser(TypingContext context) throws Exception {
+        ExpressionBuilder builder = new ExpressionBuilder();
 
-        parser.set(addition
-                .or(multiplication)
-                .or(subtraction)
-                .or(basic)
-                .or(value)
-                .or(variable));
+        org.petitparser.parser.Parser value = Real.getType().valueParser().or(recipe.lang.types.Integer.getType().valueParser());
+        org.petitparser.parser.Parser variable = context.getSubContext(Real.getType()).variableParser()
+                .or(context.getSubContext(recipe.lang.types.Integer.getType()).variableParser());
 
-        basic.set(value
-                .or(variable)
-                .or((CharacterParser.of('(').trim()
-                        .seq(parser)
-                        .seq(CharacterParser.of(')'))).map((List<Object> values) -> values.get(1))));
+        builder.group()
+                .primitive(variable.or(value).trim())
+                .wrapper(of('(').trim(), of(')').trim(),
+                        (List<Expression<Number>> values) -> values.get(1));
 
-        return parser;
+        // multiplication and addition are left-associative
+        builder.group()
+                .left(of('*').trim(), (List<ArithmeticExpression> values) -> new Multiplication(values.get(0), values.get(2)))
+                .left(of('/').trim(), (List<ArithmeticExpression> values) -> new Division(values.get(0), values.get(2)));
+        builder.group()
+                .left(of('+').trim(), (List<ArithmeticExpression> values) -> new Addition(values.get(0), values.get(2)))
+                .left(of('-').trim(), (List<ArithmeticExpression> values) -> new Subtraction(values.get(0), values.get(2)));
+
+        return builder.build();
     }
 
     @Override
-    public abstract ArithmeticExpression relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException;
+    public abstract Expression<Number> relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException;
 
     @Override
     public int hashCode(){
         return Objects.hash(this.toString());
+    }
+
+    @Override
+    public java.lang.Boolean isValidAssignmentFor(TypedVariable var){
+        return Number.class.isAssignableFrom(var.getType().getClass());
+    }
+
+    @Override
+    public Type getType(){
+        return Real.getType();
     }
 }

@@ -2,26 +2,25 @@ package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
+import org.petitparser.parser.primitive.StringParser;
+import recipe.Config;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
-import recipe.lang.expressions.channels.ChannelExpression;
-import recipe.lang.expressions.channels.ChannelVariable;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.Or;
+import recipe.lang.types.Boolean;
+import recipe.lang.types.Enum;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class ReceiveProcess extends BasicProcess {
 
-    public ReceiveProcess(Condition psi, ChannelExpression channel, Map<String, Expression> update) {
+    public ReceiveProcess(String label, Expression<Boolean> psi, Expression channel, Map<String, Expression> update) {
+        this.label = label;
         this.psi = psi;
         this.channel = channel;
         this.update = update;
@@ -31,11 +30,11 @@ public class ReceiveProcess extends BasicProcess {
         return "<" + psi.toString() + ">" + channel + "?" + "[" + update + "]";
     }
 
-    public Condition entryCondition(){
+    public Expression<Boolean> entryCondition(){
         return psi;
     }
 
-    public void addEntryCondition(Condition condition){
+    public void addEntryCondition(Expression<Boolean> condition){
         psi = new And(condition, psi);
     }
 
@@ -47,35 +46,37 @@ public class ReceiveProcess extends BasicProcess {
     }
 
     public static Parser parser(TypingContext messageContext,
-                                TypingContext localContext,
-                                TypingContext channelContext){
-        TypingContext localAndChannelContext = TypingContext.union(localContext, channelContext);
-        TypingContext channelContextWithLocalChannelVars = TypingContext.union(localContext.getSubContext(ChannelVariable.class), channelContext);
+                                TypingContext localContext) throws Exception {
+        TypingContext localChannelVars = localContext.getSubContext(Enum.getEnum(Config.channelLabel));
 
-        Parser localGuard = Condition.typeParser(localAndChannelContext);
+        TypingContext localAndChannelAndMessageContext = TypingContext.union(localContext, messageContext);
+        Parser localAssignment = Parsing.assignmentListParser(localContext, localAndChannelAndMessageContext);
+
+        Parser localGuard = Condition.typeParser(localAndChannelAndMessageContext);
 
         Parser delimetedCondition =
                 (CharacterParser.of('<').trim())
                         .seq(localGuard)
                         .seq(CharacterParser.of('>').trim())
-                        .map((List<Object> values) -> (Condition) values.get(1));
+                        .map((List<Object> values) -> (Expression<Boolean>) values.get(1));
 
 
-        TypingContext localAndChannelAndMessageContext = TypingContext.union(TypingContext.union(localContext, channelContext), messageContext);
-        Parser localAssignment = Parsing.assignmentListParser(localContext, localAndChannelAndMessageContext);
 
-        Parser parser =
-                delimetedCondition
-                        .seq(ChannelExpression.parser(channelContextWithLocalChannelVars))
-                        .seq(CharacterParser.of('?'))
+        Parser parser = (CharacterParser.word().plus().trim()
+                        .seq(CharacterParser.of(':').trim()).flatten()).optional()
+                        .seq(delimetedCondition.trim())
+                        .seq((((Enum.getEnum(Config.channelLabel).valueParser()).seq(StringParser.of("?").trim())).or(localChannelVars.variableParser().seq(StringParser.of("?").trim()))))
                         .seq((CharacterParser.of('[').trim()))
-                        .seq(localAssignment)
+                        .seq(localAssignment.optional(new HashMap<String, Expression>()))
                         .seq((CharacterParser.of(']').trim()))
                         .map((List<Object> values) -> {
-                            Condition psi = (Condition) values.get(0);
-                            ChannelExpression channel = (ChannelExpression) values.get(1);
-                            Map<String, Expression> update = (Map<String, Expression>) values.get(4);
-                            ReceiveProcess action = new ReceiveProcess(psi, channel, update);
+                            String label = ((String) values.get(0));
+                            if(label != null) label = label.replace(":", "").trim();
+                            int i = 1;
+                            Expression<Boolean> psi = (Expression<Boolean>) values.get(i);
+                            Expression channel = (Expression) ((List) values.get(i+1)).get(0);
+                            Map<String, Expression> update = (Map<String, Expression>) values.get(i+3);
+                            ReceiveProcess action = new ReceiveProcess(label, psi, channel, update);
                             return action;
                         });
 

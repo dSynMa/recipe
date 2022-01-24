@@ -1,0 +1,210 @@
+import org.apache.commons.cli.*;
+
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Scanner;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.petitparser.context.ParseError;
+import org.petitparser.context.Result;
+import org.petitparser.parser.Parser;
+import recipe.analysis.NuXmvInteraction;
+import recipe.analysis.ToNuXmv;
+import recipe.lang.utils.Pair;
+
+public class CLIApp
+{
+    static boolean isWindows() {
+        return System.getProperty("os.name").toLowerCase().contains("win");
+    }
+
+    static String npm = isWindows() ? "npm.cmd" : "npm";
+
+    public static void main( String[] args ) throws Exception
+    {
+        Options options = new Options();
+
+        Option input = new Option("i", "input", true, "info: input recipe script file\nargs: <recipe script>");
+        Option nuxmv = new Option("n", "smv", false, "info: output to smv file");
+        Option dot = new Option("d", "dot", false, "info: output agents DOT files");
+        Option mc = new Option("mc", "mc", false, "info: model checks input script file");
+        Option bmc = new Option("bmc", "bmc", true, "info: bounded model checks input script file\nargs: bound (by default 10)");
+        Option simulation = new Option("sim", "simulate", false, "info: opens file in simulation mode");
+        Option gui = new Option("g", "gui", false, "info: opens gui");
+
+//        input.setRequired(true);
+
+        options.addOption(input);
+        options.addOption(nuxmv);
+        options.addOption(dot);
+        options.addOption(mc);
+        options.addOption(bmc);
+        options.addOption(simulation);
+        options.addOption(gui);
+
+        CommandLineParser parser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+        CommandLine cmd = null;
+
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+            formatter.printHelp("recipe", options);
+
+            System.exit(1);
+        }
+
+        if(cmd.hasOption("gui")){
+            String serverURL = Server.start();
+            ProcessBuilder processBuilder = new ProcessBuilder();
+            File dir = new File(System.getProperty("user.dir") + File.separator + "frontend-react");
+
+            processBuilder.directory(dir);
+            processBuilder.command(npm, "start");
+            Process exec = processBuilder.start();
+
+            exec.getInputStream().transferTo(System.out);
+        } else if(!cmd.hasOption("i")){
+            formatter.printHelp("recipe", options);
+
+            System.exit(1);
+        } else {
+
+            Path inputFilePath = Path.of(cmd.getOptionValue("i"));
+
+            String script = String.join("\n", Files.readAllLines(inputFilePath));
+
+            String transform = "";
+            recipe.lang.System system = null;
+            try {
+                Parser systemParser = recipe.lang.System.parser().end();
+                Result r = systemParser.parse(script);
+                if (r.isFailure()) {
+                    System.out.println(r.getMessage());
+                    System.out.println(r.getPosition());
+                    System.out.println("Could not parse the following: \n" + script.substring(r.getPosition()));
+                    return;
+                }
+                system = r.get();
+
+                transform = ToNuXmv.transform(system);
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+                System.exit(1);
+            }
+
+            if (cmd.hasOption("smv")) {
+                String name = inputFilePath.getFileName().toString().split("\\.")[0] + ".smv";
+                Files.write(Path.of(name), transform.getBytes(StandardCharsets.UTF_8));
+            }
+            if (cmd.hasOption("dot")) {
+                String filename = inputFilePath.getFileName().toString().split("\\.")[0];
+                if(!Files.exists(Path.of(filename))) {
+                    Files.createDirectory(Path.of(filename));
+                }
+                JSONArray json = new JSONArray(system.toDOT());
+                for(int i = 0; i < json.length(); i++){
+                    String agentName = new JSONObject(json.getString(i)).getString("name");
+                    String agentDot = new JSONObject(json.getString(i)).getString("graph");
+                    Files.write(Path.of(filename + "/" + agentName + ".dot"), agentDot.getBytes(StandardCharsets.UTF_8));
+                }
+            }
+            NuXmvInteraction nuXmvInteraction = null;
+            if (cmd.hasOption("mc")) {
+                try {
+                    if (system.getLtlspec() == null || system.getLtlspec().size() == 0) {
+                        System.out.println("No specifications to model check.");
+                    } else {
+                        String out = ToNuXmv.nuxmvModelChecking(system);
+                        if (out.equals("") || system.isSymbolic()) {
+                            nuXmvInteraction = new NuXmvInteraction(system);
+                            for (int i = 0; i < system.getLtlspec().size(); i++) {
+                                String spec = system.getLtlspec().get(i).replaceAll("^ *[^ ]+ +", "");
+                                int bound = 0;
+                                if (system.isSymbolic()) {
+                                    System.out.println("Specification is symbolic, and thus bounded model checking will be used. Please specify an integer bound: ");
+                                    Scanner scanner = new Scanner(System.in);
+                                    bound = scanner.nextInt();
+                                }
+                                Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, false, bound);
+                                if (result.getLeft()) {
+                                    out += spec + ":\n" + result.getRight() + "\n";
+                                } else {
+                                    out += spec + " (error) :\n" + result.getRight() + "\n";
+                                }
+                            }
+                            nuXmvInteraction.stopNuXmvThread();
+                        }
+                        System.out.println(out);
+                    }
+                } catch (ParseError parseError) {
+                    System.out.println(parseError.getFailure().toString());
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+            if (cmd.hasOption("bmc")) {
+                try {
+                    if (system.getLtlspec() == null || system.getLtlspec().size() == 0) {
+                        System.out.println("No specifications to model check.");
+                    } else {
+                        String out = "";
+                        nuXmvInteraction = new NuXmvInteraction(system);
+                        for (int i = 0; i < system.getLtlspec().size(); i++) {
+                            String spec = system.getLtlspec().get(i).replaceAll("^ *[^ ]+ +", "");
+                            int bound = 10;
+                            try {
+                                bound = Integer.parseInt(cmd.getOptionValue("bmc"));
+                            } catch (Exception e) {
+                                System.out.println(cmd.getOptionValue("bmc") + " is not a valid bound. Using a bound of 10.");
+                            }
+
+                            Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, true, bound);
+                            if (result.getLeft()) {
+                                out += spec + ":\n" + result.getRight() + "\n";
+                            } else {
+                                out += spec + " (error) :\n" + result.getRight() + "\n";
+                            }
+                        }
+                        nuXmvInteraction.stopNuXmvThread();
+                        System.out.println(out);
+                    }
+                } catch (ParseError parseError) {
+                    System.out.println(parseError.getFailure().toString());
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+            if (cmd.hasOption("sim")) {
+                if (nuXmvInteraction == null) {
+                    nuXmvInteraction = new NuXmvInteraction(system);
+                }
+
+                boolean exit = false;
+                Scanner scanner = new Scanner(System.in);
+                System.out.println("You have started simulation interactive mode, exit by pressing <ctrl+c>.");
+                System.out.println("Write any constraint you wish of the initial state and press <enter> to continue.");
+                String constraint = scanner.next();
+                Pair<Boolean, String> result = nuXmvInteraction.simulation_pick_init_state(constraint);
+                if (!result.getLeft()) {
+                    System.out.println(result.getRight());
+                    return;
+                }
+
+                while (!exit) {
+                    System.out.println("Write any constraint you wish of the next state and press <enter> to continue.");
+                    constraint = scanner.next();
+                    result = nuXmvInteraction.simulation_next(constraint);
+                    System.out.println(result.getRight());
+                    if (!result.getLeft()) {
+                        return;
+                    }
+                }
+            }
+        }
+    }
+}

@@ -2,12 +2,13 @@ package recipe.lang.expressions.predicate;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
-import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
+import recipe.lang.types.Boolean;
+import recipe.lang.types.Type;
 
 import java.util.List;
 import java.util.Set;
@@ -15,10 +16,9 @@ import java.util.function.Function;
 
 public class Not extends Condition {
 
-	private Condition arg;
+	private Expression<Boolean> arg;
 
-	public Not(Condition arg) {
-		super(Condition.PredicateType.NOT);
+	public Not(Expression<Boolean> arg) {
 		if ((arg == null)) {
 			throw new NullPointerException();
 		}
@@ -50,7 +50,7 @@ public class Not extends Condition {
 	}
 
 	@Override
-	public BooleanValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException {
+	public TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException {
 		Expression argValue = arg.valueIn(store);
 
 		if(argValue.equals(Condition.TRUE)){
@@ -63,30 +63,19 @@ public class Not extends Condition {
 	}
 
 	@Override
-	public Condition close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
-		Condition closure = arg.close(store, CV);
+	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+		Expression<Boolean> closure = arg.close();
 		if (closure.equals(Condition.FALSE)) {
 			return Condition.TRUE;
-		} else if(!closure.getClass().equals(BooleanValue.class)){
-			return new Not(closure);
-		} else{
+		} else if (closure.equals(Condition.TRUE)) {
 			return Condition.FALSE;
+		} else{
+			return new Not(closure);
 		}
 	}
 
-	public static org.petitparser.parser.Parser parser(Parser basicCondition) {
-		org.petitparser.parser.Parser parser =
-				CharacterParser.of('!').trim()
-						.seq(basicCondition)
-						.map((List<Object> values) -> {
-							return new Not((Condition) values.get(1));
-						});
-
-		return parser;
-	}
-
 	@Override
-	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
 		return new Not(this.arg.relabel(relabelling));
 	}
 }

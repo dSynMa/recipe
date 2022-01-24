@@ -1,0 +1,82 @@
+channels: c, empty, g1, g2,vmm1,vmm2,vmm3,mission
+enum rolevals {clnt, vm, mgr}
+enum msgvals {reserve, request, release, buy, connect, full,complete}
+message-structure: MSG : msgvals, LNK : channel
+communication-variables: cv : rolevals
+guard g(r : rolevals, c : channel, m : channel) := (channel == *) && (cv == r) | (channel == c) && (cv == mgr) | (channel == m) ;
+ 
+agent Client
+    local: role : rolevals, cLink : channel, mLink : channel, tLink : channel
+    init: cLink == c && mLink == empty && tLink == mission && role==clnt
+    relabel:
+        cv <- role
+    receive-guard: (channel == *) | (channel == cLink) | (channel == tLink)
+ 
+    repeat: (
+            (sReserve: <cLink==c> *! g(role,cLink,mLink)(MSG := reserve)[cLink := c]
+            +
+            rReserve: < cLink==c && MSG == reserve> *? [cLink := empty]
+            )
+            ;
+ 
+            (sRequest: <cLink!=empty> cLink! g(role,cLink,mLink)(MSG := request)[cLink := c];
+             rConnect: <mLink==empty && MSG == connect> cLink? [mLink := LNK];
+             sRelease: <TRUE> *! g(role,cLink,mLink)(MSG := release)[cLink := empty];
+             sBuy: <mLink!=empty> mLink! g(role,cLink,mLink)(MSG := buy)[mLink := empty];
+             (
+                sSolve: <TRUE> tLink! g(role,cLink,tLink)(MSG := complete)[]
+               +
+               <MSG == complete> tLink? []
+             )
+ 
+            +
+             rRelease: <cLink==empty && MSG == release> *? [cLink := c]
+            )
+            )
+ 
+agent Manager
+    local: role : rolevals, cLink : channel, sLink : channel, fLink : channel
+    init: fLink == g1 && sLink == g2 && cLink == c && role==mgr
+    relabel:
+        cv <- role
+    receive-guard: (channel == *) | (channel == cLink) | (channel == fLink)
+ 
+    repeat: (
+            rRequest: <MSG == request> cLink? [];
+            sForward: <TRUE> fLink! (TRUE)(MSG := request)[];
+            (
+             rep (rFull: <MSG == full> fLink? [];
+                  sRequest: <TRUE> sLink! (TRUE)(MSG := request)[]
+                 )
+             +
+             rConnect: <MSG == connect> cLink? []
+            )
+            )
+ 
+agent Machine
+    local: gLink : channel, pLink : channel, cLink : channel, asgn : bool
+    init: !asgn && (cLink == empty)
+    relabel:
+        cv <- vm
+    receive-guard: (channel == *) | (channel == gLink)  | (channel == pLink) | (channel == cLink)
+ 
+    repeat: (
+           rForward: <cLink==empty && MSG == request> gLink? [cLink:= c];
+            (
+             sConnect: <cLink==c && !asgn> cLink! (TRUE)(MSG := connect, LNK := pLink)[cLink:= empty, asgn:= TRUE]
+             +
+             sFull: <cLink==c && asgn> gLink! (TRUE)(MSG := full)[cLink:= empty, asgn:= TRUE]
+             +
+             rConnect: <cLink==c && MSG == connect> cLink? [cLink:= empty]
+ 
+ 
+             +
+             rFull: <cLink==c && asgn && MSG == full> gLink? [cLink:= empty, asgn:= TRUE]
+            )
+            +
+            rBuy: <MSG == buy> pLink? []
+            )
+ 
+system = Client(client1,TRUE) | Client(client2,TRUE) | Client(client3,TRUE) |  Manager(manager,TRUE) | Machine(machine1,gLink==g1 && pLink==vmm1) | Machine(machine2,gLink==g1 && pLink==vmm2) | Machine(machine3,gLink==g2 && pLink==vmm3)
+ 
+LTLSPEC G ( (F(client1-mLink!=empty) & F (client2-mLink!=empty) & F (client3-mLink!=empty)) -> F (client1-sSolve | client2-sSolve | client3-sSolve));

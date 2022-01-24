@@ -2,33 +2,34 @@ package recipe.lang.expressions.predicate;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.store.Store;
+import recipe.lang.types.Boolean;
+import recipe.lang.types.Type;
+import recipe.lang.utils.Parsing;
 
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
-public class IsEqualTo extends Condition {
+public class IsEqualTo<T extends Type> extends Condition {
 
-	private Expression lhs;
-	private Expression rhs;
+	private Expression<T> lhs;
+	private Expression<T> rhs;
 
-	public IsEqualTo(Expression lhs, Expression rhs) {
-		super(Condition.PredicateType.ISEQUAL);
-		this.lhs = lhs;
-		this.rhs = rhs;
+	public IsEqualTo(Expression<T> lhs, Expression<T> rhs) throws MismatchingTypeException {
+		//nuxmv will tell you about any mismatch
+//		if(Parsing.compatible(lhs, rhs)){
+			this.lhs = lhs;
+			this.rhs = rhs;
+//		} else{
+//			throw new MismatchingTypeException(lhs.toString() + " not comparable to " + rhs.toString());
+//		}
 	}
-//	public IsEqualTo(Attribute<?> attribute, Object value) {
-//		super(Condition.PredicateType.ISEQUAL);
-//		this.lhs = new BooleanVariable(attribute.getName());
-//		this.rhs = new BooleanValue(value);
-//	}
 
 	@Override
 	public boolean equals(Object obj) {
@@ -44,11 +45,11 @@ public class IsEqualTo extends Condition {
 
 	@Override
 	public String toString() {
-		return "{" + lhs + "==" + rhs + "}";
+		return lhs + " = " + rhs;
 	}
 
 	@Override
-	public BooleanValue valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException {
+	public TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException {
 		Expression lhsValue = lhs.valueIn(store);
 		Expression rhsValue = rhs.valueIn(store);
 
@@ -60,13 +61,13 @@ public class IsEqualTo extends Condition {
 	}
 
 	@Override
-	public Condition close(Store store, Set<String> CV) throws AttributeNotInStoreException, AttributeTypeException {
-		Expression lhsObject = lhs.close(store, CV);
-		Expression rhsObject = rhs.close(store, CV);
+	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+		Expression lhsObject = lhs.close();
+		Expression rhsObject = rhs.close();
 		if (lhsObject.equals(rhsObject)) {
 			return Condition.TRUE;
-		} else if(!lhsObject.getClass().equals(BooleanValue.class) &&
-				!rhsObject.getClass().equals(BooleanValue.class)){
+		} else if(!lhsObject.getClass().equals(TypedValue.class) ||
+				!rhsObject.getClass().equals(TypedValue.class)){
 			return new IsEqualTo(lhsObject, rhsObject);
 		} else{
 			return Condition.FALSE;
@@ -75,18 +76,26 @@ public class IsEqualTo extends Condition {
 
 	public static org.petitparser.parser.Parser parser(Parser expression) {
 		org.petitparser.parser.Parser parser =
-				(expression)
+				(expression.map((Object v) -> {
+					return v;
+				}))
 						.seq(StringParser.of("=").seq(StringParser.of("=").optional()).trim())
-						.seq(expression)
+						.seq(expression.map((Object v) -> {
+							return v;
+						}))
 						.map((List<Object> values) -> {
-							return new IsEqualTo((Expression) values.get(0), (Expression) values.get(2));
+							try {
+								return new IsEqualTo((Expression) values.get(0), (Expression) values.get(2));
+							} catch (Exception e) {
+								return e;
+							}
 						});
 
 		return parser;
 	}
 
 	@Override
-	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException {
+	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
 		return new IsEqualTo(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
 	}
 }

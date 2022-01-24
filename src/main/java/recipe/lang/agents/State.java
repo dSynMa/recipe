@@ -25,4 +25,9 @@ public class State<T> {
     public void setAgent(String agent) {
         this.agent = agent;
     }
+
+    @Override
+    public String toString(){
+        return label.toString();
+    }
 }

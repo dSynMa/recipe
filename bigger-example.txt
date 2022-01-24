@@ -1,0 +1,66 @@
+channels: a, empty
+
+enum msgvals {team, form, assemble}
+
+message-structure: MSG : msgvals, NO : int, LNK : channel
+communication-variables: type : 0..3, asgn : bool, rdy : int
+
+guard g1(p : int, a : bool, t : int) := !a && (p==1 -> (t==1 | t==2)) &&(p==2 -> (t==1 | t==3));
+
+guard g2(r : int, s : int) := (r==s);
+
+agent Line
+    local: stage : int, lnk : channel, prd : int
+    init: stage == 0 && lnk == a && (prd == 1 | prd == 2)
+    relabel:
+        type <- 0
+        asgn <- false
+        rdy <- false
+    receive-guard: (channel == *)
+
+    repeat: (
+                <stage==0> *! g1(prd,asgn,type)
+                    (MSG := team, NO := 2, LNK := lnk)[stage:=1];
+
+                <stage==1> lnk!g2(rdy,stage)
+                    (MSG := assemble)[stage:=2];
+
+                <stage==2> lnk!g2(rdy,stage)
+                    (MSG := assemble)[stage:=0]
+            )
+
+agent Robot
+        local: btype : int, lnk : channel, basgn : bool, brdy : int, no  : int
+        init: btype == 1 && lnk == empty && basgn == false && brdy == 0 && no == 0
+        relabel:
+            type <- btype
+            asgn <- basgn
+            rdy <- brdy
+        receive-guard: (channel == *) | (channel == lnk)
+
+        repeat: (
+                    <MSG == team> * ?
+                        [lnk:=LNK, no:=NO];
+
+                    (
+                        <MSG ==form & NO ==0> * ?
+                            [lnk:=empty, no:=0]
+                    +
+                        (rep <MSG ==assemble & (NO>0) > * ?
+                            [lnk:=LNK, no:=NO])
+                    +
+                      (  <no>=1> *! (type==btype & !asgn)
+                            (MSG :=form, NO := no-1, LNK := lnk)[basgn:=true, no:=0];
+
+                        <MSG ==assemble & brdy==1> lnk ?
+                            [brdy:=2];
+
+                        <MSG ==assemble & brdy==2> lnk ?
+                            [brdy:=0, lnk:=empty, basgn:=false]
+                      )
+                    )
+)
+
+system = Line(one,TRUE) | Robot(two,TRUE) | Robot(three,TRUE)
+
+LTLSPEC F three-btype = 1

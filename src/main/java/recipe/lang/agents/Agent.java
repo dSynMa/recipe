@@ -6,22 +6,19 @@ import java.util.function.Function;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
+import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
-import recipe.lang.expressions.channels.ChannelExpression;
-import recipe.lang.expressions.channels.ChannelValue;
-import recipe.lang.expressions.channels.ChannelVariable;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.predicate.GuardReference;
 import recipe.lang.process.*;
-import recipe.lang.expressions.strings.StringValue;
-import recipe.lang.expressions.strings.StringVariable;
-import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.IsEqualTo;
 import recipe.lang.process.Process;
 import recipe.lang.store.Store;
+import recipe.lang.types.Boolean;
+import recipe.lang.types.Type;
 import recipe.lang.utils.*;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
@@ -29,36 +26,36 @@ import static org.petitparser.parser.primitive.CharacterParser.word;
 public class Agent {
     private String name;
     private Store store;
+    private Expression<Boolean> init;
     private HashMap<String, TypedVariable> CV;
     private Map<TypedVariable, Expression> relabel;
     private Set<State> states;  //control flow
     private Set<ProcessTransition> sendTransitions;
     private Set<ProcessTransition> receiveTransitions;
-    private Set<IterationExitTransition> iterationExitTransitions;
     private Set<Process> actions;
     private State initialState;
-    private Condition receiveGuard;
-    private Condition initialCondition;
+    private Expression<Boolean> receiveGuard;
+    private Expression<Boolean> initialCondition;
 
-    public Agent(String name) {
-        this(name, new Store(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(name, new String()), Condition.FALSE);
+    public Agent(String name) throws MismatchingTypeException {
+        this(name, new Store(), Condition.getTrue(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(name, new String()), new TypedValue<Boolean>(Boolean.getType(), "false"));
     }
 
     public Agent(String name,
-                 Store store,
+                 Store locals,
+                 Expression<Boolean> init,
                  Set<State> states,
                  Set<ProcessTransition> sendTransitions,
                  Set<ProcessTransition> receiveTransitions,
-                 Set<IterationExitTransition> iterationExitTransitions,
                  Set<Process> actions,
                  State initialState,
-                 Condition receiveGuard) {
-        this.name = name;
-        this.store = store;
+                 Expression<Boolean> receiveGuard) {
+        this.name = name.trim();
+        this.store = locals;
+        this.init = init;
         this.states = new HashSet<>(states);
         this.sendTransitions = new HashSet<>(sendTransitions);
         this.receiveTransitions = new HashSet<>(receiveTransitions);
-        this.iterationExitTransitions = new HashSet<>(iterationExitTransitions);
         this.actions = new HashSet<>(actions);
         this.initialState = initialState;
         this.receiveGuard = receiveGuard;
@@ -66,19 +63,19 @@ public class Agent {
 
     public Agent(String name,
                  Store store,
+                 Expression<Boolean> init,
                  Set<State> states,
                  Set<ProcessTransition> sendTransitions,
                  Set<ProcessTransition> receiveTransitions,
-                 Set<IterationExitTransition> iterationExitTransitions,
                  Set<Process> actions,
                  Map<TypedVariable, Expression> relabel,
                  State initialState) {
-        this.name = name;
+        this.name = name.trim();
         this.store = store;
+        this.init = init;
         this.states = new HashSet<>(states);
         this.sendTransitions = new HashSet<>(sendTransitions);
         this.receiveTransitions = new HashSet<>(receiveTransitions);
-        this.iterationExitTransitions = new HashSet<>(iterationExitTransitions);
         this.actions = new HashSet<>(actions);
         this.relabel = relabel;
         this.initialState = initialState;
@@ -88,38 +85,21 @@ public class Agent {
         return this.name;
     }
 
-    public TypedValue getValue(TypedVariable attribute) throws AttributeTypeException {
-        return store.getValue(attribute);
-    }
-
-    public void setValue(TypedVariable attribute, TypedValue value) throws AttributeTypeException {
-        store.setValue(attribute, value);
-    }
-
     public Store getStore() {
         return store;
     }
 
-    protected void setStore(Store store) {
-        this.store = store;
+    public Expression<Boolean> getInit() {
+        return init;
+    }
+
+    protected void setInit(Expression<Boolean> init) {
+        this.init = init;
     }
 
     @Override
     public String toString() {
-        return name + ":" + store.toString();
-    }
-
-    public void storeUpdate(Map<TypedVariable, TypedValue> update) throws AttributeTypeException {
-        if (update != null) {
-            for (TypedVariable att : update.keySet()) {
-                store.setValue(att, update.get(att));
-            }
-        }
-
-    }
-
-    public TypedVariable getAttribute(String name) throws AttributeNotInStoreException {
-        return store.getAttribute(name);
+        return name + ":" + init.toString();
     }
 
     public Set<State> getStates() {
@@ -139,18 +119,11 @@ public class Agent {
     }
 
     public void setName(String name) {
-        this.name = name;
+        this.name = name.trim();
     }
 
     public HashMap<String, TypedVariable> getCV() {
         return CV;
-    }
-
-    public void setCV(HashMap<String, TypedVariable> cV) throws CVAndStoreIntersectException {
-        if(!Collections.disjoint(cV.keySet(), store.getAttributes().keySet())){
-            throw new CVAndStoreIntersectException();
-        }
-        CV = CV;
     }
 
     public Map<TypedVariable, Expression> getRelabel() {
@@ -169,7 +142,7 @@ public class Agent {
         this.initialState = initialState;
     }
 
-    public Condition getReceiveGuard() {
+    public Expression<Boolean> getReceiveGuard() {
         return receiveGuard;
     }
 
@@ -193,7 +166,7 @@ public class Agent {
         this.receiveTransitions = receiveTransitions;
     }
 
-    public Condition getInitialCondition() {
+    public Expression<Boolean> getInitialCondition() {
         return initialCondition;
     }
 
@@ -201,53 +174,94 @@ public class Agent {
         this.initialCondition = initialCondition;
     }
 
-    public boolean isListening(String channel, String state) throws AttributeTypeException, AttributeNotInStoreException {
-        Condition concrete = receiveGuard.close(store, getCV().keySet());
-        Store newstore = new Store();
-
-        newstore.setValue(new ChannelVariable("channel"), new ChannelValue(channel));
-        newstore.setValue(new StringVariable("state"), new StringValue(state));
-        return concrete.isSatisfiedBy(newstore);
-    }
+//    public boolean isListening(String channel, String state) throws Exception {
+//        Condition concrete = receiveGuard.close(store, getCV().keySet());
+//        Store newstore = new Store();
+//
+//        recipe.lang.types.Enum channels = recipe.lang.types.Enum.getEnum("channels");
+//        newstore.setValue(new TypedVariable(channels, "channel"), new TypedValue(channels, channel));
+//        newstore.setValue(new StringVariable("state"), new StringValue(state));
+//        return concrete.isSatisfiedBy(newstore);
+//    }
 
     public static org.petitparser.parser.Parser parser(TypingContext messageContext,
-                                                              TypingContext communicationContext,
-                                                              TypingContext channelContext){
+                                                       TypingContext communicationContext,
+                                                       TypingContext guardDefinitionContext) throws Exception {
         SettableParser parser = SettableParser.undefined();
-        Function<TypingContext, Parser> process = (TypingContext localContext) -> Parsing.labelledParser("repeat", Process.parser(messageContext, localContext, communicationContext, channelContext));
+        Function<TypingContext, Parser> process = (TypingContext localContext) -> {
+            try {
+                return Parsing.labelledParser("repeat", Process.parser(messageContext, localContext, communicationContext));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
+        };
 
-        Parser name = word().plus().trim().flatten();
+        AtomicReference<String> nameString = new AtomicReference<>("");
+
+        Parser name = word().plus().trim().flatten().map((String val) -> {
+            nameString.set("agent " + val.trim());
+            return val;
+        });
 
         AtomicReference<String> error = new AtomicReference<>("");
         AtomicReference<TypingContext> localContext = new AtomicReference<>(new TypingContext());
 
-        TypingContext channelValueContext = channelContext.getSubContext(ChannelValue.class);
-
-        parser.set(StringParser.of("agent").trim()
-                    .seq(name)
-                    .seq(Parsing.labelledParser("local", Parsing.typedAssignmentList(channelValueContext))
-                            .mapWithSideEffects((Pair<Map, Map> values) -> {
-                                localContext.get().setAll(new TypingContext(values.getLeft()));
-                                return values;
-                            }))
-                    .seq(new LazyParser<>(((TypingContext localContext1) -> Parsing.relabellingParser(localContext1, communicationContext)), localContext.get()).trim())
-                    .seq(new LazyParser<>(((TypingContext localContext1) -> Parsing.receiveGuardParser(localContext1, channelContext)), localContext.get()))
-                    .seq(new LazyParser(process, localContext.get()).trim())
+        parser.set((StringParser.of("agent").trim().or(FailureParser.withMessage("Could not parse agent definition.")))
+                    .seq(name.or(FailureParser.withMessage("Could not parse agent name.")))
+                    .seq(Parsing.labelledParser("local", Parsing.typedVariableList())
+                            .mapWithSideEffects((List<TypedVariable> values) -> {
+                                localContext.get().setAll(new TypingContext(values));
+                                Map<String, TypedVariable> vars = new HashMap();
+                                for(TypedVariable var : values){
+                                    vars.put(var.getName(), new TypedVariable(var.getType(), var.getName()));
+                                }
+                                return vars;
+                            }).or(LazyParser.failingParser(nameString, "Could not parse agent's local definition.")))
+                    .seq(Parsing.labelledParser("init", new LazyParser<TypingContext>((TypingContext context) -> {
+                        try {
+                            return Condition.parser(context);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    }, localContext.get())).optional(Condition.getTrue()).or(LazyParser.failingParser(nameString, "Could not parse agent's init definition.")))
+                    .seq(new LazyParser<TypingContext>(((TypingContext localContext1) -> {
+                        try {
+                            return Parsing.relabellingParser(localContext1, communicationContext);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    }), localContext.get()).trim().or(LazyParser.failingParser(nameString, "Could not parse agent's relabel definition.")))
+                    .seq(new LazyParser<Pair<TypingContext,TypingContext>>(((Pair<TypingContext,TypingContext> guardAndLocalContext) -> {
+                        try {
+                            return Parsing.receiveGuardParser(TypingContext.union(guardAndLocalContext.getLeft(), guardAndLocalContext.getRight()));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    }), new Pair(guardDefinitionContext, localContext.get())).or(LazyParser.failingParser(nameString, "Could not parse agent's receive-guard definition.")))
+                    .seq(new LazyParser<Pair<TypingContext,TypingContext>>((Pair<TypingContext,TypingContext> guardAndLocalContext) -> {
+                        return process.apply(TypingContext.union(guardAndLocalContext.getLeft(), guardAndLocalContext.getRight()));
+                    }, new Pair(guardDefinitionContext, localContext.get())).trim().or(LazyParser.failingParser(nameString, "Could not parse agent's process definition.")))
                 .map((List<Object> values) -> {
-                    String agentName = (String) values.get(1);
-                    Map<String, TypedVariable> localVars = ((Pair<Map, Map>) values.get(2)).getLeft();
-                    Map<String, Expression> localValues = ((Pair<Map, Map>) values.get(2)).getRight();
+                    String agentName = ((String) values.get(1)).trim();
+                    Map<String, TypedVariable> localVars = (Map<String, TypedVariable>) values.get(2);
                     Store store = null;
                     try {
-                        store = new Store(localValues, localVars);
-                        Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(3);
-                        Condition receiveGuardCondition = (Condition) values.get(4);
-                        Process repeat = (Process) values.get(5);
-                        State startState = new State("start");
-                        Set<Transition> transitions = repeat.asTransitionSystem(startState, new State("end"));
+                        store = new Store(localVars);
+//                    Map<String, TypedValue> localValues = ((Pair<Map, Map>) values.get(2)).getRight();
+                        Expression<Boolean> init = null;
+                        init = (Expression<Boolean>) values.get(3);//new Store(localValues, localVars);
+                        Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(4);
+                        Expression<Boolean> receiveGuardCondition = (Expression<Boolean>) values.get(5);
+                        Process repeat = (Process) values.get(6);
+                        State startState = new State("0");
+                        Process.stateSeed = 0;
+                        Set<Transition> transitions = repeat.asTransitionSystem(startState, startState);
                         Set<ProcessTransition> sendTransitions = new HashSet<>();
                         Set<ProcessTransition> receiveTransitions = new HashSet<>();
-                        Set<IterationExitTransition> iterationExitTransitions = new HashSet<>();
 
                         Set<Process> actions = new HashSet<>();
                         transitions.forEach(tt -> {
@@ -260,8 +274,6 @@ public class Agent {
                                 }
 
                                 actions.add(t.getLabel());
-                            } else if(tt.getClass().equals(IterationExitTransition.class)) {
-                                iterationExitTransitions.add((IterationExitTransition) tt);
                             }
                         });
                         Set<State> states = new HashSet<>();
@@ -279,10 +291,10 @@ public class Agent {
 
                         Agent agent = new Agent(agentName,
                                 store,
+                                init,
                                 states,
                                 sendTransitions,
                                 receiveTransitions,
-                                iterationExitTransitions,
                                 actions,
                                 startState,
                                 receiveGuardCondition);
@@ -291,9 +303,9 @@ public class Agent {
 
                         return agent;
                     } catch (AttributeTypeException e) {
-                        error.set(e.toString());
+                        e.printStackTrace();
                     } catch (AttributeNotInStoreException e) {
-                        error.set(e.toString());
+                        e.printStackTrace();
                     }
 
                     return null;
@@ -324,5 +336,74 @@ public class Agent {
         }
 
         return stateTransitionMap;
+    }
+
+    public String toDOT(){
+        GuardReference.resolve = false;
+        String dot = "";
+        dot += "\tgraph [rankdir=TB,ranksep=0.2,nodesep=0.2];\n"
+        + "node [shape=circle];\n";
+        for(State state : this.states){
+            if(state.equals(this.initialState)){
+                dot += "\t" +  state.toString() + "[peripheries=2];\n";
+            }
+            else{
+                dot += "\t" +  state.toString() + ";\n";
+            }
+        }
+
+        for(Transition t : this.sendTransitions){
+            String sourceLabel = t.getSource().toString();
+            String destLabel = t.getDestination().toString();
+
+
+            BasicProcess label = (BasicProcess) t.getLabel();
+            String textLabel = label.getLabel();
+            if(textLabel == null || textLabel.equals("")){
+                textLabel = label.getChannel().toString();
+            }
+
+            textLabel += "!";
+
+            dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + textLabel + "\",labeltooltip=\"" + label + "\",width=1]" + ";\n";
+        }
+
+        for(Transition t : this.receiveTransitions){
+            String sourceLabel = t.getSource().toString();
+            String destLabel = t.getDestination().toString();
+
+            BasicProcess label = (BasicProcess) t.getLabel();
+            String textLabel = label.getLabel();
+            if(textLabel == null || textLabel.equals("")){
+                textLabel = label.getChannel().toString();
+            }
+            textLabel += "?";
+
+            dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + textLabel + "\",labeltooltip=\"" + label + "\",width=1]" + ";\n";
+        }
+
+        return dot;
+    }
+
+    public void labelAllTransitions(){
+        HashSet<ProcessTransition> transitions = new HashSet(this.receiveTransitions);
+        transitions.addAll(this.sendTransitions);
+        Map<State, Set<ProcessTransition>> stateTransitionMap = getStateTransitionMap(transitions);
+        int seed = 0;
+
+        for(State state : stateTransitionMap.keySet()){
+
+        }
+    }
+
+    public boolean isSymbolic(){
+        for(TypedVariable tv : store.getAttributes().values()){
+            if(tv.getType().getClass().equals(recipe.lang.types.Integer.class)
+            || tv.getType().getClass().equals(recipe.lang.types.Real.class)){
+                return true;
+            }
+        }
+
+        return false;
     }
 }
