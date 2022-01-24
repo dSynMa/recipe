@@ -12,8 +12,7 @@ import * as All from "./mode-recipe";
 import "ace-builds/src-noconflict/theme-tomorrow";
 import ReactHtmlParser from 'react-html-parser'; 
 
-const server = 'http://localhost:61915';
-// const server = process.env.REACT_APP_SERVER_URL;
+const server = 'http://localhost:54044';
 
 const spinner = <span>&nbsp;<Spinner
 as="span"
@@ -232,18 +231,18 @@ function resetSimulate(){
               value={code}
               onChange={(v) => setCode(v)}
             />
-            <div className="d-grid gap-2">
+            <InputGroup>
               <Form.Select aria-label="1"
                 onChange={(value) => value == 1 ? setSymbolicBuild(false) : setSymbolicBuild(true)}
               >
-                <option value="1">Enumerative model (only for finite-state verification)</option>
-                <option value="2">Abstract model (allows for infinite-state verification)</option>
+                <option value="1">BDD model (only for finite-state verification)</option>
+                <option value="2">SMT model (allows for infinite-state verification)</option>
               </Form.Select>
               <Button variant="primary" size="lg" onClick={() => buildModel()} disabled={bloading}>
                 Build model
                         { bloading && spinner}
               </Button>
-            </div>
+              </InputGroup>
           </Col>
           <Col xs={6}>
             <Tabs defaultActiveKey="/" id="uncontrolled-tab-example" className="mb-3">
@@ -273,7 +272,7 @@ function resetSimulate(){
                           {(radioValue != 1) &&
                               <FormControl
                                 size="xs"
-                                placeholder="Enter bound for model checking (if no value entered ic3 may not terminate)."
+                                placeholder="Enter bound (optional for ic3)."
                                 aria-label="bound"
                                 aria-describedby="basic-addon1"
                                 onChange={(e) => setBound(e.currentTarget.value)}
