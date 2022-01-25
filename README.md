@@ -2,7 +2,7 @@
 
 This is a repository for tooling to support the [ReCiPe formalism](https://arxiv.org/abs/2104.10998) for modelling and verification of reconfigurable multi-agent systems.
 
-Currently it contains the R-CHECK tool that includes a language to specify reconfigurable multi-agent systems, and support for the model checking of these through the state-of-the-art model checker nuXmv, described better below.
+Currently it contains the [R-CHECK tool](https://arxiv.org/abs/2201.06312) that includes a language to specify reconfigurable multi-agent systems, and support for the model checking of these through the state-of-the-art model checker nuXmv, described better below.
 
 ## R-CHECK
 
