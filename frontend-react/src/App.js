@@ -49,6 +49,7 @@ function App() {
   const [simloading, setSimLoading] = useState(false);
   const [resetsimloading, setResetSimLoading] = useState(false);
   const [symbolicBuild, setSymbolicBuild] = useState(null);
+  const [built, setBuilt] = useState(false);
   const [code, setCode] = useFetch("/example.rcp");
   const [radioValue, setRadioValue] = useState('1');
   const [dot, setDot] = useState([]);
@@ -60,7 +61,7 @@ function App() {
   ];
 
   function simulate(){
-    if(symbolicBuild == null){
+    if(built == null){
       alert("Build model first.");
       return;
     }
@@ -106,7 +107,7 @@ function resetSimulate(){
   }
 
   function modelCheck(){
-    if(symbolicBuild == null){
+    if(built == null){
       alert("Build model first.");
       return;
     }
@@ -189,6 +190,7 @@ function resetSimulate(){
                  if(response2.data.hasOwnProperty("error")){
                    alert(response2.data.error);
                  } else{
+                   setBuilt(true);
                    alert("Model built successfully");
                  }
                  setBLoading(false);
