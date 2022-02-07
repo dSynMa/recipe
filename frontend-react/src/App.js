@@ -291,7 +291,7 @@ function resetSimulate(){
                       <Accordion defaultActiveKey="0">
                         {mcresponse.map((x, i) => {
                           return <Accordion.Item key={i} eventKey={i}>
-                          <Accordion.Header class={x.result == "true" ? "prop-true" : x.result == "false" ? "prop-false" : "prop-unknown"}>{x.spec}</Accordion.Header>
+                          <Accordion.Header className={x.result == "true" ? "prop-true" : x.result == "false" ? "prop-false" : "prop-unknown"}>{x.spec}</Accordion.Header>
                           <Accordion.Body style={{whiteSpace: "pre-wrap"}}>{x.output}
                             </Accordion.Body>
                           </Accordion.Item>;
