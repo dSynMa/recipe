@@ -13,7 +13,7 @@ public class ToNuXmvTest {
 
     @Test
     public void transform() throws Exception {
-        String script = String.join("\n", Files.readAllLines(Paths.get("./example-current-syntax.txt")));
+        String script = String.join("\n", Files.readAllLines(Paths.get("./bigger-example.txt")));
 
         Parser system = System.parser().end();
         Result r = system.parse(script);
@@ -30,7 +30,7 @@ public class ToNuXmvTest {
 
     @Test
     public void nuxmvLTL() throws Exception {
-        String script = String.join("\n", Files.readAllLines(Paths.get("./example-current-syntax.txt")));
+        String script = String.join("\n", Files.readAllLines(Paths.get("./bigger-example.txt")));
         Parser system = System.parser().end();
         Result r = system.parse(script);
         System s = r.get();

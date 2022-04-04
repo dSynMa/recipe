@@ -38,17 +38,6 @@ public class SystemTest {
 
     @Test
     public void parser() throws IOException {
-        String script = String.join("\n", Files.readAllLines(Paths.get("./example-current-syntax.txt")));
-
-        Parser system = System.parser().end();
-        Result r = system.parse(script);
-        java.lang.System.out.println(r.getMessage());
-        java.lang.System.out.println(script.substring(r.getPosition()));
-        assert r.isSuccess();
-    }
-
-    @Test
-    public void parser2() throws IOException {
         String script = String.join("\n", Files.readAllLines(Paths.get("./bigger-example.txt")));
 
         Parser system = System.parser().end();
@@ -59,8 +48,19 @@ public class SystemTest {
     }
 
     @Test
-    public void parser3() throws IOException {
+    public void parser2() throws IOException {
         String script = String.join("\n", Files.readAllLines(Paths.get("./bigger-example-2.txt")));
+
+        Parser system = System.parser().end();
+        Result r = system.parse(script);
+        java.lang.System.out.println(r.getMessage());
+        java.lang.System.out.println(script.substring(r.getPosition()));
+        assert r.isSuccess();
+    }
+
+    @Test
+    public void parser3() throws IOException {
+        String script = String.join("\n", Files.readAllLines(Paths.get("./bigger-example-3.txt")));
 
         Parser system = System.parser().end();
         Result r = system.parse(script);
