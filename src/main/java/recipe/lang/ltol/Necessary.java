@@ -2,11 +2,11 @@ package recipe.lang.ltol;
 
 import recipe.lang.ltol.observations.Observation;
 
-public class NecessaryGuard extends LTOL{
+public class Necessary extends LTOL{
     Observation obs;
     LTOL value;
 
-    public NecessaryGuard(Observation obs, LTOL value) {
+    public Necessary(Observation obs, LTOL value) {
         this.obs = obs;
         this.value = value;
     }

@@ -2,11 +2,11 @@ package recipe.lang.ltol;
 
 import recipe.lang.ltol.observations.Observation;
 
-public class SufficientGuard extends LTOL{
+public class Possibly extends LTOL{
     Observation obs;
     LTOL value;
 
-    public SufficientGuard(Observation obs, LTOL value) {
+    public Possibly(Observation obs, LTOL value) {
         this.obs = obs;
         this.value = value;
     }

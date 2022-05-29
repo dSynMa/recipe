@@ -8,14 +8,10 @@ import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.GuardReference;
 import recipe.lang.ltol.observations.Observation;
-import recipe.lang.process.Iterative;
-import recipe.lang.process.Process;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Integer;
-import recipe.lang.types.Type;
 import recipe.lang.utils.TypingContext;
 
 import java.util.List;
@@ -124,17 +120,17 @@ public abstract class LTOL {
         Parser sufficientObs = of('[').seq(Observation.parser(commonVars, messageVars).trim()).seq(of(']')).map((List<Observation> vals) -> vals.get(1));
 
         builder.group()
-                .prefix(necessaryObs, (List<Object> values) -> new NecessaryGuard((Observation) values.get(0), (LTOL) values.get(1)));
+                .prefix(necessaryObs, (List<Object> values) -> new Necessary((Observation) values.get(0), (LTOL) values.get(1)));
 
         builder.group()
-                .prefix(sufficientObs, (List<Object> values) -> new SufficientGuard((Observation) values.get(0), (LTOL) values.get(1)));
+                .prefix(sufficientObs, (List<Object> values) -> new Possibly((Observation) values.get(0), (LTOL) values.get(1)));
 
         // /\ v : agentKind . v != v'
 //        Parser bigAnd = of('/').seq(of('\\').trim()).seq(Parsing.)
 //                .seq(Observation.parser(commonVars, messageVars).trim()).seq(of('>')).map((List<Observation> vals) -> vals.get(1));
 
         builder.group()
-                .prefix(sufficientObs, (List<Object> values) -> new SufficientGuard((Observation) values.get(0), (LTOL) values.get(1)));
+                .prefix(sufficientObs, (List<Object> values) -> new Possibly((Observation) values.get(0), (LTOL) values.get(1)));
 
 //        // implication is right-associative
 //        builder.group()
