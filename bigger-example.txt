@@ -63,4 +63,4 @@ agent Robot
 
 system = Line(one,TRUE) | Robot(two,TRUE) | Robot(three,TRUE)
 
-LTLSPEC F three-btype = 1
+SPEC F three-btype = 1

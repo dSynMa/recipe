@@ -41,7 +41,6 @@ public abstract class Condition implements Expression<Boolean> {
 		return TRUE;
 	}
 
-
 	public static TypedValue<Boolean> getFalse(){
 		return FALSE;
 	}
@@ -65,8 +64,23 @@ public abstract class Condition implements Expression<Boolean> {
 	public static org.petitparser.parser.Parser parser(TypingContext context) throws Exception {
 		SettableParser condition = SettableParser.undefined();
 
-		Parser primitiveBoolean = context.getSubContext(Boolean.getType()).variableParser()
-				.or(Boolean.getType().valueParser())
+		Parser primitiveBoolean =
+				(context.getSubContext(Boolean.getType()).variableParser().map((TypedVariable<Boolean> value) -> {
+							try {
+								return new IsEqualTo<>(value, Condition.getTrue());
+							} catch (MismatchingTypeException e) {
+								e.printStackTrace();
+								return null;
+							}
+						}))
+				.or(Boolean.getType().valueParser().map((TypedValue<Boolean> value) -> {
+							try {
+								return new IsEqualTo<>(value, Condition.getTrue());
+							} catch (MismatchingTypeException e) {
+								e.printStackTrace();
+								return null;
+							}
+						}))
 				.or(GuardReference.parser(context, condition));
 
 		Parser arithmeticOrEnums = ArithmeticExpression.parser(context);

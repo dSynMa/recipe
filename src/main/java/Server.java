@@ -7,7 +7,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.petitparser.context.ParseError;
 import recipe.analysis.NuXmvInteraction;
-import recipe.analysis.ToNuXmv;
 import recipe.lang.System;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
@@ -134,7 +133,7 @@ public class Server {
         }
 
         try {
-            if(system.getLtlspec() == null || system.getLtlspec().size() == 0){
+            if(system.getSpecs() == null || system.getSpecs().size() == 0){
                 JSONObject jsonObject = new JSONObject();
                 jsonObject.put("error", "No specifications to model check.");
                 return jsonObject.toString();
@@ -169,8 +168,12 @@ public class Server {
                     }
                 }
 
-                for(int i = 0; i < system.getLtlspec().size(); i++) {
-                    String spec = system.getLtlspec().get(i).replaceAll("LTLSPEC", "").trim();
+                for(int i = 0; i < system.getSpecs().size(); i++) {
+                    String spec = system.getSpecs().get(i).toString().replaceAll("LTLSPEC", "").trim();
+                    if(!system.getSpecs().get(i).isPureLTL()){
+                        java.lang.System.out.println("LTOL model checking not supported yet, skipping model checking of:\n" + spec);
+                        continue;
+                    }
                     Pair<Boolean, String> result;
                     if(ic3){
                         result = nuXmvInteraction.modelCheckic3(spec, bounded, bound);

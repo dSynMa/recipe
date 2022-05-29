@@ -116,17 +116,21 @@ public class CLIApp
             NuXmvInteraction nuXmvInteraction = null;
             if (cmd.hasOption("mc")) {
                 try {
-                    if (system.getLtlspec() == null || system.getLtlspec().size() == 0) {
+                    if (system.getSpecs() == null || system.getSpecs().size() == 0) {
                         System.out.println("No specifications to model check.");
                     } else {
                         String out = ToNuXmv.nuxmvModelChecking(system);
                         if (out.equals("") || system.isSymbolic()) {
                             nuXmvInteraction = new NuXmvInteraction(system);
-                            for (int i = 0; i < system.getLtlspec().size(); i++) {
-                                String spec = system.getLtlspec().get(i).replaceAll("^ *[^ ]+ +", "");
+                            for (int i = 0; i < system.getSpecs().size(); i++) {
+                                String spec = system.getSpecs().get(i).toString().replaceAll("^ *[^ ]+ +", "");
+                                if(!system.getSpecs().get(i).isPureLTL()){
+                                    System.out.println("LTOL model checking not supported yet, skipping model checking of:\n" + spec);
+                                    continue;
+                                }
                                 int bound = 0;
                                 if (system.isSymbolic()) {
-                                    System.out.println("Specification is symbolic, and thus bounded model checking will be used. Please specify an integer bound: ");
+                                    System.out.println("There is a symbolic specification, and thus bounded model checking will be used. Please specify an integer bound: ");
                                     Scanner scanner = new Scanner(System.in);
                                     bound = scanner.nextInt();
                                 }
@@ -149,13 +153,17 @@ public class CLIApp
             }
             if (cmd.hasOption("bmc")) {
                 try {
-                    if (system.getLtlspec() == null || system.getLtlspec().size() == 0) {
+                    if (system.getSpecs() == null || system.getSpecs().size() == 0) {
                         System.out.println("No specifications to model check.");
                     } else {
                         String out = "";
                         nuXmvInteraction = new NuXmvInteraction(system);
-                        for (int i = 0; i < system.getLtlspec().size(); i++) {
-                            String spec = system.getLtlspec().get(i).replaceAll("^ *[^ ]+ +", "");
+                        for (int i = 0; i < system.getSpecs().size(); i++) {
+                            String spec = system.getSpecs().get(i).toString().replaceAll("^ *[^ ]+ +", "");
+                            if(!system.getSpecs().get(i).isPureLTL()){
+                                System.out.println("LTOL model checking not supported yet, skipping model checking of:\n" + spec);
+                                continue;
+                            }
                             int bound = 10;
                             try {
                                 bound = Integer.parseInt(cmd.getOptionValue("bmc"));

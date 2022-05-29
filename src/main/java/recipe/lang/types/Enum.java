@@ -93,4 +93,8 @@ public class Enum extends Type {
 
         return parser;
     }
+
+    public static boolean exists(String name){
+        return existing.containsKey(name);
+    }
 }

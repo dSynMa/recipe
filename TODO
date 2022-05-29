@@ -9,3 +9,5 @@
 - deploy to server (add timeouts to model checking)
 
 - LTOL: add support for LTOL
+ - <o> \phi -> next (o && \phi)
+ - [o] \phi -> next (o -> \phi)

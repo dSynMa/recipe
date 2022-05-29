@@ -601,7 +601,8 @@ public class ToNuXmv {
         nuxmv = nuxmv.replaceAll("==", " = ");
         nuxmv = nuxmv.replaceAll("\\*", broadcastChannel);
 
-        nuxmv += String.join("\n", system.getLtlspec());
+
+        nuxmv += String.join("\n", system.getSpecs().stream().map((s) -> s.isPureLTL() ? s.toString() : "").toArray(String[]::new));
 
         GuardReference.resolve = false;
 
