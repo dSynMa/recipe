@@ -84,5 +84,5 @@ LTLSPEC G (client-sRequest -> F client-rConnect);
 LTLSPEC G (manager-sForward -> X machine-rForward);
 LTLSPEC G ((!machine-asgn & machine-rForward)-> machine-sConnect);
 LTLSPEC G (client-sRelease -> F (!client-rConnect));
-LTLSPEC G (client-state=client-4 -> !client-rConnect);
-LTLSPEC  F (client-sRelease -> G(!client-rConnect));
+LTLSPEC G (client-state=4 -> !client-rConnect);
+LTLSPEC F (client-sRelease -> G(!client-rConnect));

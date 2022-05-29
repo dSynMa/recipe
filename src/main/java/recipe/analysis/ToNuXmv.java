@@ -164,7 +164,7 @@ public class ToNuXmv {
             String sendingAgentName = sendingAgentInstance.getLabel();
 
             // Declare sendingAgent's states as nuxmv variables
-            Stream<String> allStates = sendingAgent.getStates().stream().map(s -> sendingAgentName + "-" + s.toString());
+            Stream<String> allStates = sendingAgent.getStates().stream().map(s -> s.toString());
             String stateList = String.join(",", allStates.toArray(String[]::new));
 
             for (TypedVariable typedVariable : sendingAgent.getStore().getAttributes().values()) {
@@ -179,7 +179,7 @@ public class ToNuXmv {
                 init += "\t& ";
             }
 
-            init += sendingAgentName + "-state" + " = " + sendingAgentName + "-" + sendingAgent.getInitialState().toString() + "\n";
+            init += sendingAgentName + "-state" + " = " + sendingAgent.getInitialState().toString() + "\n";
 
             init += "\t& " + sendingAgent.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
             init += "\t& " + sendingAgentInstance.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
@@ -191,7 +191,7 @@ public class ToNuXmv {
             for (State state : sendingAgent.getStates()) {
                 Set<ProcessTransition> sendTransitions = agentStateSendTransitionMap.get(sendingAgent).get(state);
 
-                String sendStateIsCurrentState = sendingAgentName + "-state" + " = " + sendingAgentName + "-" + state;
+                String sendStateIsCurrentState = sendingAgentName + "-state" + " = " + state;
 
                 if (sendTransitions != null && sendTransitions.size() > 0) {
                     List<String> transitionSendPreds = new ArrayList<>();
@@ -211,10 +211,10 @@ public class ToNuXmv {
 
                         // add the guard of the sendingProcess to the guards required for the send to trigger
                         sendTriggeredIf.add(sendingProcess.getPsi()
-                                                                .relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).close().toString());
+                                .relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).close().toString());
 
                         // add next state to send effects
-                        sendEffects.add("next(" + sendingAgentName + "-state" + ") = " + sendingAgentName + "-" + t.getDestination());
+                        sendEffects.add("next(" + sendingAgentName + "-state" + ") = " + t.getDestination());
 
                         // Add updates to send effects
                         for (Map.Entry<String, Expression> entry : sendingProcess.getUpdate().entrySet()) {
@@ -293,7 +293,7 @@ public class ToNuXmv {
                                         receiveAgentReceiveTransitions = new HashSet<>();
                                     }
 
-                                    String receiveStateIsCurrentState = receiveName + "-state" + " = " + receiveName + "-" + receiveAgentState.toString();
+                                    String receiveStateIsCurrentState = receiveName + "-state" + " = " + receiveAgentState.toString();
 
                                     List<String> transitionReceivePreds = new ArrayList<>();
                                     List<String> transitionReceiveProgressConds = new ArrayList<>();
@@ -388,7 +388,7 @@ public class ToNuXmv {
                                         }
 
                                         // set the transition destination state as the next state
-                                        receiveTransEffects.add("next(" + receiveName + "-state" + ") = " + receiveName + "-" + receiveTrans.getDestination());
+                                        receiveTransEffects.add("next(" + receiveName + "-state" + ") = " + receiveTrans.getDestination());
 
                                         transitionReceivePreds.add("(" + String.join(")\n \t\t& (", receiveTransTriggeredIf) + ") & "
                                                 + "(" + String.join(")\n \t\t& (", receiveTransEffects) + ")");
@@ -407,12 +407,12 @@ public class ToNuXmv {
 
 
                                 for(State explicitState : receiveAgent.getStates()) {
-                                    String stateCond = receiveName + "-state = " + receiveName + "-" + explicitState.toString();
+                                    String stateCond = receiveName + "-state = " + explicitState.toString();
                                     String noExplicitTransition = sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel;
                                     if (receiveAgentReceivePreds.containsKey(stateCond)
                                             && !(receiveAgentReceivePreds.get(stateCond) == null)){
-                                            List<String> receiveTransPreds = receiveAgentReceivePreds.get(stateCond);
-                                            List<String> receiveTransProgressConds = receiveAgentReceiveProgressConds.get(stateCond);
+                                        List<String> receiveTransPreds = receiveAgentReceivePreds.get(stateCond);
+                                        List<String> receiveTransProgressConds = receiveAgentReceiveProgressConds.get(stateCond);
                                         if (receiveTransPreds.size() > 0) {
                                             currentAgentReceivePreds.add(stateCond + " & " + noExplicitTransition + " & keep-all-" + receiveName + " & !(" + String.join(" | ", receiveTransProgressConds) + ")");
                                             currentAgentProgressConds.add(stateCond + " & " + noExplicitTransition + " & !(" + String.join(" | ", receiveTransProgressConds) + ")");
