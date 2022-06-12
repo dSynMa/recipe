@@ -1,17 +1,15 @@
 package recipe.lang.types;
 
-import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.utils.Parsing;
-import recipe.lang.utils.TypingContext;
 
-import java.util.Locale;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Boolean extends Type {
     static Boolean base = new Boolean();
-    private Boolean(){}
+    Boolean(){}
 
     public static Boolean getType(){
         return base;
@@ -37,6 +35,12 @@ public class Boolean extends Type {
                         }));
     }
 
+    public Set getAllValues() {
+        Set<String> values = new HashSet<>();
+        values.add("true");
+        values.add("false");
+        return values;
+    }
     @Override
     public String name() {
         return "boolean";

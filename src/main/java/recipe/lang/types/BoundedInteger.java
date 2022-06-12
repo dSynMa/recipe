@@ -4,9 +4,7 @@ import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.utils.Parsing;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class BoundedInteger extends Integer {
     private int min;
@@ -70,7 +68,13 @@ public class BoundedInteger extends Integer {
             throw new MismatchingTypeException(value + " is not of type " + name());
         }
     }
-
+    public Set<TypedValue> getAllValues() throws MismatchingTypeException {
+        Set<TypedValue> values = new HashSet<>();
+        for(int i = min; i < max; i++){
+            values.add(new TypedValue<BoundedInteger>(this, "" + i));
+        }
+        return values;
+    }
     @Override
     public String name() {
         return min + ".." + max;
