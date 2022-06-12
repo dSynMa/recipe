@@ -1,30 +1,26 @@
 package recipe.lang.expressions.arithmetic;
 
 import org.petitparser.parser.Parser;
-import org.petitparser.parser.combinators.SettableParser;
-import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.tools.ExpressionBuilder;
-import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.types.Boolean;
 import recipe.lang.types.Number;
 import recipe.lang.store.Store;
 import recipe.lang.types.Real;
 import recipe.lang.types.Type;
 import recipe.lang.utils.TypingContext;
+import recipe.lang.utils.exceptions.*;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 
 import static org.petitparser.parser.primitive.CharacterParser.digit;
 import static org.petitparser.parser.primitive.CharacterParser.of;
 
 public abstract class ArithmeticExpression implements Expression<Number> {
-    public abstract TypedValue<Number> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException;
+    public abstract TypedValue<Number> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, NotImplementedYetException;
 
     public abstract Expression<Number> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException;
 

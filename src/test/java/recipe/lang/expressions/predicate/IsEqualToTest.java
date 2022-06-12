@@ -5,15 +5,12 @@ import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
-import recipe.lang.exception.TypeCreationException;
-import recipe.lang.expressions.arithmetic.ArithmeticExpression;
+import recipe.lang.utils.exceptions.TypeCreationException;
 import recipe.lang.types.Enum;
 import recipe.lang.utils.TypingContext;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.Assert.*;
 
 public class IsEqualToTest {
     static List<String> channels;

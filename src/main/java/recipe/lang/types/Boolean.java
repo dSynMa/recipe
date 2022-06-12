@@ -2,8 +2,7 @@ package recipe.lang.types;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.exception.MismatchingTypeException;
-import recipe.lang.expressions.TypedValue;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;

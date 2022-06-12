@@ -2,12 +2,10 @@ package recipe.lang.store;
 
 import org.junit.Before;
 import org.junit.Test;
-import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.exception.MismatchingTypeException;
-import recipe.lang.expressions.TypedValue;
+import recipe.lang.utils.exceptions.AttributeNotInStoreException;
+import recipe.lang.utils.exceptions.AttributeTypeException;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.types.Boolean;
 import recipe.lang.types.Integer;
 import recipe.lang.types.Real;
 

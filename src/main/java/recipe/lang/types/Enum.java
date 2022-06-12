@@ -1,13 +1,12 @@
 package recipe.lang.types;
 
 import org.petitparser.parser.Parser;
-import recipe.lang.exception.MismatchingTypeException;
-import recipe.lang.exception.TypeCreationException;
+import recipe.lang.utils.exceptions.InfiniteValueTypeException;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
+import recipe.lang.utils.exceptions.TypeCreationException;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.utils.Parsing;
-import recipe.lang.utils.TypingContext;
 
-import java.security.PermissionCollection;
 import java.util.*;
 
 public class Enum extends Type {
@@ -74,7 +73,13 @@ public class Enum extends Type {
             throw new MismatchingTypeException(value + " is not of type " + name());
         }
     }
-
+    public Set<TypedValue> getAllValues() throws MismatchingTypeException {
+        Set<TypedValue> typedValues = new HashSet<>();
+        for(String v : values){
+            typedValues.add(new TypedValue(this, v));
+        }
+        return typedValues;
+    }
     @Override
     public String name(){
         return label;

@@ -1,4 +1,4 @@
-package recipe.lang.exception;
+package recipe.lang.utils.exceptions;
 
 public class NoSuchEnumException extends Exception{
     private static final long serialVersionUID = 8L;

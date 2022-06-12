@@ -8,7 +8,6 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
@@ -18,8 +17,10 @@ import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.process.Process;
 import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
-import recipe.lang.types.Type;
 import recipe.lang.utils.*;
+import recipe.lang.utils.exceptions.AttributeNotInStoreException;
+import recipe.lang.utils.exceptions.AttributeTypeException;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
 

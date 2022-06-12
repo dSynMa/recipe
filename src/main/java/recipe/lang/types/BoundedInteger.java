@@ -1,6 +1,6 @@
 package recipe.lang.types;
 
-import recipe.lang.exception.MismatchingTypeException;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.utils.Parsing;
 

@@ -4,7 +4,6 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.definitions.GuardDefinition;
-import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
@@ -14,6 +13,7 @@ import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Guard;
 import recipe.lang.utils.TypingContext;
+import recipe.lang.utils.exceptions.*;
 
 import java.util.*;
 import java.util.function.Function;

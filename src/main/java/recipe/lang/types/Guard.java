@@ -2,8 +2,9 @@ package recipe.lang.types;
 
 import org.petitparser.parser.Parser;
 import recipe.lang.definitions.GuardDefinition;
-import recipe.lang.exception.MismatchingTypeException;
-import recipe.lang.exception.TypeCreationException;
+import recipe.lang.utils.exceptions.InfiniteValueTypeException;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
+import recipe.lang.utils.exceptions.TypeCreationException;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.utils.TypingContext;
@@ -20,7 +21,7 @@ public class Guard extends Type {
         definitions.clear();
     }
 
-    public static Set<String> definitonLabels(){
+    public static Set<String> definitionLabels(){
         return definitions.keySet();
     }
 
@@ -55,7 +56,9 @@ public class Guard extends Type {
             throw new MismatchingTypeException(e.getMessage());
         }
     }
-
+    public Set getAllValues() throws InfiniteValueTypeException {
+        throw new InfiniteValueTypeException("Guard does not have a finite set of values.");
+    }
     @Override
     public String name() {
         return label;
