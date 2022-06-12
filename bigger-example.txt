@@ -3,7 +3,7 @@ channels: a, empty
 enum msgvals {team, form, assemble}
 
 message-structure: MSG : msgvals, NO : int, LNK : channel
-communication-variables: type : 0..3, asgn : bool, rdy : int
+communication-variables: type : 0..3, asgn : bool, rdy : 0..2
 
 guard g1(p : int, a : bool, t : int) := !a && (p==1 -> (t==1 | t==2)) &&(p==2 -> (t==1 | t==3));
 
@@ -15,7 +15,7 @@ agent Line
     relabel:
         type <- 0
         asgn <- false
-        rdy <- false
+        rdy <- 0
     receive-guard: (channel == *)
 
     repeat: (
@@ -30,7 +30,7 @@ agent Line
             )
 
 agent Robot
-        local: btype : int, lnk : channel, basgn : bool, brdy : int, no  : int
+        local: btype : int, lnk : channel, basgn : bool, brdy : 0..2, no  : int
         init: btype == 1 && lnk == empty && basgn == false && brdy == 0 && no == 0
         relabel:
             type <- btype
@@ -64,3 +64,4 @@ agent Robot
 system = Line(one,TRUE) | Robot(two,TRUE) | Robot(three,TRUE)
 
 SPEC F three-btype = 1
+SPEC G((one-prd = 1 & one-stage = 0 & (<sender=one & channel = *>true)) -> (<exists(type = 1) & exists(type = 2) & forall(type = 1 | type = 2)>true))
