@@ -3,15 +3,16 @@ package recipe.lang.ltol;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
 import org.petitparser.tools.ExpressionBuilder;
+import recipe.Config;
 import recipe.lang.System;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.ltol.observations.Observation;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Integer;
+import recipe.lang.utils.Triple;
 import recipe.lang.utils.TypingContext;
 
 import java.util.List;
@@ -33,10 +34,10 @@ public abstract class LTOL {
         TypingContext agentNames = new TypingContext();
 
         Enum agentType;
-        if(!Enum.exists("Agent")) {
-            agentType = new Enum("Agent", system.getAgentInstances().stream().map(AgentInstance::getLabel).toList());
+        if(!Enum.exists(Config.agentEnumType)) {
+            agentType = new Enum(Config.agentEnumType, system.getAgentInstances().stream().map(AgentInstance::getLabel).toList());
         } else{
-            agentType = Enum.getEnum("Agent");
+            agentType = Enum.getEnum(Config.agentEnumType);
         }
 
         for(AgentInstance agentInstance : system.getAgentInstances()){
@@ -116,11 +117,19 @@ public abstract class LTOL {
                 .right(of('|').plus().trim(), (List<LTOL> values) -> new Or(values.get(0), values.get(2)))
                 .left(of('|').plus().trim(), (List<LTOL> values) -> new Or(values.get(0), values.get(2)));
 
-        Parser necessaryObs = of('<').seq(Observation.parser(commonVars, messageVars).trim()).seq(of('>')).map((List<Observation> vals) -> vals.get(1));
-        Parser sufficientObs = of('[').seq(Observation.parser(commonVars, messageVars).trim()).seq(of(']')).map((List<Observation> vals) -> vals.get(1));
+        Parser necessaryObs = of('<').seq(Observation.parser(commonVars, messageVars, agentNames).trim()).seq(of('>'))
+                .map((List<Observation> vals) -> {
+                    return vals.get(1);
+                });
+        Parser sufficientObs = of('[').seq(Observation.parser(commonVars, messageVars, agentNames).trim()).seq(of(']'))
+                .map((List<Observation> vals) -> {
+                    return vals.get(1);
+                });
 
         builder.group()
-                .prefix(necessaryObs, (List<Object> values) -> new Necessary((Observation) values.get(0), (LTOL) values.get(1)));
+                .prefix(necessaryObs, (List<Object> values) -> {
+                    return new Necessary((Observation) values.get(0), (LTOL) values.get(1));
+                });
 
         builder.group()
                 .prefix(sufficientObs, (List<Object> values) -> new Possibly((Observation) values.get(0), (LTOL) values.get(1)));
