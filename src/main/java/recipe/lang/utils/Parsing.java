@@ -5,7 +5,7 @@ import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.Config;
-import recipe.lang.exception.TypeCreationException;
+import recipe.lang.utils.exceptions.TypeCreationException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.definitions.GuardDefinition;
 import recipe.lang.expressions.TypedVariable;
