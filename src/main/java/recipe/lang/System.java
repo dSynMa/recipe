@@ -182,7 +182,6 @@ public class System{
 
                                 for(String spec : specsStrings){
                                     spec = spec.replaceAll("^SPEC", "").trim();
-                                    java.lang.System.out.println(spec);
                                     LTOL ltolSpec = ltolParser.parse(spec).get();
                                     ltolSpecs.add(ltolSpec);
                                 }
