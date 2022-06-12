@@ -1,6 +1,11 @@
 package recipe.lang.ltol;
 
-import recipe.lang.ltol.observations.Observation;
+import recipe.lang.expressions.TypedVariable;
+import recipe.lang.types.Boolean;
+import recipe.lang.utils.Triple;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class Necessary extends LTOL{
     Observation obs;
@@ -25,5 +30,16 @@ public class Necessary extends LTOL{
 
     public boolean isPureLTL() {
         return false;
+    }
+
+    public Triple<java.lang.Integer, Map<String, Observation>, LTOL> abstractOutObservations(java.lang.Integer counter) {
+        Observation oldObs = obs;
+        Map map = new HashMap<String, Observation>();
+        map.put("obs" + counter, oldObs);
+
+        TypedVariable var = new TypedVariable(Boolean.getType(), "obs" + counter);
+        obs = new Observation(var);
+
+        return new Triple<>(counter + 1, map, new Next(new And(new Atom(var), this.value)));
     }
 }

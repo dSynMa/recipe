@@ -1,19 +1,24 @@
 package recipe.lang.ltol;
 
-import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.expressions.Expression;
+import recipe.lang.types.Boolean;
+import recipe.lang.utils.Triple;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class Atom extends LTOL{
-    Condition condition;
+    Expression<Boolean> condition;
 
-    public Atom(Condition condition) {
+    public Atom(Expression<Boolean> condition) {
         this.condition = condition;
     }
 
-    public Condition getCondition() {
+    public Expression<Boolean> getCondition() {
         return condition;
     }
 
-    public void setCondition(Condition condition) {
+    public void setCondition(Expression<Boolean> condition) {
         this.condition = condition;
     }
 
@@ -25,5 +30,10 @@ public class Atom extends LTOL{
     @Override
     public boolean isPureLTL() {
         return true;
+    }
+
+    @Override
+    public Triple<Integer, Map<String, Observation>, LTOL> abstractOutObservations(Integer counter) {
+        return new Triple<>(counter, new HashMap<>(), this);
     }
 }

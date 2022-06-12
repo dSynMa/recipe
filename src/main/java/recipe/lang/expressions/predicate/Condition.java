@@ -4,8 +4,8 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.StringParser;
 import org.petitparser.tools.ExpressionBuilder;
-import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.Predicate;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.*;
@@ -19,6 +19,7 @@ import recipe.lang.utils.TypingContext;
 import recipe.lang.utils.exceptions.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
@@ -33,7 +34,7 @@ public abstract class Condition implements Expression<Boolean> {
 		try {
 			TRUE = new TypedValue<Boolean>(Boolean.getType(), "TRUE");
 			FALSE = new TypedValue<Boolean>(Boolean.getType(), "FALSE");
-		} catch (MismatchingTypeException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -46,7 +47,7 @@ public abstract class Condition implements Expression<Boolean> {
 		return FALSE;
 	}
 
-	public boolean isSatisfiedBy(Store store) throws AttributeTypeException, AttributeNotInStoreException, MismatchingTypeException {
+	public boolean isSatisfiedBy(Store store) throws AttributeTypeException, AttributeNotInStoreException, MismatchingTypeException, NotImplementedYetException {
 		TypedValue value = valueIn(store);
 		if(value.getValue().equals(true)){
 			return true;
@@ -55,7 +56,7 @@ public abstract class Condition implements Expression<Boolean> {
 		}
 	}
 
-	public abstract TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException;
+	public abstract TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, NotImplementedYetException;
 	public abstract Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, TypeCreationException, RelabellingTypeException;
 
 	public static Parser typeParser(TypingContext context) throws Exception {
@@ -67,6 +68,14 @@ public abstract class Condition implements Expression<Boolean> {
 
 		Parser primitiveBoolean =
 				(context.getSubContext(Boolean.getType()).variableParser().map((TypedVariable<Boolean> value) -> {
+					try {
+						return new IsEqualTo<>(value, Condition.getTrue());
+					} catch (MismatchingTypeException e) {
+						e.printStackTrace();
+						return null;
+					}
+				}))
+						.or(Boolean.getType().valueParser().map((TypedValue<Boolean> value) -> {
 							try {
 								return new IsEqualTo<>(value, Condition.getTrue());
 							} catch (MismatchingTypeException e) {
@@ -74,15 +83,7 @@ public abstract class Condition implements Expression<Boolean> {
 								return null;
 							}
 						}))
-				.or(Boolean.getType().valueParser().map((TypedValue<Boolean> value) -> {
-							try {
-								return new IsEqualTo<>(value, Condition.getTrue());
-							} catch (MismatchingTypeException e) {
-								e.printStackTrace();
-								return null;
-							}
-						}))
-				.or(GuardReference.parser(context, condition));
+						.or(GuardReference.parser(context, condition));
 
 		Parser arithmeticOrEnums = ArithmeticExpression.parser(context);
 
@@ -108,6 +109,12 @@ public abstract class Condition implements Expression<Boolean> {
 		// negation is a prefix
 		builder.group()
 				.prefix(of('!').trim(), (List<Condition> values) -> new Not(values.get(1)));
+
+		for(String pred : context.getPredicates()){
+			// negation is a prefix
+			builder.group()
+					.prefix(StringParser.of(pred).trim(), (List<Condition> values) -> new Predicate(pred, values.get(1)));
+		}
 
 		// repetition is a prefix operator
 		builder.group()

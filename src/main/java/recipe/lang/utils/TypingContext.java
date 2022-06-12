@@ -13,6 +13,7 @@ public class TypingContext {
     Set<Type> types;
     Map<String, Type> varType;
     Map<Type, Set<String>> typeVars;
+    Set<String> predicates;
 
     public Map<String, Type> getVarType() {
         return varType;
@@ -26,6 +27,7 @@ public class TypingContext {
         varType = new HashMap<>();
         typeVars = new HashMap<>();
         types = new HashSet<>();
+        predicates = new HashSet<>();
     }
 
     public TypingContext(Map<String, Type> varType){
@@ -70,6 +72,14 @@ public class TypingContext {
         Type type = varType.get(name);
         typeVars.get(type).remove(name);
         varType.remove(name);
+    }
+
+    public void addPredicate(String name){
+        predicates.add(name);
+    }
+
+    public Set<String> getPredicates(){
+        return predicates;
     }
 
     public void set(String name, Type type){
@@ -142,7 +152,7 @@ public class TypingContext {
     public org.petitparser.parser.Parser guardNameParser(){
         Parser parser = null;
 
-        Set<String> labels = Guard.definitonLabels();
+        Set<String> labels = Guard.definitionLabels();
         for(String v : labels){
             if(parser == null){
                 parser = StringParser.of(v);

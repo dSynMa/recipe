@@ -138,9 +138,6 @@ public abstract class LTOL {
 //        Parser bigAnd = of('/').seq(of('\\').trim()).seq(Parsing.)
 //                .seq(Observation.parser(commonVars, messageVars).trim()).seq(of('>')).map((List<Observation> vals) -> vals.get(1));
 
-        builder.group()
-                .prefix(sufficientObs, (List<Object> values) -> new Possibly((Observation) values.get(0), (LTOL) values.get(1)));
-
 //        // implication is right-associative
 //        builder.group()
 //                .right(StringParser.of("->").plus().trim(), (List<LTOL> values) -> new Implies(values.get(0), values.get(2)));
@@ -176,4 +173,6 @@ public abstract class LTOL {
     }
 
     public abstract boolean isPureLTL();
+
+    public abstract Triple<java.lang.Integer, Map<String, Observation>, LTOL> abstractOutObservations(java.lang.Integer counter);
 }
