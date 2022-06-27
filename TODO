@@ -7,6 +7,7 @@
 - for simulation, send transition labels as variables; and untagged transitions marked by arbitrary labels that are not shown to user, but used to highlight transitions in dot file
 - trace visualisation as sequence diagrams
 - deploy to server (add timeouts to model checking)
+- don't care labellings, three valued semantics
 
 - LTOL: add support for LTOL
  - <o> \phi -> next (o && \phi)
