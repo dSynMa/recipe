@@ -20,6 +20,11 @@ public class Observation {
 
     Expression<recipe.lang.types.Boolean> observation;
 
+    @Override
+    public String toString(){
+        return observation.toString();
+    }
+
     public Observation(Expression<Boolean> observation) {
         this.observation = observation;
     }
