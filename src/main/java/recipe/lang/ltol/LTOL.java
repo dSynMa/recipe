@@ -35,7 +35,11 @@ public abstract class LTOL {
 
         Enum agentType;
         if(!Enum.exists(Config.agentEnumType)) {
-            agentType = new Enum(Config.agentEnumType, system.getAgentInstances().stream().map(AgentInstance::getLabel).toList());
+            agentType = new Enum(Config.agentEnumType,
+                    system.getAgentInstances()
+                            .stream()
+                            .map(AgentInstance::getLabel)
+                            .toList());
         } else{
             agentType = Enum.getEnum(Config.agentEnumType);
         }
