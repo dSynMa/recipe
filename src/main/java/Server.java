@@ -1,3 +1,4 @@
+
 import flak.*;
 import flak.annotations.Route;
 import guru.nidi.graphviz.engine.Engine;
@@ -7,9 +8,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.petitparser.context.ParseError;
 import recipe.analysis.NuXmvInteraction;
+import recipe.analysis.ToNuXmv;
 import recipe.lang.System;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
+import recipe.lang.ltol.LTOL;
 import recipe.lang.types.Enum;
 import recipe.lang.utils.Pair;
 
@@ -168,12 +171,11 @@ public class Server {
                     }
                 }
 
-                for(int i = 0; i < system.getSpecs().size(); i++) {
-                    String spec = system.getSpecs().get(i).toString().replaceAll("LTLSPEC", "").trim();
-                    if(!system.getSpecs().get(i).isPureLTL()){
-                        java.lang.System.out.println("LTOL model checking not supported yet, skipping model checking of:\n" + spec);
-                        continue;
-                    }
+                List<LTOL> specs = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs()).getLeft();
+
+                for(int i = 0; i < specs.size(); i++) {
+                    String spec = specs.get(i).toString().replaceAll("LTLSPEC", "").trim();
+
                     Pair<Boolean, String> result;
                     if(ic3){
                         result = nuXmvInteraction.modelCheckic3(spec, bounded, bound);
