@@ -99,7 +99,7 @@ public class ToNuXmv {
                     Set<Expression<Boolean>> next = new HashSet<>();
                     for(Expression<Boolean> expr : current){
                         Set<Expression<Boolean>> nextExpressions = generateAllValuations(entry.getKey(), entry.getValue(), expr);
-                        if(nextExpressions.contains(Condition.getTrue())){
+                        if(nextExpressions.contains(Condition.getFalse())){
                             next.clear();
                             next.add(Condition.getFalse());
                             break;
