@@ -179,4 +179,12 @@ public abstract class LTOL {
     public abstract boolean isPureLTL();
 
     public abstract Triple<java.lang.Integer, Map<String, Observation>, LTOL> abstractOutObservations(java.lang.Integer counter);
+    @Override
+    public boolean equals(Object expr){
+        return this.toString().equals(expr.toString());
+    }
+    @Override
+    public int hashCode(){
+        return this.toString().hashCode();
+    }
 }
