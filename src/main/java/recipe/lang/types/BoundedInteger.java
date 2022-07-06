@@ -70,7 +70,7 @@ public class BoundedInteger extends Integer {
     }
     public Set<TypedValue> getAllValues() throws MismatchingTypeException {
         Set<TypedValue> values = new HashSet<>();
-        for(int i = min; i < max; i++){
+        for(int i = min; i <= max; i++){
             values.add(new TypedValue<BoundedInteger>(this, "" + i));
         }
         return values;
