@@ -181,4 +181,8 @@ public abstract class Condition implements Expression<Boolean> {
 	public Type getType(){
 		return Boolean.getType();
 	}
+	@Override
+	public boolean equals(Object expr){
+		return this.toString().equals(expr.toString());
+	}
 }
