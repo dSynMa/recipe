@@ -104,6 +104,7 @@ public class ToNuXmv {
                             next.add(Condition.getFalse());
                             break;
                         }
+                        nextExpressions.removeIf((p) -> p.equals(Condition.getTrue()));
                         next.addAll(nextExpressions);
                     }
                     current = next;
@@ -136,6 +137,7 @@ public class ToNuXmv {
                             next.add(Condition.getTrue());
                             break;
                         }
+                        nextExpressions.removeIf((p) -> p.equals(Condition.getFalse()));
                         next.addAll(nextExpressions);
                     }
                     current = next;
