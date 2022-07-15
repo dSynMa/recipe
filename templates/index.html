@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>ReCiPe Verification Tools</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+		integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+	<link rel="stylesheet" href="css/global.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+	<script src="https://visjs.github.io/vis-network/standalone/umd/vis-network.min.js"></script>
+
+</head>
+
+<body>
+	<section class="container-fluid bg">
+		<!-- <div class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+			<a href="#" class="navbar-brand">
+				<img src="img/me.png" alt="">
+			</a>
+			<button class="navbar-toggler" type="button" data-toggle="collapse" data-target=" #navbarResponsive">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+			<div class="collapse navbar-collapse" id="navbarResponsive">
+				<ul class="navbar-nav ml-auto">
+					<li class="nav-item">
+						<a href="#home" class="nav-link">Home</a>
+					</li>
+
+				</ul>
+			</div>
+		</div> -->
+		<ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+			<li class="nav-item">
+				<a class="nav-link active" id="pills-home-tab" data-toggle="pill" href="#pills-home" role="tab"
+					aria-controls="pills-home" aria-selected="true">ReCiPe-based LTL Synthesis</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" id="pills-profile-tab" data-toggle="pill" href="#pills-profile" role="tab"
+					aria-controls="pills-profile" aria-selected="false">Model-checking</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" id="pills-contact-tab" data-toggle="pill" href="#pills-contact" role="tab"
+					aria-controls="pills-contact" aria-selected="false">Analysis</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" id="pills-docs-tab" data-toggle="pill" href="#pills-docs" role="tab"
+					aria-controls="pills-contact" aria-selected="false">Documentation</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" id="pills-about-tab" data-toggle="pill" href="#pills-about" role="tab"
+					aria-controls="pills-contact" aria-selected="false">About</a>
+			</li>
+		</ul>
+		<div class="tab-content" id="pills-tabContent">
+			<div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab">
+				<section class="row-lg-12 justify-content-center">
+					<section>
+						<form id="frm" class="form-container" method="post" action="{{ url_for(target) }}">
+							<div class="form-row ">
+								<div class="col-md-6 mb-3">
+									<div class="form-row ">
+										<div class="col-md-12 mb-3">
+											<label for="validationServer01">LTL Formula</label>
+											<textarea name="formula" id="text-code"
+											style="display:none;"
+												required>{{ code }}</textarea>
+					
+											<div id="text-code-ace" class="form-control is-valid hidden" style="height:400px;">{{ code }}
+											</div>
+										</div>
+
+									</div>
+									<div class="form-row ">
+										<div class="col-md-12 mb-3">
+											<label for="validationServer02">Inputs</label>
+											<input type="text" name="inputs" class="form-control is-valid"
+												id="validationServer02" placeholder="req0,req1" required value={{inputs}}>
+										</div>
+									</div>
+									<div class="form-row ">
+										<div class="col-md-12 mb-3">
+											<label for="validationServer03">Outputs</label>
+											<input type="text" name="outputs" class="form-control is-valid"
+												id="validationServer03" placeholder="grant0,grant1" required value={{outputs}}>
+										</div>
+									</div>
+									<div class="form-row ">
+										<div class="col-md-12 mb-3">
+											<label for="validationServer04">Compilation Errors</label>
+											<!-- <input type="text" class="form-control is-invalid" id="validationServer03"
+												placeholder="City" required> -->
+											<textarea name="debug" cols="30" rows="5" class="form-control is-invalid"
+												id="validationServer04" placeholder="" readonly>{{ rescomp }}</textarea>
+											<!-- <div class="invalid-feedback">
+												Please provide a valid city.
+											</div> -->
+										</div>
+
+									</div>
+								</div>
+								<div class="col-md-6 mb-3">
+									<div class="form-row ">
+										<div class="col-md-12 mb-3">
+											<label for="validationServer05">Result</label>
+											<input type="text" class="form-control is-valid" id="validationServer05"
+												placeholder="Realizable/Unrealizable" readonly value={{ resrun }}>
+											<!-- <div class="valid-feedback">
+											Looks good!
+										</div> -->
+										</div>
+									</div>
+									<div class="form-row">
+										<div class="col-md-12 mb-3">
+											<label for="validationServer06">Controller/Counter Strategy</label>
+					
+
+											<div id="mynetwork" class="form-control is-valid" style="height:520px;">
+											</div>
+
+										</div>
+
+									</div>
+								</div>
+
+							</div>
+
+							<!-- <div class="form-group">
+								<div class="form-check">
+									<input class="form-check-input is-invalid" type="checkbox" value=""
+										id="invalidCheck3" required>
+									<label class="form-check-label" for="invalidCheck3">
+										Agree to terms and conditions
+									</label>
+									<div class="invalid-feedback">
+										You must agree before submitting.
+									</div>
+								</div>
+							</div> -->
+							<button id="sbmt" class="btn btn-primary" type="submit">Realizablity Check</button>
+							<button id="draw" class="btn btn-success" type="button"
+								title="Draw the DOT graph (Ctrl+Enter)">Synthesize</button>
+							<button id="vld" class="btn btn-success" type="button"
+								onclick="modelcheck()">Validate</button>
+							<span id="error"></span>
+						</form>
+					</section>
+				</section>
+			</div>
+			<div class="tab-pane fade" id="pills-profile" role="tabpanel" aria-labelledby="pills-profile-tab">
+				..........</div>
+			<div class="tab-pane fade" id="pills-contact" role="tabpanel" aria-labelledby="pills-contact-tab">
+				...........</div>
+			<div class="tab-pane fade" id="pills-docs" role="tabpanel" aria-labelledby="pills-contact-tab">
+				...........</div>
+			<div class="tab-pane fade" id="pills-about" role="tabpanel" aria-labelledby="pills-about-tab">
+				...........</div>
+		</div>
+
+	</section>
+
+	<script src="../static/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+	<script>
+		// The Ace editor needs divs instead of textareas
+		// So we hide the textarea and show a div instead
+		var editorElement = document.getElementById("text-code");
+		editorElement.classList.add("hidden");
+		document.getElementById("text-code-ace").classList.remove("hidden");
+
+		// Set up the editor
+		var editor = ace.edit("text-code-ace");
+		editor.setTheme("ace/theme/tomorrow");
+		//var language = ("{{ target }}" === "runpy") ? "python" : "c_cpp";
+		editor.getSession().setMode("ace/mode/java");
+		document.getElementById('text-code-ace').style.fontSize = '25px';
+		// Make sure we copy the content of the editor to the textarea before posting
+		// its content to the server
+		document.getElementById("sbmt").addEventListener("click", function () {
+			editorElement.innerHTML = editor.getValue();
+		});
+	</script>
+	<script type="text/javascript">
+		// create a network
+		var container = document.getElementById('mynetwork');
+		var options = {
+			physics: {
+				stabilization: true,
+				barnesHut: {
+					springLength: 400
+				}
+
+			}
+		};
+		var data = {};
+		var network = new vis.Network(container, data, options);
+
+		$('#draw').click(draw);
+		//$('#frm').reset(draw);
+
+
+		$(window).resize(resize);
+		//$(window).load(draw); 
+
+		// $('#text-result').keydown(function (event) {
+		// 	if (event.ctrlKey && event.keyCode === 13) { // Ctrl+Enter
+		// 		draw();
+		// 		event.stopPropagation();
+		// 		event.preventDefault();
+		// 	}
+		// });
+
+
+
+		function draw() {
+			try {
+				// var lines = $('#text-result').val().split('\n');
+				// var myBest = lines.slice(1);
+				// $('#text-result').val(myBest.join("\n"));
+				var jResult = {{ resrun | tojson
+			}};
+		var result = jResult.substr(jResult.indexOf(" ") + 1);
+		//$('#error').html(result);
+		// Provide a string with data in DOT language
+		//data = vis.parseDOTNetwork($('#text-result').val());
+		data = vis.parseDOTNetwork(result);
+
+		network.setData(data);
+			}
+			catch (err) {
+			// set the cursor at the position where the error occurred
+			var match = /\(char (.*)\)/.exec(err);
+			if (match) {
+				var pos = Number(match[1]);
+				//var textarea = $('#text-result')[0];
+
+			}
+
+			// show an error message
+			$('#error').html(err.toString());
+		}
+		}
+	</script>
+
+	<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+		integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+		crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+		integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+		crossorigin="anonymous"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+		integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+		crossorigin="anonymous"></script>
+	<script>
+		$('#myTab a').on('click', function (e) {
+			e.preventDefault()
+			$(this).tab('show')
+		})
+	</script>
+
+	<script>
+		function modelcheck() {
+			$('a[href="#pills-profile"]').tab('show')
+		}
+		// function compute() {
+		// 	draw();
+		// 	//document.getElementById('frm').submit();
+		// 	//document.getElementById('draw').draw();			
+		// }
+	</script>
+
+
+</body>
+
+</html>
