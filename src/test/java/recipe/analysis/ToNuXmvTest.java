@@ -4,7 +4,7 @@ import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
 import recipe.lang.System;
-import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.utils.exceptions.RelabellingTypeException;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;

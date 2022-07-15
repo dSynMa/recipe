@@ -4,20 +4,16 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.exception.TypeCreationException;
+import recipe.lang.utils.exceptions.TypeCreationException;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Guard;
-import recipe.lang.types.Type;
 import recipe.lang.utils.LazyParser;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class GuardDefinition extends Definition<Expression<Boolean>> {

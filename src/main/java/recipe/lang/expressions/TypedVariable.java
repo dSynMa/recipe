@@ -1,8 +1,8 @@
 package recipe.lang.expressions;
 
-import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.utils.exceptions.AttributeNotInStoreException;
+import recipe.lang.utils.exceptions.AttributeTypeException;
+import recipe.lang.utils.exceptions.RelabellingTypeException;
 import recipe.lang.store.Store;
 import recipe.lang.types.*;
 import recipe.lang.types.Enum;
@@ -11,7 +11,6 @@ import recipe.lang.types.Process;
 
 import java.lang.Boolean;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 
 public class TypedVariable<T extends Type> implements Expression<T> {

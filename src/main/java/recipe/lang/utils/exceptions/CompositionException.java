@@ -1,4 +1,4 @@
-package recipe.lang.exception;
+package recipe.lang.utils.exceptions;
 
 public class CompositionException extends Exception {
 

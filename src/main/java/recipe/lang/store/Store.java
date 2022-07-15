@@ -5,13 +5,10 @@ import java.util.Map;
 import java.util.function.Function;
 
 import recipe.lang.definitions.Definition;
-import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.exception.MismatchingTypeException;
-import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.utils.exceptions.*;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.exception.AttributeTypeException;
 
 public class Store {
 //	private HashMap<String, TypedValue> data;
@@ -152,11 +149,11 @@ public class Store {
 		return false;
 	}
 
-	public boolean satisfy( Condition p ) throws AttributeTypeException, AttributeNotInStoreException, MismatchingTypeException {
+	public boolean satisfy( Condition p ) throws AttributeTypeException, AttributeNotInStoreException, MismatchingTypeException, NotImplementedYetException {
 		return p.isSatisfiedBy( this );
 	}
 	
-	public boolean waitUntil( Condition p ) throws AttributeTypeException, InterruptedException, AttributeNotInStoreException, MismatchingTypeException {
+	public boolean waitUntil( Condition p ) throws AttributeTypeException, InterruptedException, AttributeNotInStoreException, MismatchingTypeException, NotImplementedYetException {
 		while (!p.isSatisfiedBy(this)) {
 		}
 		return true;

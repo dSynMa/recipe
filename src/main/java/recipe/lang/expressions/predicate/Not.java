@@ -1,17 +1,12 @@
 package recipe.lang.expressions.predicate;
 
-import org.petitparser.parser.Parser;
-import org.petitparser.parser.primitive.CharacterParser;
-import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
-import recipe.lang.types.Type;
+import recipe.lang.utils.exceptions.*;
 
-import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 
 public class Not extends Condition {
@@ -50,7 +45,7 @@ public class Not extends Condition {
 	}
 
 	@Override
-	public TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException {
+	public TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, NotImplementedYetException {
 		Expression argValue = arg.valueIn(store);
 
 		if(argValue.equals(Condition.TRUE)){

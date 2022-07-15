@@ -1,17 +1,15 @@
 package recipe.lang.expressions.predicate;
 
 import org.petitparser.parser.Parser;
-import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
+import recipe.lang.utils.exceptions.*;
 
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 
 public class Implies extends Condition {
@@ -56,7 +54,7 @@ public class Implies extends Condition {
 	}
 
 	@Override
-	public TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException {
+	public TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, NotImplementedYetException {
 		Expression lhsObject = lhs.valueIn(store);
 		Expression rhsObject = rhs.valueIn(store);
 		if (lhsObject.equals(Condition.FALSE) || rhsObject.equals(Condition.TRUE)) {
@@ -72,12 +70,16 @@ public class Implies extends Condition {
 	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
 		Expression<Boolean> lhsObject = lhs.close();
 		Expression<Boolean> rhsObject = rhs.close();
-		if (lhsObject.equals(Condition.FALSE) || rhsObject.equals(Condition.TRUE)) {
+		if (lhsObject.equals(Condition.FALSE)) {
 			return Condition.TRUE;
-		} else if(!(lhsObject.equals(Condition.TRUE) && rhsObject.equals(Condition.FALSE))){
-			return new Implies(lhsObject, rhsObject);
+		} else if(rhsObject.equals(Condition.TRUE)){
+			return lhsObject;
+		} else if(rhsObject.equals(Condition.FALSE)){
+			return (new Not(lhsObject)).close();
+		} else if(lhsObject.equals(Condition.TRUE)){
+			return rhsObject;
 		} else{
-			return Condition.FALSE;
+			return new Implies(lhsObject, rhsObject);
 		}
 	}
 

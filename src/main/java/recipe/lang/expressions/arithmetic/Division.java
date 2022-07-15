@@ -1,18 +1,14 @@
 package recipe.lang.expressions.arithmetic;
 
-import org.petitparser.parser.Parser;
-import org.petitparser.parser.primitive.CharacterParser;
-import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
 import recipe.lang.types.Number;
 import recipe.lang.types.Real;
+import recipe.lang.utils.exceptions.*;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 
 public class Division extends ArithmeticExpression{
@@ -25,7 +21,7 @@ public class Division extends ArithmeticExpression{
     }
 
     @Override
-    public TypedValue<Number> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException {
+    public TypedValue<Number> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, NotImplementedYetException {
         TypedValue<Number> lhsValue = lhs.valueIn(store);
         TypedValue<Number> rhsValue = rhs.valueIn(store);
 

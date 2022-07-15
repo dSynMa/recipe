@@ -1,9 +1,11 @@
 package recipe.lang.types;
 
 import org.petitparser.parser.primitive.CharacterParser;
-import recipe.lang.exception.MismatchingTypeException;
+import recipe.lang.utils.exceptions.InfiniteValueTypeException;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.expressions.TypedValue;
-import recipe.lang.utils.TypingContext;
+
+import java.util.Set;
 
 public class Real extends Number {
     private static Real base = new Real();
@@ -32,6 +34,10 @@ public class Real extends Number {
         } catch (Exception e) {
             throw new MismatchingTypeException(value + " is not of type " + name());
         }
+    }
+
+    public Set getAllValues() throws InfiniteValueTypeException, MismatchingTypeException {
+        throw new InfiniteValueTypeException("Real does not have a finite set of values.");
     }
 
     @Override

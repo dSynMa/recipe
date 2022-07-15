@@ -1,16 +1,15 @@
 package recipe.lang.expressions;
 
-import recipe.lang.exception.AttributeNotInStoreException;
-import recipe.lang.exception.AttributeTypeException;
-import recipe.lang.exception.MismatchingTypeException;
-import recipe.lang.exception.RelabellingTypeException;
+import recipe.lang.utils.exceptions.AttributeNotInStoreException;
+import recipe.lang.utils.exceptions.AttributeTypeException;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
+import recipe.lang.utils.exceptions.RelabellingTypeException;
 import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Type;
 
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 
 public class TypedValue<T extends Type> implements Expression<T> {

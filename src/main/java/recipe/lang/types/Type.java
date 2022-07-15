@@ -1,9 +1,10 @@
 package recipe.lang.types;
 
-import recipe.lang.exception.MismatchingTypeException;
-import recipe.lang.utils.TypingContext;
+import recipe.lang.utils.exceptions.InfiniteValueTypeException;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
 
 import java.util.Objects;
+import java.util.Set;
 
 public abstract class Type {
     public abstract Object interpret(String value) throws MismatchingTypeException;
@@ -17,6 +18,8 @@ public abstract class Type {
             return false;
         }
     }
+
+    public abstract Set getAllValues() throws InfiniteValueTypeException, MismatchingTypeException;
 
     @Override
     public int hashCode() {

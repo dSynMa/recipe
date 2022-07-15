@@ -2,19 +2,17 @@ package recipe.lang.expressions.predicate;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.lang.exception.*;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.expressions.arithmetic.ArithmeticExpression;
 import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 import recipe.lang.types.Number;
+import recipe.lang.utils.exceptions.*;
 
 public class IsGreaterThan extends Condition {
 
@@ -50,7 +48,7 @@ public class IsGreaterThan extends Condition {
 	}
 
 	@Override
-	public TypedValue<Boolean> valueIn(Store store) throws AttributeTypeException, AttributeNotInStoreException, MismatchingTypeException {
+	public TypedValue<Boolean> valueIn(Store store) throws AttributeTypeException, AttributeNotInStoreException, MismatchingTypeException, NotImplementedYetException {
 		TypedValue<recipe.lang.types.Number> lhsValue = lhs.valueIn(store);
 		TypedValue<recipe.lang.types.Number> rhsValue = rhs.valueIn(store);
 

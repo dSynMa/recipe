@@ -1,3 +1,4 @@
+
 import flak.*;
 import flak.annotations.Route;
 import guru.nidi.graphviz.engine.Engine;
@@ -11,6 +12,7 @@ import recipe.analysis.ToNuXmv;
 import recipe.lang.System;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
+import recipe.lang.ltol.LTOL;
 import recipe.lang.types.Enum;
 import recipe.lang.utils.Pair;
 
@@ -134,7 +136,7 @@ public class Server {
         }
 
         try {
-            if(system.getLtlspec() == null || system.getLtlspec().size() == 0){
+            if(system.getSpecs() == null || system.getSpecs().size() == 0){
                 JSONObject jsonObject = new JSONObject();
                 jsonObject.put("error", "No specifications to model check.");
                 return jsonObject.toString();
@@ -169,8 +171,11 @@ public class Server {
                     }
                 }
 
-                for(int i = 0; i < system.getLtlspec().size(); i++) {
-                    String spec = system.getLtlspec().get(i).replaceAll("LTLSPEC", "").trim();
+                List<LTOL> specs = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs()).getLeft();
+
+                for(int i = 0; i < specs.size(); i++) {
+                    String spec = specs.get(i).toString().replaceAll("LTLSPEC", "").trim();
+
                     Pair<Boolean, String> result;
                     if(ic3){
                         result = nuXmvInteraction.modelCheckic3(spec, bounded, bound);

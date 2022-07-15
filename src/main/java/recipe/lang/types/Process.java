@@ -1,8 +1,11 @@
 package recipe.lang.types;
 
 import org.petitparser.parser.Parser;
-import recipe.lang.exception.MismatchingTypeException;
+import recipe.lang.utils.exceptions.InfiniteValueTypeException;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.utils.TypingContext;
+
+import java.util.Set;
 
 public class Process extends Type {
     TypingContext messageContext;
@@ -30,7 +33,9 @@ public class Process extends Type {
     public String name() {
         return "process";
     }
-
+    public Set getAllValues() throws InfiniteValueTypeException {
+        throw new InfiniteValueTypeException("Process does not have a finite set of values.");
+    }
     @Override
     public Parser valueParser() throws Exception {
         return recipe.lang.process.Process.parser(messageContext, localContext, communicationContext);

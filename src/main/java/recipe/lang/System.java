@@ -8,9 +8,10 @@ import org.petitparser.parser.primitive.StringParser;
 import recipe.Config;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
-import recipe.lang.exception.ParsingException;
-import recipe.lang.exception.TypeCreationException;
+import recipe.lang.utils.exceptions.ParsingException;
+import recipe.lang.utils.exceptions.TypeCreationException;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.ltol.LTOL;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Guard;
 import recipe.lang.types.Type;
@@ -30,11 +31,14 @@ public class System{
     Set<Agent> agents;
     List<AgentInstance> agentsInstances;
 
-    public List<String> getLtlspec() {
+    public List<LTOL> getSpecs() {
         return specs;
     }
+    public void setSpecs(List<LTOL> specs) {
+        this.specs = specs;
+    }
 
-    List<String> specs;
+    List<LTOL> specs;
 
     public Map<String, Type> getMessageStructure() {
         return messageStructure;
@@ -51,7 +55,9 @@ public class System{
         return agentsInstances;
     }
 
-    public System(Map<String, Type> messageStructure, Map<String, Type> communicationVariables, Map<String, Type> guardDefinitions, Set<Agent> agents, List<AgentInstance> agentsInstances, List<String> specs) {
+    public System(Map<String, Type> messageStructure, Map<String, Type> communicationVariables,
+                  Map<String, Type> guardDefinitions, Set<Agent> agents,
+                  List<AgentInstance> agentsInstances, List<LTOL> specs) {
         this.messageStructure = messageStructure;
         this.communicationVariables = communicationVariables;
         this.guardDefinitions = guardDefinitions;
@@ -145,14 +151,11 @@ public class System{
                                             return agentInstances;
                                         }).or(StringParser.of("system").and().seq(FailureParser.withMessage("Error in system definition.")))
                         )
-                        .seq(((StringParser.of("LTLSPEC ")
-//                                .or(StringParser.of("CTLSPEC"))
-//                                .or(StringParser.of("INVARSPEC"))
-//                                .or(StringParser.of("PSLSPEC"))
-//                                .or(StringParser.of("COMPUTE"))
-//                                .or(StringParser.of("SPEC"))
-//                                .or(StringParser.of("PARSYNTH"))
-                        ).flatten().seq(CharacterParser.noneOf(";").plus()).flatten()).delimitedBy((CharacterParser.of(';').or(CharacterParser.of('\n'))).trim()).optional(new ArrayList<>()))
+                        .seq(((StringParser.of("SPEC "))
+                                .flatten()
+                                .seq(CharacterParser.noneOf(";").plus()).flatten())
+                             .delimitedBy((CharacterParser.of(';').or(CharacterParser.of('\n'))).trim())
+                             .optional(new ArrayList<>()))
                         .map((List<Object> values) -> {
                             Set<String> channels = new HashSet<>((List<String>) values.get(0));
                             Map<String, Type> messageStructure = messageContext.get().getVarType();
@@ -160,18 +163,34 @@ public class System{
                             Map<String, Type> guardDefinitions = (Map<String, Type>) values.get(4);
                             List<AgentInstance> agentInstances = (List) values.get(6);
 
-                            List<String> specs = new ArrayList<>();
+                            List<String> specsStrings = new ArrayList<>();
                             for(Object obj : (List<Object>) values.get(7)){
                                 if(obj.getClass().equals(String.class)){
-                                    String[] spec = ((String) obj).split("(?=LTLSPEC)");
-                                    specs.addAll(List.of(spec));
+                                    String[] spec = ((String) obj).split("(?=SPEC)");
+                                    specsStrings.addAll(List.of(spec));
                                 }
                             }
 
-                            specs.removeIf(x -> x.trim().equals(""));
-                            specs.forEach(x -> x.trim());
+                            specsStrings.removeIf(x -> x.trim().equals(""));
+                            specsStrings.forEach(x -> x.trim());
 
-                            return new System(messageStructure, communicationVariables, guardDefinitions, agents.get(), agentInstances, specs);
+                            System system = new System(messageStructure, communicationVariables, guardDefinitions, agents.get(), agentInstances, new ArrayList<>());
+
+                            List<LTOL> ltolSpecs = new ArrayList<>();
+                            try {
+                                Parser ltolParser = LTOL.parser(system);
+
+                                for(String spec : specsStrings){
+                                    spec = spec.replaceAll("^SPEC", "").trim();
+                                    LTOL ltolSpec = ltolParser.parse(spec).get();
+                                    ltolSpecs.add(ltolSpec);
+                                }
+                                system.setSpecs(ltolSpecs);
+                            } catch (Exception e) {
+                                throw new RuntimeException(e);
+                            }
+
+                            return system;
                         })
         );
 

@@ -122,18 +122,25 @@ public class NuXmvInteraction {
         execute((x) -> x.trim().endsWith("nuXmv >"),"build_boolean_model");
 
         Predicate<String> finished = (x) -> {
-                if(x.replaceAll(" |\n|\r|\t|\\(|\\)", "").contains(property.trim().replaceAll(" |\n|\r|\t|\\(|\\)", "") + "is")) {
-                    return true;
-                } else{
-                    return false;
-                }
+            String s = x.replaceAll(" |\n|\r|\t|\\(|\\)", "");
+            if(s.contains(property.trim().replaceAll(" |\n|\r|\t|\\(|\\)", "") + "is")) {
+                return true;
+            } else if(s.contains("syntaxerror")){
+                return true;
+            } else{
+                return false;
+            }
         };
 
         String out = "";
         out = execute(finished, ("check_ltlspec_ic3" + " -p \"" + property + "\" "+ (bounded ? "-k " + steps : "")));
         out = out.replaceAll("nuXmv > ", "").trim();
         out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
-        return new Pair<>(true, out);
+        if(out.contains("syntax error")){
+            return new Pair<>(false, out);
+        } else{
+            return new Pair<>(true, out);
+        }
     }
 
     public Pair<Boolean, String> initialise(boolean simulateOrBMC) throws IOException {

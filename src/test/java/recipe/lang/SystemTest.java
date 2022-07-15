@@ -4,14 +4,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
-import recipe.lang.exception.TypeCreationException;
+import recipe.lang.utils.exceptions.TypeCreationException;
 import recipe.lang.types.Enum;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-
-import static org.junit.Assert.*;
 
 public class SystemTest {
 

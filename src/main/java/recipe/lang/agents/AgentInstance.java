@@ -77,9 +77,10 @@ public class AgentInstance {
                 .seq(CharacterParser.of(')').trim())
                 .map((List<Object> values) -> {
                     return new AgentInstance((String) values.get(2), (Expression<Boolean>) values.get(4), agentNames.get((String) values.get(0)));
-                })).or(agentParser.map((String value) -> {
-                    return new AgentInstance("", Condition.getTrue(), agentNames.get(value));
-        }));
+                }));
+                //.or(agentParser.map((String value) -> {
+                //    return new AgentInstance("", Condition.getTrue(), agentNames.get(value));
+                // }));
 
         return parser;
     }
