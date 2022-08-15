@@ -33,12 +33,12 @@ public class Possibly extends LTOL{
     }
 
     public Triple<java.lang.Integer, Map<String, Observation>, LTOL> abstractOutObservations(java.lang.Integer counter) {
-        Observation oldObs = obs;
+        Observation oldObs = new Observation(obs.observation);
         Map map = new HashMap<String, Observation>();
-        map.put("obs" + counter, oldObs);
+        map.put("obs" + counter, new Observation(oldObs.observation));
 
         TypedVariable var = new TypedVariable(Boolean.getType(), "obs" + counter);
-        obs = new Observation(var);
+//        obs = new Observation(var);
 
         return new Triple<>(counter + 1, map, new Next(new Or(new Not(new Atom(var)), this.value)));
     }
