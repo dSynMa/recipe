@@ -43,8 +43,8 @@ public class Predicate implements Expression<recipe.lang.types.Boolean> {
     }
 
     @Override
-    public Expression<recipe.lang.types.Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, RelabellingTypeException, MismatchingTypeException {
-        return new Predicate(name, input.close());
+    public Expression<recipe.lang.types.Boolean> simplify() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, RelabellingTypeException, MismatchingTypeException {
+        return new Predicate(name, input.simplify());
     }
 
     @Override

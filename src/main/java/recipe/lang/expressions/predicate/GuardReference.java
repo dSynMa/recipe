@@ -46,8 +46,8 @@ public class GuardReference extends Condition {
     }
 
     @Override
-    public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, TypeCreationException, RelabellingTypeException {
-        return this.unpack().close();
+    public Expression<Boolean> simplify() throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, TypeCreationException, RelabellingTypeException {
+        return this.unpack().simplify();
     }
 
     @Override

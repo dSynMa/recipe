@@ -63,9 +63,9 @@ public class IsGreaterThan extends Condition {
 	}
 
 	@Override
-	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
-		Expression<Number> lhsObject = lhs.close();
-		Expression<Number> rhsObject = rhs.close();
+	public Expression<Boolean> simplify() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+		Expression<Number> lhsObject = lhs.simplify();
+		Expression<Number> rhsObject = rhs.simplify();
 		if (lhsObject.equals(rhsObject)) {
 			return Condition.TRUE;
 		} else if(!lhsObject.getClass().equals(TypedValue.class) ||

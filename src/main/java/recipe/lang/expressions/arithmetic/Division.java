@@ -31,9 +31,9 @@ public class Division extends ArithmeticExpression{
     }
 
     @Override
-    public Expression<Number> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
-        Expression<Number> lhsValue = lhs.close();
-        Expression<Number> rhsValue = rhs.close();
+    public Expression<Number> simplify() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+        Expression<Number> lhsValue = lhs.simplify();
+        Expression<Number> rhsValue = rhs.simplify();
 
         if (lhsValue.getClass().equals(TypedValue.class)
                 && rhsValue.getClass().equals(TypedValue.class)){
@@ -42,7 +42,7 @@ public class Division extends ArithmeticExpression{
             return new TypedValue<Number>((Number) Real.getType(), lhsNo.divide(rhsNo).toString());
         }
         else {
-            return new Division(lhs.close(), rhs.close());
+            return new Division(lhs.simplify(), rhs.simplify());
         }
     }
 

@@ -64,9 +64,9 @@ public class Or extends Condition {
 	}
 
 	@Override
-	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
-		Expression<Boolean> lhsObject = lhs.close();
-		Expression<Boolean> rhsObject = rhs.close();
+	public Expression<Boolean> simplify() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+		Expression<Boolean> lhsObject = lhs.simplify();
+		Expression<Boolean> rhsObject = rhs.simplify();
 		if (lhsObject.equals(Condition.TRUE) || rhsObject.equals(Condition.TRUE)) {
 			return Condition.TRUE;
 		} else if(lhsObject.getClass().equals(TypedValue.class) &&

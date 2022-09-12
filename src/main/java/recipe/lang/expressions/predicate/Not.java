@@ -58,8 +58,8 @@ public class Not extends Condition {
 	}
 
 	@Override
-	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
-		Expression<Boolean> closure = arg.close();
+	public Expression<Boolean> simplify() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+		Expression<Boolean> closure = arg.simplify();
 		if (closure.equals(Condition.FALSE)) {
 			return Condition.TRUE;
 		} else if (closure.equals(Condition.TRUE)) {

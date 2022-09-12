@@ -28,16 +28,29 @@ import java.util.stream.Stream;
 
 public class ToNuXmv {
 
-    public static Expression<Boolean> treatObservation(Map<String, Type> cvs, Expression<Boolean> obs, Expression<Boolean> sendGuard, Map<String, Expression> message, TypedValue sender, Expression channel) throws Exception {
+    public static Expression<Boolean> specialiseObservationToSendTransition(Map<String, Type> cvs,
+                                                                            Expression<Boolean> obs,
+                                                                            Expression<Boolean> sendGuard,
+                                                                            Map<String, Expression> message,
+                                                                            TypedValue sender,
+                                                                            Expression channel) throws Exception {
         //handle message and sender variables
         Expression<Boolean> observation = obs.relabel((v) -> message.containsKey(v.getName()) ? message.get(v.getName()) : v)
                                                 .relabel((v) -> v.getName().equals("sender") ? sender : v)
                                                 .relabel((v) -> v.getName().equals(Config.channelLabel) ? channel : v);
-        observation = observation.close();
-        return handleCVsInObservation(cvs, observation, sendGuard).close();
+        observation = observation.simplify();
+        return handleCVsInObservation(cvs, observation, sendGuard).simplify();
     }
 
-    public static Set<Expression<Boolean>> generateAllValuations(String cv, Type type, Expression<Boolean> cond) throws InfiniteValueTypeException, RelabellingTypeException, MismatchingTypeException, AttributeTypeException, TypeCreationException, AttributeNotInStoreException {
+    public static Set<Expression<Boolean>> specialiseOnAllPossibleValues(String cv,
+                                                                         Type type,
+                                                                         Expression<Boolean> cond
+                                                                    ) throws InfiniteValueTypeException,
+                                                                            RelabellingTypeException,
+                                                                            MismatchingTypeException,
+                                                                            AttributeTypeException,
+                                                                            TypeCreationException,
+                                                                            AttributeNotInStoreException {
         //associate cv with all its possible values
         //instantiate condition for each value
 
@@ -57,7 +70,7 @@ public class ToNuXmv {
         Set<Expression<Boolean>> conditions = new HashSet<>();
         for(int j = 0; j < vals.size(); j++){
             TypedValue val = vals.get(j);
-            conditions.add(cond.relabel((v) -> v.getName().equals(cv) ? val : v).close());
+            conditions.add(cond.relabel((v) -> v.getName().equals(cv) ? val : v).simplify());
         }
 
         return conditions;
@@ -90,7 +103,7 @@ public class ToNuXmv {
             //t(forall(o)) = /\cv g_s -> o
 
             if(obss.getName().equals("forall")){
-                Expression<Boolean> t = null;
+                Expression<Boolean> finalExpression = null;
 
                 Set<Expression<Boolean>> current = new HashSet<>();
                 current.add(new Implies(sendGuard, obss.getInput()));
@@ -98,7 +111,7 @@ public class ToNuXmv {
                 for(Map.Entry<String, Type> entry : cvs.entrySet()){
                     Set<Expression<Boolean>> next = new HashSet<>();
                     for(Expression<Boolean> expr : current){
-                        Set<Expression<Boolean>> nextExpressions = generateAllValuations(entry.getKey(), entry.getValue(), expr);
+                        Set<Expression<Boolean>> nextExpressions = specialiseOnAllPossibleValues(entry.getKey(), entry.getValue(), expr);
                         if(nextExpressions.contains(Condition.getFalse())){
                             next.clear();
                             next.add(Condition.getFalse());
@@ -114,13 +127,13 @@ public class ToNuXmv {
                 }
 
                 for(Expression<Boolean> expr : current){
-                    if(t == null){
-                        t = expr.close();
+                    if(finalExpression == null){
+                        finalExpression = expr.simplify();
                     } else{
-                        t = new And(t, expr).close();
+                        finalExpression = new And(finalExpression, expr).simplify();
                     }
                 }
-                return t;
+                return finalExpression;
             } else if(obss.getName().equals("exists")) {
                 //t(exists(o)) = \/cv g_s && o
                 Expression<Boolean> t = null;
@@ -131,7 +144,7 @@ public class ToNuXmv {
                 for(Map.Entry<String, Type> entry : cvs.entrySet()){
                     Set<Expression<Boolean>> next = new HashSet<>();
                     for(Expression<Boolean> expr : current){
-                        Set<Expression<Boolean>> nextExpressions = generateAllValuations(entry.getKey(), entry.getValue(), expr);
+                        Set<Expression<Boolean>> nextExpressions = specialiseOnAllPossibleValues(nameTypePair.getKey(), nameTypePair.getValue(), expr);
                         if(nextExpressions.contains(Condition.getTrue())){
                             next.clear();
                             next.add(Condition.getTrue());
@@ -148,9 +161,9 @@ public class ToNuXmv {
 
                 for(Expression<Boolean> expr : current){
                     if(t == null){
-                        t = expr.close();
+                        t = expr.simplify();
                     } else{
-                        t = new Or(t, expr).close();
+                        t = new Or(t, expr).simplify();
                     }
                 }
                 return t;
@@ -375,7 +388,7 @@ public class ToNuXmv {
 
                         // add the guard of the sendingProcess to the guards required for the send to trigger
                         sendTriggeredIf.add(sendingProcess.getPsi()
-                                .relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).close().toString());
+                                .relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify().toString());
 
 
                         // add next state to send effects
@@ -383,7 +396,7 @@ public class ToNuXmv {
 
                         // Add updates to send effects
                         for (Map.Entry<String, Expression> entry : sendingProcess.getUpdate().entrySet()) {
-                            sendEffects.add("next(" + sendingAgentName + "-" + entry.getKey() + ") = (" + entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)).close() + ")");
+                            sendEffects.add("next(" + sendingAgentName + "-" + entry.getKey() + ") = (" + entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)).simplify() + ")");
                         }
                         //keep variable values not mentioned in the update
                         for (String var : sendingAgent.getStore().getAttributes().keySet()) {
@@ -395,7 +408,7 @@ public class ToNuXmv {
                         // relabelling message var names
                         Map<String, Expression> relabelledMessage = new HashMap<>();
                         for (Map.Entry<String, Expression> entry : sendingProcess.getMessage().entrySet()) {
-                            relabelledMessage.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + ((TypedVariable) v).getName())).close());
+                            relabelledMessage.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + ((TypedVariable) v).getName())).simplify());
                         }
 
                         //relabelling send agent variables in sendGuard
@@ -410,14 +423,14 @@ public class ToNuXmv {
                                         ? v
                                         : v.sameTypeWithName(sendingAgentName + "-" + v);
                             }
-                        }).close();
+                        }).simplify();
 
                         //Dealing with LTOL observations
                         for(Map.Entry<String, Observation> entry : observations.entrySet()){
                             Observation obs = entry.getValue();
                             String var = entry.getKey();
 
-                            Expression<Boolean> observationCondition = treatObservation(system.getCommunicationVariables(),
+                            Expression<Boolean> observationCondition = specialiseObservationToSendTransition(system.getCommunicationVariables(),
                                     obs.getObservation(),
                                     sendGuardExpr,
                                     relabelledMessage,
@@ -443,7 +456,7 @@ public class ToNuXmv {
                                         .relabel(v -> v.toString().equals(Config.channelLabel)
                                                 ? sendingOnThisChannelVarOrVal
                                                 : v.sameTypeWithName(receiveName + "-" + v));
-                                receiveGuardExpr = receiveGuardExpr.close();
+                                receiveGuardExpr = receiveGuardExpr.simplify();
 
                                 String receiveGuard;
 
@@ -471,7 +484,7 @@ public class ToNuXmv {
                                         e.printStackTrace();
                                     }
                                     return null;
-                                }).close();
+                                }).simplify();
 
 
                                 Map<String, List<String>> receiveAgentReceivePreds = new HashMap<>();
@@ -512,7 +525,7 @@ public class ToNuXmv {
                                                         : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
                                                         ? stopHelper.apply(v)
                                                         : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v)));
-                                        receiveTransitionGuard = receiveTransitionGuard.close();
+                                        receiveTransitionGuard = receiveTransitionGuard.simplify();
 
                                         ////stop considering this transition if the incoming message does not contain all message vars required
                                         if (stop.get()) continue receiveTransLoop;

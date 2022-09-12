@@ -67,15 +67,15 @@ public class Implies extends Condition {
 	}
 
 	@Override
-	public Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
-		Expression<Boolean> lhsObject = lhs.close();
-		Expression<Boolean> rhsObject = rhs.close();
+	public Expression<Boolean> simplify() throws AttributeNotInStoreException, AttributeTypeException, TypeCreationException, MismatchingTypeException, RelabellingTypeException {
+		Expression<Boolean> lhsObject = lhs.simplify();
+		Expression<Boolean> rhsObject = rhs.simplify();
 		if (lhsObject.equals(Condition.FALSE)) {
 			return Condition.TRUE;
 		} else if(rhsObject.equals(Condition.TRUE)){
-			return lhsObject;
+			return Condition.TRUE;
 		} else if(rhsObject.equals(Condition.FALSE)){
-			return (new Not(lhsObject)).close();
+			return (new Not(lhsObject)).simplify();
 		} else if(lhsObject.equals(Condition.TRUE)){
 			return rhsObject;
 		} else{

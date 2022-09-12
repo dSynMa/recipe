@@ -57,7 +57,7 @@ public abstract class Condition implements Expression<Boolean> {
 	}
 
 	public abstract TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, NotImplementedYetException;
-	public abstract Expression<Boolean> close() throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, TypeCreationException, RelabellingTypeException;
+	public abstract Expression<Boolean> simplify() throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, TypeCreationException, RelabellingTypeException;
 
 	public static Parser typeParser(TypingContext context) throws Exception {
 		return Condition.parser(context);

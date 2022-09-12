@@ -175,6 +175,7 @@ public class Server {
 
                 for(int i = 0; i < specs.size(); i++) {
                     String spec = specs.get(i).toString().replaceAll("LTLSPEC", "").trim();
+                    java.lang.System.out.println(spec);
 
                     Pair<Boolean, String> result;
                     if(ic3){
