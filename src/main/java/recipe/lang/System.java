@@ -59,13 +59,49 @@ public class System{
 
     public System(Map<String, Type> messageStructure, Map<String, Type> communicationVariables,
                   Map<String, Type> guardDefinitions, Set<Agent> agents,
-                  List<AgentInstance> agentsInstances, List<LTOL> specs) {
+                  List<AgentInstance> agentsInstances, List<LTOL> specs) throws Exception {
+        if(!validate(messageStructure, communicationVariables, guardDefinitions, agents)){
+            throw new Exception("Message and communication variables, and guard definition names need to be disjoint, " +
+                    "and they also need to be disjoin with each agent's local variables.");
+        }
         this.messageStructure = messageStructure;
         this.communicationVariables = communicationVariables;
         this.guardDefinitions = guardDefinitions;
         this.agents = agents;
         this.agentsInstances = agentsInstances;
         this.specs = specs;
+    }
+
+    public static boolean validate(Map<String, Type> messageStructure, Map<String, Type> communicationVariables,
+                                   Map<String, Type> guardDefinitions, Set<Agent> agents){
+        Set<String> vars = new HashSet<>();
+        vars.addAll(messageStructure.keySet());
+        vars.addAll(guardDefinitions.keySet());
+        vars.retainAll(communicationVariables.keySet());
+        if(vars.size() != 0){
+            return false;
+        }
+        vars.addAll(messageStructure.keySet());
+        vars.addAll(communicationVariables.keySet());
+        vars.retainAll(guardDefinitions.keySet());
+        if(vars.size() != 0){
+            return false;
+        }
+
+        vars.addAll(messageStructure.keySet());
+        vars.addAll(communicationVariables.keySet());
+        vars.addAll(guardDefinitions.keySet());
+
+        for(Agent agent : agents){
+            Set<String> locals = new HashSet<>();
+            locals.addAll(agent.getStore().getAttributes().keySet());
+            locals.retainAll(vars);
+            if(locals.size() > 0){
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public static Parser parser(){
@@ -178,23 +214,29 @@ public class System{
                             specsStrings.removeIf(x -> x.trim().equals(""));
                             specsStrings.forEach(x -> x.trim());
 
-                            System system = new System(messageStructure, communicationVariables, guardDefinitions, agents.get(), agentInstances, new ArrayList<>());
-
-                            List<LTOL> ltolSpecs = new ArrayList<>();
+                            System system = null;
                             try {
-                                Parser ltolParser = LTOL.parser(system);
+                                system = new System(messageStructure, communicationVariables, guardDefinitions, agents.get(), agentInstances, new ArrayList<>());
 
-                                for(String spec : specsStrings){
-                                    spec = spec.replaceAll("^SPEC", "").trim();
-                                    LTOL ltolSpec = ltolParser.parse(spec).get();
-                                    ltolSpecs.add(ltolSpec);
+
+                                List<LTOL> ltolSpecs = new ArrayList<>();
+                                try {
+                                    Parser ltolParser = LTOL.parser(system);
+
+                                    for(String spec : specsStrings){
+                                        spec = spec.replaceAll("^SPEC", "").trim();
+                                        LTOL ltolSpec = ltolParser.parse(spec).get();
+                                        ltolSpecs.add(ltolSpec);
+                                    }
+                                    system.setSpecs(ltolSpecs);
+                                    return system;
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
                                 }
-                                system.setSpecs(ltolSpecs);
+
                             } catch (Exception e) {
                                 throw new RuntimeException(e);
                             }
-
-                            return system;
                         })
         );
 
