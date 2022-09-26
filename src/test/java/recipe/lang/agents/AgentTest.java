@@ -31,7 +31,7 @@ public class AgentTest {
                 "\t\tg <- b != 0\n" +
                 "\treceive-guard:\n" +
                 "\t\t(c < 5 & channel == A) | (c > 3 & channel == B)\n" +
-                "\trepeat: (<b == 0> chVar!(b == f) (d1 := b + 1, d2 := false)[b := b + 1])";
+                "\trepeat: (<b == 0> chVar!(b == @f) (d1 := b + 1, d2 := false)[b := b + 1])";
 
         TypingContext messageContext = new TypingContext();
         messageContext.set("d1", Real.getType());

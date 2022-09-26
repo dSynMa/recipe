@@ -18,6 +18,7 @@ import recipe.lang.utils.TypingContext;
 import java.util.*;
 
 import static org.petitparser.parser.primitive.CharacterParser.word;
+import static recipe.Config.commVariableReferences;
 
 public class SendProcess extends BasicProcess {
 
@@ -79,7 +80,7 @@ public class SendProcess extends BasicProcess {
                         });
 
         TypingContext localAndChannelAndCommunicationContext =
-                TypingContext.union(localContext, communicationContext);
+                TypingContext.union(localContext, commVariableReferences(communicationContext));
 
         Parser messageGuard = Condition.typeParser(localAndChannelAndCommunicationContext);
 

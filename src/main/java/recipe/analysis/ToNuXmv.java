@@ -26,6 +26,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static recipe.Config.commVariableReferences;
+import static recipe.Config.isCvRef;
+
 public class ToNuXmv {
 
     public static Expression<Boolean> specialiseObservationToSendTransition(Map<String, Type> cvs,
@@ -141,7 +144,8 @@ public class ToNuXmv {
                 Set<Expression<Boolean>> current = new HashSet<>();
                 current.add(new And(sendGuard, obss.getInput()));
 
-                for(Map.Entry<String, Type> entry : cvs.entrySet()){
+                // TODO restrict to cvs that appear in obss
+                for(Map.Entry<String, Type> nameTypePair : cvs.entrySet()){
                     Set<Expression<Boolean>> next = new HashSet<>();
                     for(Expression<Boolean> expr : current){
                         Set<Expression<Boolean>> nextExpressions = specialiseOnAllPossibleValues(nameTypePair.getKey(), nameTypePair.getValue(), expr);
@@ -396,7 +400,9 @@ public class ToNuXmv {
 
                         // Add updates to send effects
                         for (Map.Entry<String, Expression> entry : sendingProcess.getUpdate().entrySet()) {
-                            sendEffects.add("next(" + sendingAgentName + "-" + entry.getKey() + ") = (" + entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)).simplify() + ")");
+                            sendEffects.add(
+                                    "next(" + sendingAgentName + "-" + entry.getKey() + ") " +
+                                    "= (" + entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)).simplify() + ")");
                         }
                         //keep variable values not mentioned in the update
                         for (String var : sendingAgent.getStore().getAttributes().keySet()) {
@@ -418,8 +424,8 @@ public class ToNuXmv {
                             if (v.getName().equals(Config.channelLabel)) {
                                 return sendingOnThisChannelVarOrVal;
                             } else {
-                                //relabelling cvs to those of the receiving agents
-                                return system.getCommunicationVariables().containsKey(v.getName())
+                                //relabelling local variables to those of the sending agents
+                                return isCvRef(system, v.getName())
                                         ? v
                                         : v.sameTypeWithName(sendingAgentName + "-" + v);
                             }
@@ -430,7 +436,8 @@ public class ToNuXmv {
                             Observation obs = entry.getValue();
                             String var = entry.getKey();
 
-                            Expression<Boolean> observationCondition = specialiseObservationToSendTransition(system.getCommunicationVariables(),
+                            Expression<Boolean> observationCondition = specialiseObservationToSendTransition(
+                                    commVariableReferences(system.getCommunicationVariables()),
                                     obs.getObservation(),
                                     sendGuardExpr,
                                     relabelledMessage,
@@ -472,12 +479,18 @@ public class ToNuXmv {
                                 }
 
                                 //relabelling sendGuard
+                                // remove @s
+                                sendGuardExpr = sendGuardExpr.relabel(v -> {
+                                    return v.getName().startsWith("@") ? ((TypedVariable) v).sameTypeWithName(v.getName().substring(1)) : v;
+                                });
+                                // rename references to cvs to receiving agents cv
                                 sendGuardExpr = sendGuardExpr.relabel(v -> {
                                     //if v is just the special variable we use in our syntax to refer to the current
                                     // channel being sent on, then replace it with the sending transitions channel reference
                                     try {
                                         //relabelling cvs to those of the receiving agents
-                                        return system.getCommunicationVariables().containsKey(v.getName())
+
+                                        return isCvRef(system, v.getName())
                                                 ? receiveAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(receiveName + "-" + vv))
                                                 : v;
                                     } catch (RelabellingTypeException | MismatchingTypeException e) {

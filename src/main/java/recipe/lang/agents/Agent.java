@@ -235,14 +235,14 @@ public class Agent {
                         }
                         return null;
                     }), localContext.get()).trim().or(LazyParser.failingParser(nameString, "Could not parse agent's relabel definition.")))
-                    .seq(new LazyParser<Pair<TypingContext,TypingContext>>(((Pair<TypingContext,TypingContext> guardAndLocalContext) -> {
+                    .seq(new LazyParser<TypingContext>(((TypingContext context) -> {
                         try {
-                            return Parsing.receiveGuardParser(TypingContext.union(guardAndLocalContext.getLeft(), guardAndLocalContext.getRight()));
+                            return Parsing.receiveGuardParser(context);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
                         return null;
-                    }), new Pair(guardDefinitionContext, localContext.get())).or(LazyParser.failingParser(nameString, "Could not parse agent's receive-guard definition.")))
+                    }), localContext.get()).or(LazyParser.failingParser(nameString, "Could not parse agent's receive-guard definition.")))
                     .seq(new LazyParser<Pair<TypingContext,TypingContext>>((Pair<TypingContext,TypingContext> guardAndLocalContext) -> {
                         return process.apply(TypingContext.union(guardAndLocalContext.getLeft(), guardAndLocalContext.getRight()));
                     }, new Pair(guardDefinitionContext, localContext.get())).trim().or(LazyParser.failingParser(nameString, "Could not parse agent's process definition.")))

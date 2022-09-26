@@ -17,10 +17,12 @@ import recipe.lang.types.Guard;
 import recipe.lang.types.Type;
 import recipe.lang.utils.*;
 
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
+import static recipe.Config.commVariableReferences;
 import static recipe.lang.utils.Parsing.*;
 import static recipe.lang.utils.Parsing.typedVariableList;
 
@@ -107,25 +109,27 @@ public class System{
                                     communicationContext.get().setAll(new TypingContext(values));
                                     return values;
                                 }).or(FailureParser.withMessage("Error in communication-variables definition.")))
-                        .seq(new LazyParser<LazyTypingContext>((LazyTypingContext context) ->
-                                guardDefinitionList(context.resolve()) //TODO may want to range over channel values and communication values in future
-                                .map((Map<String, Type> values) -> {
-                                    guardDefinitionsContext.get().setAll(new TypingContext(values));
-                                    return values;
-                                }), new LazyTypingContext(communicationContext)))//.or(StringParser.of("agent").trim().and().seq(FailureParser.withMessage("Error in guard definition."))))
-                        .seq(StringParser.of("agent").trim().and().seq(new LazyParser<Pair<Pair<TypingContext, TypingContext>, TypingContext>>(
-                                (Pair<Pair<TypingContext, TypingContext>, TypingContext> msgCmncGuardContext) ->
+                        .seq(new LazyParser<LazyTypingContext>((LazyTypingContext context) -> {
+                                    //TODO may want to range over channel values and communication values in future
+                                    TypingContext commContext = commVariableReferences(context.resolve());
+                                    return guardDefinitionList(commContext)
+                                            .map((Map<String, Type> values) ->
+                                            {
+                                                guardDefinitionsContext.get().setAll(new TypingContext(values));
+                                                return values;
+                                            });},
+                                new LazyTypingContext(communicationContext)))//.or(StringParser.of("agent").trim().and().seq(FailureParser.withMessage("Error in guard definition."))))
+                        .seq(StringParser.of("agent").trim().and().seq(new LazyParser<List<TypingContext>>(
+                                (List<TypingContext> context) ->
                                 {
                                     try {
-                                        Parser agent = Agent.parser(msgCmncGuardContext.getLeft().getLeft(),
-                                                msgCmncGuardContext.getLeft().getRight(), msgCmncGuardContext.getRight()).plus();//.seq((StringParser.of("system").trim()).and());
+                                        Parser agent = Agent.parser(context.get(0), context.get(1), context.get(2)).plus();//.seq((StringParser.of("system").trim()).and());
                                         return agent;
                                     } catch (Exception e) {
                                         e.printStackTrace();
                                     }
                                     return null;
-                                },
-                                new Pair<>(new Pair<>(messageContext.get(), communicationContext.get()), guardDefinitionsContext.get())).trim().plus()
+                                }, Arrays.asList(messageContext.get(), communicationContext.get(), guardDefinitionsContext.get())).trim().plus()
                                 .map((List agentss) -> {
                                     agentss.stream().flatMap(x -> x instanceof Agent ? Stream.of(x) : ((List) x).stream()).forEach((y) -> agents.get().add((Agent) y));
                                     return agentss;

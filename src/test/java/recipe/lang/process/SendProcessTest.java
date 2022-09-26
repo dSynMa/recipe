@@ -43,11 +43,11 @@ public class SendProcessTest {
 
         Parser parser = SendProcess.parser(messageContext, localContext, communicationContext);
 
-        Result r = parser.parse("<v == 5> c!g(m := 1)[v := 6]");
+        Result r = parser.parse("<v == 5> c!@g(m := 1)[v := 6]");
         assert r.isSuccess();
-        r = parser.parse("<true> c!g(m := 1)[v := 6]");
+        r = parser.parse("<true> c!@g(m := 1)[v := 6]");
         assert r.isSuccess();
-        r = parser.parse("<true> c!g(m := 1)[]");
+        r = parser.parse("<true> c!@g(m := 1)[]");
         assert r.isSuccess();
     }
 }

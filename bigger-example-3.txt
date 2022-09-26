@@ -3,7 +3,7 @@ enum rolevals {clnt, vm, mgr}
 enum msgvals {reserve, request, release, buy, connect, full}
 message-structure: MSG : msgvals, LNK : channel
 communication-variables: cv : rolevals
-guard g(r : rolevals, c : channel, m : channel) := (channel == *) && (cv == r) | (channel == c) && (cv == mgr) | (channel == m) ;
+guard g(r : rolevals, c : channel, m : channel) := (channel == *) && (@cv == r) | (channel == c) && (@cv == mgr) | (channel == m) ;
 
 agent Client
     local: role : rolevals, cLink : channel, mLink : channel

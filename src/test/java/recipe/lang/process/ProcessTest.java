@@ -43,17 +43,17 @@ public class ProcessTest {
 
         Parser parser = Process.parser(messageContext, localContext, communicationContext);
 
-        Result r = parser.parse("<v == 5> c!g (m1 := 1, m2 := 2)[v := 6]");
+        Result r = parser.parse("<v == 5> c!@g (m1 := 1, m2 := 2)[v := 6]");
         assert r.isSuccess();
-        r = parser.parse("<v == 5> c!g (m1 := 1)[v := 6]");
+        r = parser.parse("<v == 5> c!@g (m1 := 1)[v := 6]");
         assert r.isSuccess();
-        r = parser.parse("(<v == 5> c!g (m1 := 1)[v := 6])");
+        r = parser.parse("(<v == 5> c!@g (m1 := 1)[v := 6])");
         assert r.isSuccess();
-        r = parser.parse("(<v == 5> c!g (m1 := 1)[v := 6]) ; (<v == 5> c!g (m1 := 1)[v := 6])");
+        r = parser.parse("(<v == 5> c!@g (m1 := 1)[v := 6]) ; (<v == 5> c!@g (m1 := 1)[v := 6])");
         assert r.isSuccess();
-        r = parser.parse("((<v == 5> c!g (m1 := 1)[v := 6]) + (<v == 5> c!g (m1 := 1)[v := 6])) ; (<v == 5> c!g (m1 := 1)[v := 6])");
+        r = parser.parse("((<v == 5> c!@g (m1 := 1)[v := 6]) + (<v == 5> c!@g (m1 := 1)[v := 6])) ; (<v == 5> c!@g (m1 := 1)[v := 6])");
         assert r.isSuccess();
-        r = parser.parse("(<v == 5> c!g (m1 := 1)[v := 6] + <v == 5> c!g (m1 := 1)[v := 6]) ; (<v == 5> c!g (m1 := 1)[v := 6] + <v == 5> c!g (m1 := 1)[v := 6])");
+        r = parser.parse("(<v == 5> c!@g (m1 := 1)[v := 6] + <v == 5> c!@g (m1 := 1)[v := 6]) ; (<v == 5> c!@g (m1 := 1)[v := 6] + <v == 5> c!@g (m1 := 1)[v := 6])");
         assert r.isSuccess();
     }
 }
