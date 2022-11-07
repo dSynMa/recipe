@@ -480,11 +480,12 @@ public class ToNuXmv {
 
                                 //relabelling sendGuard
                                 // remove @s
-                                sendGuardExpr = sendGuardExpr.relabel(v -> {
+                                Expression<Boolean> sendGuardExprHere = sendGuardExpr.relabel(v -> {
                                     return v.getName().startsWith("@") ? ((TypedVariable) v).sameTypeWithName(v.getName().substring(1)) : v;
                                 });
+
                                 // rename references to cvs to receiving agents cv
-                                sendGuardExpr = sendGuardExpr.relabel(v -> {
+                                sendGuardExprHere = sendGuardExprHere.relabel(v -> {
                                     //if v is just the special variable we use in our syntax to refer to the current
                                     // channel being sent on, then replace it with the sending transitions channel reference
                                     try {
@@ -645,7 +646,7 @@ public class ToNuXmv {
                                 // otherwise a disjunct is not added to the above lists
                                 if (receiveAgentReceivePreds.size() > 0
                                         && !receiveGuard.equals("FALSE")
-                                        && !sendGuardExpr.toString().equals("FALSE")) {
+                                        && !sendGuardExprHere.toString().equals("FALSE")) {
                                     //Compute transition predicate (and progress predicate) for current agent
                                     List<String> stateTransitionPreds = new ArrayList<>();
                                     List<String> stateTransitionProgressConds = new ArrayList<>();
@@ -662,18 +663,18 @@ public class ToNuXmv {
                                     String transitionPred = "(" + String.join(")\n \t\t| (", stateTransitionPreds) + ")";
                                     String transitionProgressCond = "(" + String.join(")\n \t\t| (", stateTransitionProgressConds) + ")";
 
-                                    if (receiveGuard.equals("TRUE") && sendGuardExpr.toString().equals("TRUE")) {
+                                    if (receiveGuard.equals("TRUE") && sendGuardExprHere.toString().equals("TRUE")) {
                                         currentAgentReceivePreds.add(transitionPred);
                                         currentAgentProgressConds.add(transitionProgressCond);
                                     } else if (receiveGuard.equals("TRUE")) {
-                                        currentAgentReceivePreds.add("(" + transitionPred + ")\n \t\t& (" + sendGuardExpr + ")");
-                                        currentAgentProgressConds.add("(" + transitionProgressCond + ")\n \t\t& (" + sendGuardExpr + ")");
-                                    } else if (sendGuardExpr.toString().equals("TRUE")) {
+                                        currentAgentReceivePreds.add("(" + transitionPred + ")\n \t\t& (" + sendGuardExprHere + ")");
+                                        currentAgentProgressConds.add("(" + transitionProgressCond + ")\n \t\t& (" + sendGuardExprHere + ")");
+                                    } else if (sendGuardExprHere.toString().equals("TRUE")) {
                                         currentAgentReceivePreds.add("(" + receiveGuard + ")\n \t\t& (" + transitionPred + ")");
                                         currentAgentProgressConds.add("(" + receiveGuard + ")\n \t\t& (" + transitionProgressCond + ")");
                                     } else {
-                                        currentAgentReceivePreds.add("(" + receiveGuard + ")\n \t\t& (" + transitionPred + ")\n \t\t& (" + sendGuardExpr + ")");
-                                        currentAgentProgressConds.add("(" + receiveGuard + ")\n \t\t& (" + transitionProgressCond + ")\n \t\t& (" + sendGuardExpr + ")");
+                                        currentAgentReceivePreds.add("(" + receiveGuard + ")\n \t\t& (" + transitionPred + ")\n \t\t& (" + sendGuardExprHere + ")");
+                                        currentAgentProgressConds.add("(" + receiveGuard + ")\n \t\t& (" + transitionProgressCond + ")\n \t\t& (" + sendGuardExprHere + ")");
                                     }
                                 } else if(receiveAgentReceivePreds.size() > 0){
                                     throw new Exception("receiveAgentReceivePreds is empty");
@@ -699,26 +700,26 @@ public class ToNuXmv {
 
                                 if(sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
                                         && sendingOnThisChannelVarOrVal.toString().equals(Config.broadcast)
-                                        && sendGuardExpr.toString().equals("FALSE")){
+                                        && sendGuardExprHere.toString().equals("FALSE")){
                                     currentAgentReceivePreds.clear();
                                     currentAgentReceivePreds.add("keep-all-" + receiveName);
                                     currentAgentProgressConds.clear();
                                     currentAgentProgressConds.add("TRUE");
                                 } else if((sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
                                         && !sendingOnThisChannelVarOrVal.toString().equals(Config.broadcast))
-                                        || sendGuardExpr.toString().equals("TRUE")){
+                                        || sendGuardExprHere.toString().equals("TRUE")){
                                     //do nothing, disjunct does not hold
                                 } else{
                                     if(sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
                                             && sendingOnThisChannelVarOrVal.toString().equals(Config.broadcast)){
-                                        currentAgentReceivePreds.add("!(" + sendGuardExpr.toString() + ") & " + "keep-all-" + receiveName);
-                                        currentAgentProgressConds.add("!(" + sendGuardExpr.toString() + ")");
-                                    } else if(sendGuardExpr.toString().equals("FALSE")){
+                                        currentAgentReceivePreds.add("!(" + sendGuardExprHere.toString() + ") & " + "keep-all-" + receiveName);
+                                        currentAgentProgressConds.add("!(" + sendGuardExprHere.toString() + ")");
+                                    } else if(sendGuardExprHere.toString().equals("FALSE")){
                                         currentAgentReceivePreds.add(sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel + " & " + "keep-all-" + receiveName);
                                         currentAgentProgressConds.add(sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel);
                                     } else{
-                                        currentAgentReceivePreds.add(sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel + " & !(" + sendGuardExpr.toString() + ") & " + "keep-all-" + receiveName);
-                                        currentAgentProgressConds.add(sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel + " & !(" + sendGuardExpr.toString() + ")");
+                                        currentAgentReceivePreds.add(sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel + " & !(" + sendGuardExprHere.toString() + ") & " + "keep-all-" + receiveName);
+                                        currentAgentProgressConds.add(sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel + " & !(" + sendGuardExprHere.toString() + ")");
                                     }
                                 }
 
