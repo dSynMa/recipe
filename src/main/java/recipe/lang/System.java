@@ -107,6 +107,7 @@ public class System{
     public static Parser parser(){
         Enum.clear();
         Guard.clear();
+        Config.reset();
 
         SettableParser parser = SettableParser.undefined();
 
@@ -218,6 +219,19 @@ public class System{
                             try {
                                 system = new System(messageStructure, communicationVariables, guardDefinitions, agents.get(), agentInstances, new ArrayList<>());
 
+                                Map<String, List<AgentInstance>> agentsToInstances = new HashMap<>();
+                                for(AgentInstance instance : agentInstances){
+                                    String typeName = instance.getAgent().getName();
+                                    if(!agentsToInstances.containsKey(typeName)){
+                                        agentsToInstances.put(typeName, new ArrayList<>());
+                                    }
+                                    agentsToInstances.get(typeName).add(instance);
+                                }
+
+                                for(Map.Entry<String, List<AgentInstance>> entry : agentsToInstances.entrySet()){
+                                    new Enum(entry.getKey(), entry.getValue().stream().map(AgentInstance::toString).toList());
+                                    Config.addAgentTypeName(entry.getKey(), entry.getValue().get(0).getAgent());
+                                }
 
                                 List<LTOL> ltolSpecs = new ArrayList<>();
                                 try {

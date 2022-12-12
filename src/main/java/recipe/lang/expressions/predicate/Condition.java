@@ -4,6 +4,7 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.StringParser;
 import org.petitparser.tools.ExpressionBuilder;
+import recipe.Config;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.Predicate;
 import recipe.lang.expressions.TypedValue;
@@ -93,6 +94,9 @@ public abstract class Condition implements Expression<Boolean> {
 
 			arithmeticOrEnums = arithmeticOrEnums.or(enumTypingContext.variableParser()).or(enumm.valueParser());
 		}
+
+		TypingContext agentTypingContext = context.getSubContext(Config.getAgentType());
+		arithmeticOrEnums = arithmeticOrEnums.or(agentTypingContext.variableParser()).or(Config.getAgentType().valueParser());
 
 		ExpressionBuilder builder = new ExpressionBuilder();
 		builder.group()

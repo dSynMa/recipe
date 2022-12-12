@@ -25,6 +25,10 @@ public class AgentInstance {
         return label;
     }
 
+    public String toString(){
+        return getLabel();
+    }
+
     public Expression<Boolean> getInit() {
         return init;
     }
