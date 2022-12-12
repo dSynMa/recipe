@@ -4,12 +4,16 @@ import org.petitparser.parser.Parser;
 import org.petitparser.tools.ExpressionBuilder;
 import recipe.Config;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.*;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
 import recipe.lang.utils.TypingContext;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
+import recipe.lang.utils.exceptions.RelabellingTypeException;
 
 import java.util.List;
+import java.util.function.Function;
 
 import static org.petitparser.parser.primitive.CharacterParser.of;
 
@@ -34,7 +38,7 @@ public class Observation {
         cvAndMsg.setAll(commonVars);
         cvAndMsg.setAll(messageVars);
         cvAndMsg.set(Config.channelLabel, Enum.getEnum(Config.channelLabel));
-        cvAndMsg.set("sender", Enum.getEnum(Config.agentEnumType));
+        cvAndMsg.set("sender", Config.getAgentType());
         cvAndMsg.addPredicate("exists");
         cvAndMsg.addPredicate("forall");
 
@@ -48,14 +52,10 @@ public class Observation {
                     return values.get(1);
                         });
 
-//        // exists is a prefix operator
-//        builder.group()
-//                .prefix(StringParser.of("exists").trim(), (List<BasicObservation> values) -> new ObsExists(values.get(1)));
-//
-//        // forall is a prefix operator
-//        builder.group()
-//                .prefix(StringParser.of("forall").trim(), (List<BasicObservation> values) -> new ObsForAll(values.get(1)));
-
         return builder.build();
+    }
+
+    public Observation rename(Function<TypedVariable, TypedVariable> relabelling) throws RelabellingTypeException, MismatchingTypeException {
+        return new Observation(observation.relabel((x) -> (relabelling.apply(x))));
     }
 }

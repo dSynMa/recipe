@@ -12,8 +12,10 @@ import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Integer;
-import recipe.lang.utils.Triple;
-import recipe.lang.utils.TypingContext;
+import recipe.lang.utils.*;
+import recipe.lang.utils.exceptions.InfiniteValueTypeException;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
+import recipe.lang.utils.exceptions.RelabellingTypeException;
 
 import java.util.List;
 import java.util.Map;
@@ -178,7 +180,7 @@ public abstract class LTOL {
 
     public abstract boolean isPureLTL();
 
-    public abstract Triple<java.lang.Integer, Map<String, Observation>, LTOL> abstractOutObservations(java.lang.Integer counter);
+    public abstract Triple<java.lang.Integer, Map<String, Observation>, LTOL> abstractOutObservations(java.lang.Integer counter) throws InfiniteValueTypeException, MismatchingTypeException, RelabellingTypeException;
     @Override
     public boolean equals(Object expr){
         return this.toString().equals(expr.toString());
@@ -187,4 +189,8 @@ public abstract class LTOL {
     public int hashCode(){
         return this.toString().hashCode();
     }
+
+    public abstract LTOL rename(Function<TypedVariable, TypedVariable> relabelling) throws RelabellingTypeException, MismatchingTypeException;
+
+    public abstract LTOL toLTOLwithoutQuantifiers() throws RelabellingTypeException, InfiniteValueTypeException, MismatchingTypeException;
 }
