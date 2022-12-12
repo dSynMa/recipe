@@ -15,11 +15,13 @@ import recipe.lang.utils.TypingContext;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 
 public class ObservationTest {
 
     @Before
     public void setUp() throws IOException {
+        Config.reset();
         String script = String.join("\n", Files.readAllLines(Paths.get("./bigger-example.txt")));
 
         Parser system = System.parser().end();
@@ -87,7 +89,11 @@ public class ObservationTest {
         commonVars.set("type", Integer.getType());
         TypingContext messageVars = new TypingContext();
         TypingContext agentNames = new TypingContext();
-        agentNames.set("one", Enum.getEnum(Config.agentEnumType));
+        ArrayList<String> agent = new ArrayList<>();
+        agent.add("one");
+        new Enum("Agent", agent);
+        Config.addAgentTypeName("Agent", null);
+        agentNames.set("one", Config.getAgentType());
 
         Parser obsParser = Observation.parser(commonVars, messageVars, agentNames);
         try {

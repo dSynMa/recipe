@@ -3,6 +3,7 @@ package recipe.lang.ltol;
 import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
+import recipe.Config;
 import recipe.lang.System;
 
 import java.io.IOException;
@@ -17,6 +18,7 @@ public class LTOLTest {
 
     @Test
     public void parser() throws Exception {
+        Config.reset();
         String script = String.join("\n", Files.readAllLines(Paths.get("./bigger-example.txt")));
 
         Parser system = System.parser().end();

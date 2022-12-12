@@ -142,14 +142,36 @@ public class Parsing {
         return typedVariableList(numberType().or(enumType()).or(booleanType()));
     }
 
+    static org.petitparser.parser.Parser stringParser = word().plus().seq(CharacterParser.word().not()).flatten().trim();
+
+    public static org.petitparser.parser.Parser variableNameParser(){
+        return stringParser;
+    }
+
     public static Parser typedVariableList(Parser typeParser){
-        org.petitparser.parser.Parser stringParser = word().plus().seq(CharacterParser.word().not()).flatten().trim();
 
         org.petitparser.parser.Parser typedVariable = stringParser
                 .seq(CharacterParser.of(':').trim())
                 .seq(typeParser).trim()
                 .map((List<Object> values) -> {
-                    return new TypedVariable((Type) values.get(2), (String) values.get(0));
+                    if(List.class.isAssignableFrom(values.get(2).getClass())){
+                        List<Type> types = new ArrayList<>();
+                        for(String typeName : (List<String>) values.get(2)){
+                            try {
+                                types.add(Enum.getEnum(typeName));
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                return null;
+                            }
+                        }
+                        if(((List) values.get(2)).size() == 1){
+                            return new TypedVariable((Type) types.get(0), (String) values.get(0));
+                        } else{
+                            UnionType type = new UnionType(types);
+                            return new TypedVariable(type, (String) values.get(0));
+                        }
+                    }
+                    else return new TypedVariable((Type) values.get(2), (String) values.get(0));
                 });
 
         org.petitparser.parser.Parser typedVariableList = (typedVariable.separatedBy(CharacterParser.of(',').trim()))
@@ -167,8 +189,6 @@ public class Parsing {
     }
 
     public static Parser typedAssignmentList(TypingContext channelValueContext) throws Exception {
-        org.petitparser.parser.Parser stringParser = (word().plus().seq(CharacterParser.word().not())).flatten().trim();
-
         org.petitparser.parser.Parser numberVarParser = stringParser
                 .seq(CharacterParser.of(':').trim())
                 .seq(numberType().trim())

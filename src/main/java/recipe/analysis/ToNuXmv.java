@@ -179,7 +179,7 @@ public class ToNuXmv {
         }
     }
 
-    public static Pair<List<LTOL>, Map<String, Observation>> ltolToLTLAndObservationVariables(List<LTOL> specs){
+    public static Pair<List<LTOL>, Map<String, Observation>> ltolToLTLAndObservationVariables(List<LTOL> specs) throws RelabellingTypeException, InfiniteValueTypeException, MismatchingTypeException {
         Integer counter = 0;
         List<LTOL> pureLTLSpecs = new ArrayList<>();
         Map<String, Observation> observations = new HashMap<>();
@@ -341,7 +341,7 @@ public class ToNuXmv {
             AgentInstance sendingAgentInstance = agentInstances.get(i);
             Agent sendingAgent = sendingAgentInstance.getAgent();
             String sendingAgentName = sendingAgentInstance.getLabel();
-            TypedValue sendingAgentNameValue = new TypedValue(Enum.getEnum(Config.agentEnumType), sendingAgentName);
+            TypedValue sendingAgentNameValue = new TypedValue(Config.getAgentType(), sendingAgentName);
 
             // Declare sendingAgent's states as nuxmv variables
             Stream<String> allStates = sendingAgent.getStates().stream().map(s -> s.toString());

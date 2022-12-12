@@ -1,34 +1,74 @@
 package recipe.lang.ltol;
 
+import recipe.lang.agents.Agent;
+import recipe.lang.agents.AgentInstance;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.utils.Triple;
+import recipe.lang.utils.exceptions.InfiniteValueTypeException;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
+import recipe.lang.utils.exceptions.RelabellingTypeException;
 
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class BigOr extends LTOL{
-    TypedVariable var;
-    Condition condition;
+    List<TypedVariable> vars;
     LTOL ltol;
 
-    public BigOr(TypedVariable var, Condition condition, LTOL ltol){
-        this.condition = condition;
-        this.var = var;
+    public BigOr(TypedVariable var, LTOL ltol){
+        vars = new ArrayList<>();
+        vars.add(var);
         this.ltol = ltol;
     }
 
-    public String toString(){
-        return "/\\" + var.toString() + "." + condition.toString() + "(" + ltol.toString() + ")";
+    public BigOr(List<TypedVariable> vars, LTOL ltol){
+        this.vars = vars;
+        this.ltol = ltol;
     }
 
-    //TODO
+    public String toString() {
+        return "\\/" + vars.stream().map(Object::toString).collect(Collectors.joining(" , ")) + "." + "(" + ltol.toString() + ")";
+    }
+
     public boolean isPureLTL() {
         return ltol.isPureLTL();
     }
 
-    //TODO
+    private LTOL asPureLTOL;
+
     @Override
-    public Triple<Integer, Map<String, Observation>, LTOL> abstractOutObservations(Integer counter) {
-        return null;
+    public Triple<Integer, Map<String, Observation>, LTOL> abstractOutObservations(Integer counter) throws InfiniteValueTypeException, MismatchingTypeException, RelabellingTypeException {
+        if (asPureLTOL == null) {
+            asPureLTOL = this.toLTOLwithoutQuantifiers();
+        }
+
+        return asPureLTOL.abstractOutObservations(counter);
+    }
+    @Override
+    public LTOL rename(Function<TypedVariable, TypedVariable> relabelling) throws RelabellingTypeException, MismatchingTypeException {
+        return new BigAnd(vars, ltol.rename((x) -> !vars.contains(x) ? relabelling.apply(x) : x));
+    }
+
+    public LTOL toLTOLwithoutQuantifiers() throws RelabellingTypeException, InfiniteValueTypeException, MismatchingTypeException {
+        return rewriteOutBigOr(vars, ltol);
+    }
+
+    private static LTOL rewriteOutBigOr(List<TypedVariable> vars, LTOL ltol) throws InfiniteValueTypeException, MismatchingTypeException, RelabellingTypeException {
+        Set<LTOL> possibleValues = LTOL.rewriteOutBigAndOr(vars, ltol);
+
+        LTOL result = null;
+
+        for(LTOL ltol1 : possibleValues){
+            if(result == null){
+                result = ltol1;
+            } else{
+                result = new Or(result, ltol1);
+            }
+        }
+
+        return result;
     }
 }

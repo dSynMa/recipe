@@ -48,7 +48,6 @@ public class SystemTest {
     @Test
     public void parser2() throws IOException {
         String script = String.join("\n", Files.readAllLines(Paths.get("./bigger-example-2.txt")));
-
         Parser system = System.parser().end();
         Result r = system.parse(script);
         java.lang.System.out.println(r.getMessage());

@@ -238,9 +238,14 @@ public class System{
                                     Parser ltolParser = LTOL.parser(system);
 
                                     for(String spec : specsStrings){
-                                        spec = spec.replaceAll("^SPEC", "").trim();
-                                        LTOL ltolSpec = ltolParser.parse(spec).get();
-                                        ltolSpecs.add(ltolSpec);
+                                        try {
+                                            spec = spec.replaceAll("^SPEC", "").trim();
+                                            LTOL ltolSpec = ltolParser.parse(spec).get();
+                                            ltolSpecs.add(ltolSpec);
+                                        }
+                                        catch(Exception e){
+                                            throw new Exception("Problem parsing LTOL spec: " + spec + ".\n\n" + e.toString());
+                                        }
                                     }
                                     system.setSpecs(ltolSpecs);
                                     return system;
