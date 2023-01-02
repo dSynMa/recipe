@@ -258,7 +258,8 @@ public class Agent {
                         Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(4);
                         Expression<Boolean> receiveGuardCondition = (Expression<Boolean>) values.get(5);
                         Process repeat = (Process) values.get(6);
-                        State startState = new State("0");
+                        State startState = new State(Integer.valueOf(0));
+                        // State startState = new State("0");
                         Process.stateSeed = 0;
                         Set<Transition> transitions = repeat.asTransitionSystem(startState, startState);
                         Set<ProcessTransition> sendTransitions = new HashSet<>();
