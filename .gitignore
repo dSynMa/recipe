@@ -49,3 +49,6 @@ forSimulation.smv
 examples/translation.smv
 examples/translation.smv
 *.smv
+
+.java-version
+.vscode
