@@ -30,4 +30,30 @@ public class State<T> {
     public String toString(){
         return label.toString();
     }
+
+
+    @Override
+    public int hashCode(){
+        int result = 37;
+        if (this.agent != null) {
+            result += this.agent.hashCode();
+        }
+        result *= 37;
+        if (this.label != null) {
+            result += this.label.hashCode();
+        }
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        try {
+            State<T> other = (State<T>) obj;
+            boolean result = this.label.equals(other.label) && this.agent.equals(other.agent);
+            return result;
+        } catch (ClassCastException ex) {
+            return false;
+        }        
+        
+    }
 }
