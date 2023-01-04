@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import org.petitparser.context.ParseError;
 import recipe.analysis.NuXmvInteraction;
 import recipe.analysis.ToNuXmv;
+import recipe.interpreter.Interpreter;
 import recipe.lang.System;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
@@ -24,6 +25,8 @@ import java.util.*;
 public class Server {
     NuXmvInteraction nuXmvInteraction;
     System system;
+
+    Interpreter interpreter;
 
     @Route("/")
     public String index() {
@@ -251,11 +254,18 @@ public class Server {
         String constraint = req.getQuery().get("constraint");
 
         Pair<Boolean, String> out;
+        if (interpreter == null) {
+            interpreter = new Interpreter(system);
+        }
 
         if(req.getQuery().get("reset").toLowerCase(Locale.ROOT).trim().equals("true")){
+            
+            interpreter.init(constraint);
+
             out = nuXmvInteraction.simulation_pick_init_state(constraint);
         } else {
             out = nuXmvInteraction.simulation_next(constraint);
+            interpreter.next();
         }
 
         JSONObject response = nuXmvInteraction.outputToJSON(out.getRight());
