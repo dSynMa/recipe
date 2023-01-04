@@ -3,11 +3,14 @@ package recipe.lang.expressions.predicate;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
+
 import recipe.lang.definitions.GuardDefinition;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.ArithmeticExpression;
+import recipe.lang.store.CompositeStore;
+import recipe.lang.store.ConcreteStore;
 import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
@@ -42,6 +45,29 @@ public class GuardReference extends Condition {
 
     @Override
     public TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException {
+
+        GuardDefinition guardDef = Guard.getDefinition(guardType.name());
+        Map<TypedVariable, TypedValue> paramsMap = new HashMap<TypedVariable, TypedValue>();
+
+        // Evaluate parameters and bind values to their identifiers
+        TypedVariable[] params = guardType.getParameters();
+        try {
+            for (int i = 0; i < parametersValues.length; i++) {
+                TypedValue val = parametersValues[i].valueIn(store);
+                // System.err.printf("param %s has value %s which yields %s\n", params[i], parametersValues[i], val);
+                paramsMap.put(params[i], val);
+            }
+            // Evaluate guard itself
+            CompositeStore cs = new CompositeStore();
+            cs.push(store);
+            cs.push(new ConcreteStore(paramsMap));
+            // System.err.printf("guard: %s\n", guardDef.getTemplate());
+            return guardDef.getTemplate().valueIn(cs);
+        } catch (NotImplementedYetException e) {
+            // TODO
+            System.err.println(e);
+            System.err.println(e.getStackTrace());
+        }
         return null;
     }
 
