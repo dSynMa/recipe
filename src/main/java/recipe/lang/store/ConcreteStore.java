@@ -1,4 +1,4 @@
-package recipe.interpreter;
+package recipe.lang.store;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,7 +12,6 @@ import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Number;
 import recipe.lang.types.Type;
