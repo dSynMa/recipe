@@ -8,123 +8,322 @@ import java.util.Set;
 
 import org.json.JSONObject;
 
+import recipe.Config;
 import recipe.analysis.NuXmvInteraction;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
+import recipe.lang.store.ConcreteStore;
 import recipe.lang.store.Store;
+import recipe.lang.types.Type;
 import recipe.lang.utils.Pair;
-import recipe.lang.utils.exceptions.AttributeNotInStoreException;
-import recipe.lang.utils.exceptions.AttributeTypeException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
-import recipe.lang.utils.exceptions.NotImplementedYetException;
 
 public class Interpreter {
+    private static TypedVariable channTypedVariable;
+    private TypedVariable getChannelTV () {
+        if (channTypedVariable == null) {
+            try {
+                Type chanEnum = recipe.lang.types.Enum.getEnum("channel");
+                channTypedVariable = new TypedVariable<Type>(chanEnum, "channel");
+            } catch (Exception e) {
+                System.err.println(e);
+                System.err.println(e.getStackTrace());
+            }
+        }
+        return channTypedVariable;
+    }
 
     private class Transition {
         private AgentInstance sender;
         private ProcessTransition send;
         private Map<AgentInstance, ProcessTransition> receivers;
-    }
+        
+        public Transition() {
+            receivers = new HashMap<AgentInstance, ProcessTransition>();
+        }
 
-    
-
-
-    public class Step {
-        private Map<AgentInstance, InstanceStore> stores;
-        private Map<Expression, Set<AgentInstance>> listeners;
-        private Set<Transition> transitions;
-        private Transition chosenTransition;
-        private Step parent;
-
-        private State<Integer> makeState (AgentInstance inst, Map<AgentInstance, Map<String, String>> eval) {
-            return new State<Integer>(
-                inst.getAgent().getName(),
-                Integer.valueOf(eval.get(inst).get("state"))
-            );
+        public void prettyPrint() {
+            System.out.println("--- transition ---");
+            System.out.print("Sender:\n");
+            System.out.printf("\n%s (%s)\t\t%s\n", sender.getLabel(), sender.getAgent().getName(), send);
+            System.out.print("Receivers:\n");
+            for (AgentInstance receiver : receivers.keySet()) {
+                System.out.printf("%s (%s)\t\t%s\n", receiver.getLabel(), receiver.getAgent().getName(), receivers.get(receiver));
+            }
+            System.out.println("------------------");
         }
 
 
-        public Step(Map<AgentInstance, InstanceStore> stores, Step parent, Interpreter i) {
+        public SendProcess getSendProcess() {
+            return (SendProcess) send.getLabel();
+        }
+
+        public void setSender(AgentInstance instance) {
+            sender = instance;
+        }
+        public void setSend(ProcessTransition transition) {
+            send = transition;
+        }
+        public void pushReceiver(AgentInstance instance, ProcessTransition receive) {
+            receivers.put(instance, receive);
+        }
+    }
+
+    public class Step {
+        private Map<AgentInstance,ConcreteStore> stores;
+        // private Map<Expression, Set<AgentInstance>> listeners;
+        private Transition[] transitions;
+        private Transition chosenTransition;
+        private Step parent;
+
+        protected void handleEvaluationException(Exception e) {
+            // TODO
+            System.err.println(e);
+            System.err.println(e.getStackTrace());
+        }
+
+        public Step getParent() {
+            return parent;
+        }
+
+        public Step next(int index, Interpreter interpreter) {
+            assert index < transitions.length;
+            this.chosenTransition = transitions[index];
+            Map<AgentInstance,ConcreteStore> nextStores = new HashMap<AgentInstance,ConcreteStore>(stores);
+            
+            try {
+                // Update sender
+                ConcreteStore nextSenderStore = stores.get(chosenTransition.sender).BuildNext(chosenTransition.send);
+                nextStores.put(chosenTransition.sender, nextSenderStore);
+
+                Pair<Store, TypedValue> msgPair = MakeMessageStore(stores.get(chosenTransition.sender), chosenTransition.getSendProcess(), interpreter);
+                for (AgentInstance receiver : chosenTransition.receivers.keySet()) {
+                    ProcessTransition receive = chosenTransition.receivers.get(receiver);
+                    ConcreteStore nextReceiverStore = stores.get(receiver).BuildNext(receive, msgPair.getLeft());
+                    nextStores.put(receiver, nextReceiverStore);
+                }
+            } catch (Exception e) {
+                handleEvaluationException(e);
+            }
+            Step next = new Step(nextStores, this, interpreter);
+            return next;
+        }
+
+        protected Pair<Store, TypedValue> MakeMessageStore(Store senderStore, SendProcess sendProcess, Interpreter interpreter) {
+            // Add message and channel to a new map
+            Map<TypedVariable, TypedValue> msgMap = new HashMap<TypedVariable, TypedValue>();
+            Expression chanExpr = sendProcess.getChannel();
+            try {
+                TypedValue chan = chanExpr.valueIn(senderStore);
+                sendProcess.getMessage().forEach((msgVar, msgExpr) -> {
+                    try {
+                        TypedValue msgVal = msgExpr.valueIn(senderStore);
+                        Type msgType = interpreter.sys.getMessageStructure().get(msgVar);
+                        if (msgType != msgVal.getType()) {
+                            throw new MismatchingTypeException(
+                                String.format("Mismatch type for message variable %s (expected %s, got %s)", 
+                                msgVar,
+                                msgType.toString(), 
+                                msgVal.getType().toString()));
+                        }
+                        TypedVariable tv = new TypedVariable(msgType, msgVar);
+                        msgMap.put(tv, msgVal);
+                    } catch (Exception e) {
+                        handleEvaluationException(e);
+                    }
+                });
+                msgMap.put(getChannelTV(), chan);
+                return new Pair<Store, TypedValue>(new ConcreteStore(msgMap), chan);
+            } catch (Exception e) {
+                handleEvaluationException(e);
+            }
+            return null;
+        } 
+
+        public Step(Map<AgentInstance,ConcreteStore> stores, Step parent, Interpreter interpreter) {
             this.parent = parent;
             this.stores = stores;
-     
-            // TODO compute listeners on every channel
 
-            // TODO Compute available transitions
-            i.sys.getAgentInstances().forEach(inst -> {
-                Map<Expression, Set<ProcessTransition>> instSends = i.sends.get(stores.get(inst).getState());
+            // WIP Compute available transitions
+            interpreter.sys.getAgentInstances().forEach(sender -> {
+                ConcreteStore senderStore = stores.get(sender);
+                Set<ProcessTransition> instSends = interpreter.sends.get(senderStore.getState());
 
                 if (instSends != null) {
-                    instSends.forEach((chan, sends) -> {
-                        sends.forEach(tr -> {
-                            SendProcess lbl = (SendProcess) tr.getLabel();
-                            Expression<recipe.lang.types.Boolean> psi = lbl.getPsi();
-                            try {
-                                boolean psiSat = psi.valueIn(stores.get(inst)).equals(Condition.getTrue());
-                                System.out.println(lbl.getMessageGuard());
-                                System.out.println(lbl.getMessage());
+                    instSends.forEach(tr -> {
+                        SendProcess sendProcess = (SendProcess) tr.getLabel();
+                        Expression chanExpr = sendProcess.getChannel();
+                        Expression<recipe.lang.types.Boolean> psi = sendProcess.getPsi();
+                        try {
+                            boolean psiSat = psi.valueIn(stores.get(sender)).equals(Condition.getTrue());
 
-                                // If psisat, check for all possible receivers
-                                // (grow their Store with the message to allow evaluating the psi)
+                            if (psiSat) {
+                                // Add message and channel to a new map
+                                Pair<Store, TypedValue> msgPair = MakeMessageStore(senderStore, sendProcess, interpreter);
+                                Store msgStore = msgPair.getLeft();
+                                TypedValue chan = msgPair.getRight();
+                                // TypedValue chan = chanExpr.valueIn(senderStore);
+                                // Map<TypedVariable, TypedValue> msgMap = new HashMap<TypedVariable, TypedValue>();
+                                // msgMap.put(getChannelTV(), chan);
 
-                            } catch (Exception e) {
-                                // TODO
-                                System.out.println(e);
+                                // sendProcess.getMessage().forEach((msgVar, msgExpr) -> {
+                                //     try {
+                                //         TypedValue msgVal = msgExpr.valueIn(senderStore);
+                                //         Type msgType = interpreter.sys.getMessageStructure().get(msgVar);
+                                //         if (msgType != msgVal.getType()) {
+                                //             throw new MismatchingTypeException(
+                                //                 String.format("Mismatch type for message variable %s (expected %s, got %s)", 
+                                //                 msgVar,
+                                //                 msgType.toString(), 
+                                //                 msgVal.getType().toString()));
+                                //         }
+                                //         TypedVariable tv = new TypedVariable(msgType, msgVar);
+                                //         msgMap.put(tv, msgVal);
+                                //     } catch (Exception e) {
+                                //         handleEvaluationException(e);
+                                //     }
+                                // });
+
+                                // Set up map of receivers
+                                // A receiver must be
+                                // a) different from the sender
+                                // b) listening to the current channel
+                                // c) satisfy send guard
+                                Map<AgentInstance, Set<ProcessTransition>> receivesMap = new HashMap<AgentInstance, Set<ProcessTransition>>();
+                                for (AgentInstance inst : interpreter.sys.getAgentInstances()) {
+                                    if (inst != sender) {
+                                        try {
+                                            Store store = stores.get(inst).push(msgStore);
+                                            boolean sendGuardOk = Condition.getTrue().equals(sendProcess.getMessageGuard().valueIn(store));
+                                            // System.out.printf("sendGuard: %s\n", sendGuardOk);
+                                            boolean receiveGuardOk = Condition.getTrue().equals(inst.getAgent().getReceiveGuard().valueIn(store));
+                                            // System.out.printf("receiveGuard: %s\n", receiveGuardOk);
+                                            if (sendGuardOk && receiveGuardOk) {
+                                                receivesMap.put(inst, new HashSet<ProcessTransition>());
+                                                // System.out.printf("%s can receive\n", inst);
+                                            }
+                                        } catch (Exception e) {
+                                            handleEvaluationException(e);
+                                        }
+                                    }
+                                }
+                                // Map every receiver to its receive actions
+                                // (channel must match and psi must hold)
+                                receivesMap.keySet().forEach(receiver -> {
+                                    try {
+                                        Store store = stores.get(receiver).push(msgStore);
+                                        Set<ProcessTransition> receives = interpreter.receives.get(stores.get(receiver).getState());
+                                        for (ProcessTransition rec : receives) {
+                                            ReceiveProcess recLbl = (ReceiveProcess) rec.getLabel();
+                                            Expression recChanExpr = recLbl.getChannel();
+                                            if (recChanExpr.valueIn(store).equals(chan)) {
+                                                Expression<recipe.lang.types.Boolean> recPsi = recLbl.getPsi();
+                                                boolean recPsiSat = Condition.getTrue().equals(recPsi.valueIn(store));
+                                                // System.err.printf("%s evaluates to %s", recPsi, recPsiSat);
+                                                if (recPsiSat) {
+                                                    receivesMap.get(receiver).add(rec);
+                                                }
+                                            }
+                                        }
+                                    } catch (Exception e) {
+                                        handleEvaluationException(e);
+                                    }
+                                });
+
+                                // Compute total number of transitions.
+                                int transitionCount = 1;
+                                Set<AgentInstance> instancesToRemove = new HashSet<AgentInstance>();
+                                for (AgentInstance ins : receivesMap.keySet()) {
+                                    int receivesCount = receivesMap.get(ins).size();
+                                    // System.err.printf("%s has %d receives over %s\n", ins, receivesCount, chan);
+                                    if (!chan.toString().equals(Config.broadcast)) {
+                                        transitionCount *= receivesCount;
+                                    } else {
+                                        // If this receiver has no receives
+                                        // but the communication is broadcast,
+                                        // just remove him from receivesMap
+                                        transitionCount *= Math.max(transitionCount, 1);
+                                        if (receivesCount == 0) {
+                                            // System.err.printf("removing %s from bcast\n", ins);
+                                            instancesToRemove.add(ins);
+                                        }
+                                    }
+                                }
+                                for (AgentInstance instance : instancesToRemove) {
+                                    receivesMap.remove(instance);
+                                }
+
+                                // If nobody is blocking we can create transitions
+                                if (transitionCount > 0) {
+                                    transitions = new Transition[transitionCount];
+                                    for (int i = 0; i < transitionCount; i++) {
+                                        transitions[i] = new Transition();
+                                        transitions[i].setSender(sender);
+                                        transitions[i].setSend(tr);
+                                    }
+                                    // System.err.printf("Generated %d transition objects\n", transitionCount);
+                                    // Populate transitions with the cartesian product of receives
+                                    for (AgentInstance receiver : receivesMap.keySet()) {
+                                        System.err.printf("Adding %s\n", receiver);
+                                        int i = 0;
+                                        while (i < transitionCount) {
+                                            for (ProcessTransition transition : receivesMap.get(receiver)) {
+                                                transitions[i].pushReceiver(receiver, transition);
+                                                i++;
+                                            }
+                                        }   
+                                    }
+                                    // System.err.printf("Done\n");
+
+                                    for (Transition transition : transitions) {
+                                        transition.prettyPrint();
+                                    }
+                                }
                             }
-                        });
+                        } catch (Exception e) {
+                            handleEvaluationException(e);
+                        }
                     });    
                 }
             });
-            
-            // 1. Filter out sends where psi does not hold
-            // 2. For each MC send over c, check that all listeners on c
-            //    can do a matching receive
-            // 3. Populate the transitions set
-
 
         }
         
     }
 
-    public Step initialStep;
+    private Step currentStep;
     private recipe.lang.System sys;
-
-
-    // State -> Channel -> 2^ProcessTransition
-    private Map<State<Integer>, Map<Expression, Set<ProcessTransition>>> sends;
-    private Map<State<Integer>, Map<Expression, Set<ProcessTransition>>> receives;
-    private Map<String, Map<Integer, State<Integer>>> states;
+    private Map<State, Set<ProcessTransition>> sends;
+    private Map<State, Set<ProcessTransition>> receives;
 
     public Interpreter (recipe.lang.System s) {
         sys = s;
-        sends = new HashMap<State<Integer>, Map<Expression, Set<ProcessTransition>>>();
-        receives = new HashMap<State<Integer>, Map<Expression, Set<ProcessTransition>>>();
+        sends = new HashMap<State, Set<ProcessTransition>>();
+        receives = new HashMap<State, Set<ProcessTransition>>();
 
         // Set up send/receive tables
         sys.getAgents().forEach(a -> {
             a.getSendTransitions().forEach(send -> {
-                sends.putIfAbsent(send.getSource(), new HashMap<Expression, Set<ProcessTransition>>());
-                sends.get(send.getSource()).putIfAbsent(send.getLabel().getChannel(), new HashSet<>());
-                sends.get(send.getSource()).get(send.getLabel().getChannel()).add(send);
+                sends.putIfAbsent(send.getSource(), new HashSet<ProcessTransition>());
+                sends.get(send.getSource()).add(send);
             });
             a.getReceiveTransitions().forEach(receive -> {
-                receives.putIfAbsent(receive.getSource(), new HashMap<Expression, Set<ProcessTransition>>());
-                receives.get(receive.getSource()).putIfAbsent(receive.getLabel().getChannel(), new HashSet<>());
-                receives.get(receive.getSource()).get(receive.getLabel().getChannel()).add(receive);
+                receives.putIfAbsent(receive.getSource(), new HashSet<ProcessTransition>());
+                receives.get(receive.getSource()).add(receive);
             });
         });
-
-        System.out.println(sends);
     }
 
 
     private void rootStep(String constraint) throws IOException, Exception {
-        HashMap<AgentInstance, InstanceStore> rootStores = new HashMap<AgentInstance, InstanceStore>();
+        HashMap<AgentInstance, ConcreteStore> rootStores = new HashMap<AgentInstance, ConcreteStore>();
         NuXmvInteraction nuxmv = new NuXmvInteraction(sys);
         Pair<Boolean, String> s0 = nuxmv.simulation_pick_init_state(constraint);
         JSONObject initValues = nuxmv.outputToJSON(s0.getRight());
@@ -132,22 +331,27 @@ public class Interpreter {
         sys.getAgentInstances().forEach((x) -> {
             String name = x.getLabel();
             JSONObject jObj = initValues.getJSONObject(name);
-            InstanceStore ist = new InstanceStore(jObj, x.getAgent());
-            System.out.println(ist);
+            ConcreteStore ist = new ConcreteStore(jObj, x.getAgent());
+            // System.out.println(ist);
             rootStores.put(x, ist);
         });
-        System.out.println(rootStores);
-        this.initialStep = new Step(rootStores, null, this);
+        // System.out.println(rootStores);
+        this.currentStep = new Step(rootStores, null, this);
     }
 
-    public void init (String constraint) throws IOException, Exception {
+    public void init(String constraint) throws IOException, Exception {
             assert sys != null;
             this.rootStep(constraint);
-            // NuXmvInteraction nuxmv = new NuXmvInteraction(sys);
-            // Pair<Boolean, String> s0 = nuxmv.simulation_pick_init_state(constraint);       
     }
 
+    public void next() {
+        // TODO make index a user input
+        currentStep = currentStep.next(0, this);
+    }
 
+    public void backtrack() {
+        currentStep = currentStep.parent;
+    }
 
     public void setSystem(recipe.lang.System s) {
         sys = s;
