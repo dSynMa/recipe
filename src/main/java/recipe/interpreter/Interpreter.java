@@ -276,7 +276,7 @@ public class Interpreter {
                                     // System.err.printf("Generated %d transition objects\n", transitionCount);
                                     // Populate transitions with the cartesian product of receives
                                     for (AgentInstance receiver : receivesMap.keySet()) {
-                                        System.err.printf("Adding %s\n", receiver);
+                                        // System.err.printf("Adding %s\n", receiver);
                                         int i = 0;
                                         while (i < transitionCount) {
                                             for (ProcessTransition transition : receivesMap.get(receiver)) {
