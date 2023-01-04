@@ -1,6 +1,7 @@
 package recipe.interpreter;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -49,15 +50,17 @@ public class Interpreter {
             receivers = new HashMap<AgentInstance, ProcessTransition>();
         }
 
-        public void prettyPrint() {
-            System.out.println("--- transition ---");
-            System.out.print("Sender:\n");
-            System.out.printf("\n%s (%s)\t\t%s\n", sender.getLabel(), sender.getAgent().getName(), send);
-            System.out.print("Receivers:\n");
+        public void prettyPrint() { prettyPrint(System.out); }
+
+        public void prettyPrint(PrintStream stream) {
+            stream.println("--- transition ---");
+            stream.print("Sender:\n");
+            stream.printf("\n%s (%s)\t\t%s\n", sender.getLabel(), sender.getAgent().getName(), send);
+            stream.print("Receivers:\n");
             for (AgentInstance receiver : receivers.keySet()) {
-                System.out.printf("%s (%s)\t\t%s\n", receiver.getLabel(), receiver.getAgent().getName(), receivers.get(receiver));
+                stream.printf("%s (%s)\t\t%s\n", receiver.getLabel(), receiver.getAgent().getName(), receivers.get(receiver));
             }
-            System.out.println("------------------");
+            stream.println("------------------");
         }
 
 
@@ -96,6 +99,8 @@ public class Interpreter {
         public Step next(int index, Interpreter interpreter) {
             assert index < transitions.length;
             this.chosenTransition = transitions[index];
+            chosenTransition.prettyPrint(System.err);
+
             Map<AgentInstance,ConcreteStore> nextStores = new HashMap<AgentInstance,ConcreteStore>(stores);
             
             try {
@@ -279,11 +284,6 @@ public class Interpreter {
                                                 i++;
                                             }
                                         }   
-                                    }
-                                    // System.err.printf("Done\n");
-
-                                    for (Transition transition : transitions) {
-                                        transition.prettyPrint();
                                     }
                                 }
                             }
