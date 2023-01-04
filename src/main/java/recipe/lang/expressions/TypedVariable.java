@@ -40,7 +40,10 @@ public class TypedVariable<T extends Type> implements Expression<T> {
 
     @Override
     public TypedValue<T> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException {
-        return store.getValue(this);
+
+        TypedValue<T> result = store.getValue(this);
+        // System.err.printf("Evaluating %s on store %s yields %s\n", this, store, result);
+        return result;
     }
 
     @Override
