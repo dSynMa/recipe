@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -81,8 +83,8 @@ public class Interpreter {
 
     public class Step {
         private Map<AgentInstance,ConcreteStore> stores;
-        // private Map<Expression, Set<AgentInstance>> listeners;
-        private Transition[] transitions;
+        private Map<TypedValue, Set<AgentInstance>> listeners;
+        private List<Transition> transitions;
         private Transition chosenTransition;
         private Step parent;
 
@@ -97,9 +99,10 @@ public class Interpreter {
         }
 
         public Step next(int index, Interpreter interpreter) {
-            assert index < transitions.length;
-            this.chosenTransition = transitions[index];
-            chosenTransition.prettyPrint(System.err);
+            assert index < transitions.size();
+            this.chosenTransition = transitions.get(index);
+            // System.out.printf("Chosen: %d, available: %d\n", index, transitions.size());
+            chosenTransition.prettyPrint(System.out);
 
             Map<AgentInstance,ConcreteStore> nextStores = new HashMap<AgentInstance,ConcreteStore>(stores);
             
@@ -155,6 +158,27 @@ public class Interpreter {
         public Step(Map<AgentInstance,ConcreteStore> stores, Step parent, Interpreter interpreter) {
             this.parent = parent;
             this.stores = stores;
+            this.listeners = new HashMap<>();
+
+            try {
+                Type chanEnum = recipe.lang.types.Enum.getEnum("channel");
+                for (AgentInstance instance : interpreter.sys.getAgentInstances()) {
+                    ConcreteStore store = stores.get(instance);
+                    for (Object objChan : chanEnum.getAllValues()) {
+                        TypedValue chan = (TypedValue) objChan;
+                        Store s = store.push(getChannelTV(), chan);
+                        boolean isListening = Condition.getTrue().equals(instance.getAgent().getReceiveGuard().valueIn(s));
+                        if (isListening) {
+                            listeners.putIfAbsent(chan, new HashSet<>());
+                            listeners.get(chan).add(instance);
+                        }
+                    }
+                }
+                System.err.println(listeners);
+            } catch (Exception e) {
+                handleEvaluationException(e);
+            }
+
 
             // WIP Compute available transitions
             interpreter.sys.getAgentInstances().forEach(sender -> {
@@ -174,27 +198,6 @@ public class Interpreter {
                                 Pair<Store, TypedValue> msgPair = MakeMessageStore(senderStore, sendProcess, interpreter);
                                 Store msgStore = msgPair.getLeft();
                                 TypedValue chan = msgPair.getRight();
-                                // TypedValue chan = chanExpr.valueIn(senderStore);
-                                // Map<TypedVariable, TypedValue> msgMap = new HashMap<TypedVariable, TypedValue>();
-                                // msgMap.put(getChannelTV(), chan);
-
-                                // sendProcess.getMessage().forEach((msgVar, msgExpr) -> {
-                                //     try {
-                                //         TypedValue msgVal = msgExpr.valueIn(senderStore);
-                                //         Type msgType = interpreter.sys.getMessageStructure().get(msgVar);
-                                //         if (msgType != msgVal.getType()) {
-                                //             throw new MismatchingTypeException(
-                                //                 String.format("Mismatch type for message variable %s (expected %s, got %s)", 
-                                //                 msgVar,
-                                //                 msgType.toString(), 
-                                //                 msgVal.getType().toString()));
-                                //         }
-                                //         TypedVariable tv = new TypedVariable(msgType, msgVar);
-                                //         msgMap.put(tv, msgVal);
-                                //     } catch (Exception e) {
-                                //         handleEvaluationException(e);
-                                //     }
-                                // });
 
                                 // Set up map of receivers
                                 // A receiver must be
@@ -202,7 +205,7 @@ public class Interpreter {
                                 // b) listening to the current channel
                                 // c) satisfy send guard
                                 Map<AgentInstance, Set<ProcessTransition>> receivesMap = new HashMap<AgentInstance, Set<ProcessTransition>>();
-                                for (AgentInstance inst : interpreter.sys.getAgentInstances()) {
+                                for (AgentInstance inst : listeners.get(chan)) {
                                     if (inst != sender) {
                                         try {
                                             Store store = stores.get(inst).push(msgStore);
@@ -267,11 +270,11 @@ public class Interpreter {
 
                                 // If nobody is blocking we can create transitions
                                 if (transitionCount > 0) {
-                                    transitions = new Transition[transitionCount];
+                                    Transition[] newTransitions = new Transition[transitionCount];
                                     for (int i = 0; i < transitionCount; i++) {
-                                        transitions[i] = new Transition();
-                                        transitions[i].setSender(sender);
-                                        transitions[i].setSend(tr);
+                                        newTransitions[i] = new Transition();
+                                        newTransitions[i].setSender(sender);
+                                        newTransitions[i].setSend(tr);
                                     }
                                     // System.err.printf("Generated %d transition objects\n", transitionCount);
                                     // Populate transitions with the cartesian product of receives
@@ -280,10 +283,16 @@ public class Interpreter {
                                         int i = 0;
                                         while (i < transitionCount) {
                                             for (ProcessTransition transition : receivesMap.get(receiver)) {
-                                                transitions[i].pushReceiver(receiver, transition);
+                                                newTransitions[i].pushReceiver(receiver, transition);
                                                 i++;
                                             }
-                                        }   
+                                        }
+                                    }
+                                    if (transitions == null) {
+                                        transitions = new LinkedList<>();
+                                    }
+                                    for (Transition t : newTransitions) {
+                                        transitions.add(t);
                                     }
                                 }
                             }
@@ -320,7 +329,6 @@ public class Interpreter {
             });
         });
     }
-
 
     private void rootStep(String constraint) throws IOException, Exception {
         HashMap<AgentInstance, ConcreteStore> rootStores = new HashMap<AgentInstance, ConcreteStore>();
