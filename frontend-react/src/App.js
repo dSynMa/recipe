@@ -54,6 +54,15 @@ function App() {
   const [radioValue, setRadioValue] = useState('1');
   const [dot, setDot] = useState([]);
 
+
+  const [interpreterstarted, setInterpreterStarted] = useState(false);
+  const [interpreterresponse, setInterpreterResponse] = useState([]);
+  const [interpretertransitions, setInterpreterTransitions] = useState([]);
+  const [interpreterloading, setInterpreterLoading] = useState(false);
+  const [resetinterpreterloading, setResetInterpreterLoading] = useState(false);
+  const [interpreternextindex, setInterpreterNextIndex] = useState(0);
+
+
   const radios = [
     { name: 'explicit', value: '1' },
     { name: 'ic3', value: '2' },
@@ -105,6 +114,70 @@ function resetSimulate(){
 
     setResetSimLoading(false);
   }
+
+  function interpret(){
+    if(built == null){
+      alert("Build model first.");
+      return;
+    }
+
+    setInterpreterLoading(true);
+
+    const params = new URLSearchParams();
+    params.append('reset', encodeURIComponent(!interpreterstarted));
+    console.log(interpreternextindex);
+    params.append('index', interpreternextindex);
+
+    var url;
+    axios.get(server + "/interpretNext", { params })
+         .then((response) => {
+            var res = response.data.state;
+            setInterpreterTransitions(response.data.transitions);
+            setInterpreterNextIndex(0);
+            setInterpreterResponse(interpreterresponse.concat([].concat(res)));
+            console.log(interpreterresponse);
+            setInterpreterLoading(false);
+            setInterpreterStarted(true);
+         })
+         .catch((err) => {
+           alert(err.message);
+           setSimLoading(false);
+         });
+  }
+
+function backtrackInterpreter(){
+  if (interpreterresponse.length <= 1) {
+    resetInterpreter();
+  }
+  else {
+    setInterpreterLoading(true);
+    axios.get(server + "/interpretBack", { })
+      .then((response) => {
+        var res = response.data.state;
+        setInterpreterTransitions(response.data.transitions);
+        setInterpreterNextIndex(0);
+        setInterpreterResponse(interpreterresponse.slice(0, -1));
+        console.log(interpreterresponse);
+        setInterpreterLoading(false);
+      })
+      .catch((err) => {
+        alert(err.message);
+        setInterpreterLoading(false);
+      });
+  }
+}
+
+function resetInterpreter(){
+    setResetInterpreterLoading(true);
+
+    setInterpreterStarted(false);
+    setInterpreterResponse([]);
+    setInterpreterTransitions([]);
+    setInterpreterNextIndex(0);
+
+    setResetInterpreterLoading(false);
+  }
+
 
   function modelCheck(){
     if(built == null){
@@ -340,6 +413,59 @@ function resetSimulate(){
                         </thead>
                         <tbody>
                         {simresponse.map((x, i) => {
+                          return <tr key={i}>
+                          <td>{i}</td>
+                          <td>{JSON.stringify(x)}</td>
+                        </tr>;
+                        })}
+                        </tbody>
+                      </Table>
+                    </Col>
+                  </Row>
+                </Container>
+              </Tab>
+              <Tab eventKey="interpreter" title="Interpreter">
+              <Container fluid>
+                  <Row>
+                    <Col xs={12}>
+                      <InputGroup className="mb-3">
+                            {(interpreterstarted) &&
+                            <Form.Select 
+                              aria-label="interpreter-next"
+                              value={interpreternextindex}
+                              onChange={(e) => {setInterpreterNextIndex(e.target.value)}}> 
+                              {interpretertransitions.map((x, i) => {
+                                return <option kay={i} value={i}>({i}): {x.send} from {x.sender} to [{x.receivers.join(", ")}]</option>
+                              })}
+                            </Form.Select>
+                            }
+                            <Button variant="primary" size="lg" disabled={interpreterloading} onClick={interpret}>
+                              {!interpreterstarted && <span>Start</span>}
+                              {interpreterstarted && <span>Next</span>}
+                              {interpreterloading && spinner}
+                            </Button>
+                            <Button variant="secondary" size="lg" disabled={resetinterpreterloading} onClick={resetInterpreter}>
+                              Reset
+                              { resetinterpreterloading && spinner }
+                            </Button>
+                            <Button variant="secondary" size="lg" disabled={interpreterloading} onClick={backtrackInterpreter}>
+                              Backtrack
+                              { interpreterloading && spinner }
+                            </Button>
+                      </InputGroup>
+                    </Col>
+                  </Row>
+                  <Row>
+                    <Col style={{height: "345px", overflowY: "auto", overflowX: "auto"}}>
+                      <Table striped bordered hover>
+                        <thead>
+                          <tr>
+                            <th>#Step</th>
+                            <th>Changed Variables</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                        {interpreterresponse.map((x, i) => {
                           return <tr key={i}>
                           <td>{i}</td>
                           <td>{JSON.stringify(x)}</td>
