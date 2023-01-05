@@ -352,9 +352,11 @@ public class Interpreter {
             this.rootStep(constraint);
     }
 
-    public void next() {
-        // TODO make index a user input
-        currentStep = currentStep.next(0, this);
+    public void next(int index) {
+        if (currentStep.transitions.size() == 0) {
+            // TODO handle deadlocked states
+        }
+        currentStep = currentStep.next(index, this);
     }
 
     public void backtrack() {
@@ -363,5 +365,9 @@ public class Interpreter {
 
     public void setSystem(recipe.lang.System s) {
         sys = s;
+    }
+
+    public Step getCurrentStep() {
+        return currentStep;
     }
 }
