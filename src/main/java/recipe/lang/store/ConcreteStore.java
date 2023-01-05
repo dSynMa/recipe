@@ -68,12 +68,13 @@ public class ConcreteStore extends Store {
     public TypedValue getValue(Object attribute) {
         try {
             TypedVariable attr = (TypedVariable) attribute;
+
             // System.err.printf("getValue of %s\n", attr.getName());
             // If attribute is a cv, evaluate its corresponding expression
             // TODO check w/ Shaun if we can improve this (it's the @'s fault)
-            if (this.agent != null) {
+            
+            if (this.agent != null && attr.getName().startsWith("@")) {
                 for (TypedVariable cv : this.agent.getRelabel().keySet()) {
-                    // System.err.printf("checking @%s against %s\n", cv.getName(), attr.getName());
                     if (("@" + cv.getName()).equals(attr.getName())) {
                         // System.err.printf("match!\n");
                         TypedValue result = this.agent.getRelabel().get(cv).valueIn(this);
