@@ -30,6 +30,8 @@ public class ConcreteStore extends Store {
         return  String.format("%s@%s: %s", this.agent, this.state, this.data.toString());
     }
 
+    public Map<TypedVariable, TypedValue> getData() { return data; }
+
     public State getState() {
         return state;
     }

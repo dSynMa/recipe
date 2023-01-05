@@ -2,6 +2,7 @@ package recipe.interpreter;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -52,6 +53,19 @@ public class Interpreter {
             receivers = new HashMap<AgentInstance, ProcessTransition>();
         }
 
+        public JSONObject toJSON() {
+            JSONObject result = new JSONObject();
+            List<String> receiverNames = new ArrayList<>(receivers.size());
+            for (AgentInstance receiver : receivers.keySet()) {
+                receiverNames.add(receiver.getLabel());
+            }
+
+            result.put("sender", sender.getLabel());
+            result.put("send", send.getLabel().toString());
+            result.put("receivers", receiverNames);
+            return result;
+        }
+
         public void prettyPrint() { prettyPrint(System.out); }
 
         public void prettyPrint(PrintStream stream) {
@@ -96,6 +110,27 @@ public class Interpreter {
 
         public Step getParent() {
             return parent;
+        }
+
+        public JSONObject toJSON() {
+            JSONObject jStores = new JSONObject();
+            for (AgentInstance instance : stores.keySet()) {
+                ConcreteStore store = stores.get(instance);
+                JSONObject jStore = new JSONObject();
+                jStore.put("**state**", store.getState().label.toString());
+                store.getData().forEach((var, value) -> {
+                    jStore.put(var.getName(), value.toString());
+                });
+                jStores.put(instance.getLabel(), jStore);
+            }
+            List<JSONObject> jTransitions = new ArrayList<>(transitions.size());
+            for (Transition t : transitions) {
+                jTransitions.add(t.toJSON());
+            }
+            JSONObject result = new JSONObject();
+            result.put("state", jStores);
+            result.put("transitions", jTransitions);
+            return result;
         }
 
         public Step next(int index, Interpreter interpreter) {
