@@ -234,6 +234,37 @@ public class Server {
             return "{ \"error\" : \"" + e.getMessage() + "\"}";
         }
     }
+    
+    @Route("/interpretNext")
+    public String interpretNext(Request req) throws Exception {
+        if (system == null) {
+            return "{ \"error\" : \"Compile system first.\"}";
+        }
+        if (interpreter == null) {
+            interpreter = new Interpreter(system);
+        }
+
+        if(req.getQuery().get("reset").toLowerCase(Locale.ROOT).trim().equals("true")){
+            interpreter.init("TRUE");
+        } else {
+            int index = Integer.parseInt(req.getQuery().get("index"));
+            interpreter.next(index);
+        }
+        JSONObject response = interpreter.getCurrentStep().toJSON();
+        return response.toString();
+    }
+
+    @Route("/interpretBack")
+    public String interpretBack(Request req) throws Exception {
+        interpreter.backtrack();
+        return interpreter.getCurrentStep().toJSON().toString();
+    }
+
+    @Route("/resetInterpreter")
+    public void resetInterpreter(Request req) throws Exception {
+        interpreter = null;
+        cors();
+    }
 
     Map<String, String> latestDots = new HashMap<>();
 
@@ -254,18 +285,11 @@ public class Server {
         String constraint = req.getQuery().get("constraint");
 
         Pair<Boolean, String> out;
-        if (interpreter == null) {
-            interpreter = new Interpreter(system);
-        }
 
         if(req.getQuery().get("reset").toLowerCase(Locale.ROOT).trim().equals("true")){
-            
-            interpreter.init(constraint);
-
             out = nuXmvInteraction.simulation_pick_init_state(constraint);
         } else {
             out = nuXmvInteraction.simulation_next(constraint);
-            interpreter.next();
         }
 
         JSONObject response = nuXmvInteraction.outputToJSON(out.getRight());
