@@ -116,6 +116,11 @@ public abstract class LTOL {
 
         TypingContext vars = new TypingContext();
         vars.setAll(agentVariables);
+        // TODO uncommenting the below allows us to write something like SPEC /\ k : Robot . k = two -> F k-lnk = a,
+        //  but still need to deal appropriately with the translation to nuXmv before allowing it;
+        //  we have no 'two' variable in the model, so need to resolve the k to two in the right-hand side
+        //  of the implication, but what about other forms of the formula? e.g. (k = two) | (k-lnk = a)
+//        vars.setAll(agentNames);
         vars.setAll(transitionLabels);
 
         // /\ v : agentKind . v != v'
