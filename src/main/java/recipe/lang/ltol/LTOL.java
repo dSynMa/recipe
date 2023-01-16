@@ -123,7 +123,7 @@ public abstract class LTOL {
         agentTypes.addAll(Config.getAgentTypeNames());
         agentTypes.add("Agent");
 
-        Parser agentTypeParser = Parsing.disjunctiveStringParser(agentTypes).separatedBy(StringParser.of("|").trim()
+        Parser agentTypeParser = Parsing.disjunctiveStringParser(agentTypes).separatedBy(StringParser.of("|").trim())
                 .map((List<Object> types) -> {
                     UnionType type;
                     try {
@@ -135,6 +135,7 @@ public abstract class LTOL {
                         type.addType(firstType);
 
                         for(int i = 1; i < types.size(); i++){
+                            if(((String) types.get(i)).contains("|")) continue;
                             String agentType = (String) types.get(i);
                             if(agentType == "Agent") {
                                 return Config.getAgentType();
@@ -148,7 +149,7 @@ public abstract class LTOL {
                         e.printStackTrace();
                         return null;
                     }
-                }));
+                });
 
         AtomicReference<TypingContext> newAgentVars = new AtomicReference<>(new TypingContext());
 
