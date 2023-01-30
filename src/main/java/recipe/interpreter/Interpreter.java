@@ -193,8 +193,10 @@ public class Interpreter {
         public Step(Map<AgentInstance,ConcreteStore> stores, Step parent, Interpreter interpreter) {
             this.parent = parent;
             this.stores = stores;
+            this.transitions = new LinkedList<>();
             this.listeners = new HashMap<>();
 
+            // Evaluate which channels each agent is currently listening to
             try {
                 Type chanEnum = recipe.lang.types.Enum.getEnum("channel");
                 for (AgentInstance instance : interpreter.sys.getAgentInstances()) {
@@ -322,9 +324,6 @@ public class Interpreter {
                                                 i++;
                                             }
                                         }
-                                    }
-                                    if (transitions == null) {
-                                        transitions = new LinkedList<>();
                                     }
                                     for (Transition t : newTransitions) {
                                         transitions.add(t);
