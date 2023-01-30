@@ -216,8 +216,7 @@ public class Interpreter {
                 handleEvaluationException(e);
             }
 
-
-            // WIP Compute available transitions
+            // Compute available transitions
             interpreter.sys.getAgentInstances().forEach(sender -> {
                 ConcreteStore senderStore = stores.get(sender);
                 Set<ProcessTransition> instSends = interpreter.sends.get(senderStore.getState());
@@ -237,9 +236,9 @@ public class Interpreter {
                                 TypedValue chan = msgPair.getRight();
 
                                 // Set up map of receivers
-                                // A receiver must be
-                                // a) different from the sender
-                                // b) listening to the current channel
+                                // A receiver must
+                                // a) not be the sender
+                                // b) be listening to channel "chan"
                                 // c) satisfy send guard
                                 Map<AgentInstance, Set<ProcessTransition>> receivesMap = new HashMap<AgentInstance, Set<ProcessTransition>>();
                                 for (AgentInstance inst : listeners.get(chan)) {
