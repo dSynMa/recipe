@@ -265,15 +265,17 @@ public class Interpreter {
                                     try {
                                         Store store = stores.get(receiver).push(msgStore);
                                         Set<ProcessTransition> receives = interpreter.receives.get(stores.get(receiver).getState());
-                                        for (ProcessTransition rec : receives) {
-                                            ReceiveProcess recLbl = (ReceiveProcess) rec.getLabel();
-                                            Expression recChanExpr = recLbl.getChannel();
-                                            if (recChanExpr.valueIn(store).equals(chan)) {
-                                                Expression<recipe.lang.types.Boolean> recPsi = recLbl.getPsi();
-                                                boolean recPsiSat = Condition.getTrue().equals(recPsi.valueIn(store));
-                                                // System.err.printf("%s evaluates to %s", recPsi, recPsiSat);
-                                                if (recPsiSat) {
-                                                    receivesMap.get(receiver).add(rec);
+                                        if (receives != null) {
+                                            for (ProcessTransition rec : receives) {
+                                                ReceiveProcess recLbl = (ReceiveProcess) rec.getLabel();
+                                                Expression recChanExpr = recLbl.getChannel();
+                                                if (recChanExpr.valueIn(store).equals(chan)) {
+                                                    Expression<recipe.lang.types.Boolean> recPsi = recLbl.getPsi();
+                                                    boolean recPsiSat = Condition.getTrue().equals(recPsi.valueIn(store));
+                                                    // System.err.printf("%s evaluates to %s", recPsi, recPsiSat);
+                                                    if (recPsiSat) {
+                                                        receivesMap.get(receiver).add(rec);
+                                                    }
                                                 }
                                             }
                                         }
