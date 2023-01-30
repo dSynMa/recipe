@@ -435,7 +435,7 @@ function resetInterpreter(){
                               value={interpreternextindex}
                               onChange={(e) => {setInterpreterNextIndex(e.target.value)}}> 
                               {interpretertransitions.map((x, i) => {
-                                return <option kay={i} value={i}>({i}): {x.send} from {x.sender} to [{x.receivers.join(", ")}]</option>
+                                return <option key={i} value={i}>({i}): {x.send} from {x.sender} to [{x.receivers.join(", ")}]</option>
                               })}
                             </Form.Select>
                             }
