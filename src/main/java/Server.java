@@ -245,9 +245,13 @@ public class Server {
         }
 
         if(req.getQuery().get("reset").toLowerCase(Locale.ROOT).trim().equals("true")){
+            interpreter = new Interpreter(system);
             interpreter.init("TRUE");
         } else {
             int index = Integer.parseInt(req.getQuery().get("index"));
+            if (interpreter.isDeadlocked()) {
+                return "{ \"error\" : \"No successor state (system is deadlocked).\"}";
+            }
             interpreter.next(index);
         }
         JSONObject response = interpreter.getCurrentStep().toJSON();
@@ -262,7 +266,7 @@ public class Server {
 
     @Route("/resetInterpreter")
     public void resetInterpreter(Request req) throws Exception {
-        interpreter = null;
+        interpreter = new Interpreter(system);
         cors();
     }
 
