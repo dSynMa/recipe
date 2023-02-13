@@ -131,14 +131,19 @@ function resetSimulate(){
     var url;
     axios.get(server + "/interpretNext", { params })
          .then((response) => {
-            var res = response.data.state;
-            setInterpreterTransitions(response.data.transitions);
-            setInterpreterNextIndex(0);
-            setInterpreterResponse(interpreterresponse.concat([].concat(res)));
-            console.log(interpreterresponse);
-            setInterpreterLoading(false);
+            if(response.data.hasOwnProperty("error")){
+              alert(response.data.error);
+              setInterpreterTransitions([]);
+            } else{
+              var res = response.data.state;
+              setInterpreterTransitions(response.data.transitions);
+              setInterpreterNextIndex(0);
+              setInterpreterResponse(interpreterresponse.concat([].concat(res)));
+              console.log(interpreterresponse);
+              setInterpreterLoading(false);
+            }
             setInterpreterStarted(true);
-         })
+          })
          .catch((err) => {
            alert(err.message);
            setSimLoading(false);
@@ -173,7 +178,7 @@ function resetInterpreter(){
     setInterpreterStarted(false);
     setInterpreterResponse([]);
     setInterpreterTransitions([]);
-    setInterpreterNextIndex(0);
+    setInterpreterNextIndex("");
 
     setResetInterpreterLoading(false);
   }
@@ -429,17 +434,20 @@ function resetInterpreter(){
                   <Row>
                     <Col xs={12}>
                       <InputGroup className="mb-3">
-                            {(interpreterstarted) &&
+                            {
                             <Form.Select 
                               aria-label="interpreter-next"
                               value={interpreternextindex}
-                              onChange={(e) => {setInterpreterNextIndex(e.target.value)}}> 
+                              onChange={(e) => {setInterpreterNextIndex(e.target.value)}}>
+                              {(!interpreterstarted) && <option value="" disabled selected>Choose a transition here</option>}
                               {interpretertransitions.map((x, i) => {
                                 return <option key={i} value={i}>({i}): {x.send} from {x.sender} to [{x.receivers.join(", ")}]</option>
                               })}
                             </Form.Select>
                             }
-                            <Button variant="primary" size="lg" disabled={interpreterloading} onClick={interpret}>
+                            <Button variant="primary" size="lg"
+                              disabled={interpreterloading || (interpreterstarted && interpretertransitions.length == 0)}
+                              onClick={interpret}>
                               {!interpreterstarted && <span>Start</span>}
                               {interpreterstarted && <span>Next</span>}
                               {interpreterloading && spinner}
