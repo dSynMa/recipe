@@ -100,6 +100,9 @@ public class Interpreter {
         private Map<TypedValue, Set<AgentInstance>> listeners;
         private List<Transition> transitions;
         private Transition chosenTransition;
+        // The transition that led to this state
+        private Transition inboundTransition;
+        private int depth;
         private Step parent;
 
         protected void handleEvaluationException(Exception e) {
@@ -128,6 +131,10 @@ public class Interpreter {
                 jTransitions.add(t.toJSON());
             }
             JSONObject result = new JSONObject();
+            result.put("depth", depth);
+            result.put(
+                "inboundTransition",
+                inboundTransition == null ? null : inboundTransition.toJSON());
             result.put("state", jStores);
             result.put("transitions", jTransitions);
             return result;
@@ -136,7 +143,6 @@ public class Interpreter {
         public Step next(int index, Interpreter interpreter) {
             assert index < transitions.size();
             this.chosenTransition = transitions.get(index);
-            // System.out.printf("Chosen: %d, available: %d\n", index, transitions.size());
             chosenTransition.prettyPrint(System.out);
 
             Map<AgentInstance,ConcreteStore> nextStores = new HashMap<AgentInstance,ConcreteStore>(stores);
@@ -195,6 +201,11 @@ public class Interpreter {
             this.stores = stores;
             this.transitions = new LinkedList<>();
             this.listeners = new HashMap<>();
+            this.depth = parent == null ? 0 : parent.depth + 1;
+
+            if (parent != null) {
+                this.inboundTransition = parent.chosenTransition;
+            }
 
             // Evaluate which channels each agent is currently listening to
             try {
