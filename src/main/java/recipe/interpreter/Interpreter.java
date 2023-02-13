@@ -387,9 +387,14 @@ public class Interpreter {
             this.rootStep(constraint);
     }
 
+    public boolean isDeadlocked() {
+        return currentStep.transitions.size() == 0;
+    }
+
     public void next(int index) {
-        if (currentStep.transitions.size() == 0) {
-            // TODO handle deadlocked states
+        if (isDeadlocked()) {
+            // Deadlocked state, do nothing
+            return;
         }
         currentStep = currentStep.next(index, this);
     }
