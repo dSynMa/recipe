@@ -135,10 +135,15 @@ function resetSimulate(){
               alert(response.data.error);
               setInterpreterTransitions([]);
             } else{
-              var res = response.data.state;
+              var res = response.data;
               setInterpreterTransitions(response.data.transitions);
               setInterpreterNextIndex(0);
-              setInterpreterResponse(interpreterresponse.concat([].concat(res)));
+              if (response.data.inboundTransition != null) {
+                setInterpreterResponse(interpreterresponse.concat([response.data.inboundTransition, res]));
+              }
+              else {
+                setInterpreterResponse(interpreterresponse.concat([res]));
+              }
               console.log(interpreterresponse);
               setInterpreterLoading(false);
             }
@@ -161,7 +166,7 @@ function backtrackInterpreter(){
         var res = response.data.state;
         setInterpreterTransitions(response.data.transitions);
         setInterpreterNextIndex(0);
-        setInterpreterResponse(interpreterresponse.slice(0, -1));
+        setInterpreterResponse(interpreterresponse.slice(0, -2));
         console.log(interpreterresponse);
         setInterpreterLoading(false);
       })
@@ -474,8 +479,14 @@ function resetInterpreter(){
                         </thead>
                         <tbody>
                         {interpreterresponse.map((x, i) => {
-                          return <tr key={i}>
-                          <td>{i}</td>
+                          return i % 2 ? 
+                          <tr>
+                          <td></td>
+                          <td>{JSON.stringify(x)}</td>
+                          </tr>
+                          :
+                          <tr key={i}>
+                          <td>{x.depth}</td>
                           <td>{JSON.stringify(x)}</td>
                         </tr>;
                         })}
