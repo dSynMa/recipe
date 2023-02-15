@@ -115,6 +115,62 @@ function resetSimulate(){
     setResetSimLoading(false);
   }
 
+  function renderStep(x) {
+    if (x.depth === 0) { return x.state; }
+    var last = interpreterresponse[2*x.depth - 2];
+
+    var render = {};
+    Object.keys(x.state).forEach(agent => {
+      
+      render[agent] = {};
+      Object.keys(x.state[agent]).forEach(k => {
+        if (x.state[agent][k] != last.state[agent][k]) {
+          render[agent][k] = x.state[agent][k];
+        }
+      });
+      console.log(agent, render[agent]);
+      if (Object.keys(render[agent]).length === 0) { delete render[agent]; }
+    });
+    return render;
+  }
+
+  function formatStep(render) {
+    // console.log(render);
+    return (
+      <table>  
+      {
+        Object.keys(render).sort().map(agent => { //return (<tr><td>{agent}</td></tr>)
+          return (<tr key="{agent}">
+            <td>{agent}:</td>
+            <td> {
+              Object.keys(render[agent]).sort().map((k, index) => {
+              return <span>{index > 0 && ', '}{k === "**state**" ? <em>state</em> : k}: {render[agent][k]}</span>
+            })}</td>
+          </tr>)})
+      }
+      </table>
+    )
+  }
+  
+  const exportData = () => {
+    const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
+      JSON.stringify(interpreterresponse)
+    )}`;
+    const link = document.createElement("a");
+    link.href = jsonString;
+    link.download = "trace.json";
+    link.click();
+  };
+
+
+  function formatTransition(t) {
+    return (<table>
+      <tr><td><em>Sender: </em></td><td>{t.sender}</td></tr>
+      <tr><td><em>Label: </em></td><td>{t.send}</td></tr>
+      <tr><td><em>Receivers: </em></td><td>{t.receivers.join(", ")}</td></tr>
+    </table>)
+  }
+
   function interpret(){
     if(built == null){
       alert("Build model first.");
@@ -125,7 +181,6 @@ function resetSimulate(){
 
     const params = new URLSearchParams();
     params.append('reset', encodeURIComponent(!interpreterstarted));
-    console.log(interpreternextindex);
     params.append('index', interpreternextindex);
 
     var url;
@@ -144,7 +199,6 @@ function resetSimulate(){
               setDot([]);
               setDot(res.svgs.map(x => {
                 var svg = new DOMParser().parseFromString(x.svg, "image/svg+xml").getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
-                console.log(x.svg);
                 return svg;
               }));
               delete res.svgs;
@@ -155,7 +209,6 @@ function resetSimulate(){
               else {
                 setInterpreterResponse(interpreterresponse.concat([res]));
               }
-              console.log(interpreterresponse);
               setInterpreterLoading(false);
               setInterpreterStarted(true);
             }
@@ -178,7 +231,6 @@ function backtrackInterpreter(){
         setInterpreterTransitions(response.data.transitions);
         setInterpreterNextIndex(0);
         setInterpreterResponse(interpreterresponse.slice(0, -2));
-        console.log(interpreterresponse);
         setInterpreterLoading(false);
       })
       .catch((err) => {
@@ -491,14 +543,18 @@ function resetInterpreter(){
                         <tbody>
                         {interpreterresponse.map((x, i) => {
                           return i % 2 ? 
+                          // Transition
                           <tr key={i}>
                           <td></td>
-                          <td>{JSON.stringify(x)}</td>
+                          <td>{formatTransition(x)}</td>
                           </tr>
                           :
+                          // State
+                          // TODO store the renders somewhere, instead of recomputing
+                          // them all the time
                           <tr key={i}>
                           <td>{x.depth}</td>
-                          <td>{JSON.stringify(x)}</td>
+                          <td>{formatStep(renderStep(x))}</td>
                         </tr>;
                         })}
                         </tbody>
