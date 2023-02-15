@@ -116,6 +116,11 @@ public abstract class LTOL {
 
         TypingContext vars = new TypingContext();
         vars.setAll(agentVariables);
+        // TODO uncommenting the below allows us to write something like SPEC /\ k : Robot . k = two -> F k-lnk = a,
+        //  but still need to deal appropriately with the translation to nuXmv before allowing it;
+        //  we have no 'two' variable in the model, so need to resolve the k to two in the right-hand side
+        //  of the implication, but what about other forms of the formula? e.g. (k = two) | (k-lnk = a)
+//        vars.setAll(agentNames);
         vars.setAll(transitionLabels);
 
         // /\ v : agentKind . v != v'
@@ -123,7 +128,7 @@ public abstract class LTOL {
         agentTypes.addAll(Config.getAgentTypeNames());
         agentTypes.add("Agent");
 
-        Parser agentTypeParser = Parsing.disjunctiveStringParser(agentTypes).separatedBy(StringParser.of("|").trim()
+        Parser agentTypeParser = Parsing.disjunctiveStringParser(agentTypes).separatedBy(StringParser.of("|").trim())
                 .map((List<Object> types) -> {
                     UnionType type;
                     try {
@@ -135,6 +140,7 @@ public abstract class LTOL {
                         type.addType(firstType);
 
                         for(int i = 1; i < types.size(); i++){
+                            if(((String) types.get(i)).contains("|")) continue;
                             String agentType = (String) types.get(i);
                             if(agentType == "Agent") {
                                 return Config.getAgentType();
@@ -148,7 +154,7 @@ public abstract class LTOL {
                         e.printStackTrace();
                         return null;
                     }
-                }));
+                });
 
         AtomicReference<TypingContext> newAgentVars = new AtomicReference<>(new TypingContext());
 
