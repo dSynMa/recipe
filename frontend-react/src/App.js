@@ -133,11 +133,22 @@ function resetSimulate(){
          .then((response) => {
             if(response.data.hasOwnProperty("error")){
               alert(response.data.error);
+              setInterpreterLoading(false);
+              setInterpreterStarted(false);
               setInterpreterTransitions([]);
             } else{
               var res = response.data;
               setInterpreterTransitions(response.data.transitions);
               setInterpreterNextIndex(0);
+              // Handle SVGs
+              setDot([]);
+              setDot(res.svgs.map(x => {
+                var svg = new DOMParser().parseFromString(x.svg, "image/svg+xml").getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
+                console.log(x.svg);
+                return svg;
+              }));
+              delete res.svgs;
+
               if (response.data.inboundTransition != null) {
                 setInterpreterResponse(interpreterresponse.concat([response.data.inboundTransition, res]));
               }
@@ -146,12 +157,12 @@ function resetSimulate(){
               }
               console.log(interpreterresponse);
               setInterpreterLoading(false);
+              setInterpreterStarted(true);
             }
-            setInterpreterStarted(true);
           })
          .catch((err) => {
            alert(err.message);
-           setSimLoading(false);
+           setInterpreterLoading(false);
          });
   }
 
@@ -480,7 +491,7 @@ function resetInterpreter(){
                         <tbody>
                         {interpreterresponse.map((x, i) => {
                           return i % 2 ? 
-                          <tr>
+                          <tr key={i}>
                           <td></td>
                           <td>{JSON.stringify(x)}</td>
                           </tr>

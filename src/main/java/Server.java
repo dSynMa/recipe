@@ -21,12 +21,87 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class Server {
     NuXmvInteraction nuXmvInteraction;
     System system;
 
     Interpreter interpreter;
+    Map<String, String> latestDots = new HashMap<>();
+    Map<String, String> latestDotsInterpreter = new ConcurrentHashMap<>();
+
+    private final ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+    private List<JSONObject> renderSVGs (JSONObject response) {
+        List<JSONObject> svgs = new ArrayList<>();
+        List<Future<JSONObject>> futures = new ArrayList<>(system.getAgentInstances().size());
+
+        for(AgentInstance agentInstance : system.getAgentInstances()) {
+            futures.add(this.service.submit(new SVGWorker(agentInstance, response)));
+        }
+        try {
+            for(Future<JSONObject> f : futures) {
+                svgs.add(f.get());
+            }
+        } catch (Exception e) {
+            JSONObject err = new JSONObject();
+            err.put("error", e.getMessage());
+            svgs.clear();
+            svgs.add(err);
+        } 
+        return svgs;
+    }
+
+    private class SVGWorker implements Callable<JSONObject> {
+        private AgentInstance agentInstance;
+        private JSONObject response;
+
+        public SVGWorker(AgentInstance instance, JSONObject response) {
+            this.agentInstance = instance;
+            this.response = response;
+        }
+        @Override
+        public JSONObject call() throws Exception {
+            return renderSVG();
+        }
+
+        private JSONObject renderSVG () {
+            Agent agent = agentInstance.getAgent();
+            String name = agentInstance.getLabel();
+            String digraph;
+            if(latestDotsInterpreter.containsKey(name)){
+                digraph = latestDotsInterpreter.get(name);
+            } else{
+                digraph = "digraph \"" + agentInstance.getLabel() + "\"{\n" + agent.toDOT() + "\n}";
+            }
+
+            String query = String.format("/state/%s/**state**", name);
+            String state = response.query(query).toString();
+            java.lang.System.out.println(query);
+            java.lang.System.out.println(state);
+
+            if(state != null){
+                digraph = digraph.replaceAll(";[\r\n ]*[^;]+[\r\n ]*\\[color=red\\][\r\n ]*;", ";");
+                digraph = digraph.replaceAll("}[ \n\r\t]*", "");
+                digraph += state + "[color=red];}";
+                latestDotsInterpreter.put(name, digraph);
+            }
+
+            String s = Graphviz.fromString(digraph).engine(Engine.DOT).render(Format.SVG).toString();
+            s = String.format("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n%s", s);
+
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("name", name);
+            jsonObject.put("svg", s);
+            return jsonObject;
+        }
+    }
+
 
     @Route("/")
     public String index() {
@@ -255,13 +330,17 @@ public class Server {
             interpreter.next(index);
         }
         JSONObject response = interpreter.getCurrentStep().toJSON();
+        response.put("svgs", renderSVGs(response));
+        
         return response.toString();
     }
 
     @Route("/interpretBack")
     public String interpretBack(Request req) throws Exception {
         interpreter.backtrack();
-        return interpreter.getCurrentStep().toJSON().toString();
+        JSONObject response = interpreter.getCurrentStep().toJSON();
+        response.put("svgs", renderSVGs(response));
+        return response.toString();
     }
 
     @Route("/resetInterpreter")
@@ -269,8 +348,6 @@ public class Server {
         interpreter = new Interpreter(system);
         cors();
     }
-
-    Map<String, String> latestDots = new HashMap<>();
 
     @Route("/simulateNext")
     public String simulateNext(Request req) throws Exception {
