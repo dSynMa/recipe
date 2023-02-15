@@ -140,6 +140,15 @@ function resetSimulate(){
               var res = response.data;
               setInterpreterTransitions(response.data.transitions);
               setInterpreterNextIndex(0);
+              // Handle SVGs
+              setDot([]);
+              setDot(res.svgs.map(x => {
+                var svg = new DOMParser().parseFromString(x.svg, "image/svg+xml").getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
+                console.log(x.svg);
+                return svg;
+              }));
+              delete res.svgs;
+
               if (response.data.inboundTransition != null) {
                 setInterpreterResponse(interpreterresponse.concat([response.data.inboundTransition, res]));
               }
@@ -482,7 +491,7 @@ function resetInterpreter(){
                         <tbody>
                         {interpreterresponse.map((x, i) => {
                           return i % 2 ? 
-                          <tr>
+                          <tr key={i}>
                           <td></td>
                           <td>{JSON.stringify(x)}</td>
                           </tr>
