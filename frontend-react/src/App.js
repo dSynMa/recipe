@@ -133,6 +133,8 @@ function resetSimulate(){
          .then((response) => {
             if(response.data.hasOwnProperty("error")){
               alert(response.data.error);
+              setInterpreterLoading(false);
+              setInterpreterStarted(false);
               setInterpreterTransitions([]);
             } else{
               var res = response.data;
@@ -146,12 +148,12 @@ function resetSimulate(){
               }
               console.log(interpreterresponse);
               setInterpreterLoading(false);
+              setInterpreterStarted(true);
             }
-            setInterpreterStarted(true);
           })
          .catch((err) => {
            alert(err.message);
-           setSimLoading(false);
+           setInterpreterLoading(false);
          });
   }
 
