@@ -380,11 +380,10 @@ function resetInterpreter(){
               onChange={(v) => setCode(v)}
             />
             <InputGroup>
-              <Form.Select aria-label="1"
-                onChange={(value) => value == 1 ? setSymbolicBuild(false) : setSymbolicBuild(true)}
-              >
-                <option value="1">BDD model (only for finite-state verification)</option>
-                <option value="2">SMT model (allows for infinite-state verification)</option>
+              <Form.Select aria-label="smt"
+                onChange={ (e) => setSymbolicBuild(e.target.value == "smt") }>
+                <option value="smt">SMT model (allows for infinite-state verification)</option>
+                <option value="bdd">BDD model (only for finite-state verification)</option>
               </Form.Select>
               <Button variant="primary" size="lg" onClick={() => buildModel()} disabled={bloading}>
                 Build model
@@ -526,6 +525,10 @@ function resetInterpreter(){
                             </Button>
                             <Button variant="secondary" size="lg" disabled={interpreterloading} onClick={backtrackInterpreter}>
                               Backtrack
+                              { interpreterloading && spinner }
+                            </Button>
+                            <Button variant="secondary" size="lg" disabled={interpreterloading} onClick={exportData}>
+                              Export
                               { interpreterloading && spinner }
                             </Button>
                       </InputGroup>
