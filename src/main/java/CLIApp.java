@@ -133,6 +133,7 @@ public class CLIApp
                                     System.out.println("There is a symbolic specification, and thus bounded model checking will be used. Please specify an integer bound: ");
                                     Scanner scanner = new Scanner(System.in);
                                     bound = scanner.nextInt();
+                                    scanner.close();
                                 }
                                 Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, false, bound);
                                 if (result.getLeft()) {
@@ -200,6 +201,7 @@ public class CLIApp
                 Pair<Boolean, String> result = nuXmvInteraction.simulation_pick_init_state(constraint);
                 if (!result.getLeft()) {
                     System.out.println(result.getRight());
+                    scanner.close();
                     return;
                 }
 
@@ -209,9 +211,11 @@ public class CLIApp
                     result = nuXmvInteraction.simulation_next(constraint);
                     System.out.println(result.getRight());
                     if (!result.getLeft()) {
+                        scanner.close();
                         return;
                     }
                 }
+                scanner.close();
             }
         }
     }

@@ -82,8 +82,6 @@ public class Server {
 
             String query = String.format("/state/%s/**state**", name);
             String state = response.query(query).toString();
-            java.lang.System.out.println(query);
-            java.lang.System.out.println(state);
 
             if(state != null){
                 digraph = digraph.replaceAll(";[\r\n ]*[^;]+[\r\n ]*\\[color=red\\][\r\n ]*;", ";");

@@ -222,7 +222,6 @@ public class Interpreter {
                         }
                     }
                 }
-                System.err.println(listeners);
             } catch (Exception e) {
                 handleEvaluationException(e);
             }
