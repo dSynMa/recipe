@@ -233,6 +233,11 @@ function backtrackInterpreter(){
         setInterpreterNextIndex(0);
         setInterpreterResponse(interpreterresponse.slice(0, -2));
         setInterpreterLoading(false);
+        setDot([]);
+        setDot(response.data.svgs.map(x => {
+          var svg = new DOMParser().parseFromString(x.svg, "image/svg+xml").getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
+          return svg;
+        }));
       })
       .catch((err) => {
         alert(err.message);
