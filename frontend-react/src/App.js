@@ -48,7 +48,7 @@ function App() {
   const [mcloading, setMCLoading] = useState(false);
   const [simloading, setSimLoading] = useState(false);
   const [resetsimloading, setResetSimLoading] = useState(false);
-  const [symbolicBuild, setSymbolicBuild] = useState(null);
+  const [symbolicBuild, setSymbolicBuild] = useState(true);
   const [built, setBuilt] = useState(false);
   const [code, setCode] = useFetch("/example.rcp");
   const [radioValue, setRadioValue] = useState('1');
@@ -380,8 +380,8 @@ function resetInterpreter(){
               onChange={(v) => setCode(v)}
             />
             <InputGroup>
-              <Form.Select aria-label="smt"
-                onChange={ (e) => setSymbolicBuild(e.target.value == "smt") }>
+              <Form.Select aria-label="1"
+                onChange={ (e) =>{ setSymbolicBuild(e.target.value === "smt") }}>
                 <option value="smt">SMT model (allows for infinite-state verification)</option>
                 <option value="bdd">BDD model (only for finite-state verification)</option>
               </Form.Select>
