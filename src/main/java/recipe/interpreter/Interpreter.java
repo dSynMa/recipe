@@ -421,7 +421,6 @@ public class Interpreter {
 
             Interpreter interpreter = new Interpreter(s);
             JSONObject initState = states.get(0);
-            StringBuilder builder = new StringBuilder();
 
             // Compute set of variables in the system
             Set<String> varNames = new HashSet<>(s.getCommunicationVariables().keySet());
@@ -431,16 +430,17 @@ public class Interpreter {
 
             // Create constraint on initial state & find it
             isFirst = true;
+            List<String> constraints = new LinkedList<String>();
+            
             for (String agentInstance : initState.keySet()) {
                 JSONObject agentState = initState.getJSONObject(agentInstance);
                 for (String var : agentState.keySet()) {
                     if (varNames.contains(var)) {
-                        if (isFirst) { isFirst = false; } else { builder.append(" & "); }
-                        builder.append(String.format("%s-%s = %s", agentInstance, var, agentState.get(var)));
+                        constraints.add(String.format("%s-%s = %s", agentInstance, var, agentState.get(var)));
                     }
                 }
             }
-            String initConstraint = builder.toString();
+            String initConstraint = String.join(" & ", constraints);
             System.out.println(initConstraint);
             interpreter.init(initConstraint);
             // Walk the rest of the trace 
@@ -494,6 +494,8 @@ public class Interpreter {
         Step candidate;
         for (int i = 0; i < currentStep.transitions.size(); i++) {
             candidate = currentStep.next(i, this); 
+            // TODO here we just pick the 1st transition to a target state
+            // that satisfies the constraint. Is this always enough?
             if (candidate.satisfies(constraint))
                 System.out.println(candidate.inboundTransition);
                 currentStep = candidate;
