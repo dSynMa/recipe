@@ -67,8 +67,6 @@ public class Interpreter {
             return result;
         }
 
-        public void prettyPrint() { prettyPrint(System.out); }
-
         public void prettyPrint(PrintStream stream) {
             stream.println("--- transition ---");
             stream.print("Sender:\n");
@@ -160,7 +158,6 @@ public class Interpreter {
         public Step next(int index, Interpreter interpreter) {
             assert index < transitions.size();
             this.chosenTransition = transitions.get(index);
-            chosenTransition.prettyPrint(System.out);
 
             Map<AgentInstance,ConcreteStore> nextStores = new HashMap<AgentInstance,ConcreteStore>(stores);
             
@@ -474,10 +471,8 @@ public class Interpreter {
             String name = x.getLabel();
             JSONObject jObj = initValues.getJSONObject(name);
             ConcreteStore ist = new ConcreteStore(jObj, x.getAgent());
-            // System.out.println(ist);
             rootStores.put(x, ist);
         });
-        // System.out.println(rootStores);
         this.currentStep = new Step(rootStores, null, this);
     }
 
@@ -497,7 +492,6 @@ public class Interpreter {
             // TODO here we just pick the 1st transition to a target state
             // that satisfies the constraint. Is this always enough?
             if (candidate.satisfies(constraint))
-                System.out.println(candidate.inboundTransition);
                 currentStep = candidate;
                 return true;
         }
