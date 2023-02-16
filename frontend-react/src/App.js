@@ -253,6 +253,7 @@ function resetInterpreter(){
     setInterpreterResponse([]);
     setInterpreterTransitions([]);
     setInterpreterNextIndex("");
+    setDot([]);
 
     setResetInterpreterLoading(false);
   }
