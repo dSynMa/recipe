@@ -1,6 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
-import {Container, Table, Accordion, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton} from 'react-bootstrap';
+import {Container, Table, Accordion, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton, Badge} from 'react-bootstrap';
 import AceEditor from "react-ace";
 import React, { useState, useEffect, useRef } from 'react';
 import axios from "axios";
@@ -61,6 +61,7 @@ function App() {
   const [interpreterloading, setInterpreterLoading] = useState(false);
   const [resetinterpreterloading, setResetInterpreterLoading] = useState(false);
   const [interpreternextindex, setInterpreterNextIndex] = useState(0);
+  const [interpreterbadge, setInterpreterBadge] = useState(false);
 
 
   const radios = [
@@ -297,6 +298,8 @@ function resetInterpreter(){
               }
               setInterpreterTransitions(trace[trace.length-1].transitions);
               setInterpreterResponse(trace);
+              alert("Counterexample has been loaded in the Interpreter tab.");
+              setInterpreterBadge(true);
               setInterpreterStarted(true);
               setMCLoading(false);
             }
@@ -409,7 +412,8 @@ function resetInterpreter(){
               </InputGroup>
           </Col>
           <Col xs={6}>
-            <Tabs defaultActiveKey="/" id="uncontrolled-tab-example" className="mb-3">
+            <Tabs defaultActiveKey="/" id="uncontrolled-tab-example" className="mb-3"
+              onSelect={(e) => { if (e === "interpreter") setInterpreterBadge(false);} }>
               <Tab eventKey="mc" title="Model Checking">
                 <Container fluid>
                   <Row>
@@ -513,7 +517,12 @@ function resetInterpreter(){
                   </Row>
                 </Container>
               </Tab>
-              <Tab eventKey="interpreter" title="Interpreter">
+              <Tab eventKey="interpreter" title={
+                <React.Fragment>
+                  Interpreter{' '} 
+                  {interpreterbadge && <Badge pill bg="primary" show={false}>!</Badge>}
+                </React.Fragment>
+              }>
               <Container fluid>
                   <Row>
                     <Col xs={12}>
