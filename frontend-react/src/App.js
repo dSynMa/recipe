@@ -141,7 +141,7 @@ function resetSimulate(){
       <table>  
       {
         Object.keys(render).sort().map(agent => { //return (<tr><td>{agent}</td></tr>)
-          return (<tr key="{agent}">
+          return (<tr key={agent}>
             <td>{agent}:</td>
             <td> {
               Object.keys(render[agent]).sort().map((k, index) => {
