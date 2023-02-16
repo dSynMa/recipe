@@ -14,6 +14,7 @@ import org.json.JSONObject;
 
 import recipe.Config;
 import recipe.analysis.NuXmvInteraction;
+import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
@@ -138,6 +139,22 @@ public class Interpreter {
             result.put("state", jStores);
             result.put("transitions", jTransitions);
             return result;
+        }
+
+        public boolean satisfies(JSONObject constraint) {
+            JSONObject thisState = this.toJSON().getJSONObject("state");
+            for (String agentInstance : constraint.keySet()) {
+                JSONObject instanceState = thisState.getJSONObject(agentInstance);
+                JSONObject instanceConstraint = constraint.getJSONObject(agentInstance);
+                for (String var : instanceConstraint.keySet()) {
+                    if (instanceState.has(var)) {
+                        if (instanceState.get(var) != instanceConstraint.get(var)) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
         }
 
         public Step next(int index, Interpreter interpreter) {
@@ -375,6 +392,78 @@ public class Interpreter {
         });
     }
 
+    public List<JSONObject> traceToJSON () {
+        List<JSONObject> result = new LinkedList<>();
+        Step myStep = currentStep;
+        while(myStep != null) {
+            result.add(0, myStep.toJSON());
+            myStep = myStep.parent;
+        }
+        return result;
+    }
+
+    /**
+     * @param s
+     * @param trace
+     * @return
+     */
+    public static Interpreter ofTrace(recipe.lang.System s, String trace) {
+        try {
+            NuXmvInteraction nuxmv = new NuXmvInteraction(s);
+            String[] split = trace.split("->", 0);
+            List<JSONObject> states = new ArrayList<>(split.length - 1);
+            Boolean isFirst = true;
+            for (String string : split) {
+                // Skip stuff before the 1st state
+                if (isFirst) { isFirst = false; continue; }
+                states.add(nuxmv.outputToJSON(string));
+            }
+
+            Interpreter interpreter = new Interpreter(s);
+            JSONObject initState = states.get(0);
+            StringBuilder builder = new StringBuilder();
+
+            // Compute set of variables in the system
+            Set<String> varNames = new HashSet<>(s.getCommunicationVariables().keySet());
+            for (Agent a : s.getAgents()) {
+                varNames.addAll(a.getStore().getAttributes().keySet());
+            }
+
+            // Create constraint on initial state & find it
+            isFirst = true;
+            for (String agentInstance : initState.keySet()) {
+                JSONObject agentState = initState.getJSONObject(agentInstance);
+                for (String var : agentState.keySet()) {
+                    if (varNames.contains(var)) {
+                        if (isFirst) { isFirst = false; } else { builder.append(" & "); }
+                        builder.append(String.format("%s-%s = %s", agentInstance, var, agentState.get(var)));
+                    }
+                }
+            }
+            String initConstraint = builder.toString();
+            System.out.println(initConstraint);
+            interpreter.init(initConstraint);
+            // Walk the rest of the trace 
+            for (int i = 1; i < states.size(); i++) {
+                JSONObject constraint = states.get(i);
+                if (!interpreter.findNext(constraint)) {
+                    System.out.println(String.format("Something wrong at step %d", i)); //REMOVE
+                    break;
+                }
+                else {
+                    System.out.println(i); ///REMOVE
+                    System.out.println(interpreter.currentStep); ///REMOVE
+                }
+            }
+            return interpreter;
+
+        } catch (Exception e) {
+            // TODO report message back to UI
+            System.out.println(e.getMessage());
+        }
+        return null;
+    }
+
     private void rootStep(String constraint) throws IOException, Exception {
         HashMap<AgentInstance, ConcreteStore> rootStores = new HashMap<AgentInstance, ConcreteStore>();
         NuXmvInteraction nuxmv = new NuXmvInteraction(sys);
@@ -399,6 +488,18 @@ public class Interpreter {
 
     public boolean isDeadlocked() {
         return currentStep.transitions.size() == 0;
+    }
+
+    public boolean findNext(JSONObject constraint) {
+        Step candidate;
+        for (int i = 0; i < currentStep.transitions.size(); i++) {
+            candidate = currentStep.next(i, this); 
+            if (candidate.satisfies(constraint))
+                System.out.println(candidate.inboundTransition);
+                currentStep = candidate;
+                return true;
+        }
+        return false;
     }
 
     public void next(int index) {
