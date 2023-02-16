@@ -282,7 +282,24 @@ function resetInterpreter(){
          .then((response) => {
             console.log(response.data);
             setMCResponse(response.data.results);
-            setMCLoading(false);
+            if (response.data.trace != undefined) {
+              setDot([]);
+              setDot(response.data.svgs.map(x => { 
+                var svg = new DOMParser().parseFromString(x.svg, "image/svg+xml").getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
+                return svg;
+              }));
+              var trace = [];
+              for (let index = 0; index < response.data.trace.length; index++) {
+                if (index > 0) {
+                  trace.push(response.data.trace[index].inboundTransition);
+                }
+                trace.push(response.data.trace[index]);
+              }
+              setInterpreterTransitions(trace[trace.length-1].transitions);
+              setInterpreterResponse(trace);
+              setInterpreterStarted(true);
+              setMCLoading(false);
+            }
          })
          .catch((err) => {
            alert(err.message);
