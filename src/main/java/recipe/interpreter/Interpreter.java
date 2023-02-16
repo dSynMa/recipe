@@ -14,6 +14,7 @@ import org.json.JSONObject;
 
 import recipe.Config;
 import recipe.analysis.NuXmvInteraction;
+import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
@@ -65,8 +66,6 @@ public class Interpreter {
             result.put("receivers", receiverNames);
             return result;
         }
-
-        public void prettyPrint() { prettyPrint(System.out); }
 
         public void prettyPrint(PrintStream stream) {
             stream.println("--- transition ---");
@@ -140,10 +139,25 @@ public class Interpreter {
             return result;
         }
 
+        public boolean satisfies(JSONObject constraint) {
+            JSONObject thisState = this.toJSON().getJSONObject("state");
+            for (String agentInstance : constraint.keySet()) {
+                JSONObject instanceState = thisState.getJSONObject(agentInstance);
+                JSONObject instanceConstraint = constraint.getJSONObject(agentInstance);
+                for (String var : instanceConstraint.keySet()) {
+                    if (instanceState.has(var)) {
+                        if (!instanceState.get(var).equals(instanceConstraint.get(var))) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
         public Step next(int index, Interpreter interpreter) {
             assert index < transitions.size();
             this.chosenTransition = transitions.get(index);
-            chosenTransition.prettyPrint(System.out);
 
             Map<AgentInstance,ConcreteStore> nextStores = new HashMap<AgentInstance,ConcreteStore>(stores);
             
@@ -222,7 +236,6 @@ public class Interpreter {
                         }
                     }
                 }
-                System.err.println(listeners);
             } catch (Exception e) {
                 handleEvaluationException(e);
             }
@@ -376,6 +389,68 @@ public class Interpreter {
         });
     }
 
+    public List<JSONObject> traceToJSON () {
+        List<JSONObject> result = new LinkedList<>();
+        Step myStep = currentStep;
+        while(myStep != null) {
+            result.add(0, myStep.toJSON());
+            myStep = myStep.parent;
+        }
+        return result;
+    }
+
+    /**
+     * @param s
+     * @param trace
+     * @return
+     */
+    public static Interpreter ofTrace(recipe.lang.System s, String trace) throws Exception {
+        // try {
+        NuXmvInteraction nuxmv = new NuXmvInteraction(s);
+        nuxmv.stopNuXmvThread(); // We ain't going to need it
+        String[] split = trace.split("->", 0);
+        List<JSONObject> states = new ArrayList<>(split.length - 1);
+        Boolean isFirst = true;
+        for (String string : split) {
+            // Skip stuff before the 1st state
+            if (isFirst) { isFirst = false; continue; }
+            states.add(nuxmv.outputToJSON(string));
+        }
+
+        Interpreter interpreter = new Interpreter(s);
+        JSONObject initState = states.get(0);
+
+        // Compute set of variables in the system
+        Set<String> varNames = new HashSet<>(s.getCommunicationVariables().keySet());
+        for (Agent a : s.getAgents()) {
+            varNames.addAll(a.getStore().getAttributes().keySet());
+        }
+
+        // Create constraint on initial state & find it
+        isFirst = true;
+        List<String> constraints = new LinkedList<String>();
+        
+        for (String agentInstance : initState.keySet()) {
+            JSONObject agentState = initState.getJSONObject(agentInstance);
+            for (String var : agentState.keySet()) {
+                if (varNames.contains(var)) {
+                    constraints.add(String.format("%s-%s = %s", agentInstance, var, agentState.get(var)));
+                }
+            }
+        }
+        String initConstraint = String.join(" & ", constraints);
+        interpreter.init(initConstraint);
+        // Walk the rest of the trace 
+        for (int i = 1; i < states.size(); i++) {
+            JSONObject constraint = states.get(i);
+            if (!interpreter.findNext(constraint)) {
+                // Todo raise
+                throw new Exception(String.format("[ofTrace] something wrong at step %d", i));
+            }
+        }
+        return interpreter;
+    }
+
     private void rootStep(String constraint) throws IOException, Exception {
         HashMap<AgentInstance, ConcreteStore> rootStores = new HashMap<AgentInstance, ConcreteStore>();
         NuXmvInteraction nuxmv = new NuXmvInteraction(sys);
@@ -386,10 +461,8 @@ public class Interpreter {
             String name = x.getLabel();
             JSONObject jObj = initValues.getJSONObject(name);
             ConcreteStore ist = new ConcreteStore(jObj, x.getAgent());
-            // System.out.println(ist);
             rootStores.put(x, ist);
         });
-        // System.out.println(rootStores);
         this.currentStep = new Step(rootStores, null, this);
     }
 
@@ -400,6 +473,20 @@ public class Interpreter {
 
     public boolean isDeadlocked() {
         return currentStep.transitions.size() == 0;
+    }
+
+    public boolean findNext(JSONObject constraint) {
+        Step candidate;
+        for (int i = 0; i < currentStep.transitions.size(); i++) {
+            candidate = currentStep.next(i, this); 
+            // TODO here we just pick the 1st transition to a target state
+            // that satisfies the constraint. Is this always enough?
+            if (candidate.satisfies(constraint)) {
+                currentStep = candidate;
+                return true;
+            }
+        }
+        return false;
     }
 
     public void next(int index) {

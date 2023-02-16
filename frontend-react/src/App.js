@@ -1,6 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
-import {Container, Table, Accordion, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton} from 'react-bootstrap';
+import {Container, Table, Accordion, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton, Badge} from 'react-bootstrap';
 import AceEditor from "react-ace";
 import React, { useState, useEffect, useRef } from 'react';
 import axios from "axios";
@@ -48,7 +48,7 @@ function App() {
   const [mcloading, setMCLoading] = useState(false);
   const [simloading, setSimLoading] = useState(false);
   const [resetsimloading, setResetSimLoading] = useState(false);
-  const [symbolicBuild, setSymbolicBuild] = useState(null);
+  const [symbolicBuild, setSymbolicBuild] = useState(true);
   const [built, setBuilt] = useState(false);
   const [code, setCode] = useFetch("/example.rcp");
   const [radioValue, setRadioValue] = useState('1');
@@ -61,6 +61,7 @@ function App() {
   const [interpreterloading, setInterpreterLoading] = useState(false);
   const [resetinterpreterloading, setResetInterpreterLoading] = useState(false);
   const [interpreternextindex, setInterpreterNextIndex] = useState(0);
+  const [interpreterbadge, setInterpreterBadge] = useState(false);
 
 
   const radios = [
@@ -140,7 +141,7 @@ function resetSimulate(){
       <table>  
       {
         Object.keys(render).sort().map(agent => { //return (<tr><td>{agent}</td></tr>)
-          return (<tr key="{agent}">
+          return (<tr key={agent}>
             <td>{agent}:</td>
             <td> {
               Object.keys(render[agent]).sort().map((k, index) => {
@@ -232,6 +233,11 @@ function backtrackInterpreter(){
         setInterpreterNextIndex(0);
         setInterpreterResponse(interpreterresponse.slice(0, -2));
         setInterpreterLoading(false);
+        setDot([]);
+        setDot(response.data.svgs.map(x => {
+          var svg = new DOMParser().parseFromString(x.svg, "image/svg+xml").getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
+          return svg;
+        }));
       })
       .catch((err) => {
         alert(err.message);
@@ -247,6 +253,7 @@ function resetInterpreter(){
     setInterpreterResponse([]);
     setInterpreterTransitions([]);
     setInterpreterNextIndex("");
+    setDot([]);
 
     setResetInterpreterLoading(false);
   }
@@ -282,7 +289,26 @@ function resetInterpreter(){
          .then((response) => {
             console.log(response.data);
             setMCResponse(response.data.results);
-            setMCLoading(false);
+            if (response.data.trace != undefined) {
+              setDot([]);
+              setDot(response.data.svgs.map(x => { 
+                var svg = new DOMParser().parseFromString(x.svg, "image/svg+xml").getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
+                return svg;
+              }));
+              var trace = [];
+              for (let index = 0; index < response.data.trace.length; index++) {
+                if (index > 0) {
+                  trace.push(response.data.trace[index].inboundTransition);
+                }
+                trace.push(response.data.trace[index]);
+              }
+              setInterpreterTransitions(trace[trace.length-1].transitions);
+              setInterpreterResponse(trace);
+              alert("Counterexample has been loaded in the Interpreter tab.");
+              setInterpreterBadge(true);
+              setInterpreterStarted(true);
+              setMCLoading(false);
+            }
          })
          .catch((err) => {
            alert(err.message);
@@ -380,8 +406,8 @@ function resetInterpreter(){
               onChange={(v) => setCode(v)}
             />
             <InputGroup>
-              <Form.Select aria-label="smt"
-                onChange={ (e) => setSymbolicBuild(e.target.value == "smt") }>
+              <Form.Select aria-label="1"
+                onChange={ (e) =>{ setSymbolicBuild(e.target.value === "smt") }}>
                 <option value="smt">SMT model (allows for infinite-state verification)</option>
                 <option value="bdd">BDD model (only for finite-state verification)</option>
               </Form.Select>
@@ -392,7 +418,8 @@ function resetInterpreter(){
               </InputGroup>
           </Col>
           <Col xs={6}>
-            <Tabs defaultActiveKey="/" id="uncontrolled-tab-example" className="mb-3">
+            <Tabs defaultActiveKey="/" id="uncontrolled-tab-example" className="mb-3"
+              onSelect={(e) => { if (e === "interpreter") setInterpreterBadge(false);} }>
               <Tab eventKey="mc" title="Model Checking">
                 <Container fluid>
                   <Row>
@@ -496,7 +523,12 @@ function resetInterpreter(){
                   </Row>
                 </Container>
               </Tab>
-              <Tab eventKey="interpreter" title="Interpreter">
+              <Tab eventKey="interpreter" title={
+                <React.Fragment>
+                  Interpreter{' '} 
+                  {interpreterbadge && <Badge pill bg="primary" show={false}>!</Badge>}
+                </React.Fragment>
+              }>
               <Container fluid>
                   <Row>
                     <Col xs={12}>
