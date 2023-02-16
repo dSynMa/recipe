@@ -146,7 +146,7 @@ public class Interpreter {
                 JSONObject instanceConstraint = constraint.getJSONObject(agentInstance);
                 for (String var : instanceConstraint.keySet()) {
                     if (instanceState.has(var)) {
-                        if (instanceState.get(var) != instanceConstraint.get(var)) {
+                        if (!instanceState.get(var).equals(instanceConstraint.get(var))) {
                             return false;
                         }
                     }
@@ -404,61 +404,51 @@ public class Interpreter {
      * @param trace
      * @return
      */
-    public static Interpreter ofTrace(recipe.lang.System s, String trace) {
-        try {
-            NuXmvInteraction nuxmv = new NuXmvInteraction(s);
-            String[] split = trace.split("->", 0);
-            List<JSONObject> states = new ArrayList<>(split.length - 1);
-            Boolean isFirst = true;
-            for (String string : split) {
-                // Skip stuff before the 1st state
-                if (isFirst) { isFirst = false; continue; }
-                states.add(nuxmv.outputToJSON(string));
-            }
-
-            Interpreter interpreter = new Interpreter(s);
-            JSONObject initState = states.get(0);
-
-            // Compute set of variables in the system
-            Set<String> varNames = new HashSet<>(s.getCommunicationVariables().keySet());
-            for (Agent a : s.getAgents()) {
-                varNames.addAll(a.getStore().getAttributes().keySet());
-            }
-
-            // Create constraint on initial state & find it
-            isFirst = true;
-            List<String> constraints = new LinkedList<String>();
-            
-            for (String agentInstance : initState.keySet()) {
-                JSONObject agentState = initState.getJSONObject(agentInstance);
-                for (String var : agentState.keySet()) {
-                    if (varNames.contains(var)) {
-                        constraints.add(String.format("%s-%s = %s", agentInstance, var, agentState.get(var)));
-                    }
-                }
-            }
-            String initConstraint = String.join(" & ", constraints);
-            System.out.println(initConstraint);
-            interpreter.init(initConstraint);
-            // Walk the rest of the trace 
-            for (int i = 1; i < states.size(); i++) {
-                JSONObject constraint = states.get(i);
-                if (!interpreter.findNext(constraint)) {
-                    System.out.println(String.format("Something wrong at step %d", i)); //REMOVE
-                    break;
-                }
-                else {
-                    System.out.println(i); ///REMOVE
-                    System.out.println(interpreter.currentStep); ///REMOVE
-                }
-            }
-            return interpreter;
-
-        } catch (Exception e) {
-            // TODO report message back to UI
-            System.out.println(e.getMessage());
+    public static Interpreter ofTrace(recipe.lang.System s, String trace) throws Exception {
+        // try {
+        NuXmvInteraction nuxmv = new NuXmvInteraction(s);
+        nuxmv.stopNuXmvThread(); // We ain't going to need it
+        String[] split = trace.split("->", 0);
+        List<JSONObject> states = new ArrayList<>(split.length - 1);
+        Boolean isFirst = true;
+        for (String string : split) {
+            // Skip stuff before the 1st state
+            if (isFirst) { isFirst = false; continue; }
+            states.add(nuxmv.outputToJSON(string));
         }
-        return null;
+
+        Interpreter interpreter = new Interpreter(s);
+        JSONObject initState = states.get(0);
+
+        // Compute set of variables in the system
+        Set<String> varNames = new HashSet<>(s.getCommunicationVariables().keySet());
+        for (Agent a : s.getAgents()) {
+            varNames.addAll(a.getStore().getAttributes().keySet());
+        }
+
+        // Create constraint on initial state & find it
+        isFirst = true;
+        List<String> constraints = new LinkedList<String>();
+        
+        for (String agentInstance : initState.keySet()) {
+            JSONObject agentState = initState.getJSONObject(agentInstance);
+            for (String var : agentState.keySet()) {
+                if (varNames.contains(var)) {
+                    constraints.add(String.format("%s-%s = %s", agentInstance, var, agentState.get(var)));
+                }
+            }
+        }
+        String initConstraint = String.join(" & ", constraints);
+        interpreter.init(initConstraint);
+        // Walk the rest of the trace 
+        for (int i = 1; i < states.size(); i++) {
+            JSONObject constraint = states.get(i);
+            if (!interpreter.findNext(constraint)) {
+                // Todo raise
+                throw new Exception(String.format("[ofTrace] something wrong at step %d", i));
+            }
+        }
+        return interpreter;
     }
 
     private void rootStep(String constraint) throws IOException, Exception {
@@ -491,9 +481,10 @@ public class Interpreter {
             candidate = currentStep.next(i, this); 
             // TODO here we just pick the 1st transition to a target state
             // that satisfies the constraint. Is this always enough?
-            if (candidate.satisfies(constraint))
+            if (candidate.satisfies(constraint)) {
                 currentStep = candidate;
                 return true;
+            }
         }
         return false;
     }
