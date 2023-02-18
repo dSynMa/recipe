@@ -63,6 +63,10 @@ agent Robot
 
 system = Line(one,TRUE) | Robot(two,TRUE) | Robot(three,TRUE)
 
-SPEC F three-btype = 1
 SPEC G((one-prd = 1 & one-stage = 0 & (<sender=one & channel = *>true)) -> (<exists(type = 1) & exists(type = 2) & forall(type = 1 | type = 2)>true))
+SPEC F F three-btype = 1
+SPEC F !<channel != *>!true
+SPEC F <channel = *>true
+SPEC F (<channel = *>true)
 SPEC /\ k : Robot . F k-btype = 1
+SPEC /\ k : Robot | Line . F k-lnk = a
