@@ -71,6 +71,9 @@ public class NuXmvInteraction {
             byteArrayOutputStream.reset();
             out.write(("\n").getBytes());
             out.flush();
+            if(outText.contains("not built")){
+                return outText;
+            }
         }
         return outText;
     }
@@ -113,13 +116,10 @@ public class NuXmvInteraction {
     }
 
     public Pair<Boolean, String> modelCheckic3(String property, boolean bounded, int steps) throws IOException {
-        if(!go_msat){
-            Pair<Boolean, String> initialise = initialise(true);
-            if(!initialise.getLeft()){
-                return initialise;
-            }
+        Pair<Boolean, String> initialise = initialise(true);
+        if(!initialise.getLeft()){
+            return initialise;
         }
-        execute((x) -> x.trim().endsWith("nuXmv >"),"build_boolean_model");
 
         Predicate<String> finished = (x) -> {
             String s = x.replaceAll(" |\n|\r|\t|\\(|\\)", "");
@@ -146,16 +146,11 @@ public class NuXmvInteraction {
     public Pair<Boolean, String> initialise(boolean simulateOrBMC) throws IOException {
         String out = execute((x) -> x.trim().endsWith("nuXmv >"),"go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
 
-        if(!out.contains(" file ")) {
-            if(simulateOrBMC) {
-                go_msat = true;
-                out = execute((x) -> x.trim().endsWith("nuXmv >"), "build_boolean_model");
-            }
-            else go = true;
-            return new Pair<>(true, out);
+        if(out.contains(" file ")) {
+            return new Pair<>(false, out);
         }
 
-        return new Pair<>(false, out);
+        return new Pair<>(true, out);
     }
 
     public Pair<Boolean, String> simulation_pick_init_state(String constraint) throws IOException {
