@@ -71,9 +71,17 @@ public class ToNuXmv {
         }
 
         Set<Expression<Boolean>> conditions = new HashSet<>();
+        final String cv_cleaned = cv.replaceAll("^@", "");
         for(int j = 0; j < vals.size(); j++){
             TypedValue val = vals.get(j);
-            conditions.add(cond.relabel((v) -> v.getName().equals(cv) ? val : v).simplify());
+            conditions.add(cond.relabel((v) -> {
+                String v_cleaned = v.getName().replaceAll("^@", "");
+                if(v_cleaned.equals(cv_cleaned)){
+                    return val;
+                } else{
+                    return v;
+                }
+            }).simplify());
         }
 
         return conditions;
