@@ -1,7 +1,5 @@
 package recipe.lang.process;
 
-import org.petitparser.parser.Parser;
-import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
@@ -27,7 +25,6 @@ public class Iterative extends Process{
         Set<Transition> ts = new HashSet<>();
 
         Set<Transition> loop = a.asTransitionSystem(start, start);
-
 
         ts.addAll(loop);
         return ts;
