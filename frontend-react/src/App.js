@@ -307,8 +307,8 @@ function resetInterpreter(){
               alert("Counterexample has been loaded in the Interpreter tab.");
               setInterpreterBadge(true);
               setInterpreterStarted(true);
-              setMCLoading(false);
             }
+            setMCLoading(false);
          })
          .catch((err) => {
            alert(err.message);
