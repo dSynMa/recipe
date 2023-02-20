@@ -275,16 +275,18 @@ public class Server {
                         resultJSON.put("result", "error");
                     }
 
-                    // Load trace into interpreter
                     String output = result.getRight().replaceAll(" --", "\n--");
-                    this.interpreter = Interpreter.ofTrace(system, output);
+                    if(result.getRight().toLowerCase(Locale.ROOT).contains("is false")){
+                        // Load trace into interpreter
+                        this.interpreter = Interpreter.ofTrace(system, output);
+                        List<JSONObject> trace = interpreter.traceToJSON();
+                        jsonObject.put("svgs", renderSVGs(trace.get(trace.size()-1)));
+                        jsonObject.put("trace", trace);
+                    }
                     resultJSON.put("output", output);
                     array.put(resultJSON);
                 }
-                List<JSONObject> trace = interpreter.traceToJSON();
-                jsonObject.put("trace", trace);
                 jsonObject.put("results", array);
-                jsonObject.put("svgs", renderSVGs(trace.get(trace.size()-1)));
 
                 nuXmvInteraction.stopNuXmvThread();
                 return jsonObject.toString();

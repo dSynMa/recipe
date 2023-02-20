@@ -11,14 +11,16 @@ import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.GuardReference;
+import recipe.lang.expressions.predicate.IsEqualTo;
 import recipe.lang.process.*;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.process.Process;
 import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
+import recipe.lang.types.Enum;
 import recipe.lang.utils.*;
-import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.AttributeTypeException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 
@@ -251,10 +253,19 @@ public class Agent {
                     Map<String, TypedVariable> localVars = (Map<String, TypedVariable>) values.get(2);
                     Store store = null;
                     try {
+                        ArrayList<String> nameList = new ArrayList<>();
+                        nameList.add(agentName);
+                        Enum nameType = new Enum(agentName + "-name", nameList);
+                        TypedVariable nameVar = new TypedVariable(nameType, "name");
+                        TypedValue agentNameValue = new TypedValue(nameType, agentName);
+                        localVars.put("name", nameVar);
                         store = new Store(localVars);
 //                    Map<String, TypedValue> localValues = ((Pair<Map, Map>) values.get(2)).getRight();
                         Expression<Boolean> init = null;
                         init = (Expression<Boolean>) values.get(3);//new Store(localValues, localVars);
+
+                        init = new And(init, new IsEqualTo(nameVar, agentNameValue));
+
                         Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(4);
                         Expression<Boolean> receiveGuardCondition = (Expression<Boolean>) values.get(5);
                         Process repeat = (Process) values.get(6);
@@ -304,9 +315,9 @@ public class Agent {
                         agent.setRelabel(relabel);
 
                         return agent;
-                    } catch (AttributeTypeException e) {
+                    } catch (AttributeTypeException | MismatchingTypeException e) {
                         e.printStackTrace();
-                    } catch (AttributeNotInStoreException e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
 

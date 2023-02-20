@@ -215,19 +215,6 @@ public abstract class LTOL {
                             return values.get(1);
                         });
 
-        // negation is a prefix
-        builder.group()
-                .prefix(of('!').trim(), (List<LTOL> values) -> new Not(values.get(1)));
-
-        builder.group()
-                .prefix(of('G').trim(), (List<LTOL> values) -> new Globally(values.get(1)));
-
-        builder.group()
-                .prefix(of('F').trim(), (List<LTOL> values) -> new Eventually(values.get(1)));
-
-        builder.group()
-                .prefix(of('X').trim(), (List<LTOL> values) -> new Next(values.get(1)));
-
         Parser necessaryObs = of('<').seq(Observation.parser(commonVars, messageVars, agentNames).trim()).seq(of('>'))
                 .map((List<Observation> vals) -> {
                     return vals.get(1);
@@ -244,6 +231,20 @@ public abstract class LTOL {
 
         builder.group()
                 .prefix(sufficientObs, (List<Object> values) -> new Possibly((Observation) values.get(0), (LTOL) values.get(1)));
+
+        builder.group()
+                .prefix(of('!').trim(), (List<LTOL> values) -> new Not(values.get(1)));
+
+        builder.group()
+                .prefix(of('G').trim(), (List<LTOL> values) -> new Globally(values.get(1)));
+
+        builder.group()
+                .prefix(of('F').trim(), (List<LTOL> values) -> {
+                    return new Eventually(values.get(1));
+                });
+
+        builder.group()
+                .prefix(of('X').trim(), (List<LTOL> values) -> new Next(values.get(1)));
 
         builder.group()
                 .left(StringParser.of("U").trim(), (List<LTOL> values) -> new Until(values.get(0), values.get(2)));
