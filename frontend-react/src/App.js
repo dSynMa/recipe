@@ -1,6 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
-import {Container, Table, Accordion, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton, Badge} from 'react-bootstrap';
+import {Container, Table, Dropdown, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton, Badge, Alert} from 'react-bootstrap';
 import AceEditor from "react-ace";
 import React, { useState, useEffect, useRef } from 'react';
 import axios from "axios";
@@ -65,7 +65,7 @@ function App() {
 
 
   const radios = [
-    { name: 'explicit', value: '1' },
+    { name: 'concrete', value: '1' },
     { name: 'ic3', value: '2' },
     { name: 'bmc', value: '3' },
   ];
@@ -153,6 +153,43 @@ function resetSimulate(){
     )
   }
   
+  function loadTraceIntoInterpreter(output) {
+    const params = new URLSearchParams();
+    params.append("output", encodeURIComponent(output));
+    axios
+    .get(server + "/interpretLoad", { params })
+    .then((response) => {
+      var trace = response.data.trace;
+      if (trace != undefined) {
+        setDot([]);
+        setDot(response.data.svgs.map(x => { 
+          var svg = new DOMParser().parseFromString(x.svg, "image/svg+xml").getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
+          return svg;
+        }));
+        setInterpreterTransitions(trace[trace.length-1].transitions);
+        setInterpreterResponse(trace);
+        alert("Counterexample has been loaded in the Interpreter tab.");
+        setInterpreterBadge(true);
+        setInterpreterStarted(true);
+      }
+    })
+    .catch((err) => {
+      alert(err.message);
+      setSimLoading(false);
+    });;
+  }
+
+
+  function exportRaw(output) {
+    const exportTxt = `data:text/plain;chatset=utf-8,${encodeURIComponent(
+      output
+    )}`;
+    const link = document.createElement("a");
+    link.href = exportTxt;
+    link.download = "output.txt";
+    link.click();
+  }
+
   const exportData = () => {
     const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
       JSON.stringify(interpreterresponse)
@@ -252,7 +289,6 @@ function resetInterpreter(){
     setResetInterpreterLoading(false);
   }
 
-
   function modelCheck(){
     if(built == null){
       alert("Build model first.");
@@ -260,6 +296,7 @@ function resetInterpreter(){
     }
     
     setMCLoading(true);
+    setMCResponse([]);
     
     if(symbolicBuild && radioValue == 1){
       alert("Cannot explicitly model check with abstract model. Build explicit model.");
@@ -282,19 +319,11 @@ function resetInterpreter(){
       axios.get(server + "/modelCheck", { params })
          .then((response) => {
             console.log(response.data);
-            setMCResponse(response.data.results);
-            if (response.data.trace != undefined) {
-              setDot([]);
-              setDot(response.data.svgs.map(x => { 
-                var svg = new DOMParser().parseFromString(x.svg, "image/svg+xml").getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
-                return svg;
-              }));
-              var trace = response.data.trace;
-              setInterpreterTransitions(trace[trace.length-1].transitions);
-              setInterpreterResponse(trace);
-              alert("Counterexample has been loaded in the Interpreter tab.");
-              setInterpreterBadge(true);
-              setInterpreterStarted(true);
+            if (response.data !== undefined) {
+              setMCResponse(response.data.results);
+            }
+            if (response.error !== undefined) {
+              alert(response.error);
             }
             setMCLoading(false);
          })
@@ -309,11 +338,9 @@ function resetInterpreter(){
     setVLoading(true);
     const params = new URLSearchParams();
     params.append('script', encodeURIComponent(code));
-    console.log(server);
 
     axios.get(server + "/setSystem", { params })
          .then((response) => {
-           console.log(response);
           axios.get(server + "/toDOTSVG")
                .then((response2) => {
                 console.log(response2.data);
@@ -420,6 +447,7 @@ function resetInterpreter(){
                             {radios.map((radio, idx) => (
                               <ToggleButton
                                 key={idx}
+                                size="lg"
                                 id={`radio-${idx}`}
                                 type="radio"
                                 variant={idx % 2 ? 'outline-success' : 'outline-danger'}
@@ -434,7 +462,7 @@ function resetInterpreter(){
                             </ButtonGroup>
                           {(radioValue != 1) &&
                               <FormControl
-                                size="xs"
+                                size="lg"
                                 placeholder="Enter bound (optional for ic3)."
                                 aria-label="bound"
                                 aria-describedby="basic-addon1"
@@ -449,19 +477,32 @@ function resetInterpreter(){
 
                     </Col>
                   </Row>
-                  <Row>
-                    <Col>
-                      <Accordion defaultActiveKey="0">
-                        {mcresponse.map((x, i) => {
-                          return <Accordion.Item key={i} eventKey={i}>
-                          <Accordion.Header className={x.result == "true" ? "prop-true" : x.result == "false" ? "prop-false" : "prop-unknown"}>{x.spec}</Accordion.Header>
-                          <Accordion.Body style={{whiteSpace: "pre-wrap"}}>{x.output}
-                            </Accordion.Body>
-                          </Accordion.Item>;
-                        })}
-                      </Accordion>
+                    {mcresponse.map((x, i) => {
+                    return <Row className={i % 2 ? "border py-2" : "bg-light border py-2"}>
+                    <Col xs={x.result=="false" ? 9 : 12} className="align-self-center">
+                      <h5 className='my-auto'>{x.spec} <Badge bg={x.result == "true" ? "success" : x.result == "false" ? "danger" : "secondary"}>
+                      {x.result == "true" ? "pass" : x.result == "false" ? "fail" : "unknown"}
+                      </Badge>
+                      </h5>
                     </Col>
-                  </Row>
+                    {x.result == "false" && 
+                      <Col xs={3} style={{ textAlign:"right" }} className="align-self-center">
+                        {/* <div className="d-grid"> */}
+                        <Dropdown as={ButtonGroup}>
+                        <Button onClick={() => loadTraceIntoInterpreter(mcresponse[i].output)}>
+                          Load into interpreter
+                        </Button>
+                          <Dropdown.Toggle split id="dropdown-split-basic" />
+                          <Dropdown.Menu>
+                            <Dropdown.Item onClick={() => loadTraceIntoInterpreter(mcresponse[i].output)}>Load into interpreter</Dropdown.Item>
+                            <Dropdown.Item onClick={() => exportRaw(mcresponse[i].output)}>Download raw output</Dropdown.Item>
+                          </Dropdown.Menu>
+                        </Dropdown>
+                      </Col>
+                    }
+                    </Row>})}
+                    {/* </tbody></Table> */}
+                  {/* </Row> */}
                 </Container>
               </Tab>
               {/* <Tab eventKey="sim" title="Simulation">
