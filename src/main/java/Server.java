@@ -128,6 +128,7 @@ public class Server {
     @Route("/buildModel")
     public String buildModel(Request req) {
         Enum.clear();
+        interpreter = null;
         String script = req.getQuery().get("script").trim();
         Boolean buildType = Boolean.valueOf(req.getQuery().get("symbolic").trim());
         try {

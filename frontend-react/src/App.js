@@ -349,6 +349,7 @@ function resetInterpreter(){
 
   function buildModel(){
     setBLoading(true);
+    resetInterpreter();
     const params = new URLSearchParams();
     params.append('script', encodeURIComponent(code));
     console.log(server);
