@@ -24,6 +24,7 @@ import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
+import recipe.lang.store.CompositeStore;
 import recipe.lang.store.ConcreteStore;
 import recipe.lang.store.Store;
 import recipe.lang.types.Type;
@@ -107,7 +108,7 @@ public class Interpreter {
         protected void handleEvaluationException(Exception e) {
             // TODO
             System.err.println(e);
-            System.err.println(e.getStackTrace());
+            e.printStackTrace();
         }
 
         public Step getParent() {
@@ -229,7 +230,8 @@ public class Interpreter {
                     for (Object objChan : chanEnum.getAllValues()) {
                         TypedValue chan = (TypedValue) objChan;
                         Store s = store.push(getChannelTV(), chan);
-                        boolean isListening = Condition.getTrue().equals(instance.getAgent().getReceiveGuard().valueIn(s));
+                        TypedValue evalGuard = instance.getAgent().getReceiveGuard().valueIn(s);
+                        boolean isListening = Condition.getTrue().equals(evalGuard);
                         if (isListening) {
                             listeners.putIfAbsent(chan, new HashSet<>());
                             listeners.get(chan).add(instance);
@@ -248,10 +250,10 @@ public class Interpreter {
                 if (instSends != null) {
                     instSends.forEach(tr -> {
                         SendProcess sendProcess = (SendProcess) tr.getLabel();
-                        Expression chanExpr = sendProcess.getChannel();
                         Expression<recipe.lang.types.Boolean> psi = sendProcess.getPsi();
                         try {
-                            boolean psiSat = psi.valueIn(stores.get(sender)).equals(Condition.getTrue());
+                            TypedValue psiEval = psi.valueIn(senderStore);
+                            boolean psiSat = Condition.getTrue().equals(psiEval);
 
                             if (psiSat) {
                                 // Add message and channel to a new map
@@ -268,11 +270,18 @@ public class Interpreter {
                                 for (AgentInstance inst : listeners.get(chan)) {
                                     if (inst != sender) {
                                         try {
-                                            Store store = stores.get(inst).push(msgStore);
-                                            boolean sendGuardOk = Condition.getTrue().equals(sendProcess.getMessageGuard().valueIn(store));
-                                            // System.out.printf("sendGuard: %s\n", sendGuardOk);
-                                            boolean receiveGuardOk = Condition.getTrue().equals(inst.getAgent().getReceiveGuard().valueIn(store));
-                                            // System.out.printf("receiveGuard: %s\n", receiveGuardOk);
+                                            Store instStore = stores.get(inst).push(msgStore);
+                                            // Local variables get evaluated over the sender,
+                                            // CVs get evaluated over the receiver (inst)
+                                            CompositeStore sendGuardStore = new CompositeStore(sys);
+                                            sendGuardStore.push(senderStore);
+                                            sendGuardStore.pushReceiverStore(instStore);
+
+                                            TypedValue sendGuard = sendProcess.getMessageGuard().valueIn(sendGuardStore);
+                                            boolean sendGuardOk = Condition.getTrue().equals(sendGuard);
+
+                                            TypedValue receiveGuard = inst.getAgent().getReceiveGuard().valueIn(instStore);
+                                            boolean receiveGuardOk = Condition.getTrue().equals(receiveGuard);
                                             if (sendGuardOk && receiveGuardOk) {
                                                 receivesMap.put(inst, new HashSet<ProcessTransition>());
                                                 // System.out.printf("%s can receive\n", inst);
@@ -456,6 +465,7 @@ public class Interpreter {
         NuXmvInteraction nuxmv = new NuXmvInteraction(sys);
         Pair<Boolean, String> s0 = nuxmv.simulation_pick_init_state(constraint);
         JSONObject initValues = nuxmv.outputToJSON(s0.getRight());
+        nuxmv.stopNuXmvThread();
 
         sys.getAgentInstances().forEach((x) -> {
             String name = x.getLabel();
