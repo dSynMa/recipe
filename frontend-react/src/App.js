@@ -464,7 +464,7 @@ function resetInterpreter(){
                   </Row>
                 </Container>
               </Tab>
-              <Tab eventKey="sim" title="Simulation">
+              {/* <Tab eventKey="sim" title="Simulation">
               <Container fluid>
                   <Row>
                     <Col xs={12}>
@@ -511,7 +511,7 @@ function resetInterpreter(){
                     </Col>
                   </Row>
                 </Container>
-              </Tab>
+              </Tab> */}
               <Tab eventKey="interpreter" title={
                 <React.Fragment>
                   Interpreter{' '} 
