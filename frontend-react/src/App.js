@@ -192,7 +192,7 @@ function resetSimulate(){
     .catch((err) => {
       alert(err.message);
       setSimLoading(false);
-    });;
+    });
   }
 
 
@@ -579,6 +579,17 @@ function resetInterpreter(){
                   <Row>
                     <Col xs={12}>
                       <InputGroup className="mb-3">
+                          <Button variant="primary" size="lg" disabled={interpreterloading || interpretertransitions.length == 0} onClick={backtrackInterpreter}>
+                              Back
+                              { interpreterloading && spinner }
+                          </Button>
+                          <Button variant="primary" size="lg"
+                              disabled={interpreterloading || (interpreterstarted && interpretertransitions.length == 0)}
+                              onClick={interpret}>
+                              {!interpreterstarted && <span>Start</span>}
+                              {interpreterstarted && <span>Next</span>}
+                              {interpreterloading && spinner}
+                            </Button>
                             {
                             <Form.Select 
                               aria-label="interpreter-next"
@@ -590,20 +601,9 @@ function resetInterpreter(){
                               })}
                             </Form.Select>
                             }
-                            <Button variant="primary" size="lg"
-                              disabled={interpreterloading || (interpreterstarted && interpretertransitions.length == 0)}
-                              onClick={interpret}>
-                              {!interpreterstarted && <span>Start</span>}
-                              {interpreterstarted && <span>Next</span>}
-                              {interpreterloading && spinner}
-                            </Button>
                             <Button variant="secondary" size="lg" disabled={resetinterpreterloading} onClick={resetInterpreter}>
                               Reset
                               { resetinterpreterloading && spinner }
-                            </Button>
-                            <Button variant="secondary" size="lg" disabled={interpreterloading} onClick={backtrackInterpreter}>
-                              Backtrack
-                              { interpreterloading && spinner }
                             </Button>
                             {/* <Button variant="secondary" size="lg" disabled={interpreterloading || interpretertransitions.length == 0} onClick={exportData}>
                               Export
