@@ -132,6 +132,7 @@ public class Server {
         interpreter = null;
         String script = req.getQuery().get("script").trim();
         Boolean buildType = Boolean.valueOf(req.getQuery().get("symbolic").trim());
+        JSONObject response = new JSONObject();
         try {
             system = recipe.lang.System.parser().end().parse(script).get();
             if(nuXmvInteraction != null){
@@ -140,16 +141,23 @@ public class Server {
             }
             nuXmvInteraction = new NuXmvInteraction(system);
             Pair<Boolean, String> initialise = nuXmvInteraction.initialise(buildType);
+            
             if(initialise.getLeft()){
-                return "{ \"success\" : true}";
+                response.put("success", true);
+                // return "{ \"success\" : true}";
             } else{
-                return "{ \"error\" : \"" + initialise.getRight() + "\"}";
+                response.put("error", initialise.getRight());
             }
         } catch (ParseError parseError){
-            return "{ \"error\" : \"" + parseError.getFailure().toString() + "\"}";
+            response.clear();
+            response.put("error", parseError.getFailure());
+            java.lang.System.out.println(response.toString());
         } catch (Exception e) {
-            return "{ \"error\" : \"" + e.getMessage() + "\"}";
-        }
+            response.clear();
+            response.put("error", e.getMessage() );
+            java.lang.System.out.println(response.toString());
+        } 
+        return response.toString();
     }
 
     @Route("/toDOT")
