@@ -2,6 +2,8 @@ package recipe.lang.store;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import recipe.Config;
 import recipe.lang.expressions.TypedValue;
 
 public class CompositeStore extends Store {
@@ -9,13 +11,24 @@ public class CompositeStore extends Store {
     // private Store base;
     // private Store shadow;
     private List<Store> stack;
+    private List<Boolean> isReceiverStore;
+    private recipe.lang.System system;
 
-    public CompositeStore() {
+    public CompositeStore(recipe.lang.System s) {
         this.stack = new ArrayList<Store>(2);
+        this.isReceiverStore = new ArrayList<Boolean>();
+        this.system = s;
     }
 
-    public void push(Store store) {
+    public CompositeStore() { this(null); }
+
+    public void pushReceiverStore(Store store) { push(store, true); }
+
+    public void push(Store store) { push(store, false); }
+
+    private void push(Store store, boolean isReceiver) {
         stack.add(store);
+        isReceiverStore.add(isReceiver);
     }
 
     public Store pop() {
@@ -38,9 +51,14 @@ public class CompositeStore extends Store {
 
     @Override
     public TypedValue getValue(Object attribute) {
+
         for (int i = stack.size()-1; i >= 0; i--) {
             TypedValue result = stack.get(i).getValue(attribute);
-            if (result != null) {
+            Boolean isCV = false;
+            if (system != null) {
+                isCV = Config.isCvRef(system, attribute.toString());
+            }
+            if (result != null && (!isCV || isReceiverStore.get(i))) {
                 return result;
             }
         }
