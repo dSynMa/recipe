@@ -63,7 +63,6 @@ function App() {
   const [interpreternextindex, setInterpreterNextIndex] = useState(0);
   const [interpreterbadge, setInterpreterBadge] = useState(false);
 
-
   const radios = [
     { name: 'concrete', value: '1' },
     { name: 'ic3', value: '2' },
@@ -151,6 +150,23 @@ function resetSimulate(){
       }
       </table>
     )
+  }
+  
+  // Needed by the Import button
+  // const importFile = useRef(null);
+  function loadJSONIntoInterpreter(file) {
+    console.log(importFileObj);
+    // var formData = new FormData();
+    // formData.append("trace", file);
+    const reader = new FileReader();
+    reader.onload = async (e) => { 
+      const params = new URLSearchParams();
+      params.append("trace", encodeURIComponent(e.target.result));
+      axios.get(server + "/interpretLoadJSON", { params })
+      .then((response) => { console.log(response) })
+      .catch((error) => { console.log(error) }); 
+    };
+    reader.readAsText(file);
   }
   
   function loadTraceIntoInterpreter(output) {
@@ -589,10 +605,16 @@ function resetInterpreter(){
                               Backtrack
                               { interpreterloading && spinner }
                             </Button>
-                            <Button variant="secondary" size="lg" disabled={interpreterloading} onClick={exportData}>
+                            {/* <Button variant="secondary" size="lg" disabled={interpreterloading || interpretertransitions.length == 0} onClick={exportData}>
                               Export
                               { interpreterloading && spinner }
                             </Button>
+                            <Button variant="secondary" size="lg" disabled={interpreterloading} onClick={() => { importFile.current.click(); }}>
+                              Import
+                              { interpreterloading && spinner }
+                            </Button> */}
+                            {/* Dummy/invisible field for Import */}
+                            {/* <input type='file' id='file' ref={importFile} style={{display: 'none'}} onChange={(e) => loadJSONIntoInterpreter(e.target.files[0])}/>  */}
                       </InputGroup>
                     </Col>
                   </Row>
