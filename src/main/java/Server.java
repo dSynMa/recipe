@@ -351,6 +351,23 @@ public class Server {
         cors();
     }
 
+    @Route("/interpretLoad")
+    public String loadInterpreter(Request req) {
+        // Load trace into interpreter
+        String output = req.getQuery().get("output");
+        try {
+            interpreter = Interpreter.ofTrace(system, output);
+            List<JSONObject> trace = interpreter.traceToJSON();
+            JSONObject response = new JSONObject();
+            response.put("svgs", renderSVGs(trace.get(trace.size()-1)));
+            response.put("trace", trace);
+            return response.toString();
+        } catch (Exception e) {
+            return String.format("{ \"error\" : \"%s\"}", e.getMessage());
+        }
+        
+    }
+
     @Route("/simulateNext")
     public String simulateNext(Request req) throws Exception {
         if(system == null){
