@@ -6,6 +6,7 @@ import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.petitparser.context.ParseError;
 import recipe.analysis.NuXmvInteraction;
 import recipe.analysis.ToNuXmv;
@@ -365,8 +366,32 @@ public class Server {
         } catch (Exception e) {
             return String.format("{ \"error\" : \"%s\"}", e.getMessage());
         }
-        
     }
+
+
+    @Route("/interpretLoadJSON")
+    public String loadInterpreterJSON(Request req) {
+        String trace = req.getQuery().get("trace");
+        JSONTokener toks = new JSONTokener(trace);
+        JSONArray json = new JSONArray(toks);
+        
+        try {
+            interpreter = Interpreter.ofJSON(system, json);
+            // List<JSONObject> trace = interpreter.traceToJSON();
+            // JSONObject response = new JSONObject();
+            // response.put("svgs", renderSVGs(trace.get(trace.size()-1)));
+            // response.put("trace", trace);
+            // return response.toString();
+
+
+            java.lang.System.out.println(json);
+
+            return "{}";
+        } catch (Exception e) {
+            return String.format("{ \"error\" : \"%s\"}", e.getMessage());
+        }
+    }
+
 
     @Route("/simulateNext")
     public String simulateNext(Request req) throws Exception {
