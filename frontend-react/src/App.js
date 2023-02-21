@@ -118,7 +118,7 @@ function resetSimulate(){
 
   function renderStep(x) {
     if (x.depth === 0) { return x.state; }
-    var last = interpreterresponse[2*x.depth - 2];
+    var last = interpreterresponse[x.depth - 1];
 
     var render = {};
     Object.keys(x.state).forEach(agent => {
@@ -165,9 +165,9 @@ function resetSimulate(){
 
 
   function formatTransition(t) {
-    return (<table>
+    return t === undefined? "" : (<table>
       <tr><td><em>Sender: </em></td><td>{t.sender}</td></tr>
-      <tr><td><em>Label: </em></td><td>{t.send}</td></tr>
+      <tr><td><em>Command: </em></td><td>{t.send}</td></tr>
       <tr><td><em>Receivers: </em></td><td>{t.receivers.join(", ")}</td></tr>
     </table>)
   }
@@ -203,13 +203,7 @@ function resetSimulate(){
                 return svg;
               }));
               delete res.svgs;
-
-              if (response.data.inboundTransition != null) {
-                setInterpreterResponse(interpreterresponse.concat([response.data.inboundTransition, res]));
-              }
-              else {
-                setInterpreterResponse(interpreterresponse.concat([res]));
-              }
+              setInterpreterResponse(interpreterresponse.concat([res]));
               setInterpreterLoading(false);
               setInterpreterStarted(true);
             }
@@ -231,7 +225,7 @@ function backtrackInterpreter(){
         var res = response.data.state;
         setInterpreterTransitions(response.data.transitions);
         setInterpreterNextIndex(0);
-        setInterpreterResponse(interpreterresponse.slice(0, -2));
+        setInterpreterResponse(interpreterresponse.slice(0, -1));
         setInterpreterLoading(false);
         setDot([]);
         setDot(response.data.svgs.map(x => {
@@ -295,13 +289,7 @@ function resetInterpreter(){
                 var svg = new DOMParser().parseFromString(x.svg, "image/svg+xml").getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
                 return svg;
               }));
-              var trace = [];
-              for (let index = 0; index < response.data.trace.length; index++) {
-                if (index > 0) {
-                  trace.push(response.data.trace[index].inboundTransition);
-                }
-                trace.push(response.data.trace[index]);
-              }
+              var trace = response.data.trace;
               setInterpreterTransitions(trace[trace.length-1].transitions);
               setInterpreterResponse(trace);
               alert("Counterexample has been loaded in the Interpreter tab.");
@@ -578,20 +566,27 @@ function resetInterpreter(){
                         </thead>
                         <tbody>
                         {interpreterresponse.map((x, i) => {
-                          return i % 2 ? 
-                          // Transition
-                          <tr key={i}>
-                          <td></td>
-                          <td>{formatTransition(x)}</td>
+                          
+                          return (
+                          <React.Fragment>{
+                            x.inboundTransition !== undefined ? 
+                            // Transition
+                            <tr key={i}>
+                            <td></td>
+                            <td>{formatTransition(x.inboundTransition)}</td>
+                            </tr>
+                            :
+                            ""
+                          }
+                            {/* 
+                            // State
+                            // TODO store the renders somewhere, instead of
+                            // recomputing them all the time */}
+                            <tr key={i}>
+                            <td>{x.depth}</td>
+                            <td>{formatStep(renderStep(x))}</td>
                           </tr>
-                          :
-                          // State
-                          // TODO store the renders somewhere, instead of recomputing
-                          // them all the time
-                          <tr key={i}>
-                          <td>{x.depth}</td>
-                          <td>{formatStep(renderStep(x))}</td>
-                        </tr>;
+                          </React.Fragment>)
                         })}
                         </tbody>
                       </Table>
