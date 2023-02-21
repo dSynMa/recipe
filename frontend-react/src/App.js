@@ -155,7 +155,6 @@ function resetSimulate(){
   // Needed by the Import button
   // const importFile = useRef(null);
   function loadJSONIntoInterpreter(file) {
-    console.log(importFileObj);
     // var formData = new FormData();
     // formData.append("trace", file);
     const reader = new FileReader();
