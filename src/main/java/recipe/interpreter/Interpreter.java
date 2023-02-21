@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import recipe.Config;
@@ -406,6 +407,14 @@ public class Interpreter {
             myStep = myStep.parent;
         }
         return result;
+    }
+
+    public static Interpreter ofJSON(recipe.lang.System s, JSONArray json) throws Exception {
+        List<JSONObject> list = new ArrayList<>(json.length());
+        for (int i = 0; i < json.length(); i++) {
+            list.add(json.getJSONObject(i));
+        }
+        return Interpreter.ofJSON(s, list);
     }
 
     public static Interpreter ofJSON(recipe.lang.System s, List<JSONObject> states) throws Exception {
