@@ -6,6 +6,7 @@ import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.petitparser.context.ParseError;
 import recipe.analysis.NuXmvInteraction;
 import recipe.analysis.ToNuXmv;
@@ -131,6 +132,7 @@ public class Server {
         interpreter = null;
         String script = req.getQuery().get("script").trim();
         Boolean buildType = Boolean.valueOf(req.getQuery().get("symbolic").trim());
+        JSONObject response = new JSONObject();
         try {
             system = recipe.lang.System.parser().end().parse(script).get();
             if(nuXmvInteraction != null){
@@ -139,16 +141,23 @@ public class Server {
             }
             nuXmvInteraction = new NuXmvInteraction(system);
             Pair<Boolean, String> initialise = nuXmvInteraction.initialise(buildType);
+            
             if(initialise.getLeft()){
-                return "{ \"success\" : true}";
+                response.put("success", true);
+                // return "{ \"success\" : true}";
             } else{
-                return "{ \"error\" : \"" + initialise.getRight() + "\"}";
+                response.put("error", initialise.getRight());
             }
         } catch (ParseError parseError){
-            return "{ \"error\" : \"" + parseError.getFailure().toString() + "\"}";
+            response.clear();
+            response.put("error", parseError.getFailure());
+            java.lang.System.out.println(response.toString());
         } catch (Exception e) {
-            return "{ \"error\" : \"" + e.getMessage() + "\"}";
-        }
+            response.clear();
+            response.put("error", e.getMessage() );
+            java.lang.System.out.println(response.toString());
+        } 
+        return response.toString();
     }
 
     @Route("/toDOT")
@@ -248,7 +257,9 @@ public class Server {
                     }
                 }
 
-                List<LTOL> specs = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs()).getLeft();
+                
+                Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
+                List<LTOL> specs = toLtl.getLeft();
 
                 for(int i = 0; i < specs.size(); i++) {
                     String spec = specs.get(i).toString().replaceAll("LTLSPEC", "").trim();
@@ -262,7 +273,7 @@ public class Server {
                         result = nuXmvInteraction.modelCheck(spec, bounded, bound);
                     }
                     JSONObject resultJSON = new JSONObject();
-                    resultJSON.put("spec", spec);
+                    resultJSON.put("spec", system.getSpecs().get(i).toString());
 
                     if(result.getLeft()) {
                         if(result.getRight().toLowerCase(Locale.ROOT).contains("is false")){
@@ -277,13 +288,6 @@ public class Server {
                     }
 
                     String output = result.getRight().replaceAll(" --", "\n--");
-                    if(result.getRight().toLowerCase(Locale.ROOT).contains("is false")){
-                        // Load trace into interpreter
-                        this.interpreter = Interpreter.ofTrace(system, output);
-                        List<JSONObject> trace = interpreter.traceToJSON();
-                        jsonObject.put("svgs", renderSVGs(trace.get(trace.size()-1)));
-                        jsonObject.put("trace", trace);
-                    }
                     resultJSON.put("output", output);
                     array.put(resultJSON);
                 }
@@ -357,6 +361,47 @@ public class Server {
         interpreter = new Interpreter(system);
         cors();
     }
+
+    @Route("/interpretLoad")
+    public String loadInterpreter(Request req) {
+        // Load trace into interpreter
+        String output = req.getQuery().get("output");
+        try {
+            interpreter = Interpreter.ofTrace(system, output);
+            List<JSONObject> trace = interpreter.traceToJSON();
+            JSONObject response = new JSONObject();
+            response.put("svgs", renderSVGs(trace.get(trace.size()-1)));
+            response.put("trace", trace);
+            return response.toString();
+        } catch (Exception e) {
+            return String.format("{ \"error\" : \"%s\"}", e.getMessage());
+        }
+    }
+
+
+    @Route("/interpretLoadJSON")
+    public String loadInterpreterJSON(Request req) {
+        String trace = req.getQuery().get("trace");
+        JSONTokener toks = new JSONTokener(trace);
+        JSONArray json = new JSONArray(toks);
+        
+        try {
+            interpreter = Interpreter.ofJSON(system, json);
+            // List<JSONObject> trace = interpreter.traceToJSON();
+            // JSONObject response = new JSONObject();
+            // response.put("svgs", renderSVGs(trace.get(trace.size()-1)));
+            // response.put("trace", trace);
+            // return response.toString();
+
+
+            java.lang.System.out.println(json);
+
+            return "{}";
+        } catch (Exception e) {
+            return String.format("{ \"error\" : \"%s\"}", e.getMessage());
+        }
+    }
+
 
     @Route("/simulateNext")
     public String simulateNext(Request req) throws Exception {

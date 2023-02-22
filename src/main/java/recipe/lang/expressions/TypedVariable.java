@@ -88,4 +88,8 @@ public class TypedVariable<T extends Type> implements Expression<T> {
     public String toString() {
         return name;
     }
+
+    public String toTypedString() {
+        return name + " : " + type.name();
+    }
 }

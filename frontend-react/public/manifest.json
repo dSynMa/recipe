@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "R-CHECK",
+  "name": "React UI for R-CHECK",
   "icons": [
     {
       "src": "favicon.ico",

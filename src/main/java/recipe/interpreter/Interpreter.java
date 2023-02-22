@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import recipe.Config;
@@ -408,24 +409,18 @@ public class Interpreter {
         return result;
     }
 
-    /**
-     * @param s
-     * @param trace
-     * @return
-     */
-    public static Interpreter ofTrace(recipe.lang.System s, String trace) throws Exception {
-        // try {
-        NuXmvInteraction nuxmv = new NuXmvInteraction(s);
-        nuxmv.stopNuXmvThread(); // We ain't going to need it
-        String[] split = trace.split("->", 0);
-        List<JSONObject> states = new ArrayList<>(split.length - 1);
-        Boolean isFirst = true;
-        for (String string : split) {
-            // Skip stuff before the 1st state
-            if (isFirst) { isFirst = false; continue; }
-            states.add(nuxmv.outputToJSON(string));
+    public static Interpreter ofJSON(recipe.lang.System s, JSONArray json) throws Exception {
+        List<JSONObject> list = new ArrayList<>(json.length());
+        for (int i = 0; i < json.length(); i++) {
+            list.add(json.getJSONObject(i));
         }
+        return Interpreter.ofJSON(s, list);
+    }
 
+    public static Interpreter ofJSON(recipe.lang.System s, List<JSONObject> states) throws Exception {
+        if (states.size() == 0) {
+            throw new Exception("Empty JSON");
+        }
         Interpreter interpreter = new Interpreter(s);
         JSONObject initState = states.get(0);
 
@@ -436,7 +431,6 @@ public class Interpreter {
         }
 
         // Create constraint on initial state & find it
-        isFirst = true;
         List<String> constraints = new LinkedList<String>();
         
         for (String agentInstance : initState.keySet()) {
@@ -458,6 +452,27 @@ public class Interpreter {
             }
         }
         return interpreter;
+    }
+
+    /**
+     * Loads a nuXmv trace into a new intepreter and returns it
+     * 
+     * @param s the r-check system
+     * @param trace a nuXmv trace
+     * @return an instance of Interpreter
+     */
+    public static Interpreter ofTrace(recipe.lang.System s, String trace) throws Exception {
+        NuXmvInteraction nuxmv = new NuXmvInteraction(s);
+        nuxmv.stopNuXmvThread(); // We ain't going to need it
+        String[] split = trace.split("->", 0);
+        List<JSONObject> states = new ArrayList<>(split.length - 1);
+        Boolean isFirst = true;
+        for (String string : split) {
+            // Skip stuff before the 1st state
+            if (isFirst) { isFirst = false; continue; }
+            states.add(nuxmv.outputToJSON(string));
+        }
+        return Interpreter.ofJSON(s, states);
     }
 
     private void rootStep(String constraint) throws IOException, Exception {

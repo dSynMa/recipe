@@ -30,7 +30,11 @@ public class BigOr extends LTOL{
     }
 
     public String toString() {
-        return "\\/" + vars.stream().map(Object::toString).collect(Collectors.joining(" , ")) + "." + "(" + ltol.toString() + ")";
+        List<String> fmt = new ArrayList<String>(vars.size());
+        for (TypedVariable variable : vars) {
+            fmt.add(variable.toTypedString());
+        }
+        return "\\/" + String.join(" , ", fmt) + "." + "(" + ltol.toString() + ")";
     }
 
     public boolean isPureLTL() {

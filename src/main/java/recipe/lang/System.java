@@ -219,8 +219,24 @@ public class System{
                             try {
                                 system = new System(messageStructure, communicationVariables, guardDefinitions, agents.get(), agentInstances, new ArrayList<>());
 
+                                List<String> agentNames = new ArrayList<>();
+                                for(Agent agent : agents.get()) {
+                                    if(agentNames.contains(agent.getName())){
+                                        throw new Exception("Multiple agent definitions with label " + agent.getName());
+                                    } else{
+                                        agentNames.add(agent.getName());
+                                    }
+                                }
+
                                 Map<String, List<AgentInstance>> agentsToInstances = new HashMap<>();
+                                List<String> agentInstanceLabels = new ArrayList<>();
                                 for(AgentInstance instance : agentInstances){
+                                    if(agentInstanceLabels.contains(instance.getLabel())){
+                                        throw new Exception("Multiple agent instances named " + instance.getLabel());
+                                    }
+                                    else{
+                                        agentInstanceLabels.add(instance.getLabel());
+                                    }
                                     String typeName = instance.getAgent().getName();
                                     if(!agentsToInstances.containsKey(typeName)){
                                         agentsToInstances.put(typeName, new ArrayList<>());
