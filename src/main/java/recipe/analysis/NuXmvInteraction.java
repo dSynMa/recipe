@@ -133,7 +133,7 @@ public class NuXmvInteraction {
         };
 
         String out = "";
-        out = execute(finished, ("check_ltlspec_ic3" + " -p \"" + property + "\" "+ (bounded ? "-k " + steps : "")));
+        out = execute(finished, ("check_ltlspec_ic3" + (bounded ? " -k " + steps : "") + " -p \"" + property + "\" "));
         out = out.replaceAll("nuXmv > ", "").trim();
         out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
         if(out.contains("syntax error")){
