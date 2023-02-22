@@ -442,7 +442,7 @@ function resetInterpreter(){
                 <option value="smt">SMT model (allows for infinite-state verification)</option>
                 <option value="bdd">BDD model (only for finite-state verification)</option>
               </Form.Select>
-              <Button variant="primary" size="lg" onClick={() => buildModel()} disabled={bloading}>
+              <Button variant="primary" size="lg" onClick={() => {buildModel(); visualise();}} disabled={bloading}>
                 Build model
                         { bloading && spinner}
               </Button>
@@ -662,13 +662,13 @@ function resetInterpreter(){
         <hr />
         <Row>
           <Col xs={12}>
-                <Button variant="primary" 
+                {/* <Button variant="primary" 
                         size="lg" 
                         onClick={() => visualise()}
                         disabled={vloading}>
                 Visualise
                         { vloading && spinner}
-                </Button>
+                </Button> */}
             <Container fluid style={Bg}>
               <Row>
                   {dot.map((x, i) => {
