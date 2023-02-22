@@ -394,6 +394,7 @@ function resetInterpreter(){
                    alert(response2.data.error);
                  } else{
                    setBuilt(true);
+                   visualise();
                    alert("Model built successfully");
                  }
                  setBLoading(false);
@@ -442,7 +443,7 @@ function resetInterpreter(){
                 <option value="smt">SMT model (allows for infinite-state verification)</option>
                 <option value="bdd">BDD model (only for finite-state verification)</option>
               </Form.Select>
-              <Button variant="primary" size="lg" onClick={() => {buildModel(); visualise();}} disabled={bloading}>
+              <Button variant="primary" size="lg" onClick={() => {buildModel();}} disabled={bloading}>
                 Build model
                         { bloading && spinner}
               </Button>
