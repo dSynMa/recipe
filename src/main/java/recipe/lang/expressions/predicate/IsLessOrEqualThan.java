@@ -55,7 +55,7 @@ public class IsLessOrEqualThan extends Condition {
 		Number lhsNo = (Number) lhsValue.getValue();
 		Number rhsNo = (Number) rhsValue.getValue();
 
-		if(0 <= new BigDecimal(lhsNo.toString()).compareTo(new BigDecimal(rhsNo.toString()))) {
+		if(0 >= new BigDecimal(lhsNo.toString()).compareTo(new BigDecimal(rhsNo.toString()))) {
 			return Condition.TRUE;
 		} else {
 			return Condition.FALSE;

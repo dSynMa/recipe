@@ -51,13 +51,13 @@ public class IsLessThan extends Condition {
 	public TypedValue<Boolean> valueIn(Store store) throws AttributeTypeException, AttributeNotInStoreException, MismatchingTypeException, NotImplementedYetException {
 		TypedValue<Number> lhsValue = lhs.valueIn(store);
 		TypedValue<Number> rhsValue = rhs.valueIn(store);
+		System.out.printf("evaluating %s as (%s) < (%s)", this, lhsValue, rhsValue);
 
-		Number lhsNo = (Number) lhsValue.getValue();
-		Number rhsNo = (Number) rhsValue.getValue();
-
-		if(0 < new BigDecimal(lhsNo.toString()).compareTo(new BigDecimal(rhsNo.toString()))) {
+		if(0 > new BigDecimal(lhsValue.getValue().toString()).compareTo(new BigDecimal(rhsValue.getValue().toString()))) {
+			System.out.println(" yields TRUE");
 			return Condition.TRUE;
 		} else {
+			System.out.println(" yields FALSE");
 			return Condition.FALSE;
 		}
 	}
