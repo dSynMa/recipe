@@ -32,7 +32,7 @@ public class Integer extends Real {
     @Override
     public java.lang.Number interpret(String value) throws MismatchingTypeException {
         try{
-            return java.lang.Integer.parseInt(value.replaceAll(".0+$", ""));
+            return java.lang.Integer.parseInt(value.replaceAll("\\.0+$", ""));
         } catch (Exception e) {
             throw new MismatchingTypeException(value + " is not of type " + name());
         }
