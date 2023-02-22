@@ -30,6 +30,7 @@ import recipe.lang.store.ConcreteStore;
 import recipe.lang.store.Store;
 import recipe.lang.types.Type;
 import recipe.lang.utils.Pair;
+import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 
 public class Interpreter {
@@ -141,16 +142,51 @@ public class Interpreter {
             return result;
         }
 
+        /**
+         * Check satisfaction of a state constraint
+         * @param constraint a JSON object
+         * @return true iff the state satisfies the constraint
+         */
         public boolean satisfies(JSONObject constraint) {
-            JSONObject thisState = this.toJSON().getJSONObject("state");
-            for (String agentInstance : constraint.keySet()) {
-                JSONObject instanceState = thisState.getJSONObject(agentInstance);
-                JSONObject instanceConstraint = constraint.getJSONObject(agentInstance);
-                for (String var : instanceConstraint.keySet()) {
-                    if (instanceState.has(var)) {
-                        if (!instanceState.get(var).equals(instanceConstraint.get(var))) {
-                            return false;
+            for (String agentInstanceName : constraint.keySet()) {
+                AgentInstance inst = null;
+                for (AgentInstance i : sys.getAgentInstances()) {
+                    if (i.getLabel().equals(agentInstanceName)) {
+                        inst = i;
+                        break;
+                    }
+                }
+                if (inst == null) {
+                    System.out.printf("Agent instance not found: %s\n", agentInstanceName);
+                    return false;
+                }
+                JSONObject instanceConstraint = constraint.getJSONObject(agentInstanceName);
+                for (String varName : instanceConstraint.keySet()) {
+                    try {
+                        TypedVariable var = inst.getAgent().getStore().getAttribute(varName);
+                        TypedValue value = this.stores.get(inst).getValue(var);
+                        if (value != null) {
+                            if (value.getType() instanceof recipe.lang.types.Number) {
+                                // Go for numerical comparison
+                                try {
+                                    Double x = Double.valueOf(instanceConstraint.get(varName).toString());
+                                    Double y = Double.valueOf(value.getValue().toString());
+                                    if (x - y > Double.MIN_VALUE) {
+                                        return false;
+                                    }
+                                } catch (NumberFormatException e) {
+                                    handleEvaluationException(e);
+                                    return false;
+                                }
+                                
+                            }
+                            else if (!value.getValue().toString().equals(instanceConstraint.get(varName))) {
+                                return false;
+                            }
+                        } else {
                         }
+                    } catch (AttributeNotInStoreException e) {
+                        // System.out.printf(">> Not found: %s\n", varName);
                     }
                 }
             }
