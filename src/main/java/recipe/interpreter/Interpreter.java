@@ -483,7 +483,6 @@ public class Interpreter {
         for (int i = 1; i < states.size(); i++) {
             JSONObject constraint = states.get(i);
             if (!interpreter.findNext(constraint)) {
-                // Todo raise
                 throw new Exception(String.format("[ofTrace] something wrong at step %d", i));
             }
         }
