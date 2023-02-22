@@ -257,7 +257,9 @@ public class Server {
                     }
                 }
 
-                List<LTOL> specs = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs()).getLeft();
+                
+                Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
+                List<LTOL> specs = toLtl.getLeft();
 
                 for(int i = 0; i < specs.size(); i++) {
                     String spec = specs.get(i).toString().replaceAll("LTLSPEC", "").trim();
@@ -271,7 +273,7 @@ public class Server {
                         result = nuXmvInteraction.modelCheck(spec, bounded, bound);
                     }
                     JSONObject resultJSON = new JSONObject();
-                    resultJSON.put("spec", spec);
+                    resultJSON.put("spec", system.getSpecs().get(i).toString());
 
                     if(result.getLeft()) {
                         if(result.getRight().toLowerCase(Locale.ROOT).contains("is false")){
