@@ -144,7 +144,10 @@ public class NuXmvInteraction {
     }
 
     public Pair<Boolean, String> initialise(boolean simulateOrBMC) throws IOException {
-        String out = execute((x) -> x.trim().endsWith("nuXmv >"),"go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
+        String out = execute((x) -> x.trim().endsWith("nuXmv >"),"go" + ((system.isSymbolic() || simulateOrBMC) ? "_msat" : ""));
+        if(system.isSymbolic() || simulateOrBMC){
+            out += execute((x) -> x.trim().endsWith("nuXmv >"),"build_boolean_model");
+        }
 
         if(out.contains(" file ")) {
             return new Pair<>(false, out);
