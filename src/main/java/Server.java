@@ -15,6 +15,7 @@ import recipe.lang.System;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.ltol.LTOL;
+import recipe.lang.ltol.Observation;
 import recipe.lang.types.Enum;
 import recipe.lang.utils.Pair;
 
