@@ -133,7 +133,7 @@ public class NuXmvInteraction {
         };
 
         String out = "";
-        out = execute(finished, ("check_ltlspec_ic3" + " -p \"" + property + "\" "+ (bounded ? "-k " + steps : "")));
+        out = execute(finished, ("check_ltlspec_ic3" + (bounded ? " -k " + steps : "") + " -p \"" + property + "\" "));
         out = out.replaceAll("nuXmv > ", "").trim();
         out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
         if(out.contains("syntax error")){
@@ -144,7 +144,10 @@ public class NuXmvInteraction {
     }
 
     public Pair<Boolean, String> initialise(boolean simulateOrBMC) throws IOException {
-        String out = execute((x) -> x.trim().endsWith("nuXmv >"),"go" + ((system.isSymbolic() | simulateOrBMC) ? "_msat" : ""));
+        String out = execute((x) -> x.trim().endsWith("nuXmv >"),"go" + ((system.isSymbolic() || simulateOrBMC) ? "_msat" : ""));
+        if(system.isSymbolic() || simulateOrBMC){
+            out += execute((x) -> x.trim().endsWith("nuXmv >"),"build_boolean_model");
+        }
 
         if(out.contains(" file ")) {
             return new Pair<>(false, out);
