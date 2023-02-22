@@ -269,6 +269,7 @@ public class Interpreter {
                         Store s = store.push(getChannelTV(), chan);
                         TypedValue evalGuard = instance.getAgent().getReceiveGuard().valueIn(s);
                         boolean isListening = Condition.getTrue().equals(evalGuard);
+                        // System.out.printf("eval %s on store %s ---> %s\n", instance.getAgent().getReceiveGuard(), s, isListening);
                         if (isListening) {
                             listeners.putIfAbsent(chan, new HashSet<>());
                             listeners.get(chan).add(instance);
@@ -543,6 +544,7 @@ public class Interpreter {
             // that satisfies the constraint. Is this always enough?
             if (candidate.satisfies(constraint)) {
                 currentStep = candidate;
+                System.out.println(currentStep.toJSON());
                 return true;
             }
         }
