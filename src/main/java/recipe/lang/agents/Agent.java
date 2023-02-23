@@ -229,7 +229,7 @@ public class Agent {
                             e.printStackTrace();
                         }
                         return null;
-                    }, localContext.get())).optional(Condition.getTrue()).or(LazyParser.failingParser(nameString, "Could not parse agent's init definition.")))
+                    }, localContext.get())).or(StringParser.of("init").not().map((Object val)-> Condition.getTrue())).or(LazyParser.failingParser(nameString, "Could not parse agent's init definition.")))
                     .seq(new LazyParser<TypingContext>(((TypingContext localContext1) -> {
                         try {
                             return Parsing.relabellingParser(localContext1, communicationContext);
