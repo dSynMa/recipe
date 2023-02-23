@@ -175,6 +175,9 @@ function resetSimulate(){
     .get(server + "/interpretLoad", { params })
     .then((response) => {
       var trace = response.data.trace;
+      if (response.data.error != undefined) {
+        alert(response.data.error);
+      }
       if (trace != undefined) {
         setDot([]);
         setDot(response.data.svgs.map(x => { 
