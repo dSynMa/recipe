@@ -141,11 +141,11 @@ public class System{
                                     messageContext.get().setAll(new TypingContext(values));
                                     return values;
                                 }).or(FailureParser.withMessage("Error in message-structure definition.")))
-                        .seq(labelledParser("communication-variables", typedVariableList())
+                        .seq(labelledParser("communication-variables", typedVariableList().optional(new ArrayList<>()))
                                 .map((List<TypedVariable> values) -> {
                                     communicationContext.get().setAll(new TypingContext(values));
                                     return values;
-                                }).or(FailureParser.withMessage("Error in communication-variables definition.")))
+                                }).optional(new ArrayList<>()))//.or(FailureParser.withMessage("Error in communication-variables definition.")))
                         .seq(new LazyParser<LazyTypingContext>((LazyTypingContext context) -> {
                                     //TODO may want to range over channel values and communication values in future
                                     TypingContext commContext = commVariableReferences(context.resolve());
