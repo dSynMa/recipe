@@ -176,6 +176,24 @@ public class ParsingTest {
     }
 
     @Test
+    public void relabellingParser1() throws Exception {
+        String script = "\trelabel:\n" +
+                "\t\tcv <- A";
+
+        TypingContext localContext = new TypingContext();
+        localContext.set("b", Real.getType());
+
+        TypingContext communicativeContext = new TypingContext();
+        communicativeContext.set("f", Real.getType());
+        communicativeContext.set("g", Boolean.getType());
+        communicativeContext.set("cv", channel);
+
+        Parser parser = Parsing.relabellingParser(localContext, communicativeContext).end();
+        Result r = parser.parse(script);
+        assert r.isSuccess();
+    }
+
+    @Test
     public void receiveGuardParser1() throws Exception {
         String script = "receive-guard:\n" +
         "true";

@@ -2,6 +2,7 @@ package recipe.lang.expressions.predicate;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
+import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
 import org.petitparser.tools.ExpressionBuilder;
 import recipe.Config;
@@ -10,12 +11,11 @@ import recipe.lang.expressions.Predicate;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.arithmetic.*;
-import recipe.lang.process.*;
-import recipe.lang.process.Process;
 import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Type;
+import recipe.lang.types.UnionType;
 import recipe.lang.utils.TypingContext;
 import recipe.lang.utils.exceptions.*;
 
@@ -86,15 +86,31 @@ public abstract class Condition implements Expression<Boolean> {
 
 		Parser arithmetic = ArithmeticExpression.parser(context);
 
-		TypingContext agentTypingContext = context.getSubContext(Config.getAgentType());
-		Parser agentParser = (agentTypingContext.variableParser()).or(Config.getAgentType().valueParser());
-		Parser enumEquality = (IsEqualTo.parser(agentParser).or(IsNotEqualTo.parser(agentParser)));
+		Parser enumEquality;
+		UnionType agentType = Config.getAgentType();
+		if(agentType.getTypes().size() > 0) {
+			TypingContext agentTypingContext = context.getSubContext(Config.getAgentType());
+			Parser agentParser = (agentTypingContext.variableParser()).or(Config.getAgentType().valueParser());
+			enumEquality = (IsEqualTo.parser(agentParser).or(IsNotEqualTo.parser(agentParser)));
+		} else{
+			enumEquality = null;
+		}
 
 		for(String label : Enum.getEnumLabels()){
 			recipe.lang.types.Enum enumm = Enum.getEnum(label);
 			TypingContext enumTypingContext = context.getSubContext(enumm);
 			Parser enummParser = (enumTypingContext.variableParser()).or(enumm.valueParser());
-			enumEquality = enumEquality.or(IsEqualTo.parser(enummParser).or(IsNotEqualTo.parser(enummParser)));
+			Parser enummEqualityParser = IsEqualTo.parser(enummParser).or(IsNotEqualTo.parser(enummParser));
+			if(enumEquality == null){
+				enumEquality = enummEqualityParser;
+			}
+			else{
+				enumEquality = enumEquality.or(enummEqualityParser);
+			}
+		}
+
+		if(enumEquality == null){
+			enumEquality = FailureParser.withMessage("");
 		}
 
 		ExpressionBuilder builder = new ExpressionBuilder();
@@ -119,10 +135,6 @@ public abstract class Condition implements Expression<Boolean> {
 			builder.group()
 					.prefix(StringParser.of(pred).trim(), (List<Condition> values) -> new Predicate(pred, values.get(1)));
 		}
-
-		// repetition is a prefix operator
-		builder.group()
-				.prefix(StringParser.of("rep").trim(), (List<Process> values) -> new Iterative(values.get(1)));
 
 		// conjunction is right- and left-associative
 		builder.group()
