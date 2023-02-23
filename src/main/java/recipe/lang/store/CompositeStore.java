@@ -5,6 +5,7 @@ import java.util.List;
 
 import recipe.Config;
 import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
 
 public class CompositeStore extends Store {
 
@@ -62,6 +63,13 @@ public class CompositeStore extends Store {
                 return result;
             }
         }
+        try {
+            TypedVariable var = (TypedVariable) attribute;
+            System.out.printf(">>> Lookup failed for %s : %s in %s\n", var, var.getType(), this);
+        } catch (Exception e) {
+            System.out.printf(">>> Lookup failed for %s in %s\n", attribute, this);
+        }
+        
         return null;
     }
 }

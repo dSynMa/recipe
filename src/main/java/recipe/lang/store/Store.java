@@ -78,6 +78,7 @@ public class Store {
 
 	public TypedValue getValue(Object attribute) {
 		//TODO
+		System.out.println(">>> This should be overridden");
 		return null;
 	}
 
