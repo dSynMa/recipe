@@ -373,20 +373,18 @@ public class Server {
     public String loadInterpreter(Request req) {
         // Load trace into interpreter
         String output = req.getQuery().get("output");
+        JSONObject response = new JSONObject();
 
-        // Remove loop annotiations, for now
-        // TODO turn this into something visible in the UI
-        output = output.replaceAll("-- Loop starts here\n", "");
         try {
             interpreter = Interpreter.ofTrace(system, obsMap, output);
             List<JSONObject> trace = interpreter.traceToJSON();
-            JSONObject response = new JSONObject();
             response.put("svgs", renderSVGs(trace.get(trace.size()-1)));
             response.put("trace", trace);
-            return response.toString();
         } catch (Exception e) {
-            return String.format("{ \"error\" : \"%s\"}", e.getMessage());
+            e.printStackTrace();
+            response.put("error", e.getMessage());
         }
+        return response.toString();
     }
 
 
