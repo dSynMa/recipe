@@ -579,7 +579,7 @@ function resetInterpreter(){
                   <Row>
                     <Col xs={12}>
                       <InputGroup className="mb-3">
-                          <Button variant="primary" size="lg" disabled={interpreterloading || interpretertransitions.length == 0} onClick={backtrackInterpreter}>
+                          <Button variant="primary" size="lg" disabled={interpreterloading || interpreterresponse.length == 0} onClick={backtrackInterpreter}>
                               Back
                               { interpreterloading && spinner }
                           </Button>
