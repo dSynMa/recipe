@@ -27,6 +27,10 @@ public class Parsing {
             return FailureParser.withMessage("No variables of expected type.");
         }
 
+        List<String> allowedSorted = new ArrayList<>(allowed);
+        allowedSorted.sort(Comparator.comparingInt(String::length));
+        Collections.reverse(allowedSorted);
+
         org.petitparser.parser.Parser parser = StringParser.of(allowed.get(0));
         for (int i = 1; i < allowed.size(); i++) {
             //DOC: .seq(CharacterParser.word().not()) is added with each parser to allow for parsing when
