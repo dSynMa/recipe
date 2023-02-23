@@ -367,6 +367,11 @@ public class Server {
     public String loadInterpreter(Request req) {
         // Load trace into interpreter
         String output = req.getQuery().get("output");
+        // TODO for now we only consider the loop-free prefix of the path
+        int bound = output.indexOf("-- Loop starts here", 0);
+        if (bound > -1) {
+            output = output.substring(0, bound);
+        }
         try {
             interpreter = Interpreter.ofTrace(system, output);
             List<JSONObject> trace = interpreter.traceToJSON();
