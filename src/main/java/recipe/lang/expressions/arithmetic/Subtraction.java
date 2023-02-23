@@ -25,13 +25,22 @@ public class Subtraction extends ArithmeticExpression{
         TypedValue<Number> lhsValue = lhs.valueIn(store);
         TypedValue<Number> rhsValue = rhs.valueIn(store);
 
-        if(lhsValue.getValue().getClass().equals(Number.class) &&
-                rhsValue.getValue().getClass().equals(Number.class)){
+        try {
             BigDecimal lhsNo = new BigDecimal(lhsValue.getValue().toString());
             BigDecimal rhsNo = new BigDecimal(rhsValue.getValue().toString());
             return new TypedValue<Number>((Number) Real.getType(), lhsNo.subtract(rhsNo).toString());
+        } catch (NumberFormatException e) {
+            System.out.printf("%s %s\n", lhsValue.toString(), lhsValue.getValue().getClass().toString());
+            System.out.printf("%s %s\n", rhsValue.toString(), rhsValue.getValue().getClass().toString());
+            throw new AttributeTypeException();
         }
-        throw new AttributeTypeException();
+
+        // if(lhsValue.getValue() instanceof Number && rhsValue.getValue() instanceof Number){
+        //     BigDecimal lhsNo = new BigDecimal(lhsValue.getValue().toString());
+        //     BigDecimal rhsNo = new BigDecimal(rhsValue.getValue().toString());
+        //     return new TypedValue<Number>((Number) Real.getType(), lhsNo.subtract(rhsNo).toString());
+        // }
+        
     }
 
     @Override
