@@ -157,12 +157,22 @@ public class Interpreter {
                     }
                 }
                 if (inst == null) {
+                    if (agentInstanceName.equals("___LTOL___")) continue;
                     System.out.printf("Agent instance not found: %s\n", agentInstanceName);
                     return false;
                 }
                 JSONObject instanceConstraint = constraint.getJSONObject(agentInstanceName);
                 for (String varName : instanceConstraint.keySet()) {
                     try {
+                        if (varName.equals("state")) {
+                            String stateConstraint = instanceConstraint.getString(varName);
+                            String stateInst = this.stores.get(inst).getState().getLabel().toString();
+                            if (!stateInst.equals(stateConstraint)) {
+                                System.out.printf(">> Expected %s, got %s\n", stateConstraint, stateInst);
+                                return false;
+                            }
+                            continue;
+                        }
                         TypedVariable var = inst.getAgent().getStore().getAttribute(varName);
                         TypedValue value = this.stores.get(inst).getValue(var);
                         if (value != null) {
@@ -172,6 +182,7 @@ public class Interpreter {
                                     Double x = Double.valueOf(instanceConstraint.get(varName).toString());
                                     Double y = Double.valueOf(value.getValue().toString());
                                     if (x - y > Double.MIN_VALUE) {
+                                        System.out.printf(">> Expected %s, got %s (%s)\n", x, y, x-y);
                                         return false;
                                     }
                                 } catch (NumberFormatException e) {
@@ -180,13 +191,24 @@ public class Interpreter {
                                 }
                                 
                             }
-                            else if (!value.getValue().toString().equals(instanceConstraint.get(varName))) {
+                            else if (value.getType() instanceof recipe.lang.types.Boolean) {
+                                // Go for Boolean comparison
+                                boolean isConstraintTrue = instanceConstraint.get(varName).equals("TRUE");
+                                if (!value.getValue().equals(isConstraintTrue)) {
+                                    System.out.printf(">> Expected %s, got %s\n", isConstraintTrue, value.getValue());
+                                    return false;
+                                }
+                            }
+
+                            else if (!value.getValue().toString().equals(instanceConstraint.get(varName).toString())) {
+                                System.out.printf(">> Expected %s, got %s\n", instanceConstraint.get(varName), value.getValue());
                                 return false;
                             }
                         } else {
+                            // System.out.printf(">> Not found: %s\n", varName);
                         }
                     } catch (AttributeNotInStoreException e) {
-                        // System.out.printf(">> Not found: %s\n", varName);
+                        System.out.printf(">> Not found: %s\n", varName);
                     }
                 }
             }
@@ -320,9 +342,11 @@ public class Interpreter {
 
                                             TypedValue receiveGuard = inst.getAgent().getReceiveGuard().valueIn(instStore);
                                             boolean receiveGuardOk = Condition.getTrue().equals(receiveGuard);
+                                            // System.out.printf("sendguard: %s (%s)\n", sendGuard, sendGuardOk);
+                                            // System.out.printf("receiveguard: %s (%s)\n", receiveGuard, receiveGuardOk);
+
                                             if (sendGuardOk && receiveGuardOk) {
                                                 receivesMap.put(inst, new HashSet<ProcessTransition>());
-                                                // System.out.printf("%s can receive\n", inst);
                                             }
                                         } catch (Exception e) {
                                             handleEvaluationException(e);
@@ -342,7 +366,10 @@ public class Interpreter {
                                                 if (recChanExpr.valueIn(store).equals(chan)) {
                                                     Expression<recipe.lang.types.Boolean> recPsi = recLbl.getPsi();
                                                     boolean recPsiSat = Condition.getTrue().equals(recPsi.valueIn(store));
-                                                    // System.err.printf("%s evaluates to %s", recPsi, recPsiSat);
+                                                    // System.err.printf("%s evaluates to %s\n", recPsi, recPsiSat);
+                                                    // System.err.printf("receive: %s\n", recLbl);
+                                                    // System.err.printf("store: %s\n", store);
+
                                                     if (recPsiSat) {
                                                         receivesMap.get(receiver).add(rec);
                                                     }
@@ -538,13 +565,14 @@ public class Interpreter {
 
     public boolean findNext(JSONObject constraint) {
         Step candidate;
+        System.out.printf("(%d) constraint: %s, transitions: %s\n", currentStep.depth, constraint, currentStep.transitions.size());
         for (int i = 0; i < currentStep.transitions.size(); i++) {
             candidate = currentStep.next(i, this); 
             // TODO here we just pick the 1st transition to a target state
             // that satisfies the constraint. Is this always enough?
             if (candidate.satisfies(constraint)) {
                 currentStep = candidate;
-                System.out.println(currentStep.toJSON());
+                // System.out.println(currentStep.toJSON());
                 return true;
             }
         }
