@@ -496,7 +496,7 @@ function resetInterpreter(){
 
                     </Col>
                   </Row>
-                    {mcresponse.map((x, i) => {
+                    {mcresponse && mcresponse.map((x, i) => {
                     return <Row className={i % 2 ? "border py-2" : "bg-light border py-2"}>
                     <Col xs={x.result=="false" ? 9 : 12} className="align-self-center">
                       <h5 className='my-auto'>{x.spec} <Badge bg={x.result == "true" ? "success" : x.result == "false" ? "danger" : "secondary"}>
