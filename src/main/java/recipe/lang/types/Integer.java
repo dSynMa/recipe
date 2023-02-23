@@ -31,10 +31,11 @@ public class Integer extends Real {
 
     @Override
     public java.lang.Number interpret(String value) throws MismatchingTypeException {
+        String val = value.replaceAll("\\.0+$", "");
         try{
-            return java.lang.Integer.parseInt(value.replaceAll(".0+$", ""));
+            return java.lang.Integer.parseInt(val);
         } catch (Exception e) {
-            throw new MismatchingTypeException(value + " is not of type " + name());
+            throw new MismatchingTypeException(val + " is not of type " + name());
         }
     }
     public Set getAllValues() throws InfiniteValueTypeException, MismatchingTypeException {
