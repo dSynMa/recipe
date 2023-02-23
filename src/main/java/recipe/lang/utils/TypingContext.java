@@ -6,6 +6,7 @@ import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.types.*;
+import recipe.lang.types.Enum;
 
 import java.util.*;
 
@@ -118,7 +119,13 @@ public class TypingContext {
         HashSet vars = new HashSet<>();
         for(Map.Entry<Type, Set<String>> entries : typeVars.entrySet()){
             if(type.getClass().isAssignableFrom(entries.getKey().getClass())){
-                vars.addAll(entries.getValue());
+                if(type.getClass().equals(Enum.class) && entries.getKey().getClass().equals(Enum.class)){
+                    if (((Enum) type).name().equals(((Enum) entries.getKey()).name())) {
+                        vars.addAll(entries.getValue());
+                    }
+                } else {
+                    vars.addAll(entries.getValue());
+                }
             }
         }
         return vars;
