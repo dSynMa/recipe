@@ -1,5 +1,6 @@
 package recipe.lang.types;
 
+import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.FailureParser;
 import recipe.lang.expressions.TypedValue;
@@ -37,7 +38,13 @@ public class UnionType extends Type {
         String exceptionMessage = "";
         for(Type type : types) {
             try {
-                return type.valueParser().parse(value);
+                Result r = type.valueParser().parse(value);
+                if(r.isFailure()){
+                    throw new Exception(value + " is not of type " + type.name());
+                } else{
+                    Object val = r.get();
+                    return val;
+                }
             } catch (Exception e) {
                 exceptionMessage += e.getMessage() + "\n\n";
             }
