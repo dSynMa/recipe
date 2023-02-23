@@ -36,4 +36,21 @@ public class LTOLTest {
         }
         assert(true);
     }
+
+    @Test
+    public void parser2() throws Exception {
+        Config.reset();
+        String script = String.join("\n", Files.readAllLines(Paths.get("./example.rcp")));
+
+        try {
+            Parser system = System.parser().end();
+            Result r = system.parse(script);
+            System s = r.get();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            assert(false);
+        }
+        assert(true);
+    }
 }
