@@ -136,10 +136,6 @@ public abstract class Condition implements Expression<Boolean> {
 					.prefix(StringParser.of(pred).trim(), (List<Condition> values) -> new Predicate(pred, values.get(1)));
 		}
 
-		// repetition is a prefix operator
-		builder.group()
-				.prefix(StringParser.of("rep").trim(), (List<Process> values) -> new Iterative(values.get(1)));
-
 		// conjunction is right- and left-associative
 		builder.group()
 				.right(of('&').plus().trim(), (List<Condition> values) -> new And(values.get(0), values.get(2)))
