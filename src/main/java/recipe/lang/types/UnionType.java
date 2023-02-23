@@ -2,6 +2,7 @@ package recipe.lang.types;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.FailureParser;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.utils.exceptions.InfiniteValueTypeException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 
@@ -72,11 +73,8 @@ public class UnionType extends Type {
         }
         Parser parser = new ChoiceParser(parsers);
 
-        parser = parser.map((List<Type> values) -> {
-            if(values.size() != 1) return null;
-            else{
-                return values.get(1);
-            }
+        parser = parser.map((TypedValue value) -> {
+            return value;
         });
 
         return parser;
