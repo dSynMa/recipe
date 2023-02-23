@@ -27,7 +27,16 @@ public class ConcreteStore extends Store {
 
     @Override
     public String toString() {
-        return  String.format("%s@%s: %s", this.agent, this.state, this.data.toString());
+        StringBuilder builder = new StringBuilder();
+        builder.append(String.format("%s@%s: {", this.agent, this.state));
+        for (TypedVariable v : this.data.keySet()) {
+            builder.append(String.format("%s : %s =%s, ", v.getName(), v.getType(), data.get(v)));
+        }
+        builder.delete(builder.length()-2, builder.length()-1);
+        builder.append("}");
+
+        return builder.toString();
+        // return  String.format(, this.data.toString());
     }
 
     public Map<TypedVariable, TypedValue> getData() { return data; }
@@ -68,7 +77,6 @@ public class ConcreteStore extends Store {
     public TypedValue getValue(Object attribute) {
         try {
             TypedVariable attr = (TypedVariable) attribute;
-
             // System.err.printf("getValue of %s\n", attr.getName());
             // If attribute is a cv, evaluate its corresponding expression
             // TODO check w/ Shaun if we can improve this (it's the @'s fault)
@@ -78,17 +86,23 @@ public class ConcreteStore extends Store {
                     if (("@" + cv.getName()).equals(attr.getName())) {
                         // System.err.printf("match!\n");
                         TypedValue result = this.agent.getRelabel().get(cv).valueIn(this);
-                        return result;
+                        if (result != null) {
+                            return result;
+                        }
                     }
                 }
             }
+            // Otherwise lookup variable and return its value
+            TypedValue value = this.data.get(attr);
+            if (value != null) {
+                return value;
+            }
         } catch (Exception e) {
-            // TODO
-            System.err.println(e);
-            System.err.println(e.getStackTrace());
+            System.out.println(e);
+            System.out.println(e.getStackTrace());
         }
-        // Otherwise lookup variable and return its value
-        return this.data.get(attribute);
+        // System.out.printf(">>> Lookup failed for %s in %s\n", attribute, this);
+        return null;
 	}
 
     private TypedValue typedValueFactory(Type t, String val) throws MismatchingTypeException {

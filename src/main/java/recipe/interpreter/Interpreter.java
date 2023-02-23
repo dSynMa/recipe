@@ -9,6 +9,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -23,6 +25,7 @@ import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.ltol.Observation;
 import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
 import recipe.lang.store.CompositeStore;
@@ -102,10 +105,12 @@ public class Interpreter {
         private Map<TypedValue, Set<AgentInstance>> listeners;
         private List<Transition> transitions;
         private Transition chosenTransition;
+        private recipe.lang.System sys;
         // The transition that led to this state
         private Transition inboundTransition;
         private int depth;
         private Step parent;
+        private JSONObject annotations;
 
         protected void handleEvaluationException(Exception e) {
             // TODO
@@ -139,6 +144,11 @@ public class Interpreter {
                 inboundTransition == null ? null : inboundTransition.toJSON());
             result.put("state", jStores);
             result.put("transitions", jTransitions);
+            if (this.annotations != null) {
+                for (String key : annotations.keySet()) {
+                    result.put(key, annotations.get(key));
+                }
+            }
             return result;
         }
 
@@ -147,7 +157,45 @@ public class Interpreter {
          * @param constraint a JSON object
          * @return true iff the state satisfies the constraint
          */
-        public boolean satisfies(JSONObject constraint) {
+        public boolean satisfies(Map<String,Observation> obsMap, JSONObject constraint) {
+            // LTOL
+            JSONObject ltol = constraint.optJSONObject("___LTOL___");
+            if (ltol != null) {
+                for (String obsVar : ltol.keySet()) {
+                    Expression<recipe.lang.types.Boolean> observation = obsMap.get(obsVar).getObservation();
+                    AgentInstance sender = this.inboundTransition.sender;
+                    System.out.println(observation.toString());
+                    System.out.println(sender.getLabel());
+                    Store senderStore = this.parent.stores.get(sender);
+                    try {
+                        SendProcess sendProcess = this.inboundTransition.getSendProcess();
+                        Expression chanExpr = sendProcess.getChannel();
+                        TypedValue chan = chanExpr.valueIn(senderStore);
+                        Map<TypedVariable, TypedValue> mp = new HashMap<>();
+                        mp.put(new TypedVariable<Type>(chan.getType(), "channel"), chan);
+                        // mp.put(new TypedVariable<Type>(chan.getType(), "sender"), sender.getLabel());
+                        recipe.lang.types.Enum senderEnum = recipe.lang.types.Enum.getEnum(sender.getAgent().getName());
+                        TypedValue senderName = null;
+                        for (TypedValue tv : senderEnum.getAllValues()) {
+                            if (tv.toString().equals(sender.getLabel())) {
+                                senderName = tv;
+                                break;
+                            }
+                        }
+                        mp.put(new TypedVariable<Type>(Config.getAgentType(), "sender"), senderName);
+                        Pair<Store, TypedValue> msgPair = MakeMessageStore(senderStore, sendProcess, this.sys);
+                        Store store = new ConcreteStore(mp).push(msgPair.getLeft());
+                        boolean isObserved = Condition.getTrue().equals(observation.valueIn(store));
+                        if (isObserved != ltol.get(obsVar).equals("TRUE")) {
+                            System.out.printf(">> %s (%s): expected %s, got %s\n", obsVar, observation, ltol.get(obsVar), isObserved);
+                            return false;
+                        }
+                    } catch (Exception e) {
+                        handleEvaluationException(e);
+                    }
+                }
+            }
+            // Agents
             for (String agentInstanceName : constraint.keySet()) {
                 AgentInstance inst = null;
                 for (AgentInstance i : sys.getAgentInstances()) {
@@ -157,8 +205,12 @@ public class Interpreter {
                     }
                 }
                 if (inst == null) {
-                    if (agentInstanceName.equals("___LTOL___")) continue;
-                    System.out.printf("Agent instance not found: %s\n", agentInstanceName);
+                    // Skip special fields
+                    if (agentInstanceName.startsWith("___")) {
+                        System.out.printf(">> Found annotation %s : %s\n", agentInstanceName, constraint.get(agentInstanceName));
+                        continue;
+                    } 
+                    System.out.printf(">> Agent instance not found: %s\n", agentInstanceName);
                     return false;
                 }
                 JSONObject instanceConstraint = constraint.getJSONObject(agentInstanceName);
@@ -246,7 +298,7 @@ public class Interpreter {
                 ConcreteStore nextSenderStore = stores.get(chosenTransition.sender).BuildNext(chosenTransition.send);
                 nextStores.put(chosenTransition.sender, nextSenderStore);
 
-                Pair<Store, TypedValue> msgPair = MakeMessageStore(stores.get(chosenTransition.sender), chosenTransition.getSendProcess(), interpreter);
+                Pair<Store, TypedValue> msgPair = MakeMessageStore(stores.get(chosenTransition.sender), chosenTransition.getSendProcess(), sys);
                 for (AgentInstance receiver : chosenTransition.receivers.keySet()) {
                     ProcessTransition receive = chosenTransition.receivers.get(receiver);
                     ConcreteStore nextReceiverStore = stores.get(receiver).BuildNext(receive, msgPair.getLeft());
@@ -259,7 +311,14 @@ public class Interpreter {
             return next;
         }
 
-        protected Pair<Store, TypedValue> MakeMessageStore(Store senderStore, SendProcess sendProcess, Interpreter interpreter) {
+        public void loadAnnotations(JSONObject obj) {
+            if (annotations == null) annotations = new JSONObject();
+            for (String key : obj.keySet())
+                if (key.startsWith("___"))
+                    annotations.put(key, obj.get(key));
+        }
+
+        protected Pair<Store, TypedValue> MakeMessageStore(Store senderStore, SendProcess sendProcess, recipe.lang.System sys) {
             // Add message and channel to a new map
             Map<TypedVariable, TypedValue> msgMap = new HashMap<TypedVariable, TypedValue>();
             Expression chanExpr = sendProcess.getChannel();
@@ -268,7 +327,7 @@ public class Interpreter {
                 sendProcess.getMessage().forEach((msgVar, msgExpr) -> {
                     try {
                         TypedValue msgVal = msgExpr.valueIn(senderStore);
-                        Type msgType = interpreter.sys.getMessageStructure().get(msgVar);
+                        Type msgType = sys.getMessageStructure().get(msgVar);
                         if (msgType != msgVal.getType()) {
                             throw new MismatchingTypeException(
                                 String.format("Mismatch type for message variable %s (expected %s, got %s)", 
@@ -291,6 +350,7 @@ public class Interpreter {
         } 
 
         public Step(Map<AgentInstance,ConcreteStore> stores, Step parent, Interpreter interpreter) {
+            this.sys = interpreter.sys;
             this.parent = parent;
             this.stores = stores;
             this.transitions = new LinkedList<>();
@@ -337,7 +397,7 @@ public class Interpreter {
 
                             if (psiSat) {
                                 // Add message and channel to a new map
-                                Pair<Store, TypedValue> msgPair = MakeMessageStore(senderStore, sendProcess, interpreter);
+                                Pair<Store, TypedValue> msgPair = MakeMessageStore(senderStore, sendProcess, sys);
                                 Store msgStore = msgPair.getLeft();
                                 TypedValue chan = msgPair.getRight();
 
@@ -493,15 +553,15 @@ public class Interpreter {
         return result;
     }
 
-    public static Interpreter ofJSON(recipe.lang.System s, JSONArray json) throws Exception {
+    public static Interpreter ofJSON(recipe.lang.System s, Map<String,Observation> obsMap, JSONArray json) throws Exception {
         List<JSONObject> list = new ArrayList<>(json.length());
         for (int i = 0; i < json.length(); i++) {
             list.add(json.getJSONObject(i));
         }
-        return Interpreter.ofJSON(s, list);
+        return Interpreter.ofJSON(s, obsMap, list);
     }
 
-    public static Interpreter ofJSON(recipe.lang.System s, List<JSONObject> states) throws Exception {
+    public static Interpreter ofJSON(recipe.lang.System s, Map<String,Observation> obsMap, List<JSONObject> states) throws Exception {
         if (states.size() == 0) {
             throw new Exception("Empty JSON");
         }
@@ -518,6 +578,7 @@ public class Interpreter {
         List<String> constraints = new LinkedList<String>();
         
         for (String agentInstance : initState.keySet()) {
+            if (agentInstance.startsWith("___")) continue;
             JSONObject agentState = initState.getJSONObject(agentInstance);
             for (String var : agentState.keySet()) {
                 if (varNames.contains(var)) {
@@ -532,14 +593,13 @@ public class Interpreter {
             JSONObject constraint = states.get(i);
             if (interpreter.isDeadlocked()) {
                 // If we are deadlocked, but all constraints are on LTOL
-                boolean onlyLTOL = true;
+                boolean onlyNotes = true;
                 for (String key : constraint.keySet()) {
-                    onlyLTOL &= key.startsWith("___LTOL___");
-
+                    onlyNotes &= key.startsWith("___");
                 } 
-                if (onlyLTOL) break;
+                if (onlyNotes) break;
             }
-            if (!interpreter.findNext(constraint)) {
+            if (!interpreter.findNext(obsMap, constraint)) {
                 throw new Exception(String.format("[ofTrace] something wrong at step %d", i));
             }
         }
@@ -550,21 +610,42 @@ public class Interpreter {
      * Loads a nuXmv trace into a new intepreter and returns it
      * 
      * @param s the r-check system
+     * @param obsMap a map from string to LTOL observations
      * @param trace a nuXmv trace
      * @return an instance of Interpreter
      */
-    public static Interpreter ofTrace(recipe.lang.System s, String trace) throws Exception {
+    public static Interpreter ofTrace(recipe.lang.System s, Map<String,Observation> obsMap, String trace) throws Exception {
+        // Find states that are loop-starts
+        Matcher m = Pattern.compile(
+            "-- Loop starts here[\s\n]*-> State: 1.([0.-9]+)",
+            Pattern.DOTALL
+        ).matcher(trace);
+        Set<Integer> loopingStates = new HashSet<>();
+        while (m.find()) {
+            loopingStates.add(Integer.valueOf(m.group(1))-1);
+        }
+
+        // Remove loop annotiations
+        trace = trace.replaceAll("-- Loop starts here\n", "");
+        String sentinel = "Trace Type: Counterexample";
+        int startPos = trace.indexOf(sentinel) + sentinel.length();
+        trace = trace.substring(startPos);
+        
         NuXmvInteraction nuxmv = new NuXmvInteraction(s);
         nuxmv.stopNuXmvThread(); // We ain't going to need it
         String[] split = trace.split("->", 0);
         List<JSONObject> states = new ArrayList<>(split.length - 1);
-        Boolean isFirst = true;
         for (String string : split) {
-            // Skip stuff before the 1st state
-            if (isFirst) { isFirst = false; continue; }
-            states.add(nuxmv.outputToJSON(string));
+            // Skip stuff that does not contain a state (shouldn't happen)
+            if (!string.contains("<-")) continue; 
+
+            JSONObject state = nuxmv.outputToJSON(string);
+            if (loopingStates.contains(states.size()+1)) {
+                state.put("___LOOP___", true);
+            }
+            states.add(state);
         }
-        return Interpreter.ofJSON(s, states);
+        return Interpreter.ofJSON(s, obsMap, states);
     }
 
     private void rootStep(String constraint) throws IOException, Exception {
@@ -592,14 +673,15 @@ public class Interpreter {
         return currentStep.transitions.size() == 0;
     }
 
-    public boolean findNext(JSONObject constraint) {
+    public boolean findNext(Map<String,Observation> obsMap, JSONObject constraint) {
         Step candidate;
         System.out.printf("(%d) constraint: %s, transitions: %s\n", currentStep.depth, constraint, currentStep.transitions.size());
         for (int i = 0; i < currentStep.transitions.size(); i++) {
             candidate = currentStep.next(i, this); 
             // TODO here we just pick the 1st transition to a target state
             // that satisfies the constraint. Is this always enough?
-            if (candidate.satisfies(constraint)) {
+            if (candidate.satisfies(obsMap, constraint)) {
+                candidate.loadAnnotations(constraint);
                 currentStep = candidate;
                 // System.out.println(currentStep.toJSON());
                 return true;

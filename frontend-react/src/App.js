@@ -340,8 +340,8 @@ function resetInterpreter(){
             if (response.data !== undefined) {
               setMCResponse(response.data.results);
             }
-            if (response.error !== undefined) {
-              alert(response.error);
+            if (response.data.error !== undefined) {
+              alert(response.data.error);
             }
             setMCLoading(false);
          })
@@ -496,7 +496,7 @@ function resetInterpreter(){
 
                     </Col>
                   </Row>
-                    {mcresponse.map((x, i) => {
+                    {mcresponse && mcresponse.map((x, i) => {
                     return <Row className={i % 2 ? "border py-2" : "bg-light border py-2"}>
                     <Col xs={x.result=="false" ? 9 : 12} className="align-self-center">
                       <h5 className='my-auto'>{x.spec} <Badge bg={x.result == "true" ? "success" : x.result == "false" ? "danger" : "secondary"}>
@@ -649,7 +649,7 @@ function resetInterpreter(){
                             // TODO store the renders somewhere, instead of
                             // recomputing them all the time */}
                             <tr key={i}>
-                            <td>{x.depth}</td>
+                            <td className='text-right'>{x.depth} {x.___LOOP___ && <React.Fragment><br/><em>Loop starts here</em></React.Fragment>}</td>
                             <td>{formatStep(renderStep(x))}</td>
                           </tr>
                           </React.Fragment>)

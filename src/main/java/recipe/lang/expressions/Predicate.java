@@ -38,8 +38,9 @@ public class Predicate implements Expression<recipe.lang.types.Boolean> {
     }
 
     @Override
-    public TypedValue<recipe.lang.types.Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, NotImplementedYetException {
-        throw new NotImplementedYetException("Predicate.valueIn not implemented yet");
+    public TypedValue<recipe.lang.types.Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, NotImplementedYetException, MismatchingTypeException {
+        // throw new NotImplementedYetException("Predicate.valueIn not implemented yet");
+        return input.valueIn(store);
     }
 
     @Override
