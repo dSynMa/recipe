@@ -52,10 +52,7 @@ public class IsGreaterThan extends Condition {
 		TypedValue<recipe.lang.types.Number> lhsValue = lhs.valueIn(store);
 		TypedValue<recipe.lang.types.Number> rhsValue = rhs.valueIn(store);
 
-		Number lhsNo = (Number) lhsValue.getValue();
-		Number rhsNo = (Number) rhsValue.getValue();
-
-		if(0 > new BigDecimal(lhsNo.toString()).compareTo(new BigDecimal(rhsNo.toString()))) {
+		if(0 < new BigDecimal(lhsValue.getValue().toString()).compareTo(new BigDecimal(rhsValue.getValue().toString()))) {
 			return Condition.TRUE;
 		} else {
 			return Condition.FALSE;
