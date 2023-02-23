@@ -270,35 +270,31 @@ public abstract class LTOL {
                 .left(of('|').plus().trim(), (List<LTOL> values) -> new Or(values.get(0), values.get(2)));
 
 
-//        // implication is right-associative
-//        builder.group()
-//                .right(StringParser.of("->").plus().trim(), (List<LTOL> values) -> new Implies(values.get(0), values.get(2)));
+        // iff is left and right-associative
+        builder.group()
+                .right(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<LTOL> values) -> {
+                    try {
+                        return new Iff(values.get(0), values.get(2));
+                    } catch (Exception e) {
+                        return e;
+                    }
+                })
+                .left(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<LTOL> values) -> {
+                    try {
+                        return new Iff(values.get(0), values.get(2));
+                    } catch (Exception e) {
+                        return e;
+                    }
+                });
 
-//        // iff is left and right-associative
-//        builder.group()
-//                .right(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<LTOL> values) -> {
-//                    try {
-//                        return new IsEqualTo(values.get(0), values.get(2));
-//                    } catch (Exception e) {
-//                        return e;
-//                    }
-//                })
-//                .left(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<Condition> values) -> {
-//                    try {
-//                        return new IsEqualTo(values.get(0), values.get(2));
-//                    } catch (Exception e) {
-//                        return e;
-//                    }
-//                });
-
-//        // is not equal to is left and right-associative
-//        builder.group()
-//                .right(StringParser.of("!=").trim(), (List<Condition> values) -> {
-//                    return new IsNotEqualTo(values.get(0), values.get(2));
-//                })
-//                .left(StringParser.of("!=").trim(), (List<Condition> values) -> {
-//                    return new IsNotEqualTo(values.get(0), values.get(2));
-//                });
+        // is not equal to is left and right-associative
+        builder.group()
+                .right(StringParser.of("!=").trim(), (List<LTOL> values) -> {
+                    return new Not(new Iff(values.get(0), values.get(2)));
+                })
+                .left(StringParser.of("!=").trim(), (List<LTOL> values) -> {
+                    return new Not(new Iff(values.get(0), values.get(2)));
+                });
 
 
         return builder.build();
