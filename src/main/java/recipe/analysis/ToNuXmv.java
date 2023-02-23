@@ -371,6 +371,10 @@ public class ToNuXmv {
 
             init += "\t& " + sendingAgent.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
             init += "\t& " + sendingAgentInstance.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
+
+            for(String obs : observations.keySet()){
+                init += "\t& " + obs + " = FALSE\n";
+            }
             ///////////////
 
 
