@@ -64,9 +64,9 @@ function App() {
   const [interpreterbadge, setInterpreterBadge] = useState(false);
 
   const radios = [
-    { name: 'concrete', value: '1' },
-    { name: 'ic3', value: '2' },
-    { name: 'bmc', value: '3' },
+    { name: 'MC', value: '1' },
+    { name: 'IC3', value: '2' },
+    { name: 'BMC', value: '3' },
   ];
 
   function simulate(){
@@ -479,7 +479,7 @@ function resetInterpreter(){
                           {(radioValue != 1) &&
                               <FormControl
                                 size="lg"
-                                placeholder="Enter bound (optional for ic3)."
+                                placeholder="Enter bound (optional for IC3)."
                                 aria-label="bound"
                                 aria-describedby="basic-addon1"
                                 onChange={(e) => setBound(e.currentTarget.value)}
