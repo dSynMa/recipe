@@ -23,6 +23,7 @@ import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.ltol.Observation;
 import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
 import recipe.lang.store.CompositeStore;
@@ -31,7 +32,9 @@ import recipe.lang.store.Store;
 import recipe.lang.types.Type;
 import recipe.lang.utils.Pair;
 import recipe.lang.utils.exceptions.AttributeNotInStoreException;
+import recipe.lang.utils.exceptions.AttributeTypeException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
+import recipe.lang.utils.exceptions.NotImplementedYetException;
 
 public class Interpreter {
     private static TypedVariable channTypedVariable;
@@ -147,7 +150,55 @@ public class Interpreter {
          * @param constraint a JSON object
          * @return true iff the state satisfies the constraint
          */
-        public boolean satisfies(JSONObject constraint) {
+        public boolean satisfies(Map<String,Observation> obsMap, JSONObject constraint) {
+            // LTOL
+            JSONObject ltol = constraint.optJSONObject("___LTOL___");
+            if (ltol != null) {
+                for (String obsVar : ltol.keySet()) {
+                    Expression<recipe.lang.types.Boolean> observation = obsMap.get(obsVar).getObservation();
+                    AgentInstance sender = this.inboundTransition.sender;
+                    System.out.println(observation.toString());
+                    System.out.println(sender.getLabel());
+                    Store senderStore = this.parent.stores.get(sender);
+                    try {
+                        SendProcess sendProcess = this.inboundTransition.getSendProcess();
+                        Expression chanExpr = sendProcess.getChannel();
+                        TypedValue chan = chanExpr.valueIn(senderStore);
+                        Map<TypedVariable, TypedValue> mp = new HashMap<>();
+                        mp.put(new TypedVariable<Type>(chan.getType(), "channel"), chan);
+                        // mp.put(new TypedVariable<Type>(chan.getType(), "sender"), sender.getLabel());
+                        recipe.lang.types.Enum senderEnum = recipe.lang.types.Enum.getEnum(sender.getAgent().getName());
+                        TypedValue senderName = null;
+                        for (TypedValue tv : senderEnum.getAllValues()) {
+                            if (tv.toString().equals(sender.getLabel())) {
+                                senderName = tv;
+                                break;
+                            }
+                        }
+                        mp.put(new TypedVariable<recipe.lang.types.Enum>(senderEnum, "sender"), senderName);
+
+                        
+
+                        for (String en : recipe.lang.types.Enum.getEnumLabels()) {
+                            System.out.printf("(%s) ", en);
+                            for (TypedValue v : recipe.lang.types.Enum.getEnum(en).getAllValues())
+                            System.out.printf("%s ", v.toString());
+                            System.out.println();
+                        }
+                    
+
+                        Store store = new ConcreteStore(mp);
+                        boolean isObserved = Condition.getTrue().equals(observation.valueIn(store));
+                        if (isObserved != ltol.get(obsVar).equals("TRUE")) {
+                            System.out.printf(">> %s (%s): expected %s, got %s\n", obsVar, observation, ltol.get(obsVar), isObserved);
+                            return false;
+                        }
+                    } catch (Exception e) {
+                        handleEvaluationException(e);
+                    }
+                }
+            }
+            // Agents
             for (String agentInstanceName : constraint.keySet()) {
                 AgentInstance inst = null;
                 for (AgentInstance i : sys.getAgentInstances()) {
@@ -158,7 +209,7 @@ public class Interpreter {
                 }
                 if (inst == null) {
                     if (agentInstanceName.equals("___LTOL___")) continue;
-                    System.out.printf("Agent instance not found: %s\n", agentInstanceName);
+                    System.out.printf(">> Agent instance not found: %s\n", agentInstanceName);
                     return false;
                 }
                 JSONObject instanceConstraint = constraint.getJSONObject(agentInstanceName);
@@ -493,15 +544,15 @@ public class Interpreter {
         return result;
     }
 
-    public static Interpreter ofJSON(recipe.lang.System s, JSONArray json) throws Exception {
+    public static Interpreter ofJSON(recipe.lang.System s, Map<String,Observation> obsMap, JSONArray json) throws Exception {
         List<JSONObject> list = new ArrayList<>(json.length());
         for (int i = 0; i < json.length(); i++) {
             list.add(json.getJSONObject(i));
         }
-        return Interpreter.ofJSON(s, list);
+        return Interpreter.ofJSON(s, obsMap, list);
     }
 
-    public static Interpreter ofJSON(recipe.lang.System s, List<JSONObject> states) throws Exception {
+    public static Interpreter ofJSON(recipe.lang.System s, Map<String,Observation> obsMap, List<JSONObject> states) throws Exception {
         if (states.size() == 0) {
             throw new Exception("Empty JSON");
         }
@@ -518,6 +569,7 @@ public class Interpreter {
         List<String> constraints = new LinkedList<String>();
         
         for (String agentInstance : initState.keySet()) {
+            if (agentInstance == "___LTOL___") continue;
             JSONObject agentState = initState.getJSONObject(agentInstance);
             for (String var : agentState.keySet()) {
                 if (varNames.contains(var)) {
@@ -539,7 +591,7 @@ public class Interpreter {
                 } 
                 if (onlyLTOL) break;
             }
-            if (!interpreter.findNext(constraint)) {
+            if (!interpreter.findNext(obsMap, constraint)) {
                 throw new Exception(String.format("[ofTrace] something wrong at step %d", i));
             }
         }
@@ -550,10 +602,11 @@ public class Interpreter {
      * Loads a nuXmv trace into a new intepreter and returns it
      * 
      * @param s the r-check system
+     * @param obsMap a map from string to LTOL observations
      * @param trace a nuXmv trace
      * @return an instance of Interpreter
      */
-    public static Interpreter ofTrace(recipe.lang.System s, String trace) throws Exception {
+    public static Interpreter ofTrace(recipe.lang.System s, Map<String,Observation> obsMap, String trace) throws Exception {
         NuXmvInteraction nuxmv = new NuXmvInteraction(s);
         nuxmv.stopNuXmvThread(); // We ain't going to need it
         String[] split = trace.split("->", 0);
@@ -564,7 +617,7 @@ public class Interpreter {
             if (isFirst) { isFirst = false; continue; }
             states.add(nuxmv.outputToJSON(string));
         }
-        return Interpreter.ofJSON(s, states);
+        return Interpreter.ofJSON(s, obsMap, states);
     }
 
     private void rootStep(String constraint) throws IOException, Exception {
@@ -592,14 +645,14 @@ public class Interpreter {
         return currentStep.transitions.size() == 0;
     }
 
-    public boolean findNext(JSONObject constraint) {
+    public boolean findNext(Map<String,Observation> obsMap, JSONObject constraint) {
         Step candidate;
         System.out.printf("(%d) constraint: %s, transitions: %s\n", currentStep.depth, constraint, currentStep.transitions.size());
         for (int i = 0; i < currentStep.transitions.size(); i++) {
             candidate = currentStep.next(i, this); 
             // TODO here we just pick the 1st transition to a target state
             // that satisfies the constraint. Is this always enough?
-            if (candidate.satisfies(constraint)) {
+            if (candidate.satisfies(obsMap, constraint)) {
                 currentStep = candidate;
                 // System.out.println(currentStep.toJSON());
                 return true;

@@ -32,6 +32,7 @@ import java.util.concurrent.Future;
 public class Server {
     NuXmvInteraction nuXmvInteraction;
     System system;
+    Map<String, Observation> obsMap;
 
     Interpreter interpreter;
     Map<String, String> latestDots = new HashMap<>();
@@ -261,6 +262,11 @@ public class Server {
                 
                 Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
                 List<LTOL> specs = toLtl.getLeft();
+                obsMap = toLtl.getRight();
+                obsMap.keySet().forEach((k) -> {
+                    java.lang.System.out.printf("%s -> %s\n", k, obsMap.get(k));
+                });
+                
 
                 for(int i = 0; i < specs.size(); i++) {
                     String spec = specs.get(i).toString().replaceAll("LTLSPEC", "").trim();
@@ -372,7 +378,7 @@ public class Server {
         // TODO turn this into something visible in the UI
         output = output.replaceAll("-- Loop starts here\n", "");
         try {
-            interpreter = Interpreter.ofTrace(system, output);
+            interpreter = Interpreter.ofTrace(system, obsMap, output);
             List<JSONObject> trace = interpreter.traceToJSON();
             JSONObject response = new JSONObject();
             response.put("svgs", renderSVGs(trace.get(trace.size()-1)));
@@ -391,7 +397,7 @@ public class Server {
         JSONArray json = new JSONArray(toks);
         
         try {
-            interpreter = Interpreter.ofJSON(system, json);
+            interpreter = Interpreter.ofJSON(system, obsMap, json);
             // List<JSONObject> trace = interpreter.traceToJSON();
             // JSONObject response = new JSONObject();
             // response.put("svgs", renderSVGs(trace.get(trace.size()-1)));
