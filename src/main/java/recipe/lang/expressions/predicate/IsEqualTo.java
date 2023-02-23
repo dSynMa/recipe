@@ -58,6 +58,13 @@ public class IsEqualTo<T extends Type> extends Condition {
 		Expression lhsValue = lhs.valueIn(store);
 		Expression rhsValue = rhs.valueIn(store);
 
+		if (lhsValue == null) {
+			System.out.printf(">>> Evaluation of %s over %s yields a null LHS\n", this, store);
+		}
+		if (rhsValue == null) {
+			System.out.printf(">>> Evaluation of %s over %s yields a null RHS\n", this, store);
+		}
+
 		if(lhsValue.equals(rhsValue)){
 			return Condition.TRUE;
 		} else{
