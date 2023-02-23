@@ -1,5 +1,6 @@
 package recipe.lang.expressions;
 
+import recipe.lang.types.UnionType;
 import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.AttributeTypeException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
@@ -54,6 +55,17 @@ public class TypedValue<T extends Type> implements Expression<T> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TypedValue<?> that = (TypedValue<?>) o;
+
+        if(this.type.getClass().equals(UnionType.class)){
+            if(!that.getType().getClass().equals(UnionType.class)){
+                return this.value.equals(that);
+            } else{
+                return this.value.equals(that.value);
+            }
+        } else if(that.getType().getClass().equals(UnionType.class)){
+            return that.value.equals(this);
+        }
+
         return value.equals(that.value);
     }
 
