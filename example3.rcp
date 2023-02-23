@@ -1,0 +1,41 @@
+channels: a, empty
+
+enum msgvals {forward, put}
+
+message-structure: MSG : msgvals
+communication-variables:
+
+agent Buffer
+        local: size : int, no : int
+        init: size == 4 && no == 0
+        receive-guard: TRUE
+
+        repeat: (
+
+                    <(no > 0)> *! (TRUE)
+                    (MSG := forward)[no:= no - 1]
+
+                    +
+
+                    <MSG ==put & (no < size) > * ?
+                            [no:= no + 1]
+
+
+)
+
+agent Producer
+        init: TRUE
+        receive-guard: TRUE
+
+        repeat: (
+
+                    <TRUE> *! (TRUE)
+                    (MSG := put)[]
+
+
+
+)
+
+system = Buffer(one,TRUE) | Producer(two,TRUE)
+
+SPEC F one-no == 4
