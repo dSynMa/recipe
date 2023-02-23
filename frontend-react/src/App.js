@@ -340,8 +340,8 @@ function resetInterpreter(){
             if (response.data !== undefined) {
               setMCResponse(response.data.results);
             }
-            if (response.error !== undefined) {
-              alert(response.error);
+            if (response.data.error !== undefined) {
+              alert(response.data.error);
             }
             setMCLoading(false);
          })
@@ -649,7 +649,7 @@ function resetInterpreter(){
                             // TODO store the renders somewhere, instead of
                             // recomputing them all the time */}
                             <tr key={i}>
-                            <td>{x.depth}</td>
+                            <td className='text-right'>{x.depth} {x.___LOOP___ && <React.Fragment><br/><em>Loop starts here</em></React.Fragment>}</td>
                             <td>{formatStep(renderStep(x))}</td>
                           </tr>
                           </React.Fragment>)
