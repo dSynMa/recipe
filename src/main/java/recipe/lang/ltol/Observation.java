@@ -44,15 +44,7 @@ public class Observation {
 
         Parser primitive = Condition.parser(cvAndMsg).map(Observation::new);
 
-        ExpressionBuilder builder = new ExpressionBuilder();
-        builder.group()
-                .primitive(primitive)
-                .wrapper(of('(').trim(), of(')').trim(),
-                        (List<Observation> values) -> {
-                    return values.get(1);
-                        });
-
-        return builder.build();
+        return primitive;
     }
 
     public Observation rename(Function<TypedVariable, TypedVariable> relabelling) throws RelabellingTypeException, MismatchingTypeException {
