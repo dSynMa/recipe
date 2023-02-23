@@ -12,8 +12,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.lang.model.type.UnionType;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 
