@@ -348,18 +348,22 @@ public class Parsing {
     }
 
     public static Parser relabellingParser(TypingContext localContext, TypingContext communicationContext) throws Exception {
-        return labelledParser("relabel", (communicationContext.variableParser().trim()
-                .seq(StringParser.of("<-").trim())
-                .seq(Parsing.expressionParser(localContext)).trim()).plus()
-                ).trim().map((List<Object> values) -> {
-                    values.removeIf(v -> isWhitespace(v));
-                    Map<TypedVariable, Expression> relabellingMap = new HashMap<>();
-                    for(Object relabelObj : values){
-                        List relabel = (List) relabelObj;
-                        relabellingMap.put((TypedVariable) relabel.get(0), (Expression) relabel.get(2));
-                    }
-                    return relabellingMap;
-                });
+        if(communicationContext.getVarType().size() > 0) {
+            return labelledParser("relabel", (communicationContext.variableParser().trim()
+                    .seq(StringParser.of("<-").trim())
+                    .seq(Parsing.expressionParser(localContext)).trim()).plus()
+            ).trim().map((List<Object> values) -> {
+                values.removeIf(v -> isWhitespace(v));
+                Map<TypedVariable, Expression> relabellingMap = new HashMap<>();
+                for (Object relabelObj : values) {
+                    List relabel = (List) relabelObj;
+                    relabellingMap.put((TypedVariable) relabel.get(0), (Expression) relabel.get(2));
+                }
+                return relabellingMap;
+            });
+        } else{
+            return labelledParser("relabel", StringParser.of("").map((Object values) -> {return new HashMap<>();})).optional(new HashMap<>());
+        }
     }
 
     public static Parser receiveGuardParser(TypingContext localContext) throws Exception {
