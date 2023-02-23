@@ -238,10 +238,11 @@ public class ParsingTest {
         System.out.println(script.substring(r.getPosition()));
         assert r.isSuccess();
     }
+
     @Test
-    public void receiveGuardParser5() throws Exception {
+    public void receiveGuardParser45() throws Exception {
         String script = "receive-guard:\n" +
-                    "\t\t((b < 5) & channel == A))";
+                "\t\t((b < 5) & channel == 6)";
 
         TypingContext localContext = new TypingContext();
         localContext.set("b", Real.getType());
@@ -255,6 +256,37 @@ public class ParsingTest {
         System.out.println(r.getPosition() + " " + r.getMessage());
         System.out.println(script.substring(r.getPosition()));
         assert !r.isSuccess();
+    }
+    @Test
+    public void receiveGuardParser5() throws Exception {
+        String script = "receive-guard:\n" +
+                "\t\t((b < 5) & channel == A))";
+
+        TypingContext localContext = new TypingContext();
+        localContext.set("b", Real.getType());
+        localContext.set("c", Real.getType());
+
+        localContext.set("channel", Enum.getEnum(Config.channelLabel));
+        localContext.set("chVar", Enum.getEnum(Config.channelLabel));
+
+        Parser parser = Parsing.receiveGuardParser(localContext).end();
+        Result r = parser.parse(script);
+        System.out.println(r.getPosition() + " " + r.getMessage());
+        System.out.println(script.substring(r.getPosition()));
+        assert !r.isSuccess();
+    }
+    @Test
+    public void receiveGuardParser6() throws Exception {
+        String script = "receive-guard:\n" +
+                "\t\tTRUE";
+
+        TypingContext localContext = new TypingContext();
+
+        Parser parser = Parsing.receiveGuardParser(localContext).end();
+        Result r = parser.parse(script);
+        System.out.println(r.getPosition() + " " + r.getMessage());
+        System.out.println(script.substring(r.getPosition()));
+        assert r.isSuccess();
     }
 
     @Test
