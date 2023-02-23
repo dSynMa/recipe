@@ -1,0 +1,38 @@
+channels: a, empty
+
+
+
+enum msgvals {forward, put}
+
+
+
+message-structure: MSG : msgvals
+
+communication-variables:
+
+
+
+agent Buffer
+
+        local: size : int, number : int
+
+        init: size == 4 && no == 0
+
+        relabel:
+
+
+
+        receive-guard: TRUE
+
+
+
+        repeat: (
+                    <no > 0> *! TRUE(MSG := forward)[no:= no - 1]
+                    +
+                    <MSG ==put & (no<4) > * ? [no:=no + 1]
+)
+
+
+
+system = Buffer(one,TRUE)
+

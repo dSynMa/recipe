@@ -84,22 +84,24 @@ public abstract class Condition implements Expression<Boolean> {
 						}))
 						.or(GuardReference.parser(context, condition));
 
-		Parser arithmeticOrEnums = ArithmeticExpression.parser(context);
+		Parser arithmetic = ArithmeticExpression.parser(context);
+
+		TypingContext agentTypingContext = context.getSubContext(Config.getAgentType());
+		Parser agentParser = (agentTypingContext.variableParser()).or(Config.getAgentType().valueParser());
+		Parser enumEquality = (IsEqualTo.parser(agentParser).or(IsNotEqualTo.parser(agentParser)));
 
 		for(String label : Enum.getEnumLabels()){
 			recipe.lang.types.Enum enumm = Enum.getEnum(label);
 			TypingContext enumTypingContext = context.getSubContext(enumm);
-
-			arithmeticOrEnums = arithmeticOrEnums.or(enumTypingContext.variableParser()).or(enumm.valueParser());
+			Parser enummParser = (enumTypingContext.variableParser()).or(enumm.valueParser());
+			enumEquality = enumEquality.or(IsEqualTo.parser(enummParser).or(IsNotEqualTo.parser(enummParser)));
 		}
-
-		TypingContext agentTypingContext = context.getSubContext(Config.getAgentType());
-		arithmeticOrEnums = arithmeticOrEnums.or(agentTypingContext.variableParser()).or(Config.getAgentType().valueParser());
 
 		ExpressionBuilder builder = new ExpressionBuilder();
 		builder.group()
-				.primitive(IsEqualTo.parser(arithmeticOrEnums)
-						.or(IsNotEqualTo.parser(arithmeticOrEnums))
+				.primitive(enumEquality
+						.or(IsEqualTo.parser(arithmetic))
+						.or(IsNotEqualTo.parser(arithmetic))
 						.or(IsGreaterOrEqualThan.parser(ArithmeticExpression.parser(context)))
 						.or(IsGreaterThan.parser(ArithmeticExpression.parser(context)))
 						.or(IsLessOrEqualThan.parser(ArithmeticExpression.parser(context)))
