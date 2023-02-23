@@ -46,8 +46,41 @@ public class ToNuXmvTest {
     }
 
     @Test
+    public void nuxmvLTL2() throws Exception {
+        String script = String.join("\n", Files.readAllLines(Paths.get("./example.rcp")));
+        Parser system = System.parser().end();
+        Result r = system.parse(script);
+        System s = r.get();
+        try {
+            String transform = ToNuXmv.transform(s);
+            java.lang.System.out.println(transform);
+        } catch (Exception e) {
+            e.printStackTrace();
+            assert r.isFailure();
+        }
+        assert r.isSuccess();
+
+    }
+
+    @Test
     public void transform2() throws Exception {
         String script = String.join("\n", Files.readAllLines(Paths.get("./bigger-example.txt")));
+        Parser system = System.parser().end();
+        Result r = system.parse(script);
+        System s = r.get();
+        try {
+            String out = ToNuXmv.transform(s);
+            java.lang.System.out.println(out);
+        } catch (Exception e) {
+            e.printStackTrace();
+            assert r.isFailure();
+        }
+        assert r.isSuccess();
+
+    }
+    @Test
+    public void transform3() throws Exception {
+        String script = String.join("\n", Files.readAllLines(Paths.get("./example3.rcp")));
         Parser system = System.parser().end();
         Result r = system.parse(script);
         System s = r.get();
