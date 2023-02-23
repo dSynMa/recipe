@@ -123,6 +123,10 @@ public class ConditionTest {
         assert r.isSuccess();
         r = parser.parse("!(cond & !cond) | !(((!(cond & cond))))");
         assert r.isSuccess();
+        r = parser.parse("!(cond & !cond) = !(((!(cond & cond))))");
+        assert r.isSuccess();
+        r = parser.parse("!(cond & !cond) <-> !(((!(cond & cond))))");
+        assert r.isSuccess();
         r = parser.parse("cond & !cond && cond & cond");
         assert r.isSuccess();
         r = parser.parse("cond | !cond || cond | cond");
