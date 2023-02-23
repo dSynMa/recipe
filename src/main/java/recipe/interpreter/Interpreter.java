@@ -162,11 +162,30 @@ public class Interpreter {
                     return false;
                 }
                 JSONObject instanceConstraint = constraint.getJSONObject(agentInstanceName);
+                ConcreteStore instanceStore = this.stores.get(inst);
+                if (this.parent != null) {
+                    // Everything not in the constraint must remain unchanged
+                    Store pastInstanceStore = this.parent.stores.get(inst);
+                    for (String varName : instanceStore.getAttributes().keySet()) {
+                        try {
+                            TypedVariable var = inst.getAgent().getStore().getAttribute(varName);
+                            TypedValue value = instanceStore.getValue(var);
+                            TypedValue pastValue = pastInstanceStore.getValue(var);
+                            if (!instanceConstraint.has(varName) && !pastValue.equals(value)) {
+                                System.out.printf(">> %s: expected %s (from past state), got %s\n", pastValue, value);
+                            }
+                        } catch (AttributeNotInStoreException e) {
+                            // Should never match
+                            System.out.printf(">> Not found: %s\n", varName);
+                        }
+                    }
+                }
+                
                 for (String varName : instanceConstraint.keySet()) {
                     try {
                         if (varName.equals("state")) {
                             String stateConstraint = instanceConstraint.getString(varName);
-                            String stateInst = this.stores.get(inst).getState().getLabel().toString();
+                            String stateInst = instanceStore.getState().getLabel().toString();
                             if (!stateInst.equals(stateConstraint)) {
                                 System.out.printf(">> Expected %s, got %s\n", stateConstraint, stateInst);
                                 return false;
@@ -208,7 +227,8 @@ public class Interpreter {
                             // System.out.printf(">> Not found: %s\n", varName);
                         }
                     } catch (AttributeNotInStoreException e) {
-                        System.out.printf(">> Not found: %s\n", varName);
+                        // Other variables that we do not care about
+                        // System.out.printf(">> Not found: %s\n", varName);
                     }
                 }
             }
@@ -510,6 +530,15 @@ public class Interpreter {
         // Walk the rest of the trace 
         for (int i = 1; i < states.size(); i++) {
             JSONObject constraint = states.get(i);
+            if (interpreter.isDeadlocked()) {
+                // If we are deadlocked, but all constraints are on LTOL
+                boolean onlyLTOL = true;
+                for (String key : constraint.keySet()) {
+                    onlyLTOL &= key.startsWith("___LTOL___");
+
+                } 
+                if (onlyLTOL) break;
+            }
             if (!interpreter.findNext(constraint)) {
                 throw new Exception(String.format("[ofTrace] something wrong at step %d", i));
             }
