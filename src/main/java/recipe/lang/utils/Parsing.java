@@ -31,11 +31,11 @@ public class Parsing {
         allowedSorted.sort(Comparator.comparingInt(String::length));
         Collections.reverse(allowedSorted);
 
-        org.petitparser.parser.Parser parser = StringParser.of(allowed.get(0));
+        org.petitparser.parser.Parser parser = (StringParser.of(allowed.get(0)).seq(CharacterParser.word().not())).flatten();
         for (int i = 1; i < allowed.size(); i++) {
             //DOC: .seq(CharacterParser.word().not()) is added with each parser to allow for parsing when
             // one element in allowed is a prefix of another.
-            parser = parser.or(StringParser.of(allowed.get(i)).seq(CharacterParser.word().not()).flatten());
+            parser = parser.or((StringParser.of(allowed.get(i)).seq(CharacterParser.word().not())).flatten());
         }
 
         return parser;
