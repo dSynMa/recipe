@@ -68,6 +68,13 @@ public class TypingContext {
         this.typeVars = typeVars;
     }
 
+    public void clear(){
+        varType = new HashMap<>();
+        typeVars = new HashMap<>();
+        types = new HashSet<>();
+        predicates = new HashSet<>();
+    }
+
     public void remove(String name){
         Type type = varType.get(name);
         typeVars.get(type).remove(name);
