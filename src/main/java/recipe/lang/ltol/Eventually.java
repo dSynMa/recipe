@@ -23,7 +23,7 @@ public class Eventually extends LTOL{
     public boolean isPureLTL() {
         return ltol.isPureLTL();
     }
-    public Triple<Integer, Map<String, Observation>, LTOL> abstractOutObservations(java.lang.Integer counter) throws InfiniteValueTypeException, MismatchingTypeException, RelabellingTypeException {
+    public Triple<Integer, Map<String, Observation>, LTOL> abstractOutObservations(java.lang.Integer counter) throws Exception {
         Triple<java.lang.Integer, Map<String, Observation>, LTOL> out = ltol.abstractOutObservations(counter);
 
         return new Triple<>(out.getLeft(), out.getMiddle(), new Eventually(out.getRight()));
@@ -33,7 +33,7 @@ public class Eventually extends LTOL{
         return new Eventually(ltol.rename(relabelling));
     }
 
-    public LTOL toLTOLwithoutQuantifiers() throws RelabellingTypeException, InfiniteValueTypeException, MismatchingTypeException {
+    public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return new Eventually(ltol.toLTOLwithoutQuantifiers());
     }
 }

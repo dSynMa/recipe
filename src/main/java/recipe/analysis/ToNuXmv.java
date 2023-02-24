@@ -187,13 +187,14 @@ public class ToNuXmv {
         }
     }
 
-    public static Pair<List<LTOL>, Map<String, Observation>> ltolToLTLAndObservationVariables(List<LTOL> specs) throws RelabellingTypeException, InfiniteValueTypeException, MismatchingTypeException {
+    public static Pair<List<LTOL>, Map<String, Observation>> ltolToLTLAndObservationVariables(List<LTOL> specs) throws Exception {
         Integer counter = 0;
         List<LTOL> pureLTLSpecs = new ArrayList<>();
         Map<String, Observation> observations = new HashMap<>();
 
         for(int i = 0; i < specs.size(); i++){
-            Triple<Integer, Map<String, Observation>, LTOL> integerMapLTOLTriple = specs.get(i).abstractOutObservations(counter);
+            LTOL ltol = specs.get(i);
+            Triple<Integer, Map<String, Observation>, LTOL> integerMapLTOLTriple = ltol.abstractOutObservations(counter);
             counter = integerMapLTOLTriple.getLeft();
             observations.putAll(integerMapLTOLTriple.getMiddle());
             pureLTLSpecs.add(integerMapLTOLTriple.getRight());
