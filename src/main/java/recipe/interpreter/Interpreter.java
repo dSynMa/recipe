@@ -658,7 +658,7 @@ public class Interpreter {
         sys.getAgentInstances().forEach((x) -> {
             String name = x.getLabel();
             JSONObject jObj = initValues.getJSONObject(name);
-            ConcreteStore ist = new ConcreteStore(jObj, x.getAgent());
+            ConcreteStore ist = new ConcreteStore(jObj, x);
             rootStores.put(x, ist);
         });
         this.currentStep = new Step(rootStores, null, this);
