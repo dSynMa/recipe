@@ -118,12 +118,22 @@ public class TypingContext {
     public Set<String> get(Type type){
         HashSet vars = new HashSet<>();
         for(Map.Entry<Type, Set<String>> entries : typeVars.entrySet()){
-            if(type.getClass().isAssignableFrom(entries.getKey().getClass())){
-                if(type.getClass().equals(Enum.class) && entries.getKey().getClass().equals(Enum.class)){
+            if(type.getClass().isAssignableFrom(entries.getKey().getClass())) {
+                if (type.getClass().equals(Enum.class) && entries.getKey().getClass().equals(Enum.class)) {
                     if (((Enum) type).name().equals(((Enum) entries.getKey()).name())) {
                         vars.addAll(entries.getValue());
                     }
                 } else {
+                    vars.addAll(entries.getValue());
+                }
+            }
+
+            if(type.getClass().equals(UnionType.class)){
+                if(entries.getKey().getClass().equals(UnionType.class)){
+                    if(!Collections.disjoint(((UnionType) type).getTypes(), ((UnionType) entries.getKey()).getTypes())){
+                        vars.addAll(entries.getValue());
+                    }
+                } else if(((UnionType) type).getTypes().contains(entries.getKey())){
                     vars.addAll(entries.getValue());
                 }
             }

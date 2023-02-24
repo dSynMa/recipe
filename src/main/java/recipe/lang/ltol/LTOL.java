@@ -302,7 +302,7 @@ public abstract class LTOL {
 
     public abstract boolean isPureLTL();
 
-    public abstract Triple<java.lang.Integer, Map<String, Observation>, LTOL> abstractOutObservations(java.lang.Integer counter) throws InfiniteValueTypeException, MismatchingTypeException, RelabellingTypeException;
+    public abstract Triple<java.lang.Integer, Map<String, Observation>, LTOL> abstractOutObservations(java.lang.Integer counter) throws Exception;
     @Override
     public boolean equals(Object expr){
         return this.toString().equals(expr.toString());
@@ -314,9 +314,9 @@ public abstract class LTOL {
 
     public abstract LTOL rename(Function<TypedVariable, TypedVariable> relabelling) throws RelabellingTypeException, MismatchingTypeException;
 
-    public abstract LTOL toLTOLwithoutQuantifiers() throws RelabellingTypeException, InfiniteValueTypeException, MismatchingTypeException;
+    public abstract LTOL toLTOLwithoutQuantifiers() throws Exception;
 
-    protected static Set<LTOL> rewriteOutBigAndOr(List<TypedVariable> vars, LTOL ltol) throws InfiniteValueTypeException, MismatchingTypeException, RelabellingTypeException {
+    protected static Set<LTOL> rewriteOutBigAndOr(List<TypedVariable> vars, LTOL ltol) throws Exception {
         Set<LTOL> possibleValues = new HashSet<>();
         possibleValues.add(ltol);
         for (TypedVariable var : vars) {
@@ -324,11 +324,13 @@ public abstract class LTOL {
             Set<TypedValue> possibleAgentInstances = var.getType().getAllValues();
             Set<String> possibleAgentInstancesNames = new HashSet<>();
             Set<Agent> possibleAgentTypes = new HashSet<>();
+            Map<String, Type> agentInstanceNameToType = new HashMap<>();
 
             for (Object concreteVar : possibleAgentInstances) {
                 TypedValue value = (TypedValue) concreteVar;
                 possibleAgentInstancesNames.add((String) value.getValue());
                 possibleAgentTypes.add(Config.getAgent(value.getType().name()));
+                agentInstanceNameToType.put((String) value.getValue(), value.getType());
             }
 
             boolean start = true;
@@ -355,7 +357,18 @@ public abstract class LTOL {
                 }
             }
 
-            possibleValues = newPossibleValues;
+            Set<LTOL> newNewPossibleValues = new HashSet<>();
+            for(LTOL ltol1 : newPossibleValues){
+                for(String agentInstanceName : possibleAgentInstancesNames){
+                    Type agentType = agentInstanceNameToType.get(agentInstanceName);
+                    for(TypedVariable agentVar : vars) {
+                        LTOL ltol2 = ltol1.rename((x) -> x.getName().equals(agentVar.getName()) ? new TypedVariable(agentType, agentInstanceName) : x);
+                        newNewPossibleValues.add(ltol2);
+                    }
+                }
+            }
+
+            possibleValues = newNewPossibleValues;
         }
 
         return possibleValues;

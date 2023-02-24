@@ -35,7 +35,7 @@ public class Until extends LTOL{
         return left.isPureLTL() && right.isPureLTL();
     }
 
-    public Triple<java.lang.Integer, Map<String, Observation>, LTOL> abstractOutObservations(java.lang.Integer counter) throws InfiniteValueTypeException, MismatchingTypeException, RelabellingTypeException {
+    public Triple<java.lang.Integer, Map<String, Observation>, LTOL> abstractOutObservations(java.lang.Integer counter) throws Exception {
         Triple<java.lang.Integer, Map<String, Observation>, LTOL> leftOut = left.abstractOutObservations(counter);
         Triple<java.lang.Integer, Map<String, Observation>, LTOL> rightOut = right.abstractOutObservations(leftOut.getLeft());
         Map<String, Observation> union = new HashMap<>(leftOut.getMiddle());
@@ -48,7 +48,7 @@ public class Until extends LTOL{
         return new Until(left.rename(relabelling), right.rename(relabelling));
     }
 
-    public LTOL toLTOLwithoutQuantifiers() throws RelabellingTypeException, InfiniteValueTypeException, MismatchingTypeException {
+    public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return new Until(left.toLTOLwithoutQuantifiers(), right.toLTOLwithoutQuantifiers());
     }
 }

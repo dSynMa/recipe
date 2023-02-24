@@ -41,7 +41,7 @@ public class BigAnd extends LTOL {
     private LTOL asPureLTOL;
 
     @Override
-    public Triple<Integer, Map<String, Observation>, LTOL> abstractOutObservations(Integer counter) throws InfiniteValueTypeException, MismatchingTypeException, RelabellingTypeException {
+    public Triple<Integer, Map<String, Observation>, LTOL> abstractOutObservations(Integer counter) throws Exception {
         if (asPureLTOL == null) {
             asPureLTOL = this.toLTOLwithoutQuantifiers();
         }
@@ -54,11 +54,11 @@ public class BigAnd extends LTOL {
         return new BigAnd(vars, ltol.rename((x) -> !vars.contains(x) ? relabelling.apply(x) : x));
     }
 
-    public LTOL toLTOLwithoutQuantifiers() throws RelabellingTypeException, InfiniteValueTypeException, MismatchingTypeException {
+    public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return rewriteOutBigAnd(vars, ltol);
     }
 
-    private static LTOL rewriteOutBigAnd(List<TypedVariable> vars, LTOL ltol) throws InfiniteValueTypeException, MismatchingTypeException, RelabellingTypeException {
+    private static LTOL rewriteOutBigAnd(List<TypedVariable> vars, LTOL ltol) throws Exception {
         Set<LTOL> possibleValues = LTOL.rewriteOutBigAndOr(vars, ltol);
 
         LTOL result = null;
