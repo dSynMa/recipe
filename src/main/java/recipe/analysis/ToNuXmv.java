@@ -265,8 +265,11 @@ public class ToNuXmv {
         List<LTOL> specs = specsAndObs.getLeft();
         Map<String, Observation> observations = specsAndObs.getRight();
 
+        String noObservations = "no-observations := TRUE";
+
         for(Map.Entry<String, Observation> entry : observations.entrySet()){
             vars += "\t" + entry.getKey() + " : boolean;\n";
+            noObservations += " & next(" + entry.getKey() + ") = FALSE";
         }
 
         List<AgentInstance> agentInstances = system.getAgentInstances();
@@ -332,6 +335,7 @@ public class ToNuXmv {
         if(keepFunctions.size() > 0)
             define += "\t" + String.join(";\n\t", keepFunctions) + ";\n";
         define += "\t" + keepAll + ";\n";
+        define += "\t" + noObservations + ";\n";
 
 
         List<String> progress = new ArrayList<>();
@@ -822,7 +826,7 @@ public class ToNuXmv {
 
         nuxmv += init;
         nuxmv += "TRANS\n";
-        nuxmv += "\t(transition)\n \t\t| (!progress & keep-all)\n";
+        nuxmv += "\t(transition)\n \t\t| (!progress & keep-all & no-observations)\n";
         nuxmv = nuxmv.replaceAll("&( |\n)*TRUE(( )*&( )*)( |\n)*", "");
         nuxmv = nuxmv.replaceAll("TRUE(( )*&( )*)", "");
 //        nuxmv = nuxmv.replaceAll("TRUE\n(\t& )", "\t");
