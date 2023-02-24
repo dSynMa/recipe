@@ -256,19 +256,8 @@ public abstract class LTOL {
                 .left(StringParser.of("R").trim(), (List<LTOL> values) -> new Until(new Not(values.get(0)), new Not(values.get(2))));
 
 
-        // conjunction is right- and left-associative
-        builder.group()
-                .right(of('&').plus().trim(), (List<LTOL> values) -> new And(values.get(0), values.get(2)))
-                .left(of('&').plus().trim(), (List<LTOL> values) -> new And(values.get(0), values.get(2)));
-
         builder.group()
                 .right(StringParser.of("->").trim(), (List<LTOL> values) -> new Or(new Not(values.get(0)), values.get(2)));
-
-        // disjunction is right- and left-associative
-        builder.group()
-                .right(of('|').plus().trim(), (List<LTOL> values) -> new Or(values.get(0), values.get(2)))
-                .left(of('|').plus().trim(), (List<LTOL> values) -> new Or(values.get(0), values.get(2)));
-
 
         // iff is left and right-associative
         builder.group()
@@ -296,6 +285,15 @@ public abstract class LTOL {
                     return new Not(new Iff(values.get(0), values.get(2)));
                 });
 
+        // conjunction is right- and left-associative
+        builder.group()
+                .right(of('&').plus().trim(), (List<LTOL> values) -> new And(values.get(0), values.get(2)))
+                .left(of('&').plus().trim(), (List<LTOL> values) -> new And(values.get(0), values.get(2)));
+
+        // disjunction is right- and left-associative
+        builder.group()
+                .right(of('|').plus().trim(), (List<LTOL> values) -> new Or(values.get(0), values.get(2)))
+                .left(of('|').plus().trim(), (List<LTOL> values) -> new Or(values.get(0), values.get(2)));
 
         return builder.build();
     }

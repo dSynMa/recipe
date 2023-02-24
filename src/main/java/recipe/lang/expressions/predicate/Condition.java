@@ -136,16 +136,6 @@ public abstract class Condition implements Expression<Boolean> {
 					.prefix(StringParser.of(pred).trim(), (List<Condition> values) -> new Predicate(pred, values.get(1)));
 		}
 
-		// conjunction is right- and left-associative
-		builder.group()
-				.right(of('&').plus().trim(), (List<Condition> values) -> new And(values.get(0), values.get(2)))
-				.left(of('&').plus().trim(), (List<Condition> values) -> new And(values.get(0), values.get(2)));
-
-		// disjunction is right- and left-associative
-		builder.group()
-				.right(of('|').plus().trim(), (List<Condition> values) -> new Or(values.get(0), values.get(2)))
-				.left(of('|').plus().trim(), (List<Condition> values) -> new Or(values.get(0), values.get(2)));
-
 		// implication is right-associative
 		builder.group()
 				.right(StringParser.of("->").plus().trim(), (List<Condition> values) -> new Implies(values.get(0), values.get(2)));
@@ -175,6 +165,16 @@ public abstract class Condition implements Expression<Boolean> {
 				.left(StringParser.of("!=").trim(), (List<Condition> values) -> {
 					return new IsNotEqualTo(values.get(0), values.get(2));
 				});
+
+		// conjunction is right- and left-associative
+		builder.group()
+				.right(of('&').plus().trim(), (List<Condition> values) -> new And(values.get(0), values.get(2)))
+				.left(of('&').plus().trim(), (List<Condition> values) -> new And(values.get(0), values.get(2)));
+
+		// disjunction is right- and left-associative
+		builder.group()
+				.right(of('|').plus().trim(), (List<Condition> values) -> new Or(values.get(0), values.get(2)))
+				.left(of('|').plus().trim(), (List<Condition> values) -> new Or(values.get(0), values.get(2)));
 
 		condition.set(builder.build());
 
