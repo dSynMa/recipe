@@ -266,7 +266,7 @@ public class ToNuXmv {
         List<LTOL> specs = specsAndObs.getLeft();
         Map<String, Observation> observations = specsAndObs.getRight();
 
-        String noObservations = "noObservations := TRUE";
+        String noObservations = "no-observations := TRUE";
 
         for(Map.Entry<String, Observation> entry : observations.entrySet()){
             vars += "\t" + entry.getKey() + " : boolean;\n";
@@ -830,7 +830,7 @@ public class ToNuXmv {
 
         nuxmv += init;
         nuxmv += "TRANS\n";
-        nuxmv += "\t(transition)\n \t\t| (!progress & keep-all & noObservations)\n";
+        nuxmv += "\t(transition)\n \t\t| (!progress & keep-all & no-observations)\n";
         nuxmv = nuxmv.replaceAll("&( |\n)*TRUE(( )*&( )*)( |\n)*", "");
         nuxmv = nuxmv.replaceAll("TRUE(( )*&( )*)", "");
 //        nuxmv = nuxmv.replaceAll("TRUE\n(\t& )", "\t");
