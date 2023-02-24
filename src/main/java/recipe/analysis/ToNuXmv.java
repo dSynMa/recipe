@@ -305,14 +305,16 @@ public class ToNuXmv {
                 keepThis += " & next(" + namei + "-state) = " + namei + "-state";
             }
 
-            String falsifyAllLabels = "falsify-not-" + namei + " := TRUE";
+            String falsifyAllLabelsNotOfI = "falsify-not-" + namei + " := TRUE";
+            String falsifyAllLabelsOfI = "falsify-" + namei + " := TRUE";
 
             for(Transition t : agenti.getReceiveTransitions()){
                 String label = ((ReceiveProcess) t.getLabel()).getLabel();
                 if (label != null && !label.equals("")){
                     keepThis += " & next(" + namei + "-" + label + ") = FALSE";
-                    falsifyAllLabels += " & next(" + namei + "-" + label + ") = FALSE";
+                    falsifyAllLabelsNotOfI += " & next(" + namei + "-" + label + ") = FALSE";
                     keepAll += " & next(" + namei + "-" + label + ") = FALSE";
+                    falsifyAllLabelsOfI += " & next(" + namei + "-" + label + ") = FALSE";
                     receiveProcessNames.add(namei + "-" + label);
 
                     String falsifyAllLabelsExceptThis = "falsify-not-" + namei + "-" + label + " := TRUE";
@@ -326,7 +328,8 @@ public class ToNuXmv {
                 }
             }
 
-            keepFunctions.add(falsifyAllLabels);
+            keepFunctions.add(falsifyAllLabelsNotOfI);
+            keepFunctions.add(falsifyAllLabelsOfI);
 
             keepAll += " & keep-all-" + namei;
 
@@ -411,7 +414,7 @@ public class ToNuXmv {
                         sendTriggeredIf.add(sendingProcess.getPsi()
                                 .relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify().toString());
 
-
+                        sendEffects.add("falsify-" + sendingAgentName);
                         // add next state to send effects
                         sendEffects.add("next(" + sendingAgentName + "-state" + ") = " + t.getDestination());
 
