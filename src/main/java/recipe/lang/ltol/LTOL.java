@@ -106,16 +106,16 @@ public abstract class LTOL {
         TypingContext agentVariables = agentVarLabelsPair.getLeft();
         TypingContext transitionLabels = agentVarLabelsPair.getRight();
 
-        return parser(commonVars, messageVars, agents, agentVariables, transitionLabels);
+        return parser(commonVars, messageVars, agents, agentVariables, transitionLabels, new TypingContext());
     }
 
     public static org.petitparser.parser.Parser parser(TypingContext commonVars, TypingContext messageVars,
-                                                       TypingContext agentNames, TypingContext agentVariables,
-                                                       TypingContext transitionLabels) throws Exception {
+                                                       TypingContext agentNames, TypingContext agentLocalVariables,
+                                                       TypingContext transitionLabels, TypingContext agentVariables) throws Exception {
         ExpressionBuilder builder = new ExpressionBuilder();
 
         TypingContext vars = new TypingContext();
-        vars.setAll(agentVariables);
+        vars.setAll(agentLocalVariables);
         // TODO uncommenting the below allows us to write something like SPEC /\ k : Robot . k = two -> F k-lnk = a,
         //  but still need to deal appropriately with the translation to nuXmv before allowing it;
         //  we have no 'two' variable in the model, so need to resolve the k to two in the right-hand side
@@ -171,17 +171,17 @@ public abstract class LTOL {
                             newAgentNames.setAll(agentNames);
 
                             TypingContext params = context.resolve();
-                            newAgentNames.setAll(params);
 
                             Pair<TypingContext, TypingContext> agentVarLabelsPair = agentTyping(params);
 
                             TypingContext newAgentVariables = agentVarLabelsPair.getLeft();
-                            newAgentVariables.setAll(agentVariables);
+                            newAgentVariables.setAll(agentLocalVariables);
                             TypingContext newTransitionLabels = agentVarLabelsPair.getRight();
                             newTransitionLabels.setAll(transitionLabels);
 
                             try {
-                                Parser ltolParser = LTOL.parser(commonVars, messageVars, newAgentNames, newAgentVariables, newTransitionLabels).trim();
+                                Parser ltolParser = LTOL.parser(commonVars, messageVars, newAgentNames, newAgentVariables,
+                                        newTransitionLabels, params).trim();
                                 return ltolParser;
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -215,11 +215,11 @@ public abstract class LTOL {
                             return values.get(1);
                         });
 
-        Parser necessaryObs = of('<').seq(Observation.parser(commonVars, messageVars, agentNames).trim()).seq(of('>'))
+        Parser necessaryObs = of('<').seq(Observation.parser(commonVars, messageVars, agentVariables).trim()).seq(of('>'))
                 .map((List<Observation> vals) -> {
                     return vals.get(1);
                 });
-        Parser sufficientObs = of('[').seq(Observation.parser(commonVars, messageVars, agentNames).trim()).seq(of(']'))
+        Parser sufficientObs = of('[').seq(Observation.parser(commonVars, messageVars, agentVariables).trim()).seq(of(']'))
                 .map((List<Observation> vals) -> {
                     return vals.get(1);
                 });
