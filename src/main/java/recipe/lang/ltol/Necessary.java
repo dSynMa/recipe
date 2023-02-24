@@ -46,7 +46,7 @@ public class Necessary extends LTOL{
         Triple<java.lang.Integer, Map<String, Observation>, LTOL> newValue = this.value.abstractOutObservations(counter + 1);
         map.putAll(newValue.getMiddle());
 
-        return new Triple<>(newValue.getLeft(), map, new Next(new Or(new Not(new Atom(var)), newValue.getRight())));
+        return new Triple<>(newValue.getLeft(), map, new Next(new And(new Atom(var), newValue.getRight())));
     }
 
     public LTOL rename(Function<TypedVariable, TypedVariable> relabelling) throws RelabellingTypeException, MismatchingTypeException{
