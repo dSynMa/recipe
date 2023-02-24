@@ -583,13 +583,13 @@ public class ToNuXmv {
                                         // else relabel variables appropriately
                                         for (Map.Entry<String, Expression> entry : receiveProcess.getUpdate().entrySet()) {
                                             receiveTransEffects
-                                                    .add("next(" + receiveName + "-" + entry.getKey() + ") = "
+                                                    .add("next(" + receiveName + "-" + entry.getKey() + ") = ("
                                                             + entry.getValue().relabel(v ->
                                                             sendingProcess.getMessage().containsKey(((TypedVariable) v).getName())
                                                                     ? relabelledMessage.get(((TypedVariable) v).getName())
                                                                     : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
                                                                     ? stopHelper.apply((TypedVariable) v)
-                                                                    : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v))));
+                                                                    : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v))) + ")");
                                         }
 
                                         //stop considering this transition if update uses a message variable
