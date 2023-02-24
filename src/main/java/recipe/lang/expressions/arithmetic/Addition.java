@@ -6,6 +6,8 @@ import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
 import recipe.lang.types.Number;
 import recipe.lang.types.Real;
+import recipe.lang.types.Integer;
+
 import recipe.lang.utils.exceptions.*;
 
 import java.math.BigDecimal;
@@ -27,7 +29,10 @@ public class Addition extends ArithmeticExpression{
 
         BigDecimal lhsNo = new BigDecimal(lhsValue.getValue().toString());
         BigDecimal rhsNo = new BigDecimal(rhsValue.getValue().toString());
-        return new TypedValue<Number>((Number) Real.getType(), lhsNo.add(rhsNo).toString());
+        BigDecimal result = lhsNo.add(rhsNo);
+        Number resultType = isInteger(result) ? Integer.getType() : Real.getType();
+
+        return new TypedValue<Number>(resultType, result.toString());
     }
 
     @Override

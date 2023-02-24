@@ -8,6 +8,7 @@ import javax.management.AttributeNotFoundException;
 import org.json.JSONObject;
 
 import recipe.lang.agents.Agent;
+import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
 import recipe.lang.expressions.TypedValue;
@@ -154,16 +155,16 @@ public class ConcreteStore extends Store {
     // Use sparingly.
     public ConcreteStore(Map<TypedVariable, TypedValue> data) { this.data = data; }
 
-    public ConcreteStore(JSONObject obj, Agent agent) {
-        this.agent = agent;
+    public ConcreteStore(JSONObject obj, AgentInstance instance) {
+        this.agent = instance.getAgent();
         data = new HashMap<TypedVariable, TypedValue>();
         state = new State<Integer>(
             agent.getName(),
-            Integer.valueOf(obj.getString("state"))
+            Integer.valueOf(obj.getString("automaton-state"))
         );
 
         obj.keySet().forEach(var -> {
-            if (!var.toString().equals("state")) {
+            if (!var.toString().equals("automaton-state")) {
                 try {
                     TypedVariable v = agent.getStore().getAttribute(var);
                     if (v != null) {

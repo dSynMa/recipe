@@ -6,7 +6,6 @@ import recipe.lang.utils.Pair;
 
 import org.json.*;
 
-import javax.annotation.RegEx;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -322,7 +321,7 @@ public class NuXmvInteraction {
         while(matcher.find()){
             String[] group = matcher.toMatchResult().group().split("=");
 
-            String[] left = group[0].split("-");
+            String[] left = group[0].split("-", 2);
 
             String agent = left[0].trim();
 

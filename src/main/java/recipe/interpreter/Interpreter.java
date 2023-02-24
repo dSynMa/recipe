@@ -37,7 +37,7 @@ import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 
 public class Interpreter {
-    private static TypedVariable channTypedVariable;
+    private TypedVariable channTypedVariable;
     private TypedVariable getChannelTV () {
         if (channTypedVariable == null) {
             try {
@@ -235,7 +235,7 @@ public class Interpreter {
                 
                 for (String varName : instanceConstraint.keySet()) {
                     try {
-                        if (varName.equals("state")) {
+                        if (varName.equals("automaton-state")) {
                             String stateConstraint = instanceConstraint.getString(varName);
                             String stateInst = instanceStore.getState().getLabel().toString();
                             if (!stateInst.equals(stateConstraint)) {
@@ -658,7 +658,7 @@ public class Interpreter {
         sys.getAgentInstances().forEach((x) -> {
             String name = x.getLabel();
             JSONObject jObj = initValues.getJSONObject(name);
-            ConcreteStore ist = new ConcreteStore(jObj, x.getAgent());
+            ConcreteStore ist = new ConcreteStore(jObj, x);
             rootStores.put(x, ist);
         });
         this.currentStep = new Step(rootStores, null, this);
