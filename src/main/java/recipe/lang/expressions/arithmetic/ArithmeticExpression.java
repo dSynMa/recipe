@@ -12,6 +12,7 @@ import recipe.lang.types.Type;
 import recipe.lang.utils.TypingContext;
 import recipe.lang.utils.exceptions.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -67,5 +68,10 @@ public abstract class ArithmeticExpression implements Expression<Number> {
     @Override
     public Type getType(){
         return Real.getType();
+    }
+
+    // Helper function to check if n is integer or real
+    protected static boolean isInteger(BigDecimal n) {
+        return n.signum() == 0 || n.scale() <= 0 || n.stripTrailingZeros().scale() <= 0;
     }
 }

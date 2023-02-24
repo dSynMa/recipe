@@ -5,6 +5,7 @@ import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
 import recipe.lang.types.Number;
+import recipe.lang.types.Integer;
 import recipe.lang.types.Real;
 import recipe.lang.utils.exceptions.*;
 
@@ -28,7 +29,10 @@ public class Subtraction extends ArithmeticExpression{
         try {
             BigDecimal lhsNo = new BigDecimal(lhsValue.getValue().toString());
             BigDecimal rhsNo = new BigDecimal(rhsValue.getValue().toString());
-            return new TypedValue<Number>((Number) Real.getType(), lhsNo.subtract(rhsNo).toString());
+            BigDecimal result = lhsNo.subtract(rhsNo);
+            Number resultType = isInteger(result) ? Integer.getType() : Real.getType();
+
+            return new TypedValue<Number>(resultType, result.toString());
         } catch (NumberFormatException e) {
             System.out.printf("%s %s\n", lhsValue.toString(), lhsValue.getValue().getClass().toString());
             System.out.printf("%s %s\n", rhsValue.toString(), rhsValue.getValue().getClass().toString());
