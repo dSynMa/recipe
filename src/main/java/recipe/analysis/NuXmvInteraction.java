@@ -322,7 +322,7 @@ public class NuXmvInteraction {
         while(matcher.find()){
             String[] group = matcher.toMatchResult().group().split("=");
 
-            String[] left = group[0].split("-");
+            String[] left = group[0].split("-", 2);
 
             String agent = left[0].trim();
 

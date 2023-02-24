@@ -159,11 +159,11 @@ public class ConcreteStore extends Store {
         data = new HashMap<TypedVariable, TypedValue>();
         state = new State<Integer>(
             agent.getName(),
-            Integer.valueOf(obj.getString("state"))
+            Integer.valueOf(obj.getString("automaton-state"))
         );
 
         obj.keySet().forEach(var -> {
-            if (!var.toString().equals("state")) {
+            if (!var.toString().equals("automaton-state")) {
                 try {
                     TypedVariable v = agent.getStore().getAttribute(var);
                     if (v != null) {

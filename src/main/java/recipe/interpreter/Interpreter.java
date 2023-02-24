@@ -235,7 +235,7 @@ public class Interpreter {
                 
                 for (String varName : instanceConstraint.keySet()) {
                     try {
-                        if (varName.equals("state")) {
+                        if (varName.equals("automaton-state")) {
                             String stateConstraint = instanceConstraint.getString(varName);
                             String stateInst = instanceStore.getState().getLabel().toString();
                             if (!stateInst.equals(stateConstraint)) {
