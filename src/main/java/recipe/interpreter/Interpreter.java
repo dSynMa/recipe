@@ -162,6 +162,7 @@ public class Interpreter {
             JSONObject ltol = constraint.optJSONObject("___LTOL___");
             if (ltol != null) {
                 for (String obsVar : ltol.keySet()) {
+                    if (obsVar.equals("no-observations")) continue;
                     Expression<recipe.lang.types.Boolean> observation = obsMap.get(obsVar).getObservation();
                     AgentInstance sender = this.inboundTransition.sender;
                     System.out.println(observation.toString());
@@ -173,7 +174,6 @@ public class Interpreter {
                         TypedValue chan = chanExpr.valueIn(senderStore);
                         Map<TypedVariable, TypedValue> mp = new HashMap<>();
                         mp.put(new TypedVariable<Type>(chan.getType(), "channel"), chan);
-                        // mp.put(new TypedVariable<Type>(chan.getType(), "sender"), sender.getLabel());
                         recipe.lang.types.Enum senderEnum = recipe.lang.types.Enum.getEnum(sender.getAgent().getName());
                         TypedValue senderName = null;
                         for (TypedValue tv : senderEnum.getAllValues()) {

@@ -312,6 +312,9 @@ public class NuXmvInteraction {
         // nuxmvSimOutput = nuxmvSimOutput.replaceAll("-- Loop starts here\n", "");
 
         nuxmvSimOutput = nuxmvSimOutput.replaceAll("(obs[0-9]+)", "___LTOL___-$1");
+        nuxmvSimOutput = nuxmvSimOutput.replaceAll(
+            "no-observations", 
+            "___LTOL___-no-observations");
 
         String agentStateRegex = "(^|\\n)[^=\\n\\^]+\\-[^=\\n\\^]+ =[^=\\n$]+(\\n|$)";
         Pattern compile = Pattern.compile(agentStateRegex, Pattern.MULTILINE);
