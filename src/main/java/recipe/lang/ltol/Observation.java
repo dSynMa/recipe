@@ -33,12 +33,13 @@ public class Observation {
         this.observation = observation;
     }
 
-    public static org.petitparser.parser.Parser parser(TypingContext commonVars, TypingContext messageVars, TypingContext agentNames) throws Exception {
+    public static org.petitparser.parser.Parser parser(TypingContext commonVars, TypingContext messageVars, TypingContext agentParameters) throws Exception {
         TypingContext cvAndMsg = new TypingContext();
         cvAndMsg.setAll(commonVars);
         cvAndMsg.setAll(messageVars);
         cvAndMsg.set(Config.channelLabel, Enum.getEnum(Config.channelLabel));
         cvAndMsg.set("sender", Config.getAgentType());
+        cvAndMsg.setAll(agentParameters);
         cvAndMsg.addPredicate("exists");
         cvAndMsg.addPredicate("forall");
 
