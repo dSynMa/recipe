@@ -36,18 +36,21 @@ public class Possibly extends LTOL{
         return false;
     }
 
-    public Triple<java.lang.Integer, Map<String, Observation>, LTOL> abstractOutObservations(java.lang.Integer counter) {
+    public Triple<java.lang.Integer, Map<String, Observation>, LTOL> abstractOutObservations(java.lang.Integer counter) throws Exception {
         Observation oldObs = new Observation(obs.observation);
         Map map = new HashMap<String, Observation>();
         map.put("obs" + counter, new Observation(oldObs.observation));
 
         TypedVariable var = new TypedVariable(Boolean.getType(), "obs" + counter);
 
-        return new Triple<>(counter + 1, map, new Next(new Or(new Not(new Atom(var)), this.value)));
+        Triple<java.lang.Integer, Map<String, Observation>, LTOL> newValue = this.value.abstractOutObservations(counter + 1);
+        map.putAll(newValue.getMiddle());
+
+        return new Triple<>(newValue.getLeft(), map, new Next(new Or(new Not(new Atom(var)), newValue.getRight())));
     }
 
     public LTOL rename(Function<TypedVariable, TypedVariable> relabelling) throws RelabellingTypeException, MismatchingTypeException {
-        return new Possibly(obs.rename(relabelling), value);
+        return new Possibly(obs.rename(relabelling), value.rename(relabelling));
     }
 
     public LTOL toLTOLwithoutQuantifiers() throws RelabellingTypeException, InfiniteValueTypeException, MismatchingTypeException {
