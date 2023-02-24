@@ -37,7 +37,7 @@ import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 
 public class Interpreter {
-    private static TypedVariable channTypedVariable;
+    private TypedVariable channTypedVariable;
     private TypedVariable getChannelTV () {
         if (channTypedVariable == null) {
             try {
