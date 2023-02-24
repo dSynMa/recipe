@@ -192,6 +192,10 @@ public class Interpreter {
                         }
                     } catch (Exception e) {
                         handleEvaluationException(e);
+                        // If the observation was supposed to be satisfied
+                        // then something's wrong
+                        if (ltol.get(obsVar).equals("TRUE"))
+                            return false;
                     }
                 }
             }
