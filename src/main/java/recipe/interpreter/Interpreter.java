@@ -177,6 +177,9 @@ public class Interpreter {
                         recipe.lang.types.Enum senderEnum = recipe.lang.types.Enum.getEnum(sender.getAgent().getName());
                         TypedValue senderName = null;
                         for (TypedValue tv : senderEnum.getAllValues()) {
+                            // In some cases the agent instance name gets
+                            // treated like a variable. So we just add variables
+                            mp.put(new TypedVariable<Type>(tv.getType(), tv.toString()), tv);
                             if (tv.toString().equals(sender.getLabel())) {
                                 senderName = tv;
                                 break;
