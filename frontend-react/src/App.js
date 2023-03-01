@@ -649,7 +649,10 @@ function resetInterpreter(){
                             // TODO store the renders somewhere, instead of
                             // recomputing them all the time */}
                             <tr key={i}>
-                            <td className='text-right'>{x.depth} {x.___LOOP___ && <React.Fragment><br/><em>Loop starts here</em></React.Fragment>}</td>
+                            <td className='text-right'>{x.depth} 
+                              {x.___LOOP___ && !x.___DEADLOCK___ && <React.Fragment><br/><em>Loop starts here</em></React.Fragment>}
+                              {x.___DEADLOCK___ && <React.Fragment><br/><em>Deadlock state</em></React.Fragment>}
+                            </td>
                             <td>{formatStep(renderStep(x))}</td>
                           </tr>
                           </React.Fragment>)

@@ -144,6 +144,9 @@ public class Interpreter {
                 inboundTransition == null ? null : inboundTransition.toJSON());
             result.put("state", jStores);
             result.put("transitions", jTransitions);
+            if (this.transitions.size() == 0) {
+                result.put("___DEADLOCK___", true);
+            }
             if (this.annotations != null) {
                 for (String key : annotations.keySet()) {
                     result.put(key, annotations.get(key));
@@ -624,15 +627,16 @@ public class Interpreter {
     public static Interpreter ofTrace(recipe.lang.System s, Map<String,Observation> obsMap, String trace) throws Exception {
         // Find states that are loop-starts
         Matcher m = Pattern.compile(
-            "-- Loop starts here[\s\n]*-> State: 1.([0.-9]+)",
+            "-- Loop starts here[\s\n]*-> State: 1.([0-9]+)",
             Pattern.DOTALL
         ).matcher(trace);
         Set<Integer> loopingStates = new HashSet<>();
         while (m.find()) {
+            // We do -1 since nuXmv numbers states from 1
             loopingStates.add(Integer.valueOf(m.group(1))-1);
         }
 
-        // Remove loop annotiations
+        // Remove loop annotations
         trace = trace.replaceAll("-- Loop starts here\n", "");
         String sentinel = "Trace Type: Counterexample";
         int startPos = trace.indexOf(sentinel) + sentinel.length();
@@ -647,7 +651,7 @@ public class Interpreter {
             if (!string.contains("<-")) continue; 
 
             JSONObject state = nuxmv.outputToJSON(string);
-            if (loopingStates.contains(states.size()+1)) {
+            if (loopingStates.contains(states.size())) {
                 state.put("___LOOP___", true);
             }
             states.add(state);
