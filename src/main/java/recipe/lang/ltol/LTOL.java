@@ -16,7 +16,6 @@ import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Integer;
 import recipe.lang.utils.*;
-import recipe.lang.utils.exceptions.InfiniteValueTypeException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.utils.exceptions.RelabellingTypeException;
 
@@ -325,22 +324,16 @@ public abstract class LTOL {
             for(LTOL ltol1 : possibleValues){
                 for(String agentName : possibleAgentInstancesNames){
                     LTOL ltol2 = ltol1.rename((x) -> labelledPossibleReferences.contains(x) ? new TypedVariable(x.getType(), x.toString().replaceAll("^" + var.toString(), agentName)) : x);
-                    newPossibleValues.add(ltol2);
-                }
-            }
-
-            Set<LTOL> newNewPossibleValues = new HashSet<>();
-            for(LTOL ltol1 : newPossibleValues){
-                for(String agentInstanceName : possibleAgentInstancesNames){
-                    Type agentType = agentInstanceNameToType.get(agentInstanceName);
+                    Type agentType = agentInstanceNameToType.get(agentName);
                     for(TypedVariable agentVar : vars) {
-                        LTOL ltol2 = ltol1.rename((x) -> x.getName().equals(agentVar.getName()) ? new TypedVariable(agentType, agentInstanceName) : x);
-                        newNewPossibleValues.add(ltol2);
+                        ltol2 = ltol2.rename((x) -> x.getName().equals(agentVar.getName()) ? new TypedVariable(agentType, agentName) : x);
+                        java.lang.System.out.println(ltol2.toString());
+                        newPossibleValues.add(ltol2);
                     }
                 }
             }
 
-            possibleValues = newNewPossibleValues;
+            possibleValues = newPossibleValues;
         }
 
         return possibleValues;
