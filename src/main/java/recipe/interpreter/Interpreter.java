@@ -144,6 +144,9 @@ public class Interpreter {
                 inboundTransition == null ? null : inboundTransition.toJSON());
             result.put("state", jStores);
             result.put("transitions", jTransitions);
+            if (this.transitions.size() == 0) {
+                result.put("___DEADLOCK___", true);
+            }
             if (this.annotations != null) {
                 for (String key : annotations.keySet()) {
                     result.put(key, annotations.get(key));
