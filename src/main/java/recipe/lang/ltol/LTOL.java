@@ -203,9 +203,6 @@ public abstract class LTOL {
                     return new BigOr((List<TypedVariable>) paramsAndFormula.get(0), (LTOL) paramsAndFormula.get(2));
                 });
 
-        builder.group().primitive(bigAnd);
-        builder.group().primitive(bigOr);
-
         builder.group()
                 .primitive(Condition.parser(vars).map((Condition value) -> {
                     return new Atom(value);
@@ -215,52 +212,36 @@ public abstract class LTOL {
                             return values.get(1);
                         });
 
-        Parser necessaryObs = of('<').seq(Observation.parser(commonVars, messageVars, agentVariables).trim()).seq(of('>'))
+        Parser necessaryObs = of('<').seq(Observation.parser(commonVars, messageVars, agentVariables).trim()).seq(of('>')).trim()
                 .map((List<Observation> vals) -> {
                     return vals.get(1);
                 });
-        Parser sufficientObs = of('[').seq(Observation.parser(commonVars, messageVars, agentVariables).trim()).seq(of(']'))
+        Parser sufficientObs = of('[').seq(Observation.parser(commonVars, messageVars, agentVariables).trim()).seq(of(']')).trim()
                 .map((List<Observation> vals) -> {
                     return vals.get(1);
                 });
 
         builder.group()
-                .prefix(necessaryObs, (List<Object> values) -> {
+                .prefix(of('!').trim(), (List<LTOL> values) -> new Not(values.get(1)))
+                .prefix(of('G').trim(), (List<LTOL> values) -> new Globally(values.get(1)))
+                .prefix(of('F').trim(), (List<LTOL> values) -> {
+                    return new Eventually(values.get(1));
+                })
+                .prefix(of('X').trim(), (List<LTOL> values) -> new Next(values.get(1)))
+                .prefix(sufficientObs.trim(), (List<Object> values) -> new Possibly((Observation) values.get(0), (LTOL) values.get(1)))
+                .prefix(necessaryObs.trim(), (List<Object> values) -> {
                     return new Necessary((Observation) values.get(0), (LTOL) values.get(1));
                 });
 
-        builder.group()
-                .prefix(sufficientObs, (List<Object> values) -> new Possibly((Observation) values.get(0), (LTOL) values.get(1)));
 
         builder.group()
-                .prefix(of('!').trim(), (List<LTOL> values) -> new Not(values.get(1)));
-
-        builder.group()
-                .prefix(of('G').trim(), (List<LTOL> values) -> new Globally(values.get(1)));
-
-        builder.group()
-                .prefix(of('F').trim(), (List<LTOL> values) -> {
-                    return new Eventually(values.get(1));
-                });
-
-        builder.group()
-                .prefix(of('X').trim(), (List<LTOL> values) -> new Next(values.get(1)));
-
-        builder.group()
-                .left(StringParser.of("U").trim(), (List<LTOL> values) -> new Until(values.get(0), values.get(2)));
-
-        builder.group()
-                .left(StringParser.of("W").trim(), (List<LTOL> values) -> new Or(new Globally(values.get(0)), new Until(values.get(0), values.get(2))));
-
-        builder.group()
+                .left(StringParser.of("U").trim(), (List<LTOL> values) -> new Until(values.get(0), values.get(2)))
+                .left(StringParser.of("W").trim(), (List<LTOL> values) -> new Or(new Globally(values.get(0)), new Until(values.get(0), values.get(2))))
                 .left(StringParser.of("R").trim(), (List<LTOL> values) -> new Until(new Not(values.get(0)), new Not(values.get(2))));
 
 
         builder.group()
-                .right(StringParser.of("->").trim(), (List<LTOL> values) -> new Or(new Not(values.get(0)), values.get(2)));
-
-        // iff is left and right-associative
-        builder.group()
+                .right(StringParser.of("->").trim(), (List<LTOL> values) -> new Or(new Not(values.get(0)), values.get(2)))
                 .right(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<LTOL> values) -> {
                     try {
                         return new Iff(values.get(0), values.get(2));
@@ -274,10 +255,7 @@ public abstract class LTOL {
                     } catch (Exception e) {
                         return e;
                     }
-                });
-
-        // is not equal to is left and right-associative
-        builder.group()
+                })
                 .right(StringParser.of("!=").trim(), (List<LTOL> values) -> {
                     return new Not(new Iff(values.get(0), values.get(2)));
                 })
@@ -285,13 +263,9 @@ public abstract class LTOL {
                     return new Not(new Iff(values.get(0), values.get(2)));
                 });
 
-        // conjunction is right- and left-associative
         builder.group()
                 .right(of('&').plus().trim(), (List<LTOL> values) -> new And(values.get(0), values.get(2)))
-                .left(of('&').plus().trim(), (List<LTOL> values) -> new And(values.get(0), values.get(2)));
-
-        // disjunction is right- and left-associative
-        builder.group()
+                .left(of('&').plus().trim(), (List<LTOL> values) -> new And(values.get(0), values.get(2)))
                 .right(of('|').plus().trim(), (List<LTOL> values) -> new Or(values.get(0), values.get(2)))
                 .left(of('|').plus().trim(), (List<LTOL> values) -> new Or(values.get(0), values.get(2)));
 
