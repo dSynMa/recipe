@@ -73,7 +73,7 @@ public abstract class LTOL {
                 }
             }
 
-            agentVariables.set(name + "-state", Integer.getType());
+            agentVariables.set(name + "-automaton-state", Integer.getType());
 
             for(TypedVariable var : localVars) {
                 agentVariables.set(name + "-" + var.getName(), var.getType());
