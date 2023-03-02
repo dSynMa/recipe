@@ -303,8 +303,10 @@ public abstract class LTOL {
             for (Agent agent : possibleAgentTypes) {
                 if (start) {
                     possibleReferences.addAll(agent.getStore().getAttributes().values());
+                    possibleReferences.addAll(agent.getAllTransitionLabels());
                 } else {
                     possibleReferences.retainAll(agent.getStore().getAttributes().values());
+                    possibleReferences.retainAll(agent.getAllTransitionLabels());
                 }
             }
 

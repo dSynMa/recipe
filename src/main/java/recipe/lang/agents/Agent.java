@@ -237,7 +237,7 @@ public class Agent {
                             e.printStackTrace();
                         }
                         return null;
-                    }), localContext.get()).trim().or(LazyParser.failingParser(nameString, "Could not parse agent's relabel definition.")))
+                    }), localContext.get()).trim().or(StringParser.of("relabel").not().map((Object val)-> new HashMap())).or(LazyParser.failingParser(nameString, "Could not parse agent's relabel definition.")))
                     .seq(new LazyParser<TypingContext>(((TypingContext context) -> {
                         try {
                             return Parsing.receiveGuardParser(context);
@@ -399,6 +399,24 @@ public class Agent {
         for(State state : stateTransitionMap.keySet()){
 
         }
+    }
+
+    public List<TypedVariable> getAllTransitionLabels(){
+        List<TypedVariable> labels = new ArrayList<>();
+        for(ProcessTransition process : this.sendTransitions){
+            String label = process.getLabel().getLabel();
+            if(label != null) {
+                labels.add(new TypedVariable<Boolean>(Boolean.getType(), label));
+            }
+        }
+        for(ProcessTransition process : this.receiveTransitions){
+            String label = process.getLabel().getLabel();
+            if(label != null) {
+                labels.add(new TypedVariable<Boolean>(Boolean.getType(), label));
+            }
+        }
+
+        return labels;
     }
 
     public boolean isSymbolic(){
