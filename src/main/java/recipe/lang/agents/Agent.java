@@ -254,18 +254,9 @@ public class Agent {
                     Map<String, TypedVariable> localVars = (Map<String, TypedVariable>) values.get(2);
                     Store store = null;
                     try {
-                        ArrayList<String> nameList = new ArrayList<>();
-                        nameList.add(agentName);
-                        Enum nameType = new Enum(agentName + "-name", nameList);
-                        TypedVariable nameVar = new TypedVariable(nameType, "name");
-                        TypedValue agentNameValue = new TypedValue(nameType, agentName);
-                        localVars.put("name", nameVar);
                         store = new Store(localVars);
-//                    Map<String, TypedValue> localValues = ((Pair<Map, Map>) values.get(2)).getRight();
                         Expression<Boolean> init = null;
-                        init = (Expression<Boolean>) values.get(3);//new Store(localValues, localVars);
-
-                        init = new And(init, new IsEqualTo(nameVar, agentNameValue));
+                        init = (Expression<Boolean>) values.get(3);
 
                         Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(4);
                         Expression<Boolean> receiveGuardCondition = (Expression<Boolean>) values.get(5);
@@ -316,7 +307,7 @@ public class Agent {
                         agent.setRelabel(relabel);
 
                         return agent;
-                    } catch (AttributeTypeException | MismatchingTypeException e) {
+                    } catch (AttributeTypeException e) {
                         e.printStackTrace();
                     } catch (Exception e) {
                         e.printStackTrace();

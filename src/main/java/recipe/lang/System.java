@@ -8,6 +8,10 @@ import org.petitparser.parser.primitive.StringParser;
 import recipe.Config;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
+import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.predicate.And;
+import recipe.lang.expressions.predicate.IsEqualTo;
+import recipe.lang.store.Store;
 import recipe.lang.utils.exceptions.ParsingException;
 import recipe.lang.utils.exceptions.TypeCreationException;
 import recipe.lang.expressions.TypedVariable;
@@ -245,8 +249,22 @@ public class System{
                                 }
 
                                 for(Map.Entry<String, List<AgentInstance>> entry : agentsToInstances.entrySet()){
-                                    new Enum(entry.getKey(), entry.getValue().stream().map(AgentInstance::toString).toList());
+                                    Enum agentType = new Enum(entry.getKey(), entry.getValue().stream().map(AgentInstance::toString).toList());
                                     Config.addAgentTypeName(entry.getKey(), entry.getValue().get(0).getAgent());
+
+                                    if(entry.getValue().size() > 0) {
+                                        Agent agent = entry.getValue().get(0).getAgent();
+                                        Map<String, TypedVariable> name = new HashMap<>();
+                                        TypedVariable nameVar = new TypedVariable(agentType, "name");
+                                        name.put("name", nameVar);
+                                        Store nameStore = new Store(name);
+                                        agent.getStore().update(nameStore);
+
+                                        for (AgentInstance agentInstance : entry.getValue()) {
+                                            TypedValue nameVal = new TypedValue(agentType, agentInstance.getLabel());
+                                            agentInstance.updateInit(new And(agentInstance.getInit(), new IsEqualTo(nameVar, nameVal)));
+                                        }
+                                    }
                                 }
 
                                 List<LTOL> ltolSpecs = new ArrayList<>();

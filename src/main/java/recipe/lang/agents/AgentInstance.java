@@ -33,6 +33,10 @@ public class AgentInstance {
         return init;
     }
 
+    public void updateInit(Expression<Boolean> newInit) {
+        this.init = newInit;
+    }
+
     public Agent getAgent() {
         return agent;
     }
