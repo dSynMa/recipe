@@ -37,7 +37,6 @@ public class NuXmvInteraction {
         path = Files.createFile(Path.of("./forInteraction.smv"));
         Files.write(path, nuxmvScript.getBytes(StandardCharsets.UTF_8));
         process = startNuXmvThread();
-//        execute("\n");
     }
 
     public static boolean isAlive(Process p) {
