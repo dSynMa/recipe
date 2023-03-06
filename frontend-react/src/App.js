@@ -339,6 +339,7 @@ function resetInterpreter(){
             console.log(response.data);
             if (response.data !== undefined) {
               setMCResponse(response.data.results);
+              response.data.results.map((x) => modelCheckSingle(x));
             }
             if (response.data.error !== undefined) {
               alert(response.data.error);
@@ -350,6 +351,15 @@ function resetInterpreter(){
            setMCLoading(false);
          });
     }
+  }
+
+  function modelCheckSingle(data) {
+    axios.get(server + data.url).then((response) => {
+      setMCResponse(oldmcresponse =>
+        oldmcresponse.map((x, i) => {
+          return (i == data.id) ? response.data : x;
+      }));
+    });
   }
 
   function visualise(){
@@ -499,9 +509,13 @@ function resetInterpreter(){
                     {mcresponse && mcresponse.map((x, i) => {
                     return <Row className={i % 2 ? "border py-2" : "bg-light border py-2"}>
                     <Col xs={x.result=="false" ? 9 : 12} className="align-self-center">
-                      <h5 className='my-auto'>{x.spec} <Badge bg={x.result == "true" ? "success" : x.result == "false" ? "danger" : "secondary"}>
-                      {x.result == "true" ? "pass" : x.result == "false" ? "fail" : "unknown"}
-                      </Badge>
+                      <h5 className='my-auto'>{x.spec}{' '}
+                      { x.result &&
+                        <Badge bg={x.result == "true" ? "success" : x.result == "false" ? "danger" : "secondary"}>
+                        {x.result == "true" ? "pass" : x.result == "false" ? "fail" : "unknown"}
+                        </Badge>
+                      }
+                      { (x.result === undefined) && spinner }
                       </h5>
                     </Col>
                     {x.result == "false" && 

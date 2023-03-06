@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 
 public class Server {
     NuXmvInteraction nuXmvInteraction;
@@ -38,7 +39,13 @@ public class Server {
     Map<String, String> latestDots = new HashMap<>();
     Map<String, String> latestDotsInterpreter = new ConcurrentHashMap<>();
 
+    MCConfig mcConfig;
+
     private final ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+    // TODO can we use multiple nuXmvInteraction and parallelize this?
+    private final ExecutorService mcService = Executors.newFixedThreadPool(1);
+    private Semaphore systemSem = new Semaphore(1);
 
     private List<JSONObject> renderSVGs (JSONObject response) {
         List<JSONObject> svgs = new ArrayList<>();
@@ -56,7 +63,7 @@ public class Server {
             err.put("error", e.getMessage());
             svgs.clear();
             svgs.add(err);
-        } 
+        }
         return svgs;
     }
 
@@ -103,6 +110,17 @@ public class Server {
         }
     }
 
+    private class MCWorker implements Callable<JSONObject> {
+        private int i;
+
+        public MCWorker(int i) {
+            this.i = i;
+        }
+        public JSONObject call() throws Exception {
+            return doModelCheck(i);
+        }
+    }
+
 
     @Route("/")
     public String index() {
@@ -143,7 +161,7 @@ public class Server {
             }
             nuXmvInteraction = new NuXmvInteraction(system);
             Pair<Boolean, String> initialise = nuXmvInteraction.initialise(buildType);
-            
+
             if(initialise.getLeft()){
                 response.put("success", true);
                 // return "{ \"success\" : true}";
@@ -158,7 +176,7 @@ public class Server {
             response.clear();
             response.put("error", e.getMessage() );
             java.lang.System.out.println(response.toString());
-        } 
+        }
         return response.toString();
     }
 
@@ -219,9 +237,9 @@ public class Server {
         public MCType getType() { return type; }
         public int getBound() { return bound; }
         public boolean isBounded() { return bound > -1; }
-        public MCConfig() { this.type = MCType.BDD; this.bound = -1; }
+        // public MCConfig() { this.type = MCType.BDD; this.bound = -1; }
         public MCConfig(MCType type, int bound) { this.type = type; this.bound = bound; }
-        
+
         public static MCConfig ofRequest(Request req) {
             MCType type = MCType.BDD;
             int bound = -1;
@@ -245,19 +263,49 @@ public class Server {
         }
     }
 
-    private JSONObject doModelCheck(MCConfig mcconf, LTOL ltolSpec, LTOL ltlSpec) {
-        java.lang.System.out.println(ltolSpec);
-        String spec = ltlSpec.toString().replaceAll("LTLSPEC", "").trim();
+
+    private JSONObject doModelCheck(int i) {
         JSONObject resultJSON = new JSONObject();
         Pair<Boolean, String> result;
         try {
-            if(mcconf.getType() == MCType.IC3){
-                result = nuXmvInteraction.modelCheckic3(spec, mcconf.isBounded(), mcconf.getBound());
+            systemSem.acquire();
+            // List<LTOL> specList = new ArrayList<>(1);
+            // specList.add(ltol);
+            // Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(specList);
+            // List<LTOL> specs = toLtl.getLeft();
+            // obsMap = toLtl.getRight();
+
+            // Prune other ltol formulas
+            List<LTOL> oldSpecs = system.getSpecs();
+            LTOL ltol = oldSpecs.get(i);
+            List<LTOL> singleton = new ArrayList<>(1);
+            singleton.add(ltol);
+            system.setSpecs(singleton);
+            
+            Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
+            List<LTOL> specs = toLtl.getLeft();
+            obsMap = toLtl.getRight();
+            String spec = specs.get(0).toString();
+
+            java.lang.System.out.printf("[%d]  %s, %s\n", i, ltol, mcConfig.type);
+            NuXmvInteraction nuxmv = new NuXmvInteraction(system);
+            switch (mcConfig.getType()) {
+                case IC3:
+                    nuxmv.initialise(true);
+                    result = nuxmv.modelCheckic3(spec, mcConfig.isBounded(), mcConfig.getBound());
+                    break;
+                default:
+                    nuxmv.initialise(mcConfig.getType() == MCType.BMC);
+                    result = nuxmv.modelCheck(spec, mcConfig.isBounded(), mcConfig.getBound());
+                    break;
             }
-            else {
-                result = nuXmvInteraction.modelCheck(spec, mcconf.isBounded(), mcconf.getBound());
-            }
-            resultJSON.put("spec", ltolSpec.toString());
+
+            // Stop NuXmv and restore all formulas
+            nuxmv.stopNuXmvThread();
+            system.setSpecs(oldSpecs);
+            systemSem.release();
+
+            resultJSON.put("spec", ltol.toString());
 
             if(result.getLeft()) {
                 if(result.getRight().toLowerCase(Locale.ROOT).contains("is false")){
@@ -273,7 +321,7 @@ public class Server {
 
             String output = result.getRight().replaceAll(" --", "\n--");
             resultJSON.put("output", output);
-        } catch (IOException | ParseError e) {
+        } catch (Exception e) {
             resultJSON.clear();
             e.printStackTrace();
             resultJSON.put("error", e.getMessage());
@@ -282,11 +330,25 @@ public class Server {
     }
 
 
-    // @Route("/modelCheck/:id")
-    // public String modelCheck(Request req, String idString) {
-    //     int id = Integer.valueOf(idString);
-    //     MCConfig config = MCConfig.ofRequest(req);
-    // }
+
+
+    @Route("/modelCheck/:id")
+    public String modelCheck(Request req, String idString) {
+        JSONObject result;
+        try {
+            int id = Integer.valueOf(idString);
+            // MCConfig config = MCConfig.ofRequest(req);
+            Future<JSONObject> future = this.mcService.submit(new MCWorker(id));
+            result = future.get();
+            java.lang.System.out.printf("[%s] -- DONE\n", idString);
+        } catch (Exception e) {
+            e.printStackTrace();
+            java.lang.System.out.printf("[%s] -- ERROR\n", idString);
+            result = new JSONObject();
+            result.put("error", e.getMessage());
+        }
+        return result.toString();
+    }
 
     @Route("/modelCheck")
     public String modelCheck(Request req) throws Exception {
@@ -296,13 +358,9 @@ public class Server {
 
         if(nuXmvInteraction == null){
             String init = this.init(req);
-            JSONObject resultJSON = new JSONObject();
             if(init.contains("error")){
                 return init;
             }
-
-            resultJSON.put("result", "false");
-            return resultJSON.toString();
         }
 
         try {
@@ -313,16 +371,23 @@ public class Server {
             } else{
                 JSONObject jsonObject = new JSONObject();
                 JSONArray array = new JSONArray();
-                MCConfig mcconf = MCConfig.ofRequest(req);                
-                Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
-                List<LTOL> specs = toLtl.getLeft();
-                obsMap = toLtl.getRight();
-                obsMap.keySet().forEach((k) -> {
-                    java.lang.System.out.printf("%s -> %s\n", k, obsMap.get(k));
-                });
-                
-                for(int i = 0; i < specs.size(); i++) {
-                    array.put(doModelCheck(mcconf, system.getSpecs().get(i), specs.get(i)));
+                mcConfig = MCConfig.ofRequest(req);
+                // Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
+                // List<LTOL> specs = toLtl.getLeft();
+                // obsMap = toLtl.getRight();
+                // obsMap.keySet().forEach((k) -> {
+                //     java.lang.System.out.printf("%s -> %s\n", k, obsMap.get(k));
+                // });
+
+                for(int i = 0; i < system.getSpecs().size(); i++) {
+                    JSONObject jo = new JSONObject();
+                    jo.put("id", i);
+                    jo.put("spec", system.getSpecs().get(i).toString());
+                    jo.put("url", String.format("/modelCheck/%d", i));
+                    array.put(jo);
+
+                    // java.lang.System.out.printf(">>> %s", modelCheck(req, Integer.toString(i)));
+                    // array.put(doModelCheck(mcconf, system.getSpecs().get(i), specs.get(i)));
                 }
                 jsonObject.put("results", array);
 
@@ -355,7 +420,7 @@ public class Server {
             return "{ \"error\" : \"" + e.getMessage() + "\"}";
         }
     }
-    
+
     @Route("/interpretNext")
     public String interpretNext(Request req) throws Exception {
         if (system == null) {
@@ -377,7 +442,7 @@ public class Server {
         }
         JSONObject response = interpreter.getCurrentStep().toJSON();
         response.put("svgs", renderSVGs(response));
-        
+
         return response.toString();
     }
 
@@ -419,7 +484,7 @@ public class Server {
         String trace = req.getQuery().get("trace");
         JSONTokener toks = new JSONTokener(trace);
         JSONArray json = new JSONArray(toks);
-        
+
         try {
             interpreter = Interpreter.ofJSON(system, obsMap, json);
             // List<JSONObject> trace = interpreter.traceToJSON();
