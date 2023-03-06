@@ -210,6 +210,84 @@ public class Server {
         }
     }
 
+    enum MCType { IC3, BMC, BDD }
+
+    public static class MCConfig {
+        private MCType type;
+        private int bound;
+
+        public MCType getType() { return type; }
+        public int getBound() { return bound; }
+        public boolean isBounded() { return bound > -1; }
+        public MCConfig() { this.type = MCType.BDD; this.bound = -1; }
+        public MCConfig(MCType type, int bound) { this.type = type; this.bound = bound; }
+        
+        public static MCConfig ofRequest(Request req) {
+            MCType type = MCType.BDD;
+            int bound = -1;
+            if(req.getQuery().get("bmc") != null && !req.getQuery().get("bmc").equals("")
+                    && !req.getQuery().get("bmc").toLowerCase(Locale.ROOT).trim().equals("false")){
+                type = MCType.BMC;
+                if(req.getQuery().get("bound") != null && !req.getQuery().get("bound").equals("")){
+                    bound = Integer.parseInt(req.getQuery().get("bound"));
+                }
+            }
+            else if(req.getQuery().get("ic3") != null && !req.getQuery().get("ic3").equals("")
+                    && !req.getQuery().get("ic3").toLowerCase(Locale.ROOT).trim().equals("false")){
+                type = MCType.IC3;
+                if(req.getQuery().get("bound") != null && !req.getQuery().get("bound").equals("")){
+                    bound = Integer.parseInt(req.getQuery().get("bound"));
+                } else{
+                    bound = -1;
+                }
+            }
+            return new MCConfig(type, bound);
+        }
+    }
+
+    private JSONObject doModelCheck(MCConfig mcconf, LTOL ltolSpec, LTOL ltlSpec) {
+        java.lang.System.out.println(ltolSpec);
+        String spec = ltlSpec.toString().replaceAll("LTLSPEC", "").trim();
+        JSONObject resultJSON = new JSONObject();
+        Pair<Boolean, String> result;
+        try {
+            if(mcconf.getType() == MCType.IC3){
+                result = nuXmvInteraction.modelCheckic3(spec, mcconf.isBounded(), mcconf.getBound());
+            }
+            else {
+                result = nuXmvInteraction.modelCheck(spec, mcconf.isBounded(), mcconf.getBound());
+            }
+            resultJSON.put("spec", ltolSpec.toString());
+
+            if(result.getLeft()) {
+                if(result.getRight().toLowerCase(Locale.ROOT).contains("is false")){
+                    resultJSON.put("result", "false");
+                } else if(result.getRight().toLowerCase(Locale.ROOT).contains("is true")){
+                    resultJSON.put("result", "true");
+                } else{
+                    resultJSON.put("result", "unknown");
+                }
+            } else{
+                resultJSON.put("result", "error");
+            }
+
+            String output = result.getRight().replaceAll(" --", "\n--");
+            resultJSON.put("output", output);
+        } catch (IOException | ParseError e) {
+            resultJSON.clear();
+            e.printStackTrace();
+            resultJSON.put("error", e.getMessage());
+        }
+        return resultJSON;
+    }
+
+
+    // @Route("/modelCheck/:id")
+    // public String modelCheck(Request req, String idString) {
+    //     int id = Integer.valueOf(idString);
+    //     MCConfig config = MCConfig.ofRequest(req);
+    // }
+
     @Route("/modelCheck")
     public String modelCheck(Request req) throws Exception {
         if(system == null){
@@ -218,9 +296,13 @@ public class Server {
 
         if(nuXmvInteraction == null){
             String init = this.init(req);
+            JSONObject resultJSON = new JSONObject();
             if(init.contains("error")){
                 return init;
             }
+
+            resultJSON.put("result", "false");
+            return resultJSON.toString();
         }
 
         try {
@@ -231,35 +313,7 @@ public class Server {
             } else{
                 JSONObject jsonObject = new JSONObject();
                 JSONArray array = new JSONArray();
-
-                boolean ic3 = false;
-                boolean bounded = false;
-                int bound = 10;
-                if(req.getQuery().get("bmc") != null && !req.getQuery().get("bmc").equals("")
-                        && !req.getQuery().get("bmc").toLowerCase(Locale.ROOT).trim().equals("false")){
-                    bounded = true;
-                    if(req.getQuery().get("bound") != null && !req.getQuery().get("bound").equals("")){
-                        try {
-                            bound = Integer.parseInt(req.getQuery().get("bound"));
-                        } catch (Exception e){
-                        }
-                    }
-                }
-                else if(req.getQuery().get("ic3") != null && !req.getQuery().get("ic3").equals("")
-                        && !req.getQuery().get("ic3").toLowerCase(Locale.ROOT).trim().equals("false")){
-                    ic3 = true;
-                    if(req.getQuery().get("bound") != null && !req.getQuery().get("bound").equals("")){
-                        try {
-                            bounded = true;
-                            bound = Integer.parseInt(req.getQuery().get("bound"));
-                        } catch (Exception e){
-                        }
-                    } else{
-                        bound = -1;
-                    }
-                }
-
-                
+                MCConfig mcconf = MCConfig.ofRequest(req);                
                 Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
                 List<LTOL> specs = toLtl.getLeft();
                 obsMap = toLtl.getRight();
@@ -267,36 +321,8 @@ public class Server {
                     java.lang.System.out.printf("%s -> %s\n", k, obsMap.get(k));
                 });
                 
-
                 for(int i = 0; i < specs.size(); i++) {
-                    String spec = specs.get(i).toString().replaceAll("LTLSPEC", "").trim();
-                    java.lang.System.out.println(spec);
-
-                    Pair<Boolean, String> result;
-                    if(ic3){
-                        result = nuXmvInteraction.modelCheckic3(spec, bounded, bound);
-                    }
-                    else {
-                        result = nuXmvInteraction.modelCheck(spec, bounded, bound);
-                    }
-                    JSONObject resultJSON = new JSONObject();
-                    resultJSON.put("spec", system.getSpecs().get(i).toString());
-
-                    if(result.getLeft()) {
-                        if(result.getRight().toLowerCase(Locale.ROOT).contains("is false")){
-                            resultJSON.put("result", "false");
-                        } else if(result.getRight().toLowerCase(Locale.ROOT).contains("is true")){
-                            resultJSON.put("result", "true");
-                        } else{
-                            resultJSON.put("result", "unknown");
-                        }
-                    } else{
-                        resultJSON.put("result", "error");
-                    }
-
-                    String output = result.getRight().replaceAll(" --", "\n--");
-                    resultJSON.put("output", output);
-                    array.put(resultJSON);
+                    array.put(doModelCheck(mcconf, system.getSpecs().get(i), specs.get(i)));
                 }
                 jsonObject.put("results", array);
 
