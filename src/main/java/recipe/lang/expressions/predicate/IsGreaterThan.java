@@ -9,7 +9,9 @@ import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import recipe.lang.types.Number;
 import recipe.lang.utils.exceptions.*;
@@ -88,5 +90,24 @@ public class IsGreaterThan extends Condition {
 	@Override
 	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
 		return new IsGreaterThan(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
+	}
+
+	public Set<Expression<Boolean>> subformulas(){
+		Set<Expression<Boolean>> subformulas = new HashSet<>();
+		subformulas.add(this);
+		return subformulas;
+	}
+
+	public Expression<Boolean> replace(java.util.function.Predicate<Expression<Boolean>> cond,
+									   Function<Expression<Boolean>, Expression<Boolean>> act) {
+		if (cond.test(this)) {
+			return act.apply(this);
+		} else {
+			return this;
+		}
+	}
+
+	public Condition removePreds(){
+		return this;
 	}
 }

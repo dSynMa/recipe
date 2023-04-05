@@ -1,5 +1,6 @@
 package recipe.lang.expressions;
 
+import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.store.Store;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Integer;
@@ -8,7 +9,10 @@ import recipe.lang.types.*;
 import recipe.lang.utils.exceptions.*;
 
 import java.lang.Boolean;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 
 public class Predicate implements Expression<recipe.lang.types.Boolean> {
     private String name;
@@ -84,5 +88,25 @@ public class Predicate implements Expression<recipe.lang.types.Boolean> {
     @Override
     public String toString() {
         return name + "(" + input.toString() + ")";
+    }
+
+
+    public Set<Expression<recipe.lang.types.Boolean>> subformulas(){
+        Set<Expression<recipe.lang.types.Boolean>> subformulas = new HashSet<>();
+        subformulas.add(this);
+        return subformulas;
+    }
+
+    public Expression<recipe.lang.types.Boolean> replace(java.util.function.Predicate<Expression<recipe.lang.types.Boolean>> cond,
+                                                         Function<Expression<recipe.lang.types.Boolean>, Expression<recipe.lang.types.Boolean>> act) {
+        if (cond.test(this)) {
+            return act.apply(this);
+        } else {
+            return new Predicate(name, input.replace(cond, act));
+        }
+    }
+
+    public Expression<recipe.lang.types.Boolean> removePreds(){
+        return this.input;
     }
 }

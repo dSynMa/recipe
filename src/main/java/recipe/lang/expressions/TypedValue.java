@@ -1,5 +1,6 @@
 package recipe.lang.expressions;
 
+import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.types.UnionType;
 import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.AttributeTypeException;
@@ -9,8 +10,10 @@ import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Type;
 
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 
 public class TypedValue<T extends Type> implements Expression<T> {
@@ -81,5 +84,22 @@ public class TypedValue<T extends Type> implements Expression<T> {
         }
 
         return value.toString();
+    }
+
+    public Set<Expression<Boolean>> subformulas(){
+        return new HashSet<>();
+    }
+
+    public Expression<T> replace(java.util.function.Predicate<Expression<T>> cond,
+                                 Function<Expression<T>, Expression<T>> act) {
+        if (cond.test(this)) {
+            return act.apply(this);
+        } else {
+            return this;
+        }
+    }
+
+    public Expression<T> removePreds(){
+        return this;
     }
 }

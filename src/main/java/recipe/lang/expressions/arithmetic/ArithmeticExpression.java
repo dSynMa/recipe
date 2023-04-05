@@ -5,6 +5,8 @@ import org.petitparser.tools.ExpressionBuilder;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.types.Boolean;
 import recipe.lang.types.Number;
 import recipe.lang.store.Store;
 import recipe.lang.types.Real;
@@ -13,8 +15,10 @@ import recipe.lang.utils.TypingContext;
 import recipe.lang.utils.exceptions.*;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 
 import static org.petitparser.parser.primitive.CharacterParser.digit;
@@ -73,5 +77,24 @@ public abstract class ArithmeticExpression implements Expression<Number> {
     // Helper function to check if n is integer or real
     protected static boolean isInteger(BigDecimal n) {
         return n.signum() == 0 || n.scale() <= 0 || n.stripTrailingZeros().scale() <= 0;
+    }
+
+    public Set<Expression<Boolean>> subformulas(){
+        Set<Expression<recipe.lang.types.Boolean>> subformulas = new HashSet<>();
+        return subformulas;
+    }
+
+    // TODO this is not implemented fully for the arithmetic operations, only at the top level
+    public Expression<Number> replace(java.util.function.Predicate<Expression<Number>> cond,
+                                 Function<Expression<Number>, Expression<Number>> act) {
+        if (cond.test(this)) {
+            return act.apply(this);
+        } else {
+            return this;
+        }
+    }
+
+    public Expression<recipe.lang.types.Number> removePreds(){
+        return this;
     }
 }

@@ -21,6 +21,7 @@ import recipe.lang.utils.exceptions.*;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 
 import static org.petitparser.parser.primitive.CharacterParser.of;
@@ -131,7 +132,6 @@ public abstract class Condition implements Expression<Boolean> {
 				.prefix(of('!').trim(), (List<Condition> values) -> new Not(values.get(1)));
 
 		for(String pred : context.getPredicates()){
-			// negation is a prefix
 			builder.group()
 					.prefix(StringParser.of(pred).trim(), (List<Condition> values) -> new Predicate(pred, values.get(1)));
 		}

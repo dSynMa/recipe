@@ -58,7 +58,9 @@ public class ReceiveProcess extends BasicProcess {
                 (CharacterParser.of('<').trim())
                         .seq(localGuard)
                         .seq(CharacterParser.of('>').trim())
-                        .map((List<Object> values) -> (Expression<Boolean>) values.get(1));
+                        .map((List<Object> values) -> {
+                            return (Expression<Boolean>) values.get(1);
+                        });
 
 
 

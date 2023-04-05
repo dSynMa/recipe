@@ -8,6 +8,8 @@ import recipe.Config;
 import recipe.lang.System;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.ProcessTransition;
+import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.Predicate;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
@@ -208,11 +210,61 @@ public abstract class LTOL {
 
         Parser necessaryObs = of('<').seq(Observation.parser(commonVars, messageVars, agentVariables).trim()).seq(of('>')).trim()
                 .map((List<Observation> vals) -> {
-                    return vals.get(1);
+                    if(nestedQuantifiers(vals.get(1))){
+                        java.util.function.Predicate<Expression<Boolean>> cond =
+                                (Expression<Boolean> formula) -> {
+                                    if(formula.getClass().equals(Predicate.class)){
+                                        return true;
+                                    } else{
+                                        return false;
+                                    }
+                                };
+                        java.util.function.Function<Expression<Boolean>, Expression<Boolean>> act =
+                                (Expression<Boolean> formula) -> {
+                                    if(formula.getClass().equals(Predicate.class)){
+                                        String name = ((Predicate) formula).getName();
+                                        Expression<Boolean> input = ((Predicate) formula).getInput();
+                                        return new Predicate(name, input.removePreds());
+                                    } else{
+                                        return null;
+                                    }
+                                };
+                        Observation observation = (Observation) vals.get(1);
+                        Observation newObs = new Observation(observation.getObservation().replace(cond, act));
+                        return newObs;
+                    }
+                    else{
+                        return vals.get(1);
+                    }
                 });
         Parser sufficientObs = of('[').seq(Observation.parser(commonVars, messageVars, agentVariables).trim()).seq(of(']')).trim()
                 .map((List<Observation> vals) -> {
-                    return vals.get(1);
+                    if(nestedQuantifiers(vals.get(1))){
+                        java.util.function.Predicate<Expression<Boolean>> cond =
+                                (Expression<Boolean> formula) -> {
+                                    if(formula.getClass().equals(Predicate.class)){
+                                        return true;
+                                    } else{
+                                        return false;
+                                    }
+                                };
+                        java.util.function.Function<Expression<Boolean>, Expression<Boolean>> act =
+                                (Expression<Boolean> formula) -> {
+                                    if(formula.getClass().equals(Predicate.class)){
+                                        String name = ((Predicate) formula).getName();
+                                        Expression<Boolean> input = ((Predicate) formula).getInput();
+                                        return new Predicate(name, input.removePreds());
+                                    } else{
+                                        return null;
+                                    }
+                                };
+                        Observation observation = (Observation) vals.get(1);
+                        Observation newObs = new Observation(observation.getObservation().replace(cond, act));
+                        return newObs;
+                    }
+                    else{
+                        return vals.get(1);
+                    }
                 });
 
         builder.group()
@@ -334,5 +386,21 @@ public abstract class LTOL {
         }
 
         return possibleValues;
+    }
+
+    private static java.lang.Boolean nestedQuantifiers(Observation observation){
+        Expression<Boolean> condition = observation.observation;
+        Set<Expression<recipe.lang.types.Boolean>> subformulas = condition.subformulas();
+        for(Expression<recipe.lang.types.Boolean> expr : subformulas){
+            if(expr.getClass().equals(Predicate.class)) {
+                Expression<recipe.lang.types.Boolean> predExpr = ((Predicate) expr).getInput();
+                for (Expression<recipe.lang.types.Boolean> exprr : predExpr.subformulas()) {
+                    if (exprr.getClass().equals(Predicate.class)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }

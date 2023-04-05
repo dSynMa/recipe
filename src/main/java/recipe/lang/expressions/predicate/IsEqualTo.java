@@ -10,7 +10,9 @@ import recipe.lang.types.Boolean;
 import recipe.lang.types.Type;
 import recipe.lang.utils.exceptions.*;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 public class IsEqualTo<T extends Type> extends Condition {
@@ -109,6 +111,25 @@ public class IsEqualTo<T extends Type> extends Condition {
 	@Override
 	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
 		return new IsEqualTo(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
+	}
+
+	public Set<Expression<Boolean>> subformulas(){
+		Set<Expression<Boolean>> subformulas = this.rhs.subformulas();
+		subformulas.addAll(this.lhs.subformulas());
+		return subformulas;
+	}
+
+	public Expression<Boolean> replace(java.util.function.Predicate<Expression<Boolean>> cond,
+									   Function<Expression<Boolean>, Expression<Boolean>> act) {
+		if (cond.test(this)) {
+			return act.apply(this);
+		} else {
+			return this;
+		}
+	}
+
+	public Condition removePreds(){
+		return new IsNotEqualTo(this.lhs.removePreds(), this.rhs.removePreds());
 	}
 }
 

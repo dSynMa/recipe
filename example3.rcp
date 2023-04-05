@@ -82,3 +82,4 @@ system = Client(client1,TRUE) | Client(client2,TRUE) | Client(client3,TRUE) |  M
 SPEC  G ([sender=client1 & MSG=complete](/\ j : Client . j-name != client1-name -> j-mLink=vmm3));
 SPEC  G ([sender=client2 & MSG=complete](/\ j : Client . j-name != client2-name -> j-mLink=vmm3));
 SPEC  G ([sender=client3 & MSG=complete](/\ j : Client . j-name != client3-name -> j-mLink=vmm3));
+SPEC  G ([exists(exists(TRUE))](/\ j : Client . j-name != client3-name -> j-mLink=vmm3));
