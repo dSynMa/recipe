@@ -7,6 +7,7 @@ import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
 import recipe.lang.utils.exceptions.*;
 
+import java.util.Set;
 import java.util.function.Function;
 
 public class Or extends Condition {
@@ -86,5 +87,24 @@ public class Or extends Condition {
 	@Override
 	public Condition relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException {
 		return new Or(this.lhs.relabel(relabelling), this.rhs.relabel(relabelling));
+	}
+
+	public Set<Expression<Boolean>> subformulas(){
+		Set<Expression<Boolean>> subformulas = this.rhs.subformulas();
+		subformulas.addAll(this.lhs.subformulas());
+		return subformulas;
+	}
+
+	public Expression<Boolean> replace(java.util.function.Predicate<Expression<Boolean>> cond,
+									   Function<Expression<Boolean>, Expression<Boolean>> act) {
+		if (cond.test(this)) {
+			return act.apply(this);
+		} else {
+			return new Or(this.lhs.replace(cond, act), this.rhs.replace(cond, act));
+		}
+	}
+
+	public Condition removePreds(){
+		return new Or(this.lhs.removePreds(), this.rhs.removePreds());
 	}
 }

@@ -269,7 +269,7 @@ public class System{
 
                                 List<LTOL> ltolSpecs = new ArrayList<>();
                                 try {
-                                    Parser ltolParser = LTOL.parser(system);
+                                    Parser ltolParser = LTOL.parser(system).end();
 
                                     for(String spec : specsStrings){
                                         try {

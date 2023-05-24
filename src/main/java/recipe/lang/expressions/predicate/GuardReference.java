@@ -158,4 +158,23 @@ public class GuardReference extends Condition {
             return guardType.name() + "(" + String.join(",", Arrays.stream(parametersValues).map((x) -> x.toString()).toArray(String[]::new)) + ")";
         }
     }
+
+    public Set<Expression<Boolean>> subformulas(){
+        Set<Expression<Boolean>> subformulas = new HashSet<>();
+        subformulas.add(this);
+        return subformulas;
+    }
+
+    public Expression<Boolean> replace(java.util.function.Predicate<Expression<Boolean>> cond,
+                                       Function<Expression<Boolean>, Expression<Boolean>> act) {
+        if (cond.test(this)) {
+            return act.apply(this);
+        } else {
+            return this;
+        }
+    }
+
+    public Condition removePreds(){
+        return this;
+    }
 }

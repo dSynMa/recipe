@@ -224,7 +224,9 @@ public class Agent {
                             }).optional(new HashMap<>())) //.or(LazyParser.failingParser(nameString, "Could not parse agent's local definition."))))
                     .seq(Parsing.labelledParser("init", new LazyParser<TypingContext>((TypingContext context) -> {
                         try {
-                            return Condition.parser(context);
+                            return Condition.parser(context).map((Object v) -> {
+                                return v;
+                            });
                         } catch (Exception e) {
                             e.printStackTrace();
                         }

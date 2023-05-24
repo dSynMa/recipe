@@ -1,41 +1,85 @@
-channels: a, empty
+channels: c, empty, g1, g2,vmm1,vmm2,vmm3,t
+enum rolevals {clnt, vm, mgr}
+enum msgvals {reserve, request, release, buy, connect, full,complete}
+message-structure: MSG : msgvals, LNK : channel
+communication-variables: cv : rolevals
+guard g(r : rolevals, c : channel, m : channel) := (channel == *) && (@cv == r) | (channel == c) && (@cv == mgr) | (channel == m) ;
 
-enum msgvals {forward, put}
+agent Client
+    local: role : rolevals, cLink : channel, mLink : channel, tLink : channel
+    init: cLink == c && mLink == empty && tLink == t && role==clnt
+    relabel:
+        cv <- role
+    receive-guard: (channel == *) | (channel == cLink) | (channel == tLink)
 
-message-structure: MSG : msgvals
-communication-variables:
+    repeat: (
+            (sReserve: <cLink==c> *! g(role,cLink,mLink)(MSG := reserve)[cLink := c]
+            +
+            rReserve: < cLink==c && MSG == reserve> *? [cLink := empty]
+            )
+            ;
 
-agent Buffer
-        local: size : int, no : int
-        init: size == 4 && no == 0
-        receive-guard: TRUE
+            (sRequest: <cLink!=empty> cLink! g(role,cLink,mLink)(MSG := request)[cLink := c];
+             rConnect: <mLink==empty && MSG == connect> cLink? [mLink := LNK];
+             sRelease: <TRUE> *! g(role,cLink,mLink)(MSG := release)[cLink := empty];
+             sBuy: <mLink!=empty> mLink! g(role,cLink,mLink)(MSG := buy)[mLink := empty];
+             (
+                sSolve: <TRUE> tLink! g(role,cLink,tLink)(MSG := complete)[]
+               +
+                rSolve: <MSG == complete> tLink? []
+             )
 
-        repeat: (
+            +
+             rRelease: <cLink==empty && MSG == release> *? [cLink := c]
+            )
+            )
 
-                    <(no > 0)> *! (TRUE)
-                    (MSG := forward)[no:= no - 1]
+agent Manager
+    local: role : rolevals, cLink : channel, sLink : channel, hLink : channel
+    init: hLink == g1 && sLink == g2 && cLink == c && role==mgr
+    relabel:
+        cv <- role
+    receive-guard: (channel == *) | (channel == cLink) | (channel == hLink)
 
-                    +
+    repeat: (
+            rRequest: <MSG == request> cLink? [];
+            sForward: <TRUE> hLink! (TRUE)(MSG := request)[];
+            (
+             rep (rFull: <MSG == full> hLink? [];
+                  sRequest: <TRUE> sLink! (TRUE)(MSG := request)[]
+                 )
+             +
+             rConnect: <MSG == connect> cLink? []
+            )
+            )
 
-                    <MSG ==put & (no < size) > * ?
-                            [no:= no + 1]
+agent Machine
+    local: gLink : channel, pLink : channel, cLink : channel, asgn : bool
+    init: !asgn && (cLink == empty)
+    relabel:
+        cv <- vm
+    receive-guard: (channel == *) | (channel == gLink)  | (channel == pLink) | (channel == cLink)
+
+    repeat: (
+           rForward: <cLink==empty && MSG == request> gLink? [cLink:= c];
+            (
+             sConnect: <cLink==c && !asgn> cLink! (TRUE)(MSG := connect, LNK := pLink)[cLink:= empty, asgn:= TRUE]
+             +
+             sFull: <cLink==c && asgn> gLink! (TRUE)(MSG := full)[cLink:= empty, asgn:= TRUE]
+             +
+             rConnect: <cLink==c && MSG == connect> cLink? [cLink:= empty]
 
 
-)
+             +
+             rFull: <cLink==c && asgn && MSG == full> gLink? [cLink:= empty, asgn:= TRUE]
+            )
+            +
+            rBuy: <MSG == buy> pLink? []
+            )
 
-agent Producer
-        init: TRUE
-        receive-guard: TRUE
+system = Client(client1,TRUE) | Client(client2,TRUE) | Client(client3,TRUE) |  Manager(manager,TRUE) | Machine(machine1,gLink==g1 && pLink==vmm1) | Machine(machine2,gLink==g1 && pLink==vmm2) | Machine(machine3,gLink==g2 && pLink==vmm3)
 
-        repeat: (
-
-                    <TRUE> *! (TRUE)
-                    (MSG := put)[]
-
-
-
-)
-
-system = Buffer(one,TRUE) | Producer(two,TRUE)
-
-SPEC F one-no == 4
+SPEC  G ([sender=client1 & MSG=complete](/\ j : Client . j-name != client1-name -> j-mLink=vmm3));
+SPEC  G ([sender=client2 & MSG=complete](/\ j : Client . j-name != client2-name -> j-mLink=vmm3));
+SPEC  G ([sender=client3 & MSG=complete](/\ j : Client . j-name != client3-name -> j-mLink=vmm3));
+SPEC  G ([exists(exists(TRUE))](/\ j : Client . j-name != client3-name -> j-mLink=vmm3));

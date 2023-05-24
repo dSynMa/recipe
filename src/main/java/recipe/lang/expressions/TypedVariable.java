@@ -1,5 +1,6 @@
 package recipe.lang.expressions;
 
+import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.AttributeTypeException;
 import recipe.lang.utils.exceptions.RelabellingTypeException;
@@ -10,7 +11,9 @@ import recipe.lang.types.Integer;
 import recipe.lang.types.Process;
 
 import java.lang.Boolean;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 
 public class TypedVariable<T extends Type> implements Expression<T> {
@@ -91,5 +94,27 @@ public class TypedVariable<T extends Type> implements Expression<T> {
 
     public String toTypedString() {
         return name + " : " + type.name();
+    }
+
+    public Set<Expression<recipe.lang.types.Boolean>> subformulas(){
+        Set<Expression<recipe.lang.types.Boolean>> subformulas = new HashSet<>();
+        try {
+            subformulas.add((Expression<recipe.lang.types.Boolean>) this);
+        } catch (Exception e){
+        }
+        return subformulas;
+    }
+
+    public Expression<T> replace(java.util.function.Predicate<Expression<T>> cond,
+                                 Function<Expression<T>, Expression<T>> act) {
+        if (cond.test(this)) {
+            return act.apply(this);
+        } else {
+            return this;
+        }
+    }
+
+    public Expression<T> removePreds(){
+        return this;
     }
 }
