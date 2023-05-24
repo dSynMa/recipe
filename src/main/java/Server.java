@@ -372,12 +372,6 @@ public class Server {
                 JSONObject jsonObject = new JSONObject();
                 JSONArray array = new JSONArray();
                 mcConfig = MCConfig.ofRequest(req);
-                // Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
-                // List<LTOL> specs = toLtl.getLeft();
-                // obsMap = toLtl.getRight();
-                // obsMap.keySet().forEach((k) -> {
-                //     java.lang.System.out.printf("%s -> %s\n", k, obsMap.get(k));
-                // });
 
                 for(int i = 0; i < system.getSpecs().size(); i++) {
                     JSONObject jo = new JSONObject();
@@ -385,9 +379,6 @@ public class Server {
                     jo.put("spec", system.getSpecs().get(i).toString());
                     jo.put("url", String.format("/modelCheck/%d", i));
                     array.put(jo);
-
-                    // java.lang.System.out.printf(">>> %s", modelCheck(req, Integer.toString(i)));
-                    // array.put(doModelCheck(mcconf, system.getSpecs().get(i), specs.get(i)));
                 }
                 jsonObject.put("results", array);
 
