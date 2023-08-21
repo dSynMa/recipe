@@ -668,6 +668,10 @@ public class Interpreter {
 
         sys.getAgentInstances().forEach((x) -> {
             String name = x.getLabel();
+            if (!initValues.has(name)) {
+                System.err.print(">>> ");
+                System.err.println(initValues.toString(0));
+            }
             JSONObject jObj = initValues.getJSONObject(name);
             ConcreteStore ist = new ConcreteStore(jObj, x);
             rootStores.put(x, ist);
