@@ -269,11 +269,6 @@ public class Server {
         Pair<Boolean, String> result;
         try {
             systemSem.acquire();
-            // List<LTOL> specList = new ArrayList<>(1);
-            // specList.add(ltol);
-            // Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(specList);
-            // List<LTOL> specs = toLtl.getLeft();
-            // obsMap = toLtl.getRight();
 
             // Prune other ltol formulas
             List<LTOL> oldSpecs = system.getSpecs();
@@ -286,8 +281,9 @@ public class Server {
             List<LTOL> specs = toLtl.getLeft();
             obsMap = toLtl.getRight();
             String spec = specs.get(0).toString();
+            String unparsedSpec = system.getUnparsedSpecs().get(i);
 
-            java.lang.System.out.printf("[%d]  %s, %s\n", i, ltol, mcConfig.type);
+            java.lang.System.out.printf("[%d]  %s, %s\n", i, unparsedSpec, mcConfig.type);
             NuXmvInteraction nuxmv = new NuXmvInteraction(system);
             switch (mcConfig.getType()) {
                 case IC3:
@@ -305,7 +301,8 @@ public class Server {
             system.setSpecs(oldSpecs);
             systemSem.release();
 
-            resultJSON.put("spec", ltol.toString());
+            
+            resultJSON.put("spec", unparsedSpec);
 
             if(result.getLeft()) {
                 if(result.getRight().toLowerCase(Locale.ROOT).contains("is false")){
@@ -373,10 +370,10 @@ public class Server {
                 JSONArray array = new JSONArray();
                 mcConfig = MCConfig.ofRequest(req);
 
-                for(int i = 0; i < system.getSpecs().size(); i++) {
+                for(int i = 0; i < system.getUnparsedSpecs().size(); i++) {
                     JSONObject jo = new JSONObject();
                     jo.put("id", i);
-                    jo.put("spec", system.getSpecs().get(i).toString());
+                    jo.put("spec", system.getUnparsedSpecs().get(i));
                     jo.put("url", String.format("/modelCheck/%d", i));
                     array.put(jo);
                 }

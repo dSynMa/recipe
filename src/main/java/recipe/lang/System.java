@@ -44,6 +44,18 @@ public class System{
         this.specs = specs;
     }
 
+    public List<String> getUnparsedSpecs() {
+        return unparsedSpecs;
+    }
+
+    public void setUnparsedSpecs(List<String> specs) {
+        this.unparsedSpecs = specs;
+        for (int i = 0; i < specs.size(); i++) {
+            this.unparsedSpecs.set(i, this.unparsedSpecs.get(i).replaceFirst("SPEC ", ""));
+        }
+    }
+
+    List<String> unparsedSpecs;
     List<LTOL> specs;
 
     public Map<String, Type> getMessageStructure() {
@@ -281,6 +293,7 @@ public class System{
                                             throw new Exception("Problem parsing LTOL spec: " + spec + ".\n\n" + e.toString());
                                         }
                                     }
+                                    system.setUnparsedSpecs(specsStrings);
                                     system.setSpecs(ltolSpecs);
                                     return system;
                                 } catch (Exception e) {
