@@ -1,6 +1,5 @@
 package recipe.lang.ltol;
 
-import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.types.Boolean;
 import recipe.lang.utils.Triple;

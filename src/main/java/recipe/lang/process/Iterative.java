@@ -6,7 +6,6 @@ import recipe.lang.expressions.Expression;
 import recipe.lang.types.Boolean;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class Iterative extends Process{

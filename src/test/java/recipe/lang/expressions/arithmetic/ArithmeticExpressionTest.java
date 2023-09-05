@@ -3,8 +3,6 @@ package recipe.lang.expressions.arithmetic;
 import org.junit.Test;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
-import recipe.lang.expressions.TypedVariable;
-import recipe.lang.types.Number;
 import recipe.lang.types.Real;
 import recipe.lang.utils.TypingContext;
 

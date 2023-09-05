@@ -1,17 +1,10 @@
 package recipe.lang.process;
 
-import org.petitparser.parser.Parser;
-import org.petitparser.parser.primitive.CharacterParser;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
-import recipe.lang.expressions.predicate.And;
-import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.Or;
 import recipe.lang.types.Boolean;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 public class Sequence extends Process{

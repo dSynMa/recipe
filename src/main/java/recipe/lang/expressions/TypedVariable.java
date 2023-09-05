@@ -1,6 +1,5 @@
 package recipe.lang.expressions;
 
-import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.AttributeTypeException;
 import recipe.lang.utils.exceptions.RelabellingTypeException;

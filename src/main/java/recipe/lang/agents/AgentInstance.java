@@ -1,11 +1,8 @@
 package recipe.lang.agents;
 
-import org.petitparser.context.Failure;
 import org.petitparser.parser.Parser;
-import org.petitparser.parser.combinators.ChoiceParser;
 import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.FailureParser;
-import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;

@@ -1,6 +1,5 @@
 package recipe.lang.expressions;
 
-import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.store.Store;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Integer;

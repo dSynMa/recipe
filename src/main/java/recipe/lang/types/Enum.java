@@ -1,7 +1,6 @@
 package recipe.lang.types;
 
 import org.petitparser.parser.Parser;
-import recipe.lang.utils.exceptions.InfiniteValueTypeException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.utils.exceptions.TypeCreationException;
 import recipe.lang.expressions.TypedValue;

@@ -21,7 +21,6 @@ import recipe.lang.utils.exceptions.*;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 
 import static org.petitparser.parser.primitive.CharacterParser.of;

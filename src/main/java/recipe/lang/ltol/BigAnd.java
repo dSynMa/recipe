@@ -2,13 +2,11 @@ package recipe.lang.ltol;
 
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.utils.Triple;
-import recipe.lang.utils.exceptions.InfiniteValueTypeException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.utils.exceptions.RelabellingTypeException;
 
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class BigAnd extends LTOL {
     List<TypedVariable> vars;

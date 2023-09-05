@@ -1,7 +1,6 @@
 package recipe.lang.ltol;
 
 import org.petitparser.parser.Parser;
-import org.petitparser.tools.ExpressionBuilder;
 import recipe.Config;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedVariable;
@@ -12,10 +11,7 @@ import recipe.lang.utils.TypingContext;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.utils.exceptions.RelabellingTypeException;
 
-import java.util.List;
 import java.util.function.Function;
-
-import static org.petitparser.parser.primitive.CharacterParser.of;
 
 public class Observation {
     public Expression<Boolean> getObservation() {

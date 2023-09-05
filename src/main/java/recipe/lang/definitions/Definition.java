@@ -1,6 +1,5 @@
 package recipe.lang.definitions;
 
-import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedVariable;
 
 public abstract class Definition<T> {

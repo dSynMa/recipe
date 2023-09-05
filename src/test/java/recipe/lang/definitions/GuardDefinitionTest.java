@@ -5,10 +5,6 @@ import org.petitparser.parser.Parser;
 import recipe.lang.types.Guard;
 import recipe.lang.utils.TypingContext;
 
-import javax.xml.transform.Result;
-
-import static org.junit.Assert.*;
-
 public class GuardDefinitionTest {
 
     @Test

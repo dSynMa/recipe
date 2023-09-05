@@ -5,7 +5,6 @@ import java.util.List;
 
 import recipe.Config;
 import recipe.lang.expressions.TypedValue;
-import recipe.lang.expressions.TypedVariable;
 
 public class CompositeStore extends Store {
 

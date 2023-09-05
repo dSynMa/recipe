@@ -1,7 +1,6 @@
 package recipe.lang.process;
 
 import recipe.lang.expressions.Expression;
-import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
 

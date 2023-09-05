@@ -1,14 +1,11 @@
 package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
-import org.petitparser.parser.combinators.SettableParser;
-import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
 import org.petitparser.tools.ExpressionBuilder;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
-import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.types.Boolean;
 import recipe.lang.utils.TypingContext;
 

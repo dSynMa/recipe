@@ -5,7 +5,6 @@ import org.petitparser.tools.ExpressionBuilder;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Number;
 import recipe.lang.store.Store;
@@ -21,7 +20,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
-import static org.petitparser.parser.primitive.CharacterParser.digit;
 import static org.petitparser.parser.primitive.CharacterParser.of;
 
 public abstract class ArithmeticExpression implements Expression<Number> {

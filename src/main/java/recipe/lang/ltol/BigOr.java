@@ -1,18 +1,12 @@
 package recipe.lang.ltol;
 
-import recipe.lang.agents.Agent;
-import recipe.lang.agents.AgentInstance;
-import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
-import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.utils.Triple;
-import recipe.lang.utils.exceptions.InfiniteValueTypeException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.utils.exceptions.RelabellingTypeException;
 
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class BigOr extends LTOL{
     List<TypedVariable> vars;
