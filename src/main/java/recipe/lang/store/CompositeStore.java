@@ -63,12 +63,6 @@ public class CompositeStore extends Store {
                 return result;
             }
         }
-        try {
-            TypedVariable var = (TypedVariable) attribute;
-            System.out.printf(">>> Lookup failed for %s : %s in %s\n", var, var.getType(), this);
-        } catch (Exception e) {
-            System.out.printf(">>> Lookup failed for %s in %s\n", attribute, this);
-        }
         
         return null;
     }
