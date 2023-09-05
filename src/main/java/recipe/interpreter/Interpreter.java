@@ -26,6 +26,7 @@ import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.ltol.Observation;
+import recipe.lang.process.BasicProcess;
 import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
 import recipe.lang.store.CompositeStore;
@@ -58,6 +59,19 @@ public class Interpreter {
         
         public Transition() {
             receivers = new HashMap<AgentInstance, ProcessTransition>();
+        }
+
+        public ProcessTransition findTransitionForAgent(AgentInstance instance) {
+            if (instance.getLabel() == sender.getLabel()) {
+                return send;
+            }
+            for (AgentInstance receiver : receivers.keySet()) {
+                if (receiver.getLabel() == instance.getLabel()) {
+                    return receivers.get(receiver);
+                }
+            }
+            // The agent did not take part in the transition
+            return null;
         }
 
         public JSONObject toJSON() {
@@ -128,6 +142,16 @@ public class Interpreter {
                 ConcreteStore store = stores.get(instance);
                 JSONObject jStore = new JSONObject();
                 jStore.put("**state**", store.getState().label.toString());
+                if (parent != null) {
+                    ProcessTransition maybeTransition = parent.chosenTransition.findTransitionForAgent(instance);
+                    if (maybeTransition != null) {
+                        BasicProcess trLabel = maybeTransition.getLabel();
+                        String lbl = trLabel.getLabel() + (trLabel instanceof SendProcess ? "!" : "?");
+                        jStore.put("**from_state**", parent.stores.get(instance).getState().label.toString());
+                        jStore.put("**last_transition**", trLabel.toString());
+                        jStore.put("**last_label**", lbl);
+                    }
+                }
                 store.getData().forEach((var, value) -> {
                     jStore.put(var.getName(), value.toString());
                 });
