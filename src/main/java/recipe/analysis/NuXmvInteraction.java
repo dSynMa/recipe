@@ -209,7 +209,6 @@ public class NuXmvInteraction {
         t.start();
 
         //waiting for initialisation
-        String out = new String(byteArrayOutputStream.toByteArray());
         while(nuxmvTurn.get()){}
         return t;
     }
@@ -237,7 +236,7 @@ public class NuXmvInteraction {
             Runnable runnable = () -> process.destroy();
             Runtime.getRuntime().addShutdownHook(new Thread(runnable));
 
-            String ttt = Files.readString(path);
+            // String ttt = Files.readString(path);
             BufferedInputStream out = (BufferedInputStream) process.getInputStream();
             OutputStream in = process.getOutputStream();
 
@@ -251,7 +250,8 @@ public class NuXmvInteraction {
 //            text = new String(out.readNBytes(160));
 
                 if (no > 0) {
-                    int n = out.read(buffer, 0, Math.min(no, buffer.length));
+                    // int n = 
+                    out.read(buffer, 0, Math.min(no, buffer.length));
                     text = new String(buffer, 0, Math.min(no, buffer.length));
                     Thread.sleep(10);
 

@@ -99,13 +99,15 @@ public class Server {
             if(stateQueryResult != null){
                 String state = stateQueryResult.toString();
                 
-                // Remove closing brace
+                // Remove closing brace and past highlighting
                 digraph = digraph.substring(0, digraph.length()-1);
+                digraph = digraph.replaceAll(";[\r\n ]*[^;]+[\r\n ]*\\[color=red\\][\r\n ]*;", ";");
+                digraph = digraph.replace("width=1,color=red", "width=1");
                 
                 // Highlight current state
-                digraph = digraph.replaceAll(";[\r\n ]*[^;]+[\r\n ]*\\[color=red\\][\r\n ]*;", ";");
                 digraph += state + "[color=red];";
             
+                // Highlight last transition
                 if (trQueryResult != null) {
                     String queryFromState = String.format("/state/%s/**from_state**", name);
                     String queryLbl = String.format("/state/%s/**last_label**", name);
@@ -113,8 +115,7 @@ public class Server {
                     String lbl = response.query(queryLbl).toString();
                     String lastTr = trQueryResult.toString();
                     
-                    // Highlight last transition
-                    digraph = digraph.replace("width=1,color=red", "width=1");
+                    
                     String newTr = String.format("%s -> %s[label=\"%s\",labeltooltip=\"%s\",width=1];", fromState, state, lbl, lastTr);
                     
                     digraph = digraph.replace(newTr, "\n");
