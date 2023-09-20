@@ -144,7 +144,13 @@ function resetSimulate(){
             <td>{agent}:</td>
             <td> {
               Object.keys(render[agent]).sort().map((k, index) => {
-              return <span>{index > 0 && ', '}{k === "**state**" ? <em>state</em> : k}: {render[agent][k]}</span>
+              return <span>
+                {/* {index > 0 && ', '} */}
+              {(k === "**state**") ? <em>state</em> : !k.startsWith("**") && k}
+              {(k === "**state**" || !k.startsWith("**")) && ": "}
+              {(k === "**state**" || !k.startsWith("**")) && render[agent][k]}
+              {(k === "**state**" || !k.startsWith("**")) && index < Object.keys(render[agent]).length - 1 && ', '}
+              </span>
             })}</td>
           </tr>)})
       }
