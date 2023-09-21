@@ -145,10 +145,14 @@ public class Interpreter {
                 if (parent != null) {
                     ProcessTransition maybeTransition = parent.chosenTransition.findTransitionForAgent(instance);
                     if (maybeTransition != null) {
-                        BasicProcess trLabel = maybeTransition.getLabel();
-                        String lbl = trLabel.getLabel() + (trLabel instanceof SendProcess ? "!" : "?");
+                        BasicProcess trProcess = maybeTransition.getLabel();
+                        String lbl = trProcess.getLabel();
+                        if (lbl == null) {
+                            lbl = trProcess.getChannel().toString();
+                        }
+                        lbl += (trProcess instanceof SendProcess ? "!" : "?");
                         jStore.put("**from_state**", parent.stores.get(instance).getState().label.toString());
-                        jStore.put("**last_transition**", trLabel.toString());
+                        jStore.put("**last_transition**", trProcess.toString());
                         jStore.put("**last_label**", lbl);
                     }
                 }
