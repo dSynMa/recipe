@@ -217,7 +217,7 @@ public class Interpreter {
                             }
                         }
                         mp.put(new TypedVariable<Type>(Config.getAgentType(), "sender"), senderName);
-                        Pair<Store, TypedValue> msgPair = MakeMessageStore(senderStore, sendProcess, this.sys);
+                        Pair<Store, TypedValue> msgPair = makeMessageStore(senderStore, sendProcess, this.sys);
                         Store store = new ConcreteStore(mp).push(msgPair.getLeft());
                         boolean isObserved = Condition.getTrue().equals(observation.valueIn(store));
                         if (isObserved != ltol.get(obsVar).equals("TRUE")) {
@@ -336,7 +336,7 @@ public class Interpreter {
                 ConcreteStore nextSenderStore = stores.get(chosenTransition.sender).BuildNext(chosenTransition.send);
                 nextStores.put(chosenTransition.sender, nextSenderStore);
 
-                Pair<Store, TypedValue> msgPair = MakeMessageStore(stores.get(chosenTransition.sender), chosenTransition.getSendProcess(), sys);
+                Pair<Store, TypedValue> msgPair = makeMessageStore(stores.get(chosenTransition.sender), chosenTransition.getSendProcess(), sys);
                 for (AgentInstance receiver : chosenTransition.receivers.keySet()) {
                     ProcessTransition receive = chosenTransition.receivers.get(receiver);
                     ConcreteStore nextReceiverStore = stores.get(receiver).BuildNext(receive, msgPair.getLeft());
@@ -356,7 +356,7 @@ public class Interpreter {
                     annotations.put(key, obj.get(key));
         }
 
-        protected Pair<Store, TypedValue> MakeMessageStore(Store senderStore, SendProcess sendProcess, recipe.lang.System sys) {
+        protected Pair<Store, TypedValue> makeMessageStore(Store senderStore, SendProcess sendProcess, recipe.lang.System sys) {
             // Add message and channel to a new map
             Map<TypedVariable, TypedValue> msgMap = new HashMap<TypedVariable, TypedValue>();
             Expression chanExpr = sendProcess.getChannel();
@@ -435,7 +435,7 @@ public class Interpreter {
 
                             if (psiSat) {
                                 // Add message and channel to a new map
-                                Pair<Store, TypedValue> msgPair = MakeMessageStore(senderStore, sendProcess, sys);
+                                Pair<Store, TypedValue> msgPair = makeMessageStore(senderStore, sendProcess, sys);
                                 Store msgStore = msgPair.getLeft();
                                 TypedValue chan = msgPair.getRight();
 
