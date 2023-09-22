@@ -34,13 +34,15 @@ public abstract class Process {
                                 TypingContext communicationContext) throws Exception {
         Parser receiveProcess = ReceiveProcess.parser(messageContext, localContext);
         Parser sendProcess = SendProcess.parser(messageContext, localContext, communicationContext);
+        Parser getProcess = GetProcess.parser(messageContext, localContext);
+        Parser supplyProcess = SupplyProcess.parser(messageContext, localContext, communicationContext);
 
         ExpressionBuilder builder = new ExpressionBuilder();
         builder.group()
-                .primitive(sendProcess.or(receiveProcess).trim())
+                .primitive(sendProcess.or(receiveProcess).or(getProcess).or(supplyProcess).trim())
                 .wrapper(of('(').trim(), of(')').trim(),
                         (List<Process> values) -> values.get(1));
-
+        
         // repetition is a prefix operator
         builder.group()
                 .prefix(StringParser.of("rep").trim(), (List<Process> values) -> new Iterative(values.get(1)));
