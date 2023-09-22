@@ -19,7 +19,7 @@ import java.util.*;
 
 import static recipe.Config.commVariableReferences;
 
-public class SendProcess extends BasicProcess {
+public class SendProcess extends BasicProcessWithMessage {
 
     public Map<String, Expression> message;
 
@@ -38,6 +38,7 @@ public class SendProcess extends BasicProcess {
         this.messageGuard = messageGuard;
     }
 
+    @Override
     public Map<String, Expression> getMessage() {
         return message;
     }

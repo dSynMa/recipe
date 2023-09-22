@@ -19,9 +19,7 @@ import java.util.*;
 
 import static recipe.Config.commVariableReferences;
 
-public class SupplyProcess extends BasicProcess {
-
-    public Map<String, Expression> message;
+public class SupplyProcess extends BasicProcessWithMessage {
 
     public Expression<Boolean> getMessageGuard() {
         return messageGuard;
@@ -35,10 +33,6 @@ public class SupplyProcess extends BasicProcess {
         this.channel = channel;
         this.message = message;
         this.update = update;
-    }
-
-    public Map<String, Expression> getMessage() {
-        return message;
     }
 
     public String toString() {
