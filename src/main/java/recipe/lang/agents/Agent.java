@@ -32,13 +32,15 @@ public class Agent {
     private Set<State> states;  //control flow
     private Set<ProcessTransition> sendTransitions;
     private Set<ProcessTransition> receiveTransitions;
+    private Set<ProcessTransition> getTransitions;
+    private Set<ProcessTransition> supplyTransitions;
     private Set<Process> actions;
     private State initialState;
     private Expression<Boolean> receiveGuard;
     private Expression<Boolean> initialCondition;
 
     public Agent(String name) throws MismatchingTypeException {
-        this(name, new Store(), Condition.getTrue(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(name, new String()), new TypedValue<Boolean>(Boolean.getType(), "false"));
+        this(name, new Store(), Condition.getTrue(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new State(name, new String()), new TypedValue<Boolean>(Boolean.getType(), "false"), new HashSet<>(), new HashSet<>());
     }
 
     public Agent(String name,
@@ -49,7 +51,10 @@ public class Agent {
                  Set<ProcessTransition> receiveTransitions,
                  Set<Process> actions,
                  State initialState,
-                 Expression<Boolean> receiveGuard) {
+                 Expression<Boolean> receiveGuard,
+                 Set<ProcessTransition> getTransitions,
+                 Set<ProcessTransition> supplyTransitions
+                 ) {
         this.name = name.trim();
         this.store = locals;
         this.init = init;
@@ -59,6 +64,8 @@ public class Agent {
         this.actions = new HashSet<>(actions);
         this.initialState = initialState;
         this.receiveGuard = receiveGuard;
+        this.getTransitions = new HashSet<>(getTransitions);
+        this.supplyTransitions = new HashSet<>(supplyTransitions);
     }
 
     public Agent(String name,
@@ -266,6 +273,8 @@ public class Agent {
                         Set<Transition> transitions = repeat.asTransitionSystem(startState, startState);
                         Set<ProcessTransition> sendTransitions = new HashSet<>();
                         Set<ProcessTransition> receiveTransitions = new HashSet<>();
+                        Set<ProcessTransition> getTransitions = new HashSet<>();
+                        Set<ProcessTransition> supplyTransitions = new HashSet<>();
 
                         Set<Process> actions = new HashSet<>();
                         transitions.forEach(tt -> {
@@ -275,6 +284,10 @@ public class Agent {
                                     sendTransitions.add(t);
                                 } else if (t.getLabel().getClass().equals(ReceiveProcess.class)) {
                                     receiveTransitions.add(t);
+                                } else if (t.getLabel().getClass().equals(GetProcess.class)) {
+                                    getTransitions.add(t);
+                                } else if (t.getLabel().getClass().equals(SupplyProcess.class)) {
+                                    supplyTransitions.add(t);
                                 }
 
                                 actions.add(t.getLabel());
@@ -301,7 +314,9 @@ public class Agent {
                                 receiveTransitions,
                                 actions,
                                 startState,
-                                receiveGuardCondition);
+                                receiveGuardCondition,
+                                getTransitions,
+                                supplyTransitions);
 
                         agent.setRelabel(relabel);
 
@@ -383,6 +398,30 @@ public class Agent {
             }
             textLabel += "?";
 
+            dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + textLabel + "\",labeltooltip=\"" + label + "\",width=1]" + ";\n";
+        }
+
+        for(Transition t : this.getTransitions){
+            String sourceLabel = t.getSource().toString();
+            String destLabel = t.getDestination().toString();
+
+            BasicProcess label = (BasicProcess) t.getLabel();
+            String textLabel = label.getLabel() + " (get)";
+            if(textLabel == null || textLabel.equals("")){
+                textLabel = "get@" + label.getChannel().toString();
+            }
+            dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + textLabel + "\",labeltooltip=\"" + label + "\",width=1]" + ";\n";
+        }
+
+        for(Transition t : this.supplyTransitions){
+            String sourceLabel = t.getSource().toString();
+            String destLabel = t.getDestination().toString();
+
+            BasicProcess label = (BasicProcess) t.getLabel();
+            String textLabel = label.getLabel() + " (sply)";
+            if(textLabel == null || textLabel.equals("")){
+                textLabel = "get@" + label.getChannel().toString();
+            }
             dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + textLabel + "\",labeltooltip=\"" + label + "\",width=1]" + ";\n";
         }
 
