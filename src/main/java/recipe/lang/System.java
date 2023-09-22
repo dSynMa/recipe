@@ -213,7 +213,7 @@ public class System{
                              .delimitedBy((CharacterParser.of(';').or(CharacterParser.of('\n'))).trim())
                              .optional(new ArrayList<>()))
                         .map((List<Object> values) -> {
-                            Set<String> channels = new HashSet<>((List<String>) values.get(0));
+                            // Set<String> channels = new HashSet<>((List<String>) values.get(0));
                             Map<String, Type> messageStructure = messageContext.get().getVarType();
                             Map<String, Type> communicationVariables = communicationContext.get().getVarType();
                             Map<String, Type> guardDefinitions = (Map<String, Type>) values.get(4);

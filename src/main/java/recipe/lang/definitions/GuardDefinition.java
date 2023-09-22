@@ -25,7 +25,7 @@ public class GuardDefinition extends Definition<Expression<Boolean>> {
     }
 
     public static org.petitparser.parser.Parser parser(TypingContext context){
-        AtomicReference<TypingContext> contextHere = new AtomicReference<>(TypingContext.union(context, new TypingContext()));
+        // AtomicReference<TypingContext> contextHere = new AtomicReference<>(TypingContext.union(context, new TypingContext()));
         AtomicReference<Guard> guarddef = new AtomicReference<>(null);
 
         Parser parser = (StringParser.of("guard").trim()

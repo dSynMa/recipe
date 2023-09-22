@@ -59,7 +59,7 @@ public class CLIApp
         }
 
         if(cmd.hasOption("gui")){
-            String serverURL = Server.start();
+            Server.start();
             ProcessBuilder processBuilder = new ProcessBuilder();
             File dir = new File(System.getProperty("user.dir") + File.separator + "frontend-react");
 

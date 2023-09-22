@@ -373,7 +373,7 @@ public class Interpreter {
                                 msgType.toString(), 
                                 msgVal.getType().toString()));
                         }
-                        TypedVariable tv = new TypedVariable(msgType, msgVar);
+                        TypedVariable<Type> tv = new TypedVariable<>(msgType, msgVar);
                         msgMap.put(tv, msgVal);
                     } catch (Exception e) {
                         handleEvaluationException(e);

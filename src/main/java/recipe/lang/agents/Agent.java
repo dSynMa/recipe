@@ -392,12 +392,12 @@ public class Agent {
     public void labelAllTransitions(){
         HashSet<ProcessTransition> transitions = new HashSet(this.receiveTransitions);
         transitions.addAll(this.sendTransitions);
-        Map<State, Set<ProcessTransition>> stateTransitionMap = getStateTransitionMap(transitions);
-        int seed = 0;
+        // Map<State, Set<ProcessTransition>> stateTransitionMap = getStateTransitionMap(transitions);
+        // int seed = 0;
 
-        for(State state : stateTransitionMap.keySet()){
+        // for(State state : stateTransitionMap.keySet()){
 
-        }
+        // }
     }
 
     public List<TypedVariable> getAllTransitionLabels(){

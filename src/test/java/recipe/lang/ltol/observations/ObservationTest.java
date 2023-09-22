@@ -26,7 +26,8 @@ public class ObservationTest {
 
         Parser system = System.parser().end();
         Result r = system.parse(script);
-        System s = r.get();
+        // System s =
+        r.get();
     }
     @Test
     public void parser() throws Exception {

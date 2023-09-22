@@ -45,7 +45,8 @@ public class LTOLTest {
         try {
             Parser system = System.parser().end();
             Result r = system.parse(script);
-            System s = r.get();
+            // System s = 
+            r.get();
 
         } catch (Exception e) {
             e.printStackTrace();
