@@ -105,4 +105,9 @@ public class SupplyProcess extends BasicProcessWithMessage {
 
         return parser;
     }
+    
+    @Override
+    public String prettyPrintLabel() {
+        return ((label == null || label == "") ? getChannel().toString() : label) + " [sply]";
+    }
 }

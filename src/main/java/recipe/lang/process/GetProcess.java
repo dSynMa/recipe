@@ -84,4 +84,9 @@ public class GetProcess extends BasicProcess {
                         });
         return parser;
     }
+
+    @Override
+    public String prettyPrintLabel() {
+        return ((label == null || label == "") ? getChannel().toString() : label) + " [get]";
+    }
 }

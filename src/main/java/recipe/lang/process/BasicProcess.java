@@ -6,7 +6,7 @@ import recipe.lang.types.Enum;
 
 import java.util.Map;
 
-public abstract class BasicProcess extends Process{
+public abstract class BasicProcess extends Process {
     protected String label;
     protected Expression<Boolean> psi;
     protected Expression<Enum> channel;
@@ -15,6 +15,8 @@ public abstract class BasicProcess extends Process{
     public String getLabel() {
         return label;
     }
+
+    public abstract String prettyPrintLabel();
 
     public Expression<Boolean> getPsi() {
         return psi;
