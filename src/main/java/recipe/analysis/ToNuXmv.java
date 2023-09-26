@@ -209,7 +209,9 @@ public class ToNuXmv {
         writer.write(script);
         writer.close();
         Runtime rt = Runtime.getRuntime();
-        Process pr = rt.exec(Config.getNuxmvPath() + " translation.smv");
+        String[] cmd = new String[] {Config.getNuxmvPath(), " translation.smv"};
+        // Process pr = rt.exec(Config.getNuxmvPath() + " translation.smv");
+        Process pr = rt.exec(cmd);
 
         AtomicReference<String> out = new AtomicReference<>("");
 
