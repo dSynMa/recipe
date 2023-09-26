@@ -175,6 +175,9 @@ public class Server {
     public String buildModel(Request req) {
         Enum.clear();
         interpreter = null;
+        latestDots = new HashMap<>();
+        latestDotsInterpreter = new ConcurrentHashMap<>();
+
         String script = req.getQuery().get("script").trim();
         Boolean buildType = Boolean.valueOf(req.getQuery().get("symbolic").trim());
         JSONObject response = new JSONObject();
