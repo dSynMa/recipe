@@ -1,0 +1,19 @@
+channels: c
+enum rolevals {clnt, srv}
+enum msgvals {reserve, request, release, buy, connect, full}
+message-structure: MSG : msgvals
+communication-variables: cv : rolevals
+
+agent Client
+    local: role : rolevals, counter : integer
+    init: role == clnt && boh == 0
+    relabel:
+        cv <- role
+    receive-guard: (channel == *)
+
+    repeat: (
+            mySply: <TRUE> sply@TRUE(MSG := release)[counter := counter + 1]
+            +
+            myGet: <TRUE> get@TRUE[]
+            )
+system = Client(one,TRUE) | Client(two,TRUE) | Client(three,TRUE)
