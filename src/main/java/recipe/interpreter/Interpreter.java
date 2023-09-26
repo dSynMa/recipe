@@ -1,7 +1,6 @@
 package recipe.interpreter;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -27,8 +26,11 @@ import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.ltol.Observation;
 import recipe.lang.process.BasicProcess;
+import recipe.lang.process.BasicProcessWithMessage;
+import recipe.lang.process.GetProcess;
 import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
+import recipe.lang.process.SupplyProcess;
 import recipe.lang.store.CompositeStore;
 import recipe.lang.store.ConcreteStore;
 import recipe.lang.store.Store;
@@ -52,15 +54,97 @@ public class Interpreter {
         return channTypedVariable;
     }
 
-    private class Transition {
+    private interface Transition {
+        public AgentInstance getInitiator();
+        public Set<AgentInstance> getResponders();
+        public ProcessTransition getInitiatorTransition();
+        public BasicProcessWithMessage getInitiatorProcess();
+        public ProcessTransition findTransitionForAgent(AgentInstance instance);
+        public void setInitiator(AgentInstance instance, ProcessTransition transition) throws Exception;
+        public void pushResponder(AgentInstance instance, ProcessTransition transition) throws Exception;
+        public JSONObject toJSON();
+    }
+
+    private class SupplyGetTransition implements Transition {
+        private AgentInstance supplier;
+        private AgentInstance getter;
+        private ProcessTransition supply;
+        private ProcessTransition get;
+
+        @Override
+        public ProcessTransition getInitiatorTransition() {
+            return supply;
+        }
+
+        @Override
+        public BasicProcessWithMessage getInitiatorProcess() {
+            return (BasicProcessWithMessage) supply.getLabel();
+        }
+
+        @Override
+        public ProcessTransition findTransitionForAgent(AgentInstance instance) {
+            String label = instance.getLabel();
+            if (label == supplier.getLabel()) return supply;
+            else if (label == getter.getLabel()) return get;
+            // The agent did not take part in the transition
+            else return null;
+        }
+
+        @Override
+        public void setInitiator(AgentInstance instance, ProcessTransition transition) throws Exception {
+            this.supplier = instance;
+            this.supply = transition;
+        }
+
+        @Override
+        public JSONObject toJSON() {
+            // TODO Auto-generated method stub
+            JSONObject result = new JSONObject();
+            List<String> receiverNames = new ArrayList<>(1);
+            receiverNames.add(getter.getLabel());
+            result.put("sender", supplier.getLabel());
+            result.put("send", supply.getLabel().toString());
+            result.put("receivers", receiverNames);
+            return result;
+        }
+
+
+
+        @Override
+        public AgentInstance getInitiator() {
+            return supplier;
+        }
+
+        @Override
+        public Set<AgentInstance> getResponders() {
+            Set<AgentInstance> result = new HashSet<>();
+            result.add(getter);
+            return result;
+        }
+
+        @Override
+        public void pushResponder(AgentInstance instance, ProcessTransition transition) throws Exception {
+            if (getter != null) {
+
+            }
+            if (!transition.getLabel().getClass().equals(GetProcess.class)) {
+                throw new Exception("getter's transition must contain a GetProcess");
+            }
+            this.getter = instance;
+            this.get = transition;
+        }
+    }
+
+    private class SendReceiveTransition implements Transition {
         private AgentInstance sender;
         private ProcessTransition send;
         private Map<AgentInstance, ProcessTransition> receivers;
         
-        public Transition() {
+        public SendReceiveTransition() {
             receivers = new HashMap<AgentInstance, ProcessTransition>();
         }
 
+        @Override
         public ProcessTransition findTransitionForAgent(AgentInstance instance) {
             if (instance.getLabel() == sender.getLabel()) {
                 return send;
@@ -87,30 +171,56 @@ public class Interpreter {
             return result;
         }
 
-        public void prettyPrint(PrintStream stream) {
-            stream.println("--- transition ---");
-            stream.print("Sender:\n");
-            stream.printf("\n%s (%s)\t\t%s\n", sender.getLabel(), sender.getAgent().getName(), send);
-            stream.print("Receivers:\n");
-            for (AgentInstance receiver : receivers.keySet()) {
-                stream.printf("%s (%s)\t\t%s\n", receiver.getLabel(), receiver.getAgent().getName(), receivers.get(receiver));
-            }
-            stream.println("------------------");
-        }
+        // public void prettyPrint(PrintStream stream) {
+        //     stream.println("--- transition ---");
+        //     stream.print("Sender:\n");
+        //     stream.printf("\n%s (%s)\t\t%s\n", sender.getLabel(), sender.getAgent().getName(), send);
+        //     stream.print("Receivers:\n");
+        //     for (AgentInstance receiver : receivers.keySet()) {
+        //         stream.printf("%s (%s)\t\t%s\n", receiver.getLabel(), receiver.getAgent().getName(), receivers.get(receiver));
+        //     }
+        //     stream.println("------------------");
+        // }
 
+        // @Override
+        // public SendProcess getInitiatorProcess() {
+        //     return (SendProcess) send.getLabel();
+        // }
 
-        public SendProcess getSendProcess() {
-            return (SendProcess) send.getLabel();
-        }
-
-        public void setSender(AgentInstance instance) {
+        @Override
+        public void setInitiator(AgentInstance instance, ProcessTransition transition) throws Exception {
             sender = instance;
-        }
-        public void setSend(ProcessTransition transition) {
             send = transition;
+            if (!transition.getLabel().getClass().equals(SendProcess.class)) {
+                throw new Exception("sender's transition must contain a SendProcess");
+            }
         }
-        public void pushReceiver(AgentInstance instance, ProcessTransition receive) {
+        
+        public void pushResponder(AgentInstance instance, ProcessTransition receive) throws Exception {
+            if (!receive.getLabel().getClass().equals(ReceiveProcess.class)) {
+                throw new Exception("receiver's transition must contain a ReceiveProcess");
+            }
             receivers.put(instance, receive);
+        }
+
+        @Override
+        public ProcessTransition getInitiatorTransition() {
+            return send;
+        }
+
+        @Override
+        public BasicProcessWithMessage getInitiatorProcess() {
+            return (BasicProcessWithMessage) send.getLabel();
+        }
+
+        @Override
+        public AgentInstance getInitiator() {
+            return sender;
+        }
+
+        @Override
+        public Set<AgentInstance> getResponders() {
+            return receivers.keySet();
         }
     }
 
@@ -146,11 +256,12 @@ public class Interpreter {
                     ProcessTransition maybeTransition = parent.chosenTransition.findTransitionForAgent(instance);
                     if (maybeTransition != null) {
                         BasicProcess trProcess = maybeTransition.getLabel();
-                        String lbl = trProcess.getLabel();
-                        if (lbl == null) {
-                            lbl = trProcess.getChannel().toString();
-                        }
-                        lbl += (trProcess instanceof SendProcess ? "!" : "?");
+                        String lbl = trProcess.prettyPrintLabel();
+                        // if (lbl == null) {
+                        //     lbl = trProcess.prettyPrintLabel();
+                        // }
+                        
+                        // lbl += (trProcess instanceof SendProcess ? "!" : "?");
                         jStore.put("**from_state**", parent.stores.get(instance).getState().label.toString());
                         jStore.put("**last_transition**", trProcess.toString());
                         jStore.put("**last_label**", lbl);
@@ -195,12 +306,12 @@ public class Interpreter {
                 for (String obsVar : ltol.keySet()) {
                     if (obsVar.equals("no-observations")) continue;
                     Expression<recipe.lang.types.Boolean> observation = obsMap.get(obsVar).getObservation();
-                    AgentInstance sender = this.inboundTransition.sender;
+                    AgentInstance sender = this.inboundTransition.getInitiator();
                     System.out.println(observation.toString());
                     System.out.println(sender.getLabel());
                     Store senderStore = this.parent.stores.get(sender);
                     try {
-                        SendProcess sendProcess = this.inboundTransition.getSendProcess();
+                        SendProcess sendProcess = (SendProcess) this.inboundTransition.getInitiatorTransition().getLabel();
                         Expression chanExpr = sendProcess.getChannel();
                         TypedValue chan = chanExpr.valueIn(senderStore);
                         Map<TypedVariable, TypedValue> mp = new HashMap<>();
@@ -333,12 +444,13 @@ public class Interpreter {
             
             try {
                 // Update sender
-                ConcreteStore nextSenderStore = stores.get(chosenTransition.sender).BuildNext(chosenTransition.send);
-                nextStores.put(chosenTransition.sender, nextSenderStore);
+                AgentInstance initiator = chosenTransition.getInitiator();
+                ConcreteStore nextSenderStore = stores.get(initiator).BuildNext(chosenTransition.getInitiatorTransition());
+                nextStores.put(initiator, nextSenderStore);
 
-                Pair<Store, TypedValue> msgPair = makeMessageStore(stores.get(chosenTransition.sender), chosenTransition.getSendProcess(), sys);
-                for (AgentInstance receiver : chosenTransition.receivers.keySet()) {
-                    ProcessTransition receive = chosenTransition.receivers.get(receiver);
+                Pair<Store, TypedValue> msgPair = makeMessageStore(stores.get(initiator), chosenTransition.getInitiatorProcess(), sys);
+                for (AgentInstance receiver : chosenTransition.getResponders()) {
+                    ProcessTransition receive = chosenTransition.findTransitionForAgent(receiver);
                     ConcreteStore nextReceiverStore = stores.get(receiver).BuildNext(receive, msgPair.getLeft());
                     nextStores.put(receiver, nextReceiverStore);
                 }
@@ -356,12 +468,16 @@ public class Interpreter {
                     annotations.put(key, obj.get(key));
         }
 
-        protected Pair<Store, TypedValue> makeMessageStore(Store senderStore, SendProcess sendProcess, recipe.lang.System sys) {
+        protected Pair<Store, TypedValue> makeMessageStore(Store senderStore, BasicProcessWithMessage sendProcess, recipe.lang.System sys) {
+            return makeMessageStore(senderStore, sendProcess, sys, false);
+        }
+
+        protected Pair<Store, TypedValue> makeMessageStore(Store senderStore, BasicProcessWithMessage sendProcess, recipe.lang.System sys, boolean ignoreChan) {
             // Add message and channel to a new map
             Map<TypedVariable, TypedValue> msgMap = new HashMap<TypedVariable, TypedValue>();
             Expression chanExpr = sendProcess.getChannel();
+            TypedValue chan = null;
             try {
-                TypedValue chan = chanExpr.valueIn(senderStore);
                 sendProcess.getMessage().forEach((msgVar, msgExpr) -> {
                     try {
                         TypedValue msgVal = msgExpr.valueIn(senderStore);
@@ -379,7 +495,10 @@ public class Interpreter {
                         handleEvaluationException(e);
                     }
                 });
-                msgMap.put(getChannelTV(), chan);
+                if (!ignoreChan) {
+                    chan = chanExpr.valueIn(senderStore);
+                    msgMap.put(getChannelTV(), chan);
+                }
                 return new Pair<Store, TypedValue>(new ConcreteStore(msgMap), chan);
             } catch (Exception e) {
                 handleEvaluationException(e);
@@ -420,7 +539,7 @@ public class Interpreter {
                 handleEvaluationException(e);
             }
 
-            // Compute available transitions
+            // Compute available transitions (put/receive)
             interpreter.sys.getAgentInstances().forEach(sender -> {
                 ConcreteStore senderStore = stores.get(sender);
                 Set<ProcessTransition> instSends = interpreter.sends.get(senderStore.getState());
@@ -524,11 +643,10 @@ public class Interpreter {
 
                                 // If nobody is blocking we can create transitions
                                 if (transitionCount > 0) {
-                                    Transition[] newTransitions = new Transition[transitionCount];
+                                    SendReceiveTransition[] newTransitions = new SendReceiveTransition[transitionCount];
                                     for (int i = 0; i < transitionCount; i++) {
-                                        newTransitions[i] = new Transition();
-                                        newTransitions[i].setSender(sender);
-                                        newTransitions[i].setSend(tr);
+                                        newTransitions[i] = new SendReceiveTransition();
+                                        newTransitions[i].setInitiator(sender, tr);
                                     }
                                     // System.err.printf("Generated %d transition objects\n", transitionCount);
                                     // Populate transitions with the cartesian product of receives
@@ -537,12 +655,12 @@ public class Interpreter {
                                         int i = 0;
                                         while (i < transitionCount) {
                                             for (ProcessTransition transition : receivesMap.get(receiver)) {
-                                                newTransitions[i].pushReceiver(receiver, transition);
+                                                newTransitions[i].pushResponder(receiver, transition);
                                                 i++;
                                             }
                                         }
                                     }
-                                    for (Transition t : newTransitions) {
+                                    for (SendReceiveTransition t : newTransitions) {
                                         transitions.add(t);
                                     }
                                 }
@@ -551,6 +669,49 @@ public class Interpreter {
                             handleEvaluationException(e);
                         }
                     });    
+                }
+            });
+            System.out.println(">>>now get/sply");
+
+            //Compute available transitions (get/supply)
+            interpreter.sys.getAgentInstances().forEach(supplier -> {
+                ConcreteStore supplierStore = stores.get(supplier);
+                Set<ProcessTransition> splys = interpreter.supplys.get(supplierStore.getState());
+                if (splys == null) return;
+                for (ProcessTransition sply : splys) {
+                    SupplyProcess splyProc = (SupplyProcess) sply.getLabel();
+                    Expression<recipe.lang.types.Boolean> psi = splyProc.getPsi();
+                    try {
+                        TypedValue psiEval = psi.valueIn(supplierStore);
+                        boolean psiSat = Condition.getTrue().equals(psiEval);
+                        if (!psiSat) continue;
+                        for (AgentInstance getter : interpreter.sys.getAgentInstances()) {
+                            if (getter == supplier) continue;
+                            ConcreteStore getterStore = stores.get(getter);
+                            Set<ProcessTransition> gets = interpreter.gets.get(getterStore.getState());
+                            if (gets == null) continue;
+                            for (ProcessTransition get : gets) {
+                                Pair<Store, TypedValue> msgPair = makeMessageStore(supplierStore, splyProc, sys, true);
+                                Store instStore = getterStore.push(msgPair.getLeft());
+                                GetProcess getProc = (GetProcess) get.getLabel();
+                                Expression getPsi = getProc.getPsi();
+                                boolean getPsiSat = Condition.getTrue().equals(getPsi.valueIn(instStore));
+                                if (!getPsiSat) continue;
+                                // Check if predicates match
+                                // TODO this only works for predicates, extend to instance names
+                                if (!Condition.getTrue().equals(splyProc.getChannel().valueIn(getterStore))) continue;
+                                if (!Condition.getTrue().equals(getProc.getChannel().valueIn(supplierStore))) continue;
+
+                                // System.out.println(sply.toString() + "   " + get.toString());
+                                Transition tr = new SupplyGetTransition();
+                                tr.setInitiator(supplier, sply);
+                                tr.pushResponder(getter, get);
+                                transitions.add(tr);
+                            }
+                        }
+                    } catch (Exception e) {
+                        handleEvaluationException(e);
+                    }
                 }
             });
 
@@ -562,11 +723,15 @@ public class Interpreter {
     private recipe.lang.System sys;
     private Map<State, Set<ProcessTransition>> sends;
     private Map<State, Set<ProcessTransition>> receives;
+    private Map<State, Set<ProcessTransition>> gets;
+    private Map<State, Set<ProcessTransition>> supplys;
 
     public Interpreter (recipe.lang.System s) {
         sys = s;
         sends = new HashMap<State, Set<ProcessTransition>>();
         receives = new HashMap<State, Set<ProcessTransition>>();
+        gets = new HashMap<State, Set<ProcessTransition>>();
+        supplys = new HashMap<State, Set<ProcessTransition>>();
 
         // Set up send/receive tables
         sys.getAgents().forEach(a -> {
@@ -577,6 +742,14 @@ public class Interpreter {
             a.getReceiveTransitions().forEach(receive -> {
                 receives.putIfAbsent(receive.getSource(), new HashSet<ProcessTransition>());
                 receives.get(receive.getSource()).add(receive);
+            });
+            a.getGetTransitions().forEach(get -> {
+                gets.putIfAbsent(get.getSource(), new HashSet<ProcessTransition>());
+                gets.get(get.getSource()).add(get);
+            });
+            a.getSupplyTransitions().forEach(sply -> {
+                supplys.putIfAbsent(sply.getSource(), new HashSet<ProcessTransition>());
+                supplys.get(sply.getSource()).add(sply);
             });
         });
     }

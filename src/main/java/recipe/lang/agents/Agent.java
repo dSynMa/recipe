@@ -74,6 +74,8 @@ public class Agent {
                  Set<State> states,
                  Set<ProcessTransition> sendTransitions,
                  Set<ProcessTransition> receiveTransitions,
+                 Set<ProcessTransition> getTransitions,
+                 Set<ProcessTransition> supplyTransitions,
                  Set<Process> actions,
                  Map<TypedVariable, Expression> relabel,
                  State initialState) {
@@ -83,6 +85,8 @@ public class Agent {
         this.states = new HashSet<>(states);
         this.sendTransitions = new HashSet<>(sendTransitions);
         this.receiveTransitions = new HashSet<>(receiveTransitions);
+        this.getTransitions = new HashSet<>(getTransitions);
+        this.supplyTransitions = new HashSet<>(supplyTransitions);
         this.actions = new HashSet<>(actions);
         this.relabel = relabel;
         this.initialState = initialState;
@@ -160,6 +164,14 @@ public class Agent {
     public Set<ProcessTransition> getSendTransitions() {
         return sendTransitions;
     }
+    
+    public Set<ProcessTransition> getGetTransitions() {
+        return getTransitions;
+    }
+
+    public Set<ProcessTransition> getSupplyTransitions() {
+        return supplyTransitions;
+    }
 
     public void setSendTransitions(Set<ProcessTransition> sendTransitions) {
         this.sendTransitions = sendTransitions;
@@ -180,16 +192,6 @@ public class Agent {
     public void setInitialCondition(Condition initialCondition) {
         this.initialCondition = initialCondition;
     }
-
-//    public boolean isListening(String channel, String state) throws Exception {
-//        Condition concrete = receiveGuard.close(store, getCV().keySet());
-//        Store newstore = new Store();
-//
-//        recipe.lang.types.Enum channels = recipe.lang.types.Enum.getEnum("channels");
-//        newstore.setValue(new TypedVariable(channels, "channel"), new TypedValue(channels, channel));
-//        newstore.setValue(new StringVariable("state"), new StringValue(state));
-//        return concrete.isSatisfiedBy(newstore);
-//    }
 
     public static org.petitparser.parser.Parser parser(TypingContext messageContext,
                                                        TypingContext communicationContext,
@@ -267,7 +269,7 @@ public class Agent {
                         Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(4);
                         Expression<Boolean> receiveGuardCondition = (Expression<Boolean>) values.get(5);
                         Process repeat = (Process) values.get(6);
-                        State startState = new State(Integer.valueOf(0));
+                        State startState = new State<Integer>(Integer.valueOf(0));
                         // State startState = new State("0");
                         Process.stateSeed = 0;
                         Set<Transition> transitions = repeat.asTransitionSystem(startState, startState);
@@ -379,10 +381,8 @@ public class Agent {
             BasicProcess label = (BasicProcess) t.getLabel();
             String textLabel = label.getLabel();
             if(textLabel == null || textLabel.equals("")){
-                textLabel = label.getChannel().toString();
+                textLabel = label.prettyPrintLabel();
             }
-
-            textLabel += "!";
 
             dot += "\t" +  sourceLabel + " -> " +  destLabel + "[label=\"" + textLabel + "\",labeltooltip=\"" + label + "\",width=1]" + ";\n";
         }
@@ -406,7 +406,7 @@ public class Agent {
             String destLabel = t.getDestination().toString();
 
             BasicProcess label = (BasicProcess) t.getLabel();
-            String textLabel = label.getLabel() + " (get)";
+            String textLabel = label.prettyPrintLabel();
             if(textLabel == null || textLabel.equals("")){
                 textLabel = "get@" + label.getChannel().toString();
             }
