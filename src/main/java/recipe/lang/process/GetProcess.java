@@ -22,10 +22,16 @@ import recipe.lang.utils.TypingContext;
 
 public class GetProcess extends BasicProcess {
 
-    public GetProcess(String label, Expression<Boolean> psi, Expression channel, Map<String, Expression> update) {
+    public Expression<Boolean> messageGuard;
+
+    public Expression<Boolean> getMessageGuard() {
+        return messageGuard;
+    }
+
+    public GetProcess(String label, Expression<Boolean> psi, Expression<Boolean> messageGuard, Map<String, Expression> update) {
         this.label = label;
         this.psi = psi;
-        this.channel = channel; ///Really a location 
+        this.messageGuard = messageGuard;
         this.update = update;
     }
 
@@ -87,6 +93,6 @@ public class GetProcess extends BasicProcess {
 
     @Override
     public String prettyPrintLabel() {
-        return ((label == null || label == "") ? getChannel().toString() : label) + " [get]";
+        return ((label == null || label == "") ? getMessageGuard().toString() : label);// + " [get]";
     }
 }

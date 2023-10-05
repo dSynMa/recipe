@@ -27,10 +27,10 @@ public class SupplyProcess extends BasicProcessWithMessage {
 
     public Expression<Boolean> messageGuard;
 
-    public SupplyProcess(String label, Expression<Boolean> psi, Expression channel, Map<String, Expression> message, Map<String, Expression> update) {
+    public SupplyProcess(String label, Expression<Boolean> psi, Expression<Boolean> messageGuard, Map<String, Expression> message, Map<String, Expression> update) {
         this.label = label;
         this.psi = psi;
-        this.channel = channel;
+        this.messageGuard = messageGuard;
         this.message = message;
         this.update = update;
     }
@@ -108,6 +108,6 @@ public class SupplyProcess extends BasicProcessWithMessage {
     
     @Override
     public String prettyPrintLabel() {
-        return ((label == null || label == "") ? getChannel().toString() : label) + " [sply]";
+        return ((label == null || label == "") ? getMessageGuard().toString() : label);// + " [sply]";
     }
 }

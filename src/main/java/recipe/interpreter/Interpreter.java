@@ -257,11 +257,7 @@ public class Interpreter {
                     if (maybeTransition != null) {
                         BasicProcess trProcess = maybeTransition.getLabel();
                         String lbl = trProcess.prettyPrintLabel();
-                        // if (lbl == null) {
-                        //     lbl = trProcess.prettyPrintLabel();
-                        // }
-                        
-                        // lbl += (trProcess instanceof SendProcess ? "!" : "?");
+
                         jStore.put("**from_state**", parent.stores.get(instance).getState().label.toString());
                         jStore.put("**last_transition**", trProcess.toString());
                         jStore.put("**last_label**", lbl);
@@ -699,8 +695,8 @@ public class Interpreter {
                                 if (!getPsiSat) continue;
                                 // Check if predicates match
                                 // TODO this only works for predicates, extend to instance names
-                                if (!Condition.getTrue().equals(splyProc.getChannel().valueIn(getterStore))) continue;
-                                if (!Condition.getTrue().equals(getProc.getChannel().valueIn(supplierStore))) continue;
+                                if (!Condition.getTrue().equals(splyProc.getMessageGuard().valueIn(getterStore))) continue;
+                                if (!Condition.getTrue().equals(getProc.getMessageGuard().valueIn(supplierStore))) continue;
 
                                 // System.out.println(sply.toString() + "   " + get.toString());
                                 Transition tr = new SupplyGetTransition();
