@@ -362,7 +362,7 @@ public class Agent {
     public String toDOT(){
         GuardReference.resolve = false;
         String dot = "";
-        dot += "\tgraph [rankdir=TB,ranksep=0.2,nodesep=0.2];\n"
+        dot += "\tgraph [rankdir=TB,ranksep=0.2,nodesep=0.4];\n"
         + "node [shape=circle];\n";
         for(State state : this.states){
             if(state.equals(this.initialState)){
@@ -418,7 +418,7 @@ public class Agent {
             String destLabel = t.getDestination().toString();
 
             BasicProcess label = (BasicProcess) t.getLabel();
-            String textLabel = label.getLabel() + " (sply)";
+            String textLabel = label.getLabel();
             if(textLabel == null || textLabel.equals("")){
                 textLabel = "get@" + label.getChannel().toString();
             }
