@@ -12,8 +12,8 @@ agent Client
     receive-guard: (channel == *)
 
     repeat: (
-            s: <TRUE> sply@TRUE(MSG := release)[counter := counter + 1]
+            s: <TRUE> SPLY@TRUE(MSG := release)[counter := counter + 1]
             +
-            g: <TRUE> get@TRUE[]
+            g: <TRUE> GET@TRUE[]
             )
 system = Client(one,TRUE) | Client(two,TRUE) | Client(three,TRUE)

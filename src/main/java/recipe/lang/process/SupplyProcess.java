@@ -36,7 +36,7 @@ public class SupplyProcess extends BasicProcessWithMessage {
     }
 
     public String toString() {
-        return "<" + psi.toString() + ">sply@" + channel + "(" + message + ")[" + update + "]";
+        return "<" + psi.toString() + ">SPLY@" + channel + "(" + message + ")[" + update + "]";
     }
 
     public Set<Transition> asTransitionSystem(State start, State end){
@@ -83,7 +83,7 @@ public class SupplyProcess extends BasicProcessWithMessage {
         Parser parser = ((CharacterParser.word().plus().trim()).flatten()
                         .seq(CharacterParser.of(':').trim()).flatten()).optional().flatten()
                         .seq(delimetedCondition.trim())
-                        .seq(StringParser.of("sply@").trim())
+                        .seq(StringParser.of("SPLY@").trim())
                         .seq(messageGuard.trim())
                         .seq((CharacterParser.of('(').trim()))
                         .seq(messageAssignment)

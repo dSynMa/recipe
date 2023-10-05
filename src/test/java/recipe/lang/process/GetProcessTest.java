@@ -43,7 +43,7 @@ public class GetProcessTest {
 
         Parser parser = GetProcess.parser(messageContext, localContext, communicationContext);
 
-        Result r = parser.parse("<v == 5> get@(TRUE)[v := 6]");
+        Result r = parser.parse("<v == 5> GET@(TRUE)[v := 6]");
         assert r.isSuccess();
         r = parser.parse("<v == 5> get!@g(m := 1)[v := 6]");
         assert r.isFailure();

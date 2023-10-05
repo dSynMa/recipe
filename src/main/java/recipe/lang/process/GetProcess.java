@@ -36,7 +36,7 @@ public class GetProcess extends BasicProcess {
     }
 
     public String toString() {
-        return "<" + psi.toString() + ">get@" + channel + "[" + update + "]";
+        return "<" + psi.toString() + ">GET@" + channel + "[" + update + "]";
     }
 
     @Override
@@ -74,7 +74,7 @@ public class GetProcess extends BasicProcess {
                         .seq(CharacterParser.of(':').trim()).flatten()).optional()
                         .seq(delimetedCondition.trim())
                         // .seq((((Enum.getEnum(Config.channelLabel).valueParser()).seq(StringParser.of("?").trim())).or(localChannelVars.variableParser().seq(StringParser.of("?").trim()))))
-                        .seq((StringParser.of("get@").trim()))
+                        .seq((StringParser.of("GET@").trim()))
                         .seq(localGuard)
                         .seq((CharacterParser.of('[').trim()))
                         .seq(localAssignment.optional(new HashMap<String, Expression>()))
