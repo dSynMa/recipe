@@ -395,7 +395,6 @@ public class ToNuXmv {
 
                 String sendStateIsCurrentState = sendingAgentName + "-automaton-state" + " = " + state;
 
-
                 if (sendTransitions != null && sendTransitions.size() > 0) {
                     List<String> transitionSendPreds = new ArrayList<>();
                     List<String> transitionSendProgressCond = new ArrayList<>();
@@ -769,9 +768,6 @@ public class ToNuXmv {
                         }
 
                         if(sendingProcess.getLabel() != null && !sendingProcess.getLabel().equals("")) {
-                            if((sendingAgentName + "-" + sendingProcess.getLabel()).equals("client2-sRelease")){
-                                java.lang.System.out.println();
-                            }
                             define +=  "\t" + sendingAgentName + "-" + sendingProcess.getLabel() + " := " + agentSendPred + ";\n";
                             transitionSendPreds.add(sendingAgentName + "-" + sendingProcess.getLabel());
                         } else {
