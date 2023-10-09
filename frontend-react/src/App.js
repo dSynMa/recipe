@@ -343,12 +343,12 @@ function resetInterpreter(){
       axios.get(server + "/modelCheck", { params })
          .then((response) => {
             console.log(response.data);
-            if (response.data !== undefined) {
-              setMCResponse(response.data.results);
-              response.data.results.map((x) => modelCheckSingle(x));
-            }
             if (response.data.error !== undefined) {
               alert(response.data.error);
+            }
+            else if (response.data !== undefined) {
+              setMCResponse(response.data.results);
+              response.data.results.map((x) => modelCheckSingle(x));
             }
             setMCLoading(false);
          })
