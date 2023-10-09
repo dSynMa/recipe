@@ -667,7 +667,6 @@ public class Interpreter {
                     });    
                 }
             });
-            System.out.println(">>>now get/sply");
 
             //Compute available transitions (get/supply)
             interpreter.sys.getAgentInstances().forEach(supplier -> {
