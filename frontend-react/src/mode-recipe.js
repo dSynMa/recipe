@@ -9,7 +9,7 @@ define("ace/mode/recipe",["require","exports","module","ace/lib/oop","ace/mode/t
     var Behaviour = require("./behaviour").Behaviour;
       
     var RecipeHighlightRules = function() {
-        var keywords = "channels|receive|rep|message|structure|communication|guard|relabel|agent|repeat|channel|chan|int|bool|real|local|spec|LTLSPEC|PSLSPEC|INVARIANT|SPEC";
+        var keywords = "GET|SPLY|channels|receive|rep|message|structure|communication|guard|relabel|agent|repeat|channel|chan|int|bool|real|local|spec|LTLSPEC|PSLSPEC|INVARIANT|SPEC";
     
         var builtinConstants = (
             "true|false|null"
