@@ -36,7 +36,7 @@ public class SupplyProcess extends BasicProcessWithMessage {
     }
 
     public String toString() {
-        return "<" + psi.toString() + ">SPLY@" + channel + "(" + message + ")[" + update + "]";
+        return "<" + psi.toString() + ">SPLY@" + messageGuard + "(" + message + ")[" + update + "]";
     }
 
     public Set<Transition> asTransitionSystem(State start, State end){

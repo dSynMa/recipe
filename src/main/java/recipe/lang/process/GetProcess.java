@@ -36,7 +36,7 @@ public class GetProcess extends BasicProcess {
     }
 
     public String toString() {
-        return "<" + psi.toString() + ">GET@" + channel + "[" + update + "]";
+        return "<" + psi.toString() + ">GET@" + messageGuard + "[" + update + "]";
     }
 
     @Override
