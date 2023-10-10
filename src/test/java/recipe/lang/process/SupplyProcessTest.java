@@ -43,7 +43,7 @@ public class SupplyProcessTest {
 
         Parser parser = SupplyProcess.parser(messageContext, localContext, communicationContext);
 
-        Result r = parser.parse("<v == 5> SPLY@TRUE(m := 1)[v := 6]");
+        Result r = parser.parse("<v == 5> SUPPLY@TRUE(m := 1)[v := 6]");
         assert r.isSuccess();
     }
 }

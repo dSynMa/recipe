@@ -36,7 +36,7 @@ public class SupplyProcess extends BasicProcessWithMessage {
     }
 
     public String toString() {
-        return "<" + psi.toString() + ">SPLY@" + messageGuard + "(" + message + ")[" + update + "]";
+        return "<" + psi.toString() + ">SUPPLY@" + messageGuard + "(" + message + ")[" + update + "]";
     }
 
     public Set<Transition> asTransitionSystem(State start, State end){
@@ -83,7 +83,7 @@ public class SupplyProcess extends BasicProcessWithMessage {
         Parser parser = ((CharacterParser.word().plus().trim()).flatten()
                         .seq(CharacterParser.of(':').trim()).flatten()).optional().flatten()
                         .seq(delimetedCondition.trim())
-                        .seq(StringParser.of("SPLY@").trim())
+                        .seq(StringParser.of("SUPPLY@").trim())
                         .seq(messageGuard.trim())
                         .seq((CharacterParser.of('(').trim()))
                         .seq(messageAssignment)
@@ -108,6 +108,6 @@ public class SupplyProcess extends BasicProcessWithMessage {
     
     @Override
     public String prettyPrintLabel() {
-        return ((label == null || label == "") ? getMessageGuard().toString() : label);// + " [sply]";
+        return ((label == null || label == "") ? getMessageGuard().toString() : label);
     }
 }

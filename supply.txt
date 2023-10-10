@@ -12,7 +12,7 @@ agent Client
     receive-guard: (channel == *)
 
     repeat: (
-            s: <TRUE> SPLY@TRUE(MSG := release)[counter := counter + 1]
+            s: <TRUE> SUPPLY@TRUE(MSG := release)[counter := counter + 1]
             +
             g: <TRUE> GET@TRUE[]
             )
