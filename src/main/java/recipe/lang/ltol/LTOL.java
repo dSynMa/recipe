@@ -202,7 +202,9 @@ public abstract class LTOL {
         builder.group()
                 .primitive(Condition.parser(vars).map((Condition value) -> {
                     return new Atom(value);
-                }).or(bigAnd).or(bigOr))
+                })
+                .or(StringParser.of("PROGRESS").map((String x)-> {return new ProgressAtom();}))
+                .or(bigAnd).or(bigOr))
                 .wrapper(of('(').trim(), of(')').trim(),
                         (List values) -> {
                             return values.get(1);
