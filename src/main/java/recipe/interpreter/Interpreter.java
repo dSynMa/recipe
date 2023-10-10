@@ -464,17 +464,12 @@ public class Interpreter {
                     annotations.put(key, obj.get(key));
         }
 
-        protected Pair<Store, TypedValue> makeMessageStore(Store senderStore, BasicProcessWithMessage sendProcess, recipe.lang.System sys) {
-            return makeMessageStore(senderStore, sendProcess, sys, false);
-        }
-
-        protected Pair<Store, TypedValue> makeMessageStore(Store senderStore, BasicProcessWithMessage sendProcess, recipe.lang.System sys, boolean ignoreChan) {
+        protected Pair<Store, TypedValue> makeMessageStore(Store senderStore, BasicProcessWithMessage procWithMsg, recipe.lang.System sys) {
             // Add message and channel to a new map
             Map<TypedVariable, TypedValue> msgMap = new HashMap<TypedVariable, TypedValue>();
-            Expression chanExpr = sendProcess.getChannel();
             TypedValue chan = null;
             try {
-                sendProcess.getMessage().forEach((msgVar, msgExpr) -> {
+                procWithMsg.getMessage().forEach((msgVar, msgExpr) -> {
                     try {
                         TypedValue msgVal = msgExpr.valueIn(senderStore);
                         Type msgType = sys.getMessageStructure().get(msgVar);
@@ -491,7 +486,8 @@ public class Interpreter {
                         handleEvaluationException(e);
                     }
                 });
-                if (!ignoreChan) {
+                if (procWithMsg instanceof SendProcess) {
+                    Expression chanExpr = procWithMsg.getChannel();
                     chan = chanExpr.valueIn(senderStore);
                     msgMap.put(getChannelTV(), chan);
                 }
@@ -686,7 +682,7 @@ public class Interpreter {
                             Set<ProcessTransition> gets = interpreter.gets.get(getterStore.getState());
                             if (gets == null) continue;
                             for (ProcessTransition get : gets) {
-                                Pair<Store, TypedValue> msgPair = makeMessageStore(supplierStore, splyProc, sys, true);
+                                Pair<Store, TypedValue> msgPair = makeMessageStore(supplierStore, splyProc, sys);
                                 Store instStore = getterStore.push(msgPair.getLeft());
                                 GetProcess getProc = (GetProcess) get.getLabel();
                                 Expression getPsi = getProc.getPsi();
@@ -697,7 +693,6 @@ public class Interpreter {
                                 if (!Condition.getTrue().equals(splyProc.getMessageGuard().valueIn(getterStore))) continue;
                                 if (!Condition.getTrue().equals(getProc.getMessageGuard().valueIn(supplierStore))) continue;
 
-                                // System.out.println(sply.toString() + "   " + get.toString());
                                 Transition tr = new SupplyGetTransition();
                                 tr.setInitiator(supplier, sply);
                                 tr.pushResponder(getter, get);
