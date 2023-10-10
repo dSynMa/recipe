@@ -12,8 +12,10 @@ import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.ltol.LTOL;
 import recipe.lang.ltol.Observation;
+import recipe.lang.process.GetProcess;
 import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
+import recipe.lang.process.SupplyProcess;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Type;
@@ -256,6 +258,8 @@ public class ToNuXmv {
     public static String transform(System system, boolean sendTagsAsVars) throws Exception {
         GuardReference.resolve = true;
 
+        int unlabelledCounter = 0;
+
         String nuxmv = "MODULE main\n";
         String vars = "VAR\n";
         String broadcastChannel = "broadcast";
@@ -345,13 +349,18 @@ public class ToNuXmv {
 
 
         List<String> progress = new ArrayList<>();
+        List<String> getSupplyTrans = new ArrayList<>();
 
         Map<Agent, Map<State, Set<ProcessTransition>>> agentStateSendTransitionMap = new HashMap<>();
         Map<Agent, Map<State, Set<ProcessTransition>>> agentStateReceiveTransitionMap = new HashMap<>();
+        Map<Agent, Map<State, Set<ProcessTransition>>> agentStateGetTransitionMap = new HashMap<>();
+        Map<Agent, Map<State, Set<ProcessTransition>>> agentStateSupplyTransitionMap = new HashMap<>();
 
         for(Agent agent : system.getAgents()){
             agentStateSendTransitionMap.put(agent, agent.getStateTransitionMap(agent.getSendTransitions()));
             agentStateReceiveTransitionMap.put(agent, agent.getStateTransitionMap(agent.getReceiveTransitions()));
+            agentStateGetTransitionMap.put(agent, agent.getStateTransitionMap(agent.getGetTransitions()));
+            agentStateSupplyTransitionMap.put(agent, agent.getStateTransitionMap(agent.getSupplyTransitions()));
         }
 
 
@@ -747,8 +756,6 @@ public class ToNuXmv {
 
                                 if(currentAgentReceivePreds.size() == 0){
                                     throw new Exception("currentAgentReceivePreds is empty");
-//                                    currentAgentReceivePreds.add("FALSE");
-//                                    currentAgentProgressConds.add("FALSE");
                                 }
 
                                 agentReceivePreds.add("(" + String.join(")\n\n \t\t| (", currentAgentReceivePreds) + ")");
@@ -779,7 +786,184 @@ public class ToNuXmv {
                     agentSendPreds.put(sendStateIsCurrentState, transitionSendPreds);
                     agentSendProgressConds.put(sendStateIsCurrentState, transitionSendProgressCond);
                 }//endif
-            }
+
+                Set<ProcessTransition> supplyTransitions = agentStateSupplyTransitionMap.get(sendingAgent).get(state);
+                String supplierStateIsCurrentState = sendingAgentName + "-automaton-state" + " = " + state;
+                if (supplyTransitions != null && supplyTransitions.size() > 0) {
+                    for (ProcessTransition t : supplyTransitions) {
+                        List<String> supplyTriggeredIf = new ArrayList<>();
+                        List<String> supplyEffects = new ArrayList<>();
+                        SupplyProcess supplyProcess = (SupplyProcess) t.getLabel();
+                        // add the guard of the supplyProcess to the guards required for the supply to trigger
+                        supplyTriggeredIf.add(supplierStateIsCurrentState);
+                        supplyTriggeredIf.add(supplyProcess.getPsi().relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify().toString());
+                        
+                        supplyEffects.add("falsify-" + sendingAgentName);
+                        // add next state to supply effects
+                        supplyEffects.add("next(" + sendingAgentName + "-automaton-state" + ") = " + t.getDestination());
+
+                        // Add supply updates
+                        for (Map.Entry<String, Expression> entry : supplyProcess.getUpdate().entrySet()) {
+                            supplyEffects.add(
+                                    "next(" + sendingAgentName + "-" + entry.getKey() + ") " +
+                                    "= (" + entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)).simplify() + ")");
+                        }
+                        //keep variable values not mentioned in the update
+                        for (String var : sendingAgent.getStore().getAttributes().keySet()) {
+                            if (!supplyProcess.getUpdate().containsKey(var)) {
+                                supplyEffects.add("next(" + sendingAgentName + "-" + var + ") = " + sendingAgentName + "-" + var);
+                            }
+                        }
+
+                        // relabelling message var names
+                        Map<String, Expression> relabelledMessage = new HashMap<>();
+                        for (Map.Entry<String, Expression> entry : supplyProcess.getMessage().entrySet()) {
+                            relabelledMessage.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + ((TypedVariable) v).getName())).simplify());
+                        }
+                        //relabelling supplier agent variables in guard
+                        Expression<Boolean> supplyGuardExpr = supplyProcess.getMessageGuard().relabel(v -> {
+                            //relabelling local variables to those of the sending agents
+                            return isCvRef(system, v.getName())
+                                ? v
+                                : v.sameTypeWithName(sendingAgentName + "-" + v);
+                        }).simplify();
+
+                        //Now we will iterate over all other agents, and for every get transition,
+                        // we create predicates for when the above send transition can trigger the receive transition.
+                        // List<String> agentReceivePreds = new ArrayList<>();
+                        // List<String> agentReceiveProgressConds = new ArrayList<>();
+
+                        
+                        for (int j = 0; j < agentInstances.size(); j++) {
+                            if (i == j) continue;
+                            AgentInstance getterInstance = agentInstances.get(j);
+                            Agent getterAgent = getterInstance.getAgent();
+                            String getterName = getterInstance.getLabel();
+
+                            //relabelling supplyGuard
+                            // remove @s
+                            Expression<Boolean> supplyGuardExprHere = supplyGuardExpr.relabel(v -> {
+                                return v.getName().startsWith("@") ? ((TypedVariable) v).sameTypeWithName(v.getName().substring(1)) : v;
+                            });
+
+                            // rename references to cvs to receiving agents cv
+                            supplyGuardExprHere = supplyGuardExprHere.relabel(v -> {
+                                //if v is just the special variable we use in our syntax to refer to the current
+                                // channel being sent on, then replace it with the sending transitions channel reference
+                                try {
+                                    //relabelling cvs to those of the receiving agents
+
+                                    return isCvRef(system, v.getName())
+                                            ? getterAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(getterName + "-" + vv))
+                                            : v;
+                                } catch (RelabellingTypeException | MismatchingTypeException e) {
+                                    e.printStackTrace();
+                                }
+                                return null;
+                            }).simplify();
+
+                            for (State getterState : getterAgent.getStates()) {
+                                Set<ProcessTransition> getTransitions = agentStateGetTransitionMap.get(getterAgent).get(getterState);
+                                if (getTransitions == null || getTransitions.size() == 0) continue; // no get's in this state, nothing to do
+                                String getterStateIsCurrentState = getterName + "-automaton-state" + " = " + state;
+                                
+                                // We'll set this to true if we need to skip a transition
+                                AtomicReference<java.lang.Boolean> stop = new AtomicReference<java.lang.Boolean>(false);
+                                Function<Expression, Expression> stopHelper = (e) -> { stop.set(true); return e; };
+
+                                getterTrLoop:
+                                for (ProcessTransition gt : getTransitions) {
+                                    List<String> getTriggeredIf = new ArrayList<>();
+                                    getTriggeredIf.add(getterStateIsCurrentState);
+                                    List<String> getEffects = new ArrayList<>();
+                                    GetProcess getProcess = (GetProcess) gt.getLabel();
+                                
+                                    Expression<recipe.lang.types.Boolean> getTransitionGuard = getProcess.getPsi()
+                                        .relabel(v -> supplyProcess.getMessage().containsKey(((TypedVariable) v).getName())
+                                            ? relabelledMessage.get(((TypedVariable) v).getName())
+                                            : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
+                                            ? stopHelper.apply(v)
+                                            : ((TypedVariable) v).sameTypeWithName(getterName + "-" + v)));
+                                            
+                                        ////stop considering this transition if the supplied message does not contain all message vars required
+                                        if (stop.get()) continue getterTrLoop;
+                                        // If guard evaluates to false, we can skip
+                                        if (getTransitionGuard.equals(Condition.getFalse())) continue getterTrLoop;
+                                        else getTriggeredIf.add(getTransitionGuard.toString());    
+
+                                        //for each variable update, if the updates uses a message variable that is
+                                        // not set by the send transition, then exit
+                                        // else relabel variables appropriately
+                                        for (Map.Entry<String, Expression> entry : getProcess.getUpdate().entrySet()) {
+                                            getEffects.add("next(" + getterName + "-" + entry.getKey() + ") = ("
+                                            + entry.getValue().relabel(v ->
+                                            supplyProcess.getMessage().containsKey(((TypedVariable) v).getName())
+                                            ? relabelledMessage.get(((TypedVariable) v).getName())
+                                            : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
+                                            ? stopHelper.apply((TypedVariable) v)
+                                            : ((TypedVariable) v).sameTypeWithName(getterName + "-" + v))) + ")");
+                                        }
+                                        
+                                        // Stop considering this transition if update uses a message variable
+                                        // that is not set by the send transition
+                                        if (stop.get()) continue getterTrLoop;
+                                        ///////
+                                        
+                                        // keep the same variables for variables not mentioned in the update
+                                        for (String var : getterAgent.getStore().getAttributes().keySet()) {
+                                            if (!getProcess.getUpdate().containsKey(var)) {
+                                                getEffects.add("next(" + getterName + "-" + var + ") = " + getterName + "-" + var);
+                                            }
+                                        }
+                                        
+                                        // Add the destination state to getter effects
+                                        getEffects.add("next(" + getterName + "-automaton-state" + ") = " + gt.getDestination());
+                                        
+                                        // Keep all other agents as they are
+                                        for (AgentInstance other : agentInstances) {
+                                            String otherName = other.getLabel();
+                                            if (otherName != sendingAgentName && otherName != getterName)
+                                                getEffects.add(String.format("keep-all-%s", otherName));
+                                        }
+                                        // TODO add "falsify-" defines to allow mentioning labelled get/supply actions in specs
+                                        // TODO deal with LTOL observations
+
+                                        String splyLbl = sendingAgentName + "-";
+                                        String getLbl = getterName + "-";
+                                        if (supplyProcess.getLabel() != null && !supplyProcess.getLabel().equals("")) {
+                                            splyLbl += supplyProcess.getLabel();
+                                        } else {
+                                            splyLbl += String.format("unlabelled-supply-%d", unlabelledCounter++);
+                                        }
+                                        if (getProcess.getLabel() != null && !getProcess.getLabel().equals("")) {
+                                            getLbl += getProcess.getLabel();
+                                        } else {
+                                            getLbl += String.format("unlabelled-get-%d", unlabelledCounter++);
+                                        }
+                                        String lbl = splyLbl + "-" + getLbl;
+
+                                        define += String.format(
+                                            "\t%s := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s);\n",
+                                            lbl,
+                                            String.join(" & ", supplyTriggeredIf),
+                                            String.join(" & ", supplyEffects),
+                                            String.join(" & ", getTriggeredIf),
+                                            String.join(" & ", getEffects));
+                                        getSupplyTrans.add(lbl);
+                                        
+                                        define += String.format(
+                                            "\t%s-progress := (%s)\n\t\t& (%s);\n",
+                                            lbl,
+                                            String.join(" & ", supplyTriggeredIf),
+                                            String.join(" & ", getTriggeredIf));
+                                        progress.add(String.format("%s-progress", lbl));
+                                        
+                                    } // getter transition loop
+                            } //getter state loop
+                        } // getter agent loop
+                    } // supplier transition loop
+                } //Supplier/sender state loop
+            } // Supplier/sender agent loop
         }
 
         if(agentSendPreds.size() > 0) {
@@ -794,10 +978,12 @@ public class ToNuXmv {
 
             trans += "(" + String.join(")\n\n \t\t| (", stateTransitionPreds) + ");\n";
 
-            progress = stateTransitionProgressConds;
+            progress.addAll(stateTransitionProgressConds);
         }
-        else
-            trans += "FALSE;\n";
+        trans += "(" + String.join(")\n\n \t\t| (", getSupplyTrans) + ");\n";
+
+
+        if (trans.strip() == "") trans = "FALSE;\n";
 
         for(String name : receiveProcessNames){
             vars += "\t" + name + " : " + "boolean;\n";
@@ -818,10 +1004,6 @@ public class ToNuXmv {
             nuxmv +=  String.join(", ", constants);
             nuxmv += ";\n";
 
-//        for(String name : sendProcessNames){
-//            init += "\t& " + name + " = " + "FALSE\n";
-//        }
-
         for(String name : receiveProcessNames){
             init += "\t& " + name + " = " + "FALSE\n";
         }
@@ -831,7 +1013,6 @@ public class ToNuXmv {
         nuxmv += "\t(transition)\n \t\t| (!progress & keep-all & no-observations)\n";
         nuxmv = nuxmv.replaceAll("&( |\n)*TRUE(( )*&( )*)( |\n)*", "");
         nuxmv = nuxmv.replaceAll("TRUE(( )*&( )*)", "");
-//        nuxmv = nuxmv.replaceAll("TRUE\n(\t& )", "\t");
         nuxmv = nuxmv.replaceAll("==", " = ");
         nuxmv = nuxmv.replaceAll("\\*", broadcastChannel);
 
