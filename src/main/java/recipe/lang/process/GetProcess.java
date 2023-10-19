@@ -20,6 +20,8 @@ import recipe.lang.types.Boolean;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
+import static recipe.Config.commVariableReferences;
+
 public class GetProcess extends BasicProcess {
 
     public Expression<Boolean> messageGuard;
@@ -36,7 +38,7 @@ public class GetProcess extends BasicProcess {
     }
 
     public String toString() {
-        return "<" + psi.toString() + ">GET@" + messageGuard + "[" + update + "]";
+        return "<" + psi.toString() + ">GET@(" + messageGuard + ")[" + update + "]";
     }
 
     @Override
@@ -57,10 +59,14 @@ public class GetProcess extends BasicProcess {
     }
 
     public static Parser parser(TypingContext messageContext,
-                                TypingContext localContext) throws Exception {
+                                TypingContext localContext,
+                                TypingContext communicationContext) throws Exception {
         TypingContext localAndChannelAndMessageContext = TypingContext.union(localContext, messageContext);
+        TypingContext localAndChannelAndCommunicationContext =
+                TypingContext.union(localContext, commVariableReferences(communicationContext));
         Parser localAssignment = Parsing.assignmentListParser(localContext, localAndChannelAndMessageContext);
         Parser localGuard = Condition.typeParser(localAndChannelAndMessageContext);
+        Parser messageGuard = Condition.typeParser(localAndChannelAndCommunicationContext);
 
         Parser delimetedCondition =
                 (CharacterParser.of('<').trim())
@@ -75,7 +81,7 @@ public class GetProcess extends BasicProcess {
                         .seq(delimetedCondition.trim())
                         // .seq((((Enum.getEnum(Config.channelLabel).valueParser()).seq(StringParser.of("?").trim())).or(localChannelVars.variableParser().seq(StringParser.of("?").trim()))))
                         .seq((StringParser.of("GET@").trim()))
-                        .seq(localGuard)
+                        .seq(messageGuard.trim())
                         .seq((CharacterParser.of('[').trim()))
                         .seq(localAssignment.optional(new HashMap<String, Expression>()))
                         .seq((CharacterParser.of(']').trim()))

@@ -34,7 +34,7 @@ public abstract class Process {
                                 TypingContext communicationContext) throws Exception {
         Parser receiveProcess = ReceiveProcess.parser(messageContext, localContext);
         Parser sendProcess = SendProcess.parser(messageContext, localContext, communicationContext);
-        Parser getProcess = GetProcess.parser(messageContext, localContext);
+        Parser getProcess = GetProcess.parser(messageContext, localContext, communicationContext);
         Parser supplyProcess = SupplyProcess.parser(messageContext, localContext, communicationContext);
 
         ExpressionBuilder builder = new ExpressionBuilder();
