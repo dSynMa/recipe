@@ -229,7 +229,7 @@ public class Interpreter {
                 throw new Exception("sender's transition must contain a SendProcess");
             }
         }
-        
+
         public void pushConsumer(AgentInstance instance, ProcessTransition receive) throws Exception {
             if (!receive.getLabel().getClass().equals(ReceiveProcess.class)) {
                 throw new Exception("receiver's transition must contain a ReceiveProcess");
@@ -446,9 +446,9 @@ public class Interpreter {
                 if (inst == null) {
                     // Skip special fields
                     if (agentInstanceName.startsWith("___")) {
-                        System.out.printf(">> Found annotation %s : %s\n", agentInstanceName, constraint.get(agentInstanceName));
+                        // System.out.printf(">> Found annotation %s : %s\n", agentInstanceName, constraint.get(agentInstanceName));
                         continue;
-                    } 
+                    }
                     System.out.printf(">> Agent instance not found: %s\n", agentInstanceName);
                     return false;
                 }
@@ -471,7 +471,7 @@ public class Interpreter {
                         }
                     }
                 }
-                
+
                 for (String varName : instanceConstraint.keySet()) {
                     try {
                         if (varName.equals("automaton-state")) {
@@ -499,7 +499,7 @@ public class Interpreter {
                                     handleEvaluationException(e);
                                     return false;
                                 }
-                                
+
                             }
                             else if (value.getType() instanceof recipe.lang.types.Boolean) {
                                 // Go for Boolean comparison
@@ -531,7 +531,7 @@ public class Interpreter {
             this.chosenTransition = transitions.get(index);
 
             Map<AgentInstance,ConcreteStore> nextStores = new HashMap<AgentInstance,ConcreteStore>(stores);
-            
+
             try {
                 // Update sender
                 AgentInstance initiator = chosenTransition.getProducer();
@@ -569,9 +569,9 @@ public class Interpreter {
                         Type msgType = sys.getMessageStructure().get(msgVar);
                         if (msgType != msgVal.getType()) {
                             throw new MismatchingTypeException(
-                                String.format("Mismatch type for message variable %s (expected %s, got %s)", 
+                                String.format("Mismatch type for message variable %s (expected %s, got %s)",
                                 msgVar,
-                                msgType.toString(), 
+                                msgType.toString(),
                                 msgVal.getType().toString()));
                         }
                         TypedVariable<Type> tv = new TypedVariable<>(msgType, msgVar);
@@ -590,7 +590,7 @@ public class Interpreter {
                 handleEvaluationException(e);
             }
             return null;
-        } 
+        }
 
         public Step(Map<AgentInstance,ConcreteStore> stores, Step parent, Interpreter interpreter) {
             this.sys = interpreter.sys;
@@ -754,7 +754,7 @@ public class Interpreter {
                         } catch (Exception e) {
                             handleEvaluationException(e);
                         }
-                    });    
+                    });
                 }
             });
 
@@ -800,7 +800,7 @@ public class Interpreter {
             });
 
         }
-        
+
     }
 
     private Step currentStep;
@@ -871,7 +871,7 @@ public class Interpreter {
 
         // Create constraint on initial state & find it
         List<String> constraints = new LinkedList<String>();
-        
+
         for (String agentInstance : initState.keySet()) {
             if (agentInstance.startsWith("___")) continue;
             JSONObject agentState = initState.getJSONObject(agentInstance);
@@ -941,7 +941,7 @@ public class Interpreter {
         String sentinel = "Trace Type: Counterexample";
         int startPos = trace.indexOf(sentinel) + sentinel.length();
         trace = trace.substring(startPos);
-        
+
         NuXmvInteraction nuxmv = new NuXmvInteraction(s);
         nuxmv.stopNuXmvThread(); // We ain't going to need it
         String[] split = trace.split("->", 0);
@@ -998,7 +998,6 @@ public class Interpreter {
             if (candidate.satisfies(obsMap, nextConstraint)) {
                 candidate.loadAnnotations(nextConstraint);
                 currentStep = candidate;
-                // System.out.println(currentStep.toJSON());
                 return true;
             }
         }
