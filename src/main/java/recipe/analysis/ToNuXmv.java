@@ -12,6 +12,7 @@ import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.ltol.LTOL;
 import recipe.lang.ltol.Observation;
+import recipe.lang.process.BasicProcess;
 import recipe.lang.process.GetProcess;
 import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
@@ -314,8 +315,11 @@ public class ToNuXmv {
             String falsifyAllLabelsNotOfI = "falsify-not-" + namei + " := TRUE";
             String falsifyAllLabelsOfI = "falsify-" + namei + " := TRUE";
 
-            for(Transition t : agenti.getReceiveTransitions()){
-                String label = ((ReceiveProcess) t.getLabel()).getLabel();
+            Set<Transition> receiveAndSupplyTransitions = new HashSet<>(agenti.getReceiveTransitions());
+            receiveAndSupplyTransitions.addAll(agenti.getSupplyTransitions());
+
+            for(Transition t : receiveAndSupplyTransitions){
+                String label = ((BasicProcess) t.getLabel()).getLabel();
                 if (label != null && !label.equals("")){
                     keepThis += " & next(" + namei + "-" + label + ") = FALSE";
                     falsifyAllLabelsNotOfI += " & next(" + namei + "-" + label + ") = FALSE";
@@ -324,8 +328,8 @@ public class ToNuXmv {
                     receiveProcessNames.add(namei + "-" + label);
 
                     String falsifyAllLabelsExceptThis = "falsify-not-" + namei + "-" + label + " := TRUE";
-                    for(Transition tt : agenti.getReceiveTransitions()){
-                        String receiveLabel = ((ReceiveProcess) tt.getLabel()).getLabel();
+                    for(Transition tt : receiveAndSupplyTransitions){
+                        String receiveLabel = ((BasicProcess) tt.getLabel()).getLabel();
                         if(receiveLabel != null && !receiveLabel.equals(label) &&!receiveLabel.equals("")){
                             falsifyAllLabelsExceptThis += " & next(" + namei + "-" + receiveLabel + ") = FALSE";
                         }
@@ -852,7 +856,6 @@ public class ToNuXmv {
                                 // channel being sent on, then replace it with the sending transitions channel reference
                                 try {
                                     //relabelling cvs to those of the receiving agents
-
                                     return isCvRef(system, v.getName())
                                             ? getterAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(getterName + "-" + vv))
                                             : v;
@@ -890,6 +893,36 @@ public class ToNuXmv {
                                         // If guard evaluates to false, we can skip
                                         if (getTransitionGuard.equals(Condition.getFalse())) continue getterTrLoop;
                                         else getTriggeredIf.add(getTransitionGuard.toString());    
+
+
+                                        // Handle message guard
+                                        Expression<Boolean> getterGuardExpr = getProcess.getMessageGuard().relabel(v -> {
+                                            //relabelling local variables to those of the sending agents
+                                            return isCvRef(system, v.getName())
+                                                ? v
+                                                : v.sameTypeWithName(getterName + "-" + v);
+                                        }).simplify();
+                                        //relabelling supplyGuard
+                                        // remove @s
+                                        Expression<Boolean> getterGuardExprHere = getterGuardExpr.relabel(v -> {
+                                            return v.getName().startsWith("@") ? ((TypedVariable) v).sameTypeWithName(v.getName().substring(1)) : v;
+                                        });
+
+                                        // rename references to cvs to receiving agents cv
+                                        getterGuardExprHere = getterGuardExprHere.relabel(v -> {
+                                            //if v is just the special variable we use in our syntax to refer to the current
+                                            // channel being sent on, then replace it with the sending transitions channel reference
+                                            try {
+                                                //relabelling cvs to those of the supplier
+                                                return isCvRef(system, v.getName())
+                                                        ? sendingAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(sendingAgentName + "-" + vv))
+                                                        : v;
+                                            } catch (RelabellingTypeException | MismatchingTypeException e) {
+                                                e.printStackTrace();
+                                            }
+                                            return null;
+                                        }).simplify();
+
 
                                         //for each variable update, if the updates uses a message variable that is
                                         // not set by the send transition, then exit
@@ -933,29 +966,33 @@ public class ToNuXmv {
                                         if (supplyProcess.getLabel() != null && !supplyProcess.getLabel().equals("")) {
                                             splyLbl += supplyProcess.getLabel();
                                         } else {
-                                            splyLbl += String.format("unlabelled-supply-%d", unlabelledCounter++);
+                                            splyLbl += String.format("unlabelled_supply_%d", unlabelledCounter++);
                                         }
                                         if (getProcess.getLabel() != null && !getProcess.getLabel().equals("")) {
                                             getLbl += getProcess.getLabel();
                                         } else {
-                                            getLbl += String.format("unlabelled-get-%d", unlabelledCounter++);
+                                            getLbl += String.format("unlabelled_get_%d", unlabelledCounter++);
                                         }
                                         String lbl = splyLbl + "-" + getLbl;
 
                                         define += String.format(
-                                            "\t%s := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s);\n",
+                                            "\t%s := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s) \n\t\t& (%s);\n",
                                             lbl,
                                             String.join(" & ", supplyTriggeredIf),
+                                            supplyGuardExprHere.toString(),
                                             String.join(" & ", supplyEffects),
                                             String.join(" & ", getTriggeredIf),
+                                            getterGuardExprHere.toString(),
                                             String.join(" & ", getEffects));
                                         getSupplyTrans.add(lbl);
                                         
                                         define += String.format(
-                                            "\t%s-progress := (%s)\n\t\t& (%s);\n",
+                                            "\t%s-progress := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s);\n",
                                             lbl,
                                             String.join(" & ", supplyTriggeredIf),
-                                            String.join(" & ", getTriggeredIf));
+                                            supplyGuardExprHere.toString(),
+                                            String.join(" & ", getTriggeredIf),
+                                            getterGuardExprHere.toString());
                                         progress.add(String.format("%s-progress", lbl));
                                         
                                     } // getter transition loop
