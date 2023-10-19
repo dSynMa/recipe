@@ -1,17 +1,20 @@
 package recipe.interpreter;
 
 import java.io.IOException;
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import recipe.Config;
@@ -65,6 +68,8 @@ public class Interpreter {
         public void setProducer(AgentInstance instance, ProcessTransition transition) throws Exception;
         public void pushConsumer(AgentInstance instance, ProcessTransition transition) throws Exception;
         public JSONObject toJSON();
+
+        public Boolean satisfies(JSONObject constraint);
     }
 
     private class SupplyGetTransition implements Transition {
@@ -135,13 +140,40 @@ public class Interpreter {
             this.getter = instance;
             this.get = transition;
         }
+
+        @Override
+        public Boolean satisfies(JSONObject constraint) {
+
+            String supplyLbl = supply.getLabel().getLabel();
+            String getLbl = get.getLabel().getLabel();
+            String supplierName = supplier.getLabel();
+            String getterName = getter.getLabel();
+            JSONObject supplierState = constraint.getJSONObject(supplierName);
+            for (String key : supplierState.keySet()) {
+                if (!supplierState.get(key).equals("TRUE")) continue;
+                String[] pieces = key.split("-");
+                if (pieces.length != 3) continue;
+                Boolean check = pieces[1].equals(getterName);
+                if (!pieces[0].contains("unlabelled_supply"))
+                    check &= pieces[0].equals(supply.getLabel().getLabel());
+                else
+                    check &= (supplyLbl == null || supplyLbl.isBlank());
+                if (!pieces[2].contains("unlabelled_get"))
+                    check &= pieces[2].equals(get.getLabel().getLabel());
+                else
+                    check &= (getLbl == null || getLbl.isBlank());
+                if (!check) System.out.println(key);
+                return check;
+            }
+            return true;
+        }
     }
 
     private class SendReceiveTransition implements Transition {
         private AgentInstance sender;
         private ProcessTransition send;
         private Map<AgentInstance, ProcessTransition> receivers;
-        
+
         public SendReceiveTransition() {
             receivers = new HashMap<AgentInstance, ProcessTransition>();
         }
@@ -224,7 +256,67 @@ public class Interpreter {
         public Set<AgentInstance> getConsumers() {
             return receivers.keySet();
         }
+
+        @Override
+        public Boolean satisfies(JSONObject constraint) {
+            return true;
+        }
     }
+
+    public static class CompositeJSON extends JSONObject {
+        private JSONObject base;
+        private JSONObject diff;
+        private Set<String> keySet;
+
+        @Override
+        public JSONObject put(String key, Object value) throws JSONException {
+            throw new JSONException("CompositeJSON must be immutable");
+        }
+
+        public JSONObject getDiff() { return diff; }
+
+        public CompositeJSON(JSONObject oldJ, JSONObject newJ) {
+            base = oldJ;
+            diff = newJ;
+            keySet = this.keySet();
+
+        }
+
+        @Override
+        public Object opt(String key) {
+            Object oldObject = base.opt(key);
+            Object newObject = diff.opt(key);
+            if (newObject == null) return oldObject;
+            else if (oldObject instanceof JSONObject && newObject instanceof JSONObject)
+                return new CompositeJSON((JSONObject) oldObject, (JSONObject) newObject);
+            else return newObject;
+        }
+
+        @Override
+        public int length() {
+            return this.keySet().size();
+        }
+
+        @Override
+        public Set<String> keySet() {
+            if (this.keySet == null) {
+                keySet = new HashSet<>(diff.keySet());
+                keySet.addAll(base.keySet());
+            }
+            return this.keySet;
+        }
+
+        @Override
+        protected Set<Entry<String, Object>> entrySet() {
+            Set<Entry<String, Object>> result = new HashSet<>();
+            for (String key : this.keySet()) {
+                result.add(new SimpleImmutableEntry<String, Object>(key, this.opt(key)));
+            }
+            return result;
+        }
+    }
+
+
 
     public class Step {
         private Map<AgentInstance,ConcreteStore> stores;
@@ -791,18 +883,33 @@ public class Interpreter {
         }
         String initConstraint = String.join(" & ", constraints);
         interpreter.init(initConstraint);
-        // Walk the rest of the trace 
+        // Walk the rest of the trace
         for (int i = 1; i < states.size(); i++) {
-            JSONObject constraint = states.get(i);
+            JSONObject nextConstraint = states.get(i);
+            JSONObject currConstraint = states.get(i-1);
             if (interpreter.isDeadlocked()) {
-                // If we are deadlocked, but all constraints are on LTOL
-                boolean onlyNotes = true;
-                for (String key : constraint.keySet()) {
-                    onlyNotes &= key.startsWith("___");
-                } 
-                if (onlyNotes) break;
+                // If we are deadlocked, but no variable is changing in trace,
+                // then it's all right
+                boolean hasVars = false;
+                JSONObject jo;
+                if (nextConstraint instanceof CompositeJSON) jo = ((CompositeJSON) nextConstraint).getDiff();
+                else jo = nextConstraint;
+                OuterLoop:
+                for (String key : jo.keySet()) {
+                    if (key.startsWith("___")) continue;
+                    // key is an agentInstance's name
+                    if (initState.keySet().contains(key)) {
+                        for (String x : jo.getJSONObject(key).keySet()) {
+                            if (varNames.contains(x)) {
+                                hasVars = true;
+                                break OuterLoop;
+                            }
+                        }
+                    }
+                }
+                if (!hasVars) break;
             }
-            if (!interpreter.findNext(obsMap, constraint)) {
+            if (!interpreter.findNext(obsMap, nextConstraint, currConstraint)) {
                 throw new Exception(String.format("[ofTrace] something wrong at step %d", i));
             }
         }
@@ -811,7 +918,7 @@ public class Interpreter {
 
     /**
      * Loads a nuXmv trace into a new intepreter and returns it
-     * 
+     *
      * @param s the r-check system
      * @param obsMap a map from string to LTOL observations
      * @param trace a nuXmv trace
@@ -841,13 +948,14 @@ public class Interpreter {
         List<JSONObject> states = new ArrayList<>(split.length - 1);
         for (String string : split) {
             // Skip stuff that does not contain a state (shouldn't happen)
-            if (!string.contains("<-")) continue; 
+            if (!string.contains("<-")) continue;
 
             JSONObject state = nuxmv.outputToJSON(string);
             if (loopingStates.contains(states.size())) {
                 state.put("___LOOP___", true);
             }
-            states.add(state);
+            if (states.isEmpty()) { states.add(state); }
+            else { states.add(new CompositeJSON(states.get(states.size()-1) , state)); }
         }
         return Interpreter.ofJSON(s, obsMap, states);
     }
@@ -881,15 +989,14 @@ public class Interpreter {
         return currentStep.transitions.size() == 0;
     }
 
-    public boolean findNext(Map<String,Observation> obsMap, JSONObject constraint) {
+    public boolean findNext(Map<String,Observation> obsMap, JSONObject nextConstraint, JSONObject currConstraint) {
         Step candidate;
-        System.out.printf("(%d) constraint: %s, transitions: %s\n", currentStep.depth, constraint, currentStep.transitions.size());
+        System.out.printf("(%d) constraint: %s, transitions: %s\n", currentStep.depth, nextConstraint, currentStep.transitions.size());
         for (int i = 0; i < currentStep.transitions.size(); i++) {
-            candidate = currentStep.next(i, this); 
-            // TODO here we just pick the 1st transition to a target state
-            // that satisfies the constraint. Is this always enough?
-            if (candidate.satisfies(obsMap, constraint)) {
-                candidate.loadAnnotations(constraint);
+            if (!currentStep.transitions.get(i).satisfies(currConstraint)) continue;
+            candidate = currentStep.next(i, this);
+            if (candidate.satisfies(obsMap, nextConstraint)) {
+                candidate.loadAnnotations(nextConstraint);
                 currentStep = candidate;
                 // System.out.println(currentStep.toJSON());
                 return true;
