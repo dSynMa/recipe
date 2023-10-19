@@ -36,7 +36,7 @@ public class SupplyProcess extends BasicProcessWithMessage {
     }
 
     public String toString() {
-        return "<" + psi.toString() + ">SUPPLY@" + messageGuard + "(" + message + ")[" + update + "]";
+        return "<" + psi.toString() + ">SUPPLY@(" + messageGuard + ")(" + message + ")[" + update + "]";
     }
 
     public Set<Transition> asTransitionSystem(State start, State end){
@@ -57,8 +57,6 @@ public class SupplyProcess extends BasicProcessWithMessage {
     public static Parser parser(TypingContext messageContext,
                          TypingContext localContext,
                          TypingContext communicationContext) throws Exception {
-        TypingContext localChannelVars = localContext.getSubContext(Enum.getEnum(Config.channelLabel));
-
         Parser localGuard = Condition.typeParser(localContext);
 
         Parser delimetedCondition =
