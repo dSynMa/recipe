@@ -226,10 +226,11 @@ function resetSimulate(){
 
 
   function formatTransition(t) {
+    const isSupplyGet = t.hasOwnProperty("___get-supply___");
     return t === undefined? "" : (<table>
-      <tr><td><em>Sender: </em></td><td>{t.sender}</td></tr>
+      <tr><td><em>{isSupplyGet ? "Supplier" : "Sender"}: </em></td><td>{t.sender}</td></tr>
       <tr><td><em>Command: </em></td><td>{t.send}</td></tr>
-      <tr><td><em>Receivers: </em></td><td>{t.receivers.join(", ")}</td></tr>
+      <tr><td><em>{isSupplyGet ? "Getter" : "Receivers"}: </em></td><td>{t.receivers.join(", ")}</td></tr>
     </table>)
   }
 

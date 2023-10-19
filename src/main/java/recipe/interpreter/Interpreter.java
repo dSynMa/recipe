@@ -109,6 +109,7 @@ public class Interpreter {
             JSONObject result = new JSONObject();
             List<String> receiverNames = new ArrayList<>(1);
             receiverNames.add(getter.getLabel());
+            result.put("___get-supply___", true);
             result.put("sender", supplier.getLabel());
             result.put("send", supply.getLabel().toString());
             result.put("receivers", receiverNames);
