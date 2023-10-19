@@ -1013,12 +1013,16 @@ public class ToNuXmv {
                 stateTransitionProgressConds.add(entry.getKey() + "\n\n \t\t& ((" + String.join(")\n\n \t\t| (", entry.getValue()) + "))");
             }
 
-            trans += "(" + String.join(")\n\n \t\t| (", stateTransitionPreds) + ");\n";
+            trans += "(" + String.join(")\n\n \t\t| (", stateTransitionPreds);
 
             progress.addAll(stateTransitionProgressConds);
         }
-        trans += "(" + String.join(")\n\n \t\t| (", getSupplyTrans) + ");\n";
+        
+        if (getSupplyTrans.size() > 0) {
+            trans += String.join(")\n\n \t\t| (", getSupplyTrans);
+        }
 
+        trans += ");\n";
 
         if (trans.strip() == "") trans = "FALSE;\n";
 
