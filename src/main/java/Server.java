@@ -8,6 +8,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.petitparser.context.ParseError;
+
+import recipe.analysis.NuXmvBatch;
 import recipe.analysis.NuXmvInteraction;
 import recipe.analysis.ToNuXmv;
 import recipe.interpreter.Interpreter;
@@ -312,20 +314,21 @@ public class Server {
             String unparsedSpec = system.getUnparsedSpecs().get(i);
 
             java.lang.System.out.printf("[%d]  %s, %s\n", i, unparsedSpec, mcConfig.type);
-            NuXmvInteraction nuxmv = new NuXmvInteraction(system);
             switch (mcConfig.getType()) {
                 case IC3:
-                    nuxmv.initialise(true);
-                    result = nuxmv.modelCheckic3(spec, mcConfig.isBounded(), mcConfig.getBound());
+                    NuXmvBatch n = new NuXmvBatch(system);
+                    result = n.modelCheckic3(spec, mcConfig.isBounded(), mcConfig.getBound());
                     break;
-                default:
+                    default:
+                    NuXmvInteraction nuxmv = new NuXmvInteraction(system);
+                    nuxmv.initialise(true);
                     nuxmv.initialise(mcConfig.getType() == MCType.BMC);
                     result = nuxmv.modelCheck(spec, mcConfig.isBounded(), mcConfig.getBound());
+                    nuxmv.stopNuXmvThread();
                     break;
             }
 
             // Stop NuXmv and restore all formulas
-            nuxmv.stopNuXmvThread();
             system.setSpecs(oldSpecs);
             systemSem.release();
 
