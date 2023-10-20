@@ -1,6 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
-import {Container, Table, Dropdown, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton, Badge, Alert, OverlayTrigger, Tooltip} from 'react-bootstrap';
+import {Container, Table, Dropdown, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton, Badge, Alert, OverlayTrigger, Tooltip, Modal} from 'react-bootstrap';
 import AceEditor from "react-ace";
 import React, { useState, useEffect, useRef } from 'react';
 import axios from "axios";
@@ -63,6 +63,8 @@ function App() {
   const [interpreternextindex, setInterpreterNextIndex] = useState(0);
   const [interpreterbadge, setInterpreterBadge] = useState(false);
 
+  const [confirmBuild, setConfirmBuild] = useState(false);
+
   const radios = [
     { name: 'MC', value: '1' },
     { name: 'IC3', value: '2' },
@@ -81,7 +83,6 @@ function App() {
     params.append('reset', encodeURIComponent(!simstarted));
     params.append('constraint', encodeURIComponent(simcondition));
 
-    var url;
     axios.get(server + "/simulateNext", { params })
          .then((response) => {
             console.log(JSON.stringify(response.data.svgs));
@@ -246,7 +247,7 @@ function resetSimulate(){
     params.append('reset', encodeURIComponent(!interpreterstarted));
     params.append('index', interpreternextindex || 0);
 
-    var url;
+    // var url;
     axios.get(server + "/interpretNext", { params })
          .then((response) => {
             if(response.data.hasOwnProperty("error")){
@@ -397,12 +398,27 @@ function resetInterpreter(){
          });
   }
 
+  const handleClose = () => setConfirmBuild(false);
+  function confirmBuildModel() {
+    if (mcresponse.length > 0) {
+      setConfirmBuild(true);
+    } else {
+      buildModel();
+    }
+  }
+
   function buildModel(){
     setBLoading(true);
+    setConfirmBuild(false);
+    setInterpreterBadge(false);
+    setMCResponse([]);
     resetInterpreter();
     const params = new URLSearchParams();
     params.append('script', encodeURIComponent(code));
     console.log(server);
+    
+
+
 
     axios.get(server + "/setSystem", { params })
          .then((response) => {
@@ -442,6 +458,20 @@ function resetInterpreter(){
   return (
     <div className="App">
       <Container fluid>
+      <Modal show={confirmBuild} onHide={handleClose}>
+          <Modal.Header closeButton>
+            <Modal.Title>Warning</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>This will reset the Model Checking results. Do you want to proceed?</Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={handleClose}>
+              No
+            </Button>
+            <Button variant="primary" onClick={buildModel}>
+              Yes
+            </Button>
+          </Modal.Footer>
+        </Modal>
         <Row>
           <Col xs={6}>
             <AceEditor style={Bg}
@@ -463,7 +493,7 @@ function resetInterpreter(){
                 <option value="smt">SMT model (allows for infinite-state verification)</option>
                 <option value="bdd">BDD model (only for finite-state verification)</option>
               </Form.Select>
-              <Button variant="primary" size="lg" onClick={() => {buildModel();}} disabled={bloading}>
+              <Button variant="primary" size="lg" onClick={confirmBuildModel} disabled={bloading}>
                 Build model
                         { bloading && spinner}
               </Button>
