@@ -1,6 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
-import {Container, Table, Dropdown, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton, Badge, Alert} from 'react-bootstrap';
+import {Container, Table, Dropdown, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton, Badge, Alert, OverlayTrigger, Tooltip} from 'react-bootstrap';
 import AceEditor from "react-ace";
 import React, { useState, useEffect, useRef } from 'react';
 import axios from "axios";
@@ -244,7 +244,7 @@ function resetSimulate(){
 
     const params = new URLSearchParams();
     params.append('reset', encodeURIComponent(!interpreterstarted));
-    params.append('index', interpreternextindex);
+    params.append('index', interpreternextindex || 0);
 
     var url;
     axios.get(server + "/interpretNext", { params })
@@ -517,10 +517,15 @@ function resetInterpreter(){
                     return <Row className={i % 2 ? "border py-2" : "bg-light border py-2"}>
                     <Col xs={x.result=="false" ? 9 : 12} className="align-self-center">
                       <h5 className='my-auto'>{x.spec}{' '}
-                      { x.result &&
+                      { x.result != "error" &&
                         <Badge bg={x.result == "true" ? "success" : x.result == "false" ? "danger" : "secondary"}>
-                        {x.result == "true" ? "pass" : x.result == "false" ? "fail" : "unknown"}
+                        {x.result == "true" ? "pass" : x.result == "false" ? "fail" : x.result}
                         </Badge>
+                      }
+                      { x.result === "error" &&
+                      <OverlayTrigger placement='bottom' overlay={<Tooltip>{x.output}</Tooltip>}>
+                        <Badge bg={"secondary"}>error</Badge>
+                      </OverlayTrigger>
                       }
                       { (x.result === undefined) && spinner }
                       </h5>
