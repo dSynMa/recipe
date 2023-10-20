@@ -1019,7 +1019,7 @@ public class ToNuXmv {
         }
         
         if (getSupplyTrans.size() > 0) {
-            trans += String.join(")\n\n \t\t| (", getSupplyTrans);
+            trans += "(" + String.join(")\n\n \t\t| (", getSupplyTrans);
         }
 
         trans += ");\n";
