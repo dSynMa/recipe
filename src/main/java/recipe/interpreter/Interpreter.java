@@ -124,9 +124,11 @@ public class Interpreter {
         for (int i = 1; i < states.size(); i++) {
             JSONObject nextConstraint = states.get(i);
             JSONObject currConstraint = states.get(i-1);
+            // We got to a state where progress = false, all the rest is irrelevant
+            
+            if (currConstraint.has("___STUCK___")) break;
+            // If we are deadlocked, but no variable is changing in trace, then it's all right
             if (interpreter.isDeadlocked()) {
-                // If we are deadlocked, but no variable is changing in trace,
-                // then it's all right
                 boolean hasVars = false;
                 JSONObject jo;
                 if (nextConstraint instanceof CompositeJSON) jo = ((CompositeJSON) nextConstraint).getDiff();
