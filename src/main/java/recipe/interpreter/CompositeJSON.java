@@ -5,13 +5,14 @@ import java.util.Set;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map.Entry;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 public class CompositeJSON extends JSONObject {
     private JSONObject base;
     private JSONObject diff;
-    private Set<String> keySet;
+    private Set<String> keys;
 
     @Override
     public JSONObject put(String key, Object value) throws JSONException {
@@ -23,8 +24,25 @@ public class CompositeJSON extends JSONObject {
     public CompositeJSON(JSONObject oldJ, JSONObject newJ) {
         base = oldJ;
         diff = newJ;
-        keySet = this.keySet();
+        keys = this.keySet();
+    }
 
+    @Override
+    public boolean has(String key) {
+        return this.keys.contains(key);
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return this.keys.isEmpty();
+    }
+
+    @Override
+    public JSONArray names() {
+        if (this.isEmpty()) {
+            return null;
+        }
+        return new JSONArray(this.keys);
     }
 
     @Override
@@ -44,11 +62,11 @@ public class CompositeJSON extends JSONObject {
 
     @Override
     public Set<String> keySet() {
-        if (this.keySet == null) {
-            keySet = new HashSet<>(diff.keySet());
-            keySet.addAll(base.keySet());
+        if (this.keys == null) {
+            keys = new HashSet<>(diff.keySet());
+            keys.addAll(base.keySet());
         }
-        return this.keySet;
+        return this.keys;
     }
 
     @Override
