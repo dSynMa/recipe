@@ -210,8 +210,11 @@ public class Step {
                             try {
                                 Double x = Double.valueOf(instanceConstraint.get(varName).toString());
                                 Double y = Double.valueOf(value.getValue().toString());
-                                if (x - y > Double.MIN_VALUE) {
-                                    System.out.printf(">> Expected %s, got %s (%s)\n", x, y, x-y);
+                                double delta = Math.abs(x - y);
+                                if (delta > Double.MIN_VALUE) {
+                                    System.out.printf(
+                                        ">>%s-%s: Expected %s, got %s (%s)\n",
+                                        inst.getLabel(), varName, x, y, delta);
                                     return false;
                                 }
                             } catch (NumberFormatException e) {
@@ -224,13 +227,17 @@ public class Step {
                             // Go for Boolean comparison
                             boolean isConstraintTrue = instanceConstraint.get(varName).equals("TRUE");
                             if (!value.getValue().equals(isConstraintTrue)) {
-                                System.out.printf(">> Expected %s, got %s\n", isConstraintTrue, value.getValue());
+                                System.out.printf(
+                                    ">>%s-%s: Expected %s, got %s\n",
+                                    inst.getLabel(), varName, isConstraintTrue, value.getValue());
                                 return false;
                             }
                         }
 
                         else if (!value.getValue().toString().equals(instanceConstraint.get(varName).toString())) {
-                            System.out.printf(">> Expected %s, got %s\n", instanceConstraint.get(varName), value.getValue());
+                            System.out.printf(
+                                ">>%s-%s: Expected %s, got %s\n",
+                                inst.getLabel(), varName, instanceConstraint.get(varName), value.getValue());
                             return false;
                         }
                     } else {
