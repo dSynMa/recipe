@@ -308,8 +308,6 @@ public class NuXmvInteraction {
             }
         });
 
-        // nuxmvSimOutput = nuxmvSimOutput.replaceAll("-- Loop starts here\n", "");
-
         nuxmvSimOutput = nuxmvSimOutput.replaceAll("(obs[0-9]+)", "___LTOL___-$1");
         nuxmvSimOutput = nuxmvSimOutput.replaceAll(
             "\\bno-observations\\b", 

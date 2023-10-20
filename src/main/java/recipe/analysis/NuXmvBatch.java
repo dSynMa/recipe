@@ -30,7 +30,6 @@ public class NuXmvBatch {
         if (bounded) script.append                  (" -k " + steps);
         script.append                               ("\nquit\n");
         Files.write(scriptFile, script.toString().getBytes(StandardCharsets.UTF_8));
-        java.lang.System.out.println("Wrote script\n---\n" + script.toString()  + "\n---\nto " + scriptFile.toString());
 
         return scriptFile;
     }
@@ -52,7 +51,6 @@ public class NuXmvBatch {
         Boolean gotError = false;
         Boolean infinitePrecision = false;
         while ((nextLine = reader.readLine()) != null) {
-            java.lang.System.out.println(nextLine);
             if (nextLine.startsWith("*** ")) continue;
             nextLine = nextLine.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
 

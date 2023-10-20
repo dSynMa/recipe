@@ -103,7 +103,6 @@ class SupplyGetTransition implements Transition {
                 check &= pieces[2].equals(get.getLabel().getLabel());
             else
                 check &= (getLbl == null || getLbl.isBlank());
-            if (!check) System.out.println(key);
             return check;
         }
         return true;
