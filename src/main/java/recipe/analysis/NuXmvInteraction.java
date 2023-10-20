@@ -295,8 +295,8 @@ public class NuXmvInteraction {
         JSONObject jsonObject = new JSONObject();
 
         if(nuxmvSimOutput.toLowerCase(Locale.ROOT).contains("keep-all = true")){
-            jsonObject.put("stuck", true);
-            return jsonObject;
+            // We're stuttering
+            jsonObject.put("___STUCK___", true);
         }
 
         Set<String> receiveLabels = new HashSet<>();
