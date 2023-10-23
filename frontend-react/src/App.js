@@ -1,6 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
-import {Container, Table, Dropdown, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton, Badge, Alert, OverlayTrigger, Tooltip, Modal} from 'react-bootstrap';
+import {Container, Table, Dropdown, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton, Badge, Navbar, OverlayTrigger, Tooltip, Modal, Nav} from 'react-bootstrap';
 import AceEditor from "react-ace";
 import React, { useState, useEffect, useRef } from 'react';
 import axios from "axios";
@@ -29,6 +29,12 @@ const Bg = {
   width: "100%",
   overflow: "auto",
   paddingTop: "10px"
+}
+
+const TabStyle = {
+  minHeight: "450px",
+  width: "100%",
+  overflow: "auto",
 }
 
 const SVGBg = {
@@ -412,6 +418,7 @@ function resetInterpreter(){
     setConfirmBuild(false);
     setInterpreterBadge(false);
     setMCResponse([]);
+    setBound(-1);
     resetInterpreter();
     const params = new URLSearchParams();
     params.append('script', encodeURIComponent(code));
@@ -457,24 +464,37 @@ function resetInterpreter(){
 
   return (
     <div className="App">
-      <Container fluid>
       <Modal show={confirmBuild} onHide={handleClose}>
-          <Modal.Header closeButton>
-            <Modal.Title>Warning</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>This will reset the Model Checking results. Do you want to proceed?</Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={handleClose}>
-              No
-            </Button>
-            <Button variant="primary" onClick={buildModel}>
-              Yes
-            </Button>
-          </Modal.Footer>
-        </Modal>
-        <Row>
-          <Col xs={6}>
-            <AceEditor style={Bg}
+        <Modal.Header closeButton>
+          <Modal.Title>Warning</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>This will reset the Model Checking results. Do you want to proceed?</Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleClose}>
+            No
+          </Button>
+          <Button variant="primary" onClick={buildModel}>
+            Yes
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Container fluid className='text-center' id="TabContainer">
+        <Row className="justify-content-md-center">
+        <Col xs={12} md={10} xl={8}>
+        <Navbar expand="xs">
+        <Navbar.Brand>R-CHECK</Navbar.Brand>
+        <Nav className="justify-content-end">
+        <Nav.Link href="https://github.com/dsynMa/recipe">GitHub</Nav.Link>
+        </Nav>
+        </Navbar>
+        </Col>
+        </Row>
+        <Row className="justify-content-md-center">
+          <Col xs={12} md={10} xl={8}>
+            <Tabs defaultActiveKey="ed" id="uncontrolled-tab-example" className="mb-3"
+              onSelect={(e) => { if (e === "interpreter") setInterpreterBadge(false);} }>
+              <Tab eventKey="ed" title="Editor" style={TabStyle}>
+              <AceEditor style={Bg}
               mode="recipe"
               theme="tomorrow"
               fontSize="15px"
@@ -498,16 +518,12 @@ function resetInterpreter(){
                         { bloading && spinner}
               </Button>
               </InputGroup>
-          </Col>
-          <Col xs={6}>
-            <Tabs defaultActiveKey="/" id="uncontrolled-tab-example" className="mb-3"
-              onSelect={(e) => { if (e === "interpreter") setInterpreterBadge(false);} }>
-              <Tab eventKey="mc" title="Model Checking">
+              </Tab>
+              <Tab eventKey="mc" title="Model Checking" style={TabStyle}>
                 <Container fluid>
                   <Row>
                     <Col xs={12}>
                     <InputGroup className="mb-3">
-                      
                        <InputGroup.Text id="basic-addon1">Type</InputGroup.Text>
                             <ButtonGroup>
                             {radios.map((radio, idx) => (
@@ -532,7 +548,8 @@ function resetInterpreter(){
                                 placeholder="Enter bound (optional for IC3)."
                                 aria-label="bound"
                                 aria-describedby="basic-addon1"
-                                onChange={(e) => setBound(e.currentTarget.value)}
+                                onEmptied={() => setBound(-1)}
+                                onChange={(e) => {setBound(e.currentTarget.value.trim())}}
                               />
                               }
                               <Button variant="primary" size="lg" disabled={mcloading} onClick={modelCheck}>
@@ -545,7 +562,7 @@ function resetInterpreter(){
                   </Row>
                     {mcresponse && mcresponse.map((x, i) => {
                     return <Row className={i % 2 ? "border py-2" : "bg-light border py-2"}>
-                    <Col xs={x.result=="false" ? 9 : 12} className="align-self-center">
+                    <Col xs={x.result=="false" ? 9 : 12}>
                       <h5 className='my-auto'>{x.spec}{' '}
                       { x.result != "error" &&
                         <Badge bg={x.result == "true" ? "success" : x.result == "false" ? "danger" : "secondary"}>
@@ -576,8 +593,6 @@ function resetInterpreter(){
                       </Col>
                     }
                     </Row>})}
-                    {/* </tbody></Table> */}
-                  {/* </Row> */}
                 </Container>
               </Tab>
               {/* <Tab eventKey="sim" title="Simulation">
@@ -633,7 +648,7 @@ function resetInterpreter(){
                   Interpreter{' '} 
                   {interpreterbadge && <Badge pill bg="primary" show={false}>!</Badge>}
                 </React.Fragment>
-              }>
+              } style={TabStyle}>
               <Container fluid>
                   <Row>
                     <Col xs={12}>
@@ -722,9 +737,9 @@ function resetInterpreter(){
             </Tabs>
           </Col>
         </Row>
-        <hr />
-        <Row>
-          <Col xs={12}>
+        <Row className="justify-content-md-center">
+          <Col xs={12} md={10} xl={8}>
+          <hr />
                 {/* <Button variant="primary" 
                         size="lg" 
                         onClick={() => visualise()}
