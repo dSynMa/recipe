@@ -201,6 +201,7 @@ public class Interpreter {
 
     private void rootStep(String constraint) throws IOException, Exception {
         HashMap<AgentInstance, ConcreteStore> rootStores = new HashMap<AgentInstance, ConcreteStore>();
+        // TODO use nuxmvBatch
         NuXmvInteraction nuxmv = new NuXmvInteraction(sys);
         Pair<Boolean, String> s0 = nuxmv.simulation_pick_init_state(constraint);
         JSONObject initValues = nuxmv.outputToJSON(s0.getRight());

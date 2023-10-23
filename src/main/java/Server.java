@@ -319,20 +319,20 @@ public class Server {
                     NuXmvBatch n = new NuXmvBatch(system);
                     result = n.modelCheckic3(spec, mcConfig.isBounded(), mcConfig.getBound());
                     break;
-                    default:
+                default:
                     NuXmvInteraction nuxmv = new NuXmvInteraction(system);
                     nuxmv.initialise(true);
                     nuxmv.initialise(mcConfig.getType() == MCType.BMC);
                     result = nuxmv.modelCheck(spec, mcConfig.isBounded(), mcConfig.getBound());
+                    // Stop NuXmv
                     nuxmv.stopNuXmvThread();
                     break;
             }
 
-            // Stop NuXmv and restore all formulas
+            // Restore all formulas
             system.setSpecs(oldSpecs);
             systemSem.release();
 
-            
             resultJSON.put("spec", unparsedSpec);
 
             if(result.getLeft()) {
@@ -506,13 +506,6 @@ public class Server {
 
         try {
             interpreter = Interpreter.ofJSON(system, obsMap, json);
-            // List<JSONObject> trace = interpreter.traceToJSON();
-            // JSONObject response = new JSONObject();
-            // response.put("svgs", renderSVGs(trace.get(trace.size()-1)));
-            // response.put("trace", trace);
-            // return response.toString();
-
-
             java.lang.System.out.println(json);
 
             return "{}";
@@ -520,7 +513,6 @@ public class Server {
             return String.format("{ \"error\" : \"%s\"}", e.getMessage());
         }
     }
-
 
     @Route("/simulateNext")
     public String simulateNext(Request req) throws Exception {
