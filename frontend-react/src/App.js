@@ -519,7 +519,7 @@ function resetInterpreter(){
               </Button>
               </InputGroup>
               </Tab>
-              <Tab eventKey="mc" title="Model Checking" style={TabStyle}>
+              <Tab eventKey="mc" title="Model Checker" style={TabStyle}>
                 <Container fluid>
                   <Row>
                     <Col xs={12}>
@@ -562,7 +562,7 @@ function resetInterpreter(){
                   </Row>
                     {mcresponse && mcresponse.map((x, i) => {
                     return <Row className={i % 2 ? "border py-2" : "bg-light border py-2"}>
-                    <Col xs={x.result=="false" ? 9 : 12}>
+                    <Col style={{ textAlign:"start" }} xs={x.result=="false" ? 9 : 12}>
                       <h5 className='my-auto'>{x.spec}{' '}
                       { x.result != "error" &&
                         <Badge bg={x.result == "true" ? "success" : x.result == "false" ? "danger" : "secondary"}>
@@ -578,7 +578,7 @@ function resetInterpreter(){
                       </h5>
                     </Col>
                     {x.result == "false" && 
-                      <Col xs={3} style={{ textAlign:"right" }} className="align-self-center">
+                      <Col xs={3} style={{ textAlign:"end" }} className="align-self-center">
                         {/* <div className="d-grid"> */}
                         <Dropdown as={ButtonGroup}>
                         <Button onClick={() => loadTraceIntoInterpreter(mcresponse[i].output)}>
@@ -646,7 +646,7 @@ function resetInterpreter(){
               <Tab eventKey="interpreter" title={
                 <React.Fragment>
                   Interpreter{' '} 
-                  {interpreterbadge && <Badge pill bg="primary" show={false}>!</Badge>}
+                  {interpreterbadge && <Badge pill bg="primary" show="false">!</Badge>}
                 </React.Fragment>
               } style={TabStyle}>
               <Container fluid>
@@ -671,7 +671,7 @@ function resetInterpreter(){
                               onChange={(e) => {setInterpreterNextIndex(e.target.value)}}>
                               {(!interpreterstarted) && <option value="" disabled selected>Choose a transition here</option>}
                               {interpretertransitions.map((x, i) => {
-                                return <option key={i} value={i}>({i}): {x.send} from {x.sender} to [{x.receivers.join(", ")}]</option>
+                                return <option key="{i}-option" value={i}>({i}): {x.send} from {x.sender} to [{x.receivers.join(", ")}]</option>
                               })}
                             </Form.Select>
                             }
@@ -693,7 +693,7 @@ function resetInterpreter(){
                     </Col>
                   </Row>
                   <Row>
-                    <Col style={{height: "345px", overflowY: "auto", overflowX: "auto"}}>
+                    <Col style={{height: "345px", overflowY: "auto", overflowX: "auto", textAlign: "start"}}>
                       <Table striped bordered hover>
                         <thead>
                           <tr>
@@ -708,7 +708,7 @@ function resetInterpreter(){
                           <React.Fragment>{
                             x.inboundTransition !== undefined ? 
                             // Transition
-                            <tr key={i}>
+                            <tr key="{i}-transition">
                             <td></td>
                             <td>{formatTransition(x.inboundTransition)}</td>
                             </tr>
@@ -719,8 +719,8 @@ function resetInterpreter(){
                             // State
                             // TODO store the renders somewhere, instead of
                             // recomputing them all the time */}
-                            <tr key={i}>
-                            <td className='text-right'>{x.depth} 
+                            <tr key="{i}-state">
+                            <td>{x.depth} 
                               {x.___LOOP___ && !x.___DEADLOCK___ && <React.Fragment><br/><em>Loop starts here</em></React.Fragment>}
                               {x.___DEADLOCK___ && <React.Fragment><br/><em>Deadlock state</em></React.Fragment>}
                             </td>
