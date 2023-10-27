@@ -10,6 +10,7 @@ import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.expressions.predicate.NamedLocation;
 import recipe.lang.types.Boolean;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
@@ -75,13 +76,13 @@ public class SupplyProcess extends BasicProcessWithMessage {
 
         Parser messageAssignment = Parsing.assignmentListParser(messageContext, localAndChannelAndCommunicationContext);
         Parser localAssignment = Parsing.assignmentListParser(localContext, localContext);
-
+        Parser namedLocationParser = NamedLocation.parser();
         
         Parser parser = ((CharacterParser.word().plus().trim()).flatten()
                         .seq(CharacterParser.of(':').trim()).flatten()).optional().flatten()
                         .seq(delimetedCondition.trim())
                         .seq(StringParser.of("SUPPLY@").trim())
-                        .seq(messageGuard.trim())
+                        .seq(messageGuard.trim().or(namedLocationParser))
                         .seq((CharacterParser.of('(').trim()))
                         .seq(messageAssignment)
                         .seq((CharacterParser.of(')').trim()))

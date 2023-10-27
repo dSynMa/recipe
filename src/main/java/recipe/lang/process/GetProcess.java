@@ -16,6 +16,7 @@ import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.expressions.predicate.NamedLocation;
 import recipe.lang.types.Boolean;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
@@ -67,6 +68,7 @@ public class GetProcess extends BasicProcess {
         Parser localAssignment = Parsing.assignmentListParser(localContext, localAndChannelAndMessageContext);
         Parser localGuard = Condition.typeParser(localAndChannelAndMessageContext);
         Parser messageGuard = Condition.typeParser(localAndChannelAndCommunicationContext);
+        Parser namedLocationParser = NamedLocation.parser();
 
         Parser delimetedCondition =
                 (CharacterParser.of('<').trim())
@@ -81,7 +83,7 @@ public class GetProcess extends BasicProcess {
                         .seq(delimetedCondition.trim())
                         // .seq((((Enum.getEnum(Config.channelLabel).valueParser()).seq(StringParser.of("?").trim())).or(localChannelVars.variableParser().seq(StringParser.of("?").trim()))))
                         .seq((StringParser.of("GET@").trim()))
-                        .seq(messageGuard.trim())
+                        .seq(messageGuard.trim().or(namedLocationParser))
                         .seq((CharacterParser.of('[').trim()))
                         .seq(localAssignment.optional(new HashMap<String, Expression>()))
                         .seq((CharacterParser.of(']').trim()))
