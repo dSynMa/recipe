@@ -17,6 +17,7 @@ import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.expressions.predicate.NamedLocation;
 import recipe.lang.ltol.Observation;
 import recipe.lang.process.BasicProcess;
 import recipe.lang.process.BasicProcessWithMessage;
@@ -509,9 +510,25 @@ public class Step {
                             boolean getPsiSat = Condition.getTrue().equals(getPsi.valueIn(instStore));
                             if (!getPsiSat) continue;
                             // Check if predicates match
-                            // TODO this only works for predicates, extend to instance names
-                            if (!Condition.getTrue().equals(splyProc.getMessageGuard().valueIn(getterStore))) continue;
-                            if (!Condition.getTrue().equals(getProc.getMessageGuard().valueIn(supplierStore))) continue;
+                            Expression<recipe.lang.types.Boolean> splyGuard = splyProc.getMessageGuard();
+                            Expression<recipe.lang.types.Boolean> getGuard = getProc.getMessageGuard();
+
+                            if (splyGuard instanceof NamedLocation) {
+                                boolean isSelf = ((NamedLocation) splyGuard).isSelf();
+                                // SPLY@SELF = Only getters that know the supplier's name will be served
+                                if (isSelf && !getGuard.toString().equals(supplier.getLabel())) continue;
+                                // SPLY@foo = Only getter with name foo will be served
+                                if (!isSelf && !splyGuard.toString().equals(getter.getLabel())) continue;
+                            }
+                            if (getGuard instanceof NamedLocation) {
+                                boolean isSelf = ((NamedLocation) getGuard).isSelf();
+                                // GET@SELF = Only suppliers that know the getter's name will be chosen
+                                if (isSelf && !splyGuard.toString().equals(getter.getLabel())) continue;
+                                // GET@foo = Only supplier with name foo will be chosen
+                                if (!isSelf && !getGuard.toString().equals(supplier.getLabel())) continue;
+                            }
+                            if (!(splyGuard instanceof NamedLocation) && !Condition.getTrue().equals(splyGuard.valueIn(getterStore))) continue;
+                            if (!(getGuard instanceof NamedLocation) && !Condition.getTrue().equals(getGuard.valueIn(supplierStore))) continue;
 
                             Transition tr = new SupplyGetTransition();
                             tr.setProducer(supplier, sply);

@@ -34,6 +34,7 @@ import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.GuardReference;
 import recipe.lang.expressions.predicate.Implies;
 import recipe.lang.expressions.predicate.IsEqualTo;
+import recipe.lang.expressions.predicate.NamedLocation;
 import recipe.lang.expressions.predicate.Not;
 import recipe.lang.expressions.predicate.Or;
 import recipe.lang.ltol.LTOL;
@@ -920,13 +921,24 @@ public class ToNuXmv {
 
 
                                         // Handle message guard
-                                        Expression<Boolean> getterGuardExpr = getProcess.getMessageGuard().relabel(v -> {
+                                        Expression<Boolean> getterGuardExpr = getProcess.getMessageGuard();
+                                        if (getterGuardExpr instanceof NamedLocation) {
+                                            NamedLocation getterLocation = (NamedLocation) getterGuardExpr;
+                                            // GET@SELF never succeeds by definition
+                                            if (getterLocation.isSelf()) continue getterTrLoop;
+                                            else if (!getterLocation.toString().equals(sendingAgentName)) continue getterTrLoop;
+                                            // TODO If agent A does SUPPLY@TRUE, will it synchronize with GET@A ?
+                                            // TODO Viceversa: if A does SUPPLY@SELF will it sync with GET@TRUE ?
+                                            // Here I am assuming it can
+                                        }
+
+                                        getterGuardExpr = getterGuardExpr.relabel(v -> {
                                             //relabelling local variables to those of the sending agents
                                             return isCvRef(system, v.getName())
                                                 ? v
                                                 : v.sameTypeWithName(getterName + "-" + v);
                                         }).simplify();
-                                        //relabelling supplyGuard
+                                        //relabelling getterGuard
                                         // remove @s
                                         Expression<Boolean> getterGuardExprHere = getterGuardExpr.relabel(v -> {
                                             return v.getName().startsWith("@") ? ((TypedVariable) v).sameTypeWithName(v.getName().substring(1)) : v;
@@ -1003,10 +1015,10 @@ public class ToNuXmv {
                                             "\t%s := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s) \n\t\t& (%s);\n",
                                             lbl,
                                             String.join(" & ", supplyTriggeredIf),
-                                            supplyGuardExprHere.toString(),
+                                            (supplyGuardExprHere instanceof NamedLocation) ? "TRUE" : supplyGuardExprHere.toString(),
                                             String.join(" & ", supplyEffects),
                                             String.join(" & ", getTriggeredIf),
-                                            getterGuardExprHere.toString(),
+                                            (getterGuardExprHere instanceof NamedLocation) ? "TRUE" : getterGuardExprHere.toString(),
                                             String.join(" & ", getEffects));
                                         getSupplyTrans.add(lbl);
                                         
@@ -1014,9 +1026,9 @@ public class ToNuXmv {
                                             "\t%s-progress := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s);\n",
                                             lbl,
                                             String.join(" & ", supplyTriggeredIf),
-                                            supplyGuardExprHere.toString(),
+                                            (supplyGuardExprHere instanceof NamedLocation) ? "TRUE" : supplyGuardExprHere.toString(),
                                             String.join(" & ", getTriggeredIf),
-                                            getterGuardExprHere.toString());
+                                            (getterGuardExprHere instanceof NamedLocation) ? "TRUE" : getterGuardExprHere.toString());
                                         progress.add(String.format("%s-progress", lbl));
                                         
                                     } // getter transition loop
@@ -1047,9 +1059,9 @@ public class ToNuXmv {
             trans += "(" + String.join(")\n\n \t\t| (", getSupplyTrans) + ")";
         }
 
+        
+        if (trans.strip() == "") trans = "FALSE";
         trans += ";\n";
-
-        if (trans.strip() == "") trans = "FALSE;\n";
 
         for(String name : receiveProcessNames){
             vars += "\t" + name + " : " + "boolean;\n";
