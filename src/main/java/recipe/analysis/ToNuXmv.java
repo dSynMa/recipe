@@ -316,7 +316,7 @@ public class ToNuXmv {
             String falsifyAllLabelsOfI = "falsify-" + namei + " := TRUE";
 
             Set<Transition> receiveAndSupplyTransitions = new HashSet<>(agenti.getReceiveTransitions());
-            receiveAndSupplyTransitions.addAll(agenti.getSupplyTransitions());
+            // receiveAndSupplyTransitions.addAll(agenti.getSupplyTransitions());
 
             for(Transition t : receiveAndSupplyTransitions){
                 String label = ((BasicProcess) t.getLabel()).getLabel();
@@ -802,7 +802,7 @@ public class ToNuXmv {
                         supplyTriggeredIf.add(supplierStateIsCurrentState);
                         supplyTriggeredIf.add(supplyProcess.getPsi().relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify().toString());
                         
-                        supplyEffects.add("falsify-" + sendingAgentName);
+                        // supplyEffects.add("falsify-" + sendingAgentName);
                         // add next state to supply effects
                         supplyEffects.add("next(" + sendingAgentName + "-automaton-state" + ") = " + t.getDestination());
 
@@ -1013,16 +1013,17 @@ public class ToNuXmv {
                 stateTransitionProgressConds.add(entry.getKey() + "\n\n \t\t& ((" + String.join(")\n\n \t\t| (", entry.getValue()) + "))");
             }
 
-            trans += "(" + String.join(")\n\n \t\t| (", stateTransitionPreds);
+            trans += "(" + String.join(")\n\n \t\t| (", stateTransitionPreds) + ")";
+            if (getSupplyTrans.size() > 0) trans += "\n\n\t\t| ";
 
             progress.addAll(stateTransitionProgressConds);
         }
         
         if (getSupplyTrans.size() > 0) {
-            trans += "(" + String.join(")\n\n \t\t| (", getSupplyTrans);
+            trans += "(" + String.join(")\n\n \t\t| (", getSupplyTrans) + ")";
         }
 
-        trans += ");\n";
+        trans += ";\n";
 
         if (trans.strip() == "") trans = "FALSE;\n";
 
