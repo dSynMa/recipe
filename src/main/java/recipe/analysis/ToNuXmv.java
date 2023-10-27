@@ -1,15 +1,41 @@
 package recipe.analysis;
 
+import static recipe.Config.commVariableReferences;
+import static recipe.Config.isCvRef;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.stream.Stream;
+
 import recipe.Config;
 import recipe.lang.System;
-import recipe.lang.agents.*;
-import recipe.lang.expressions.Predicate;
-import recipe.lang.expressions.predicate.*;
-import recipe.lang.types.BoundedInteger;
-import recipe.lang.utils.exceptions.*;
+import recipe.lang.agents.Agent;
+import recipe.lang.agents.AgentInstance;
+import recipe.lang.agents.ProcessTransition;
+import recipe.lang.agents.State;
+import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.Predicate;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.predicate.And;
+import recipe.lang.expressions.predicate.Condition;
+import recipe.lang.expressions.predicate.GuardReference;
+import recipe.lang.expressions.predicate.Implies;
+import recipe.lang.expressions.predicate.IsEqualTo;
+import recipe.lang.expressions.predicate.Not;
+import recipe.lang.expressions.predicate.Or;
 import recipe.lang.ltol.LTOL;
 import recipe.lang.ltol.Observation;
 import recipe.lang.process.BasicProcess;
@@ -18,19 +44,17 @@ import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
 import recipe.lang.process.SupplyProcess;
 import recipe.lang.types.Boolean;
+import recipe.lang.types.BoundedInteger;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Type;
 import recipe.lang.utils.Pair;
 import recipe.lang.utils.Triple;
-
-import java.io.*;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
-import java.util.stream.Stream;
-
-import static recipe.Config.commVariableReferences;
-import static recipe.Config.isCvRef;
+import recipe.lang.utils.exceptions.AttributeNotInStoreException;
+import recipe.lang.utils.exceptions.AttributeTypeException;
+import recipe.lang.utils.exceptions.InfiniteValueTypeException;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
+import recipe.lang.utils.exceptions.RelabellingTypeException;
+import recipe.lang.utils.exceptions.TypeCreationException;
 
 public class ToNuXmv {
 

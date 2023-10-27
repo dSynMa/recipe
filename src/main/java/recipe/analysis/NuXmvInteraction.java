@@ -1,20 +1,30 @@
 package recipe.analysis;
 
-import recipe.Config;
-import recipe.lang.agents.ProcessTransition;
-import recipe.lang.utils.Pair;
-
-import org.json.*;
-
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.json.JSONObject;
+
+import recipe.Config;
+import recipe.lang.agents.ProcessTransition;
+import recipe.lang.utils.Pair;
 
 public class NuXmvInteraction {
 

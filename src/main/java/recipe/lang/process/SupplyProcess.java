@@ -1,9 +1,9 @@
 package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
+
 import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.parser.primitive.StringParser;
-import recipe.Config;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
@@ -11,7 +11,6 @@ import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.types.Boolean;
-import recipe.lang.types.Enum;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
 
