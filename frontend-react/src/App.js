@@ -131,7 +131,12 @@ function resetSimulate(){
       
       render[agent] = {};
       Object.keys(x.state[agent]).forEach(k => {
-        if (x.state[agent][k] != last.state[agent][k]) {
+        if (
+          // Ignore all metadata except **state**
+          (k === "**state**" || !k.startsWith("**")) &&
+          // Only add variables that have changed
+          x.state[agent][k] != last.state[agent][k]
+        ) {
           render[agent][k] = x.state[agent][k];
         }
       });
@@ -142,11 +147,10 @@ function resetSimulate(){
   }
 
   function formatStep(render) {
-    // console.log(render);
     return (
       <table>  
       {
-        Object.keys(render).sort().map(agent => { //return (<tr><td>{agent}</td></tr>)
+        Object.keys(render).sort().map(agent => {
           return (<tr key={agent}>
             <td>{agent}:</td>
             <td> {
