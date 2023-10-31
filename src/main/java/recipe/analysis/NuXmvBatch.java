@@ -7,17 +7,26 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.json.JSONObject;
 
 import recipe.Config;
 import recipe.lang.System;
+import recipe.lang.agents.ProcessTransition;
 import recipe.lang.utils.Pair;
 
 public class NuXmvBatch {
     Path path;
+    System system;
+
     public static LinkedList<Process> processes = new LinkedList<>();
-    
 
     public static void stopAllProcesses() {
         while (!processes.isEmpty()) {
@@ -29,29 +38,109 @@ public class NuXmvBatch {
     }
 
     public NuXmvBatch(System system) throws Exception {
+        this.system = system;
         String nuxmvScript = ToNuXmv.transform(system);
-        if(Files.exists(Path.of("./forInteraction.smv"))) Files.delete(Path.of("./forInteraction.smv"));
+        if (Files.exists(Path.of("./forInteraction.smv")))
+            Files.delete(Path.of("./forInteraction.smv"));
         path = Files.createFile(Path.of("./forInteraction.smv")).toRealPath();
         Files.write(path, nuxmvScript.getBytes(StandardCharsets.UTF_8));
     }
 
-    private Path makeScript(boolean build_boolean_model, int steps, boolean bmc) throws IOException {
-        if (bmc && steps < 1) steps = 1;
+    public JSONObject outputToJSON(String nuxmvSimOutput) {
+        JSONObject jsonObject = new JSONObject();
+
+        if (nuxmvSimOutput.toLowerCase(Locale.ROOT).contains("keep-all = true")) {
+            // We're stuttering
+            jsonObject.put("___STUCK___", true);
+        }
+
+        Set<String> receiveLabels = new HashSet<>();
+        system.getAgentInstances().forEach(ag -> {
+            for (ProcessTransition receiveTransition : ag.getAgent().getReceiveTransitions()) {
+                String label = receiveTransition.getLabel().getLabel();
+                if (label != null && !label.equals(""))
+                    receiveLabels.add(ag.getLabel() + "-" + receiveTransition.getLabel().getLabel());
+            }
+        });
+
+        nuxmvSimOutput = nuxmvSimOutput.replaceAll("(obs[0-9]+)", "___LTOL___-$1");
+        nuxmvSimOutput = nuxmvSimOutput.replaceAll(
+                "\\bno-observations\\b",
+                "___LTOL___-no-observations");
+
+        String agentStateRegex = "(^|\\n)[^=\\n\\^]+\\-[^=\\n\\^]+ =[^=\\n$]+(\\n|$)";
+        Pattern compile = Pattern.compile(agentStateRegex, Pattern.MULTILINE);
+        Matcher matcher = compile.matcher(nuxmvSimOutput);
+
+        match: while (matcher.find()) {
+            String[] group = matcher.toMatchResult().group().split("=");
+
+            String[] left = group[0].split("-", 2);
+
+            String agent = left[0].trim();
+
+            if (agent.startsWith("falsify") || agent.startsWith("keep")) {
+                continue;
+            }
+
+            String var = left[1].trim();
+
+            String val = group[1].trim().replaceAll(agent + "\\-", "");
+
+            if (receiveLabels.contains(group[0].trim()) && val.equals("FALSE")) {
+                continue match;
+            }
+
+            if (!jsonObject.has(agent)) {
+                jsonObject.put(agent, new JSONObject());
+            }
+
+            ((JSONObject) jsonObject.get(agent)).put(var, val);
+        }
+
+        return jsonObject;
+    }
+
+    public Pair<Boolean, String> pickInitialState(String constraint) throws IOException {
         Path scriptFile = Files.createTempFile("rcheck", "_script.smv");
-        StringBuilder script = new StringBuilder    ("go_msat\n");
-        if (build_boolean_model) script.append      ("build_boolean_model\n");
-        if (bmc) script.append                      ("msat_check_ltlspec_bmc");
-        else     script.append                      ("check_ltlspec_ic3");
-        if (steps != -1) script.append              (" -k " + steps);
-        script.append                               ("\nquit\n");
+        Files.write(scriptFile, ("go_msat\nmsat_pick_state -v -c \"" + constraint + "\"\nquit").getBytes(StandardCharsets.UTF_8));
+        NuXmvResult result = callAndRead(scriptFile);
+        Files.delete(scriptFile);
+        return result.toPair();
+    }
+
+    private NuXmvResult callAndRead(Path scriptFile) throws IOException {
+        Process proc = callNuXmv(scriptFile);
+        processes.add(proc);
+        NuXmvResult result = readFrom(proc);
+        processes.remove(proc);
+        proc.destroy();
+        return result;
+    }
+
+    private Path makeScript(boolean build_boolean_model, int steps, boolean bmc) throws IOException {
+        if (bmc && steps < 1)
+            steps = 1;
+        Path scriptFile = Files.createTempFile("rcheck", "_script.smv");
+        StringBuilder script = new StringBuilder("go_msat\n");
+        if (build_boolean_model)
+            script.append("build_boolean_model\n");
+        if (bmc)
+            script.append("msat_check_ltlspec_bmc");
+        else
+            script.append("check_ltlspec_ic3");
+        if (steps != -1)
+            script.append(" -k " + steps);
+        script.append("\nquit\n");
         Files.write(scriptFile, script.toString().getBytes(StandardCharsets.UTF_8));
 
         return scriptFile;
     }
 
-    private Process callNuXmv (Path scriptFile) throws IOException {
+    private Process callNuXmv(Path scriptFile) throws IOException {
         String nuxmvPath = Config.getNuxmvPath();
-        ProcessBuilder builder = new ProcessBuilder(nuxmvPath,  "-source", scriptFile.toRealPath().toString(), path.toString());
+        ProcessBuilder builder = new ProcessBuilder(nuxmvPath, "-source", scriptFile.toRealPath().toString(),
+                path.toString());
         builder.redirectErrorStream(true);
         Process process = builder.start();
         processes.add(process);
@@ -78,16 +167,24 @@ public class NuXmvBatch {
         result.infinitePrecisionError = false;
         while ((nextLine = reader.readLine()) != null) {
             java.lang.System.out.println(nextLine);
-            if (nextLine.startsWith("*** ")) continue;
-            nextLine = nextLine.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
+            if (nextLine.startsWith("*** internal error ***"))
+                result.gotError = true;
+            if (nextLine.startsWith("*** "))
+                continue;
+            nextLine = nextLine.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)",
+                    "");
 
-            if (!nextLine.isBlank()){
+            if (!nextLine.isBlank()) {
                 outputBuilder.append(nextLine);
                 outputBuilder.append("\n");
                 result.gotError |= nextLine.contains("syntax error");
+                result.gotError |= nextLine.contains("Type System Violation");
+                result.gotError |= nextLine.contains("Parsing error");
                 result.gotError |= nextLine.contains("aborting 'source");
-                result.infinitePrecisionError |= nextLine.contains("Impossible to build a boolean FSM with infinite precision variables");
-                if (result.gotError || result.infinitePrecisionError) break;
+                result.infinitePrecisionError |= nextLine
+                        .contains("Impossible to build a boolean FSM with infinite precision variables");
+                if (result.gotError || result.infinitePrecisionError)
+                    break;
             }
         }
         result.output = outputBuilder.toString();
@@ -96,7 +193,8 @@ public class NuXmvBatch {
     }
 
     public Pair<Boolean, String> modelCheck(String property, boolean bounded, int steps, boolean bmc) throws Exception {
-        if (!bmc && !bounded) steps = -1;
+        if (!bmc && !bounded)
+            steps = -1;
         Path scriptFile = makeScript(true, steps, bmc);
         // BufferedReader reader = callNuXmv(scriptFile);
         Process process = callNuXmv(scriptFile);
@@ -104,7 +202,8 @@ public class NuXmvBatch {
         process.destroy();
         processes.remove(process);
         Files.deleteIfExists(scriptFile);
-        if (!result.infinitePrecisionError) return result.toPair();
+        if (!result.infinitePrecisionError)
+            return result.toPair();
         // Previous call failed due to infinite-precision variables
         else {
             scriptFile = makeScript(false, steps, bmc);
@@ -116,9 +215,5 @@ public class NuXmvBatch {
             return result.toPair();
         }
 
-
-
-
-        
     }
 }

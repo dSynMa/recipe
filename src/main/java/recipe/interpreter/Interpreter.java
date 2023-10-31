@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import recipe.analysis.NuXmvInteraction;
+import recipe.analysis.NuXmvBatch;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
@@ -181,8 +181,7 @@ public class Interpreter {
         int startPos = trace.indexOf(sentinel) + sentinel.length();
         trace = trace.substring(startPos);
 
-        NuXmvInteraction nuxmv = new NuXmvInteraction(s);
-        nuxmv.stopNuXmvThread(); // We ain't going to need it
+        NuXmvBatch nuxmv = new NuXmvBatch(s);
         String[] split = trace.split("->", 0);
         List<JSONObject> states = new ArrayList<>(split.length - 1);
         for (String string : split) {
@@ -201,11 +200,9 @@ public class Interpreter {
 
     private void rootStep(String constraint) throws IOException, Exception {
         HashMap<AgentInstance, ConcreteStore> rootStores = new HashMap<AgentInstance, ConcreteStore>();
-        // TODO use nuxmvBatch
-        NuXmvInteraction nuxmv = new NuXmvInteraction(sys);
-        Pair<Boolean, String> s0 = nuxmv.simulation_pick_init_state(constraint);
+        NuXmvBatch nuxmv = new NuXmvBatch(sys);
+        Pair<Boolean, String> s0 = nuxmv.pickInitialState(constraint);
         JSONObject initValues = nuxmv.outputToJSON(s0.getRight());
-        nuxmv.stopNuXmvThread();
 
         sys.getAgentInstances().forEach((x) -> {
             String name = x.getLabel();
