@@ -2,7 +2,7 @@ import logo from './logo.svg';
 import './App.css';
 import {Container, Table, Dropdown, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton, Badge, Navbar, OverlayTrigger, Tooltip, Modal, Nav} from 'react-bootstrap';
 import AceEditor from "react-ace";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import axios from "axios";
 import { useFetch } from "./hooks";
 import Graph from "./Graph";
@@ -575,14 +575,14 @@ function resetInterpreter(){
                     return <Row className={i % 2 ? "border py-2" : "bg-light border py-2"}>
                     <Col style={{ textAlign:"start" }} xs={x.result=="false" ? 9 : 12}>
                       <h5 className='my-auto'>{x.spec}{' '}
-                      { x.result != "error" &&
+                      { x.result != "error" && x.result != "unknown" &&
                         <Badge bg={x.result == "true" ? "success" : x.result == "false" ? "danger" : "secondary"}>
                         {x.result == "true" ? "pass" : x.result == "false" ? "fail" : x.result}
                         </Badge>
                       }
-                      { x.result === "error" &&
+                      { x.result === "error" || x.result === "unknown" &&
                       <OverlayTrigger placement='bottom' overlay={<Tooltip>{x.output}</Tooltip>}>
-                        <Badge bg={"secondary"}>error</Badge>
+                        <Badge bg={"secondary"}>{x.result}</Badge>
                       </OverlayTrigger>
                       }
                       { (x.result === undefined) && spinner }
