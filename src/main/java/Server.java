@@ -422,6 +422,12 @@ public class Server {
         }
     }
 
+    @Route("/modelCheckStop")
+    public String stopModelChecking(Request req) {
+        NuXmvBatch.stopAllProcesses();
+        return "";
+    }
+
     @Route("/init")
     public String init(Request req) throws Exception {
         if(system == null){
