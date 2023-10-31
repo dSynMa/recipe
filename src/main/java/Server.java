@@ -315,17 +315,17 @@ public class Server {
 
             java.lang.System.out.printf("[%d]  %s, %s\n", i, unparsedSpec, mcConfig.type);
             switch (mcConfig.getType()) {
-                case IC3:
-                    NuXmvBatch n = new NuXmvBatch(system);
-                    result = n.modelCheckic3(spec, mcConfig.isBounded(), mcConfig.getBound());
-                    break;
-                default:
+                case BDD:
                     NuXmvInteraction nuxmv = new NuXmvInteraction(system);
                     nuxmv.initialise(true);
                     nuxmv.initialise(mcConfig.getType() == MCType.BMC);
                     result = nuxmv.modelCheck(spec, mcConfig.isBounded(), mcConfig.getBound());
                     // Stop NuXmv
                     nuxmv.stopNuXmvThread();
+                    break;
+                default:
+                    NuXmvBatch n = new NuXmvBatch(system);
+                    result = n.modelCheck(spec, mcConfig.isBounded(), mcConfig.getBound(), mcConfig.getType() == MCType.BMC);
                     break;
             }
 
