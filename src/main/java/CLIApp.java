@@ -1,10 +1,14 @@
 import org.apache.commons.cli.*;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Scanner;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -19,6 +23,15 @@ public class CLIApp
 {
     static boolean isWindows() {
         return System.getProperty("os.name").toLowerCase().contains("win");
+    }
+
+    static {
+        try {
+            InputStream properties = CLIApp.class.getResourceAsStream("/logging.properties");
+            LogManager.getLogManager().readConfiguration(properties);
+        } catch (IOException e) {
+            Logger.getGlobal().severe(e.toString());
+        }
     }
 
     static String npm = isWindows() ? "npm.cmd" : "npm";

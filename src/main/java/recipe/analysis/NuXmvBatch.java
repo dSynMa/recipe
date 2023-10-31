@@ -22,18 +22,22 @@ import recipe.lang.System;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.utils.Pair;
 
+import java.util.logging.Logger;
+
+
 public class NuXmvBatch {
     Path path;
     System system;
 
+    private static Logger logger = Logger.getLogger(NuXmvBatch.class.getName());
     public static LinkedList<Process> processes = new LinkedList<>();
 
     public static void stopAllProcesses() {
+        logger.warning(" NuXmvBatch.stopAllProcesses() invoked");
         while (!processes.isEmpty()) {
             Process proc = processes.removeLast();
-            java.lang.System.out.printf("Destroying %s...", proc.toString());
             proc.destroy();
-            java.lang.System.out.println(" done.");
+            logger.info("Destroyed process " + proc.toString());
         }
     }
 
@@ -166,7 +170,7 @@ public class NuXmvBatch {
         result.gotError = false;
         result.infinitePrecisionError = false;
         while ((nextLine = reader.readLine()) != null) {
-            java.lang.System.out.println(nextLine);
+            logger.finest(nextLine);
             if (nextLine.startsWith("*** internal error ***"))
                 result.gotError = true;
             if (nextLine.startsWith("*** "))

@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
+import java.util.logging.Logger;
 
 public class Server {
     NuXmvInteraction nuXmvInteraction;
@@ -42,6 +43,9 @@ public class Server {
     Map<String, String> latestDotsInterpreter = new ConcurrentHashMap<>();
 
     MCConfig mcConfig;
+
+    private static Logger logger = Logger.getLogger(Server.class.getName());
+    
 
     private final ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
@@ -201,11 +205,11 @@ public class Server {
         } catch (ParseError parseError){
             response.clear();
             response.put("error", parseError.getFailure());
-            java.lang.System.out.println(response.toString());
+            logger.info(response.toString());
         } catch (Exception e) {
             response.clear();
             response.put("error", e.getMessage() );
-            java.lang.System.out.println(response.toString());
+            logger.info(response.toString());
         }
         return response.toString();
     }
@@ -313,7 +317,8 @@ public class Server {
             String spec = specs.get(0).toString();
             String unparsedSpec = system.getUnparsedSpecs().get(i);
 
-            java.lang.System.out.printf("[%d]  %s, %s\n", i, unparsedSpec, mcConfig.type);
+            String info = String.format("[%d]  %s, %s", i, unparsedSpec, mcConfig.type);
+            logger.info(info);
             switch (mcConfig.getType()) {
                 case BDD:
                     NuXmvInteraction nuxmv = new NuXmvInteraction(system);
@@ -357,23 +362,23 @@ public class Server {
         return resultJSON;
     }
 
-
-
-
     @Route("/modelCheck/:id")
     public String modelCheck(Request req, String idString) {
         JSONObject result;
+        String info = "";
         try {
             int id = Integer.valueOf(idString);
             // MCConfig config = MCConfig.ofRequest(req);
             Future<JSONObject> future = this.mcService.submit(new MCWorker(id));
             result = future.get();
-            java.lang.System.out.printf("[%s] -- DONE\n", idString);
+            info = String.format("[%s] -- DONE", idString);
         } catch (Exception e) {
             e.printStackTrace();
-            java.lang.System.out.printf("[%s] -- ERROR\n", idString);
+            info = String.format("[%s] -- ERROR", idString);
             result = new JSONObject();
             result.put("error", e.getMessage());
+        } finally {
+            logger.info(info);
         }
         return result.toString();
     }
@@ -512,8 +517,6 @@ public class Server {
 
         try {
             interpreter = Interpreter.ofJSON(system, obsMap, json);
-            java.lang.System.out.println(json);
-
             return "{}";
         } catch (Exception e) {
             return String.format("{ \"error\" : \"%s\"}", e.getMessage());
@@ -639,6 +642,6 @@ public class Server {
     }
 
     public static void main(String[] args) throws Exception {
-       java.lang.System.out.println("Server started on: " + start());
+       logger.info("Server started on: " + start());
     }
 }
