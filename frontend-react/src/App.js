@@ -78,7 +78,7 @@ function App() {
   ];
 
   function simulate(){
-    if(built == null){
+    if(built != true){
       alert("Build model first.");
       return;
     }
@@ -246,7 +246,7 @@ function resetSimulate(){
   }
 
   function interpret(){
-    if(built == null){
+    if(built != true){
       alert("Build model first.");
       return;
     }
@@ -331,7 +331,7 @@ function resetInterpreter(){
   }
 
   function modelCheck(){
-    if(built == null){
+    if(built != true){
       alert("Build model first.");
       return;
     }
