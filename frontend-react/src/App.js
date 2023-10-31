@@ -2,7 +2,7 @@ import logo from './logo.svg';
 import './App.css';
 import { Container, Table, Dropdown, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton, Badge, Navbar, OverlayTrigger, Tooltip, Modal, Nav } from 'react-bootstrap';
 import AceEditor from "react-ace";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from "axios";
 import { useFetch } from "./hooks";
 import Graph from "./Graph";
@@ -43,6 +43,7 @@ const SVGBg = {
   overflow: "auto"
 }
 
+
 function App() {
   const [simcondition, setSimCondition] = useState("TRUE");
   const [simstarted, setSimStarted] = useState(false);
@@ -65,6 +66,7 @@ function App() {
   const [interpreterresponse, setInterpreterResponse] = useState([]);
   const [interpretertransitions, setInterpreterTransitions] = useState([]);
   const [interpreterloading, setInterpreterLoading] = useState(false);
+  const [interpreterbacking, setInterpreterBacking] = useState(false);
   const [resetinterpreterloading, setResetInterpreterLoading] = useState(false);
   const [interpreternextindex, setInterpreterNextIndex] = useState(0);
   const [interpreterbadge, setInterpreterBadge] = useState(false);
@@ -76,6 +78,8 @@ function App() {
     { name: 'IC3', value: '2' },
     { name: 'BMC', value: '3' },
   ];
+
+  const interpreterTable = useRef(null);
 
   function simulate() {
     if (built != true) {
@@ -279,6 +283,7 @@ function App() {
             setInterpreterResponse(interpreterresponse.concat([res]));
             setInterpreterLoading(false);
             setInterpreterStarted(true);
+            interpreterTable.current.scrollIntoView({ behavior: "smooth", block: "end" });
           }
         })
         .catch((err) => {
@@ -293,14 +298,14 @@ function App() {
       resetInterpreter();
     }
     else {
-      setInterpreterLoading(true);
+      setInterpreterBacking(true);
       axios.get(server + "/interpretBack", {})
         .then((response) => {
           var res = response.data.state;
           setInterpreterTransitions(response.data.transitions);
           setInterpreterNextIndex(0);
           setInterpreterResponse(interpreterresponse.slice(0, -1));
-          setInterpreterLoading(false);
+          setInterpreterBacking(false);
           setDot([]);
           setDot(response.data.svgs.map(x => {
             var svg = new DOMParser().parseFromString(x.svg, "image/svg+xml").getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
@@ -309,14 +314,13 @@ function App() {
         })
         .catch((err) => {
           alert(err.message);
-          setInterpreterLoading(false);
+          setInterpreterBacking(false);
         });
     }
   }
 
   function resetInterpreter() {
     setResetInterpreterLoading(true);
-
     setInterpreterStarted(false);
     setInterpreterResponse([]);
     setInterpreterTransitions([]);
@@ -669,12 +673,12 @@ function App() {
                   <Row>
                     <Col xs={12}>
                       <InputGroup className="mb-3">
-                        <Button variant="primary" size="lg" disabled={interpreterloading || interpreterresponse.length == 0} onClick={backtrackInterpreter}>
+                        <Button variant="primary" size="lg" disabled={interpreterbacking || interpreterloading || interpreterresponse.length == 0} onClick={backtrackInterpreter}>
                           Back
-                          {interpreterloading && spinner}
+                          {interpreterbacking && spinner}
                         </Button>
                         <Button variant="primary" size="lg"
-                          disabled={interpreterloading || (interpreterstarted && interpretertransitions.length == 0)}
+                          disabled={interpreterbacking || interpreterloading || (interpreterstarted && interpretertransitions.length == 0)}
                           onClick={interpret}>
                           {!interpreterstarted && <span>Start</span>}
                           {interpreterstarted && <span>Next</span>}
@@ -710,7 +714,7 @@ function App() {
                   </Row>
                   <Row>
                     <Col style={{ height: "345px", overflowY: "auto", overflowX: "auto", textAlign: "start" }}>
-                      <Table striped bordered hover>
+                      <Table ref={interpreterTable} striped bordered hover>
                         <thead>
                           <tr>
                             <th>#Step</th>
