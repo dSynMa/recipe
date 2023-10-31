@@ -352,28 +352,6 @@ public class NuXmvInteraction {
             }
 
             ((JSONObject) jsonObject.get(agent)).put(var, val);
-
-//            String agentVarRegex = "(^|\\n) *(" + agent + ")\\-[^\\n=]+=[^=\\n$]+(\\n|$)";
-//            Pattern compile2 = Pattern.compile(agentVarRegex, Pattern.MULTILINE);
-//            Matcher matcher2 = compile2.matcher(nuxmvSimOutput);
-//            JSONObject vars = new JSONObject();
-//
-//            while (matcher2.find()){
-//                String[] group2 = matcher2.toMatchResult().group().split("=");
-//
-//                String[] left2 = group2[0].split("\\-");
-//
-//                String var2 = left2[1].trim();
-//                if(var2.equals("state")){
-//                    continue;
-//                }
-//
-//                String val2 = group2[1].trim().replaceAll(agent + "\\-", "");
-//
-//                vars.put(var2, val2);
-//            }
-//
-//            ((JSONObject) jsonObject.get(agent)).put("local", vars);
         }
 
         return jsonObject;
