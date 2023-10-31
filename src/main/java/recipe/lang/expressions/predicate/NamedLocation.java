@@ -24,13 +24,14 @@ import recipe.lang.utils.exceptions.TypeCreationException;
 public class NamedLocation extends Condition {
     private String name;
     private boolean _isSelf = false;
+    public static final String selfToken = "SELF";
 
     public NamedLocation() { _isSelf = true; }
 
     public NamedLocation(String name) { this.name = name; }
 
     @Override
-    public String toString() { return _isSelf ? "SELF" : name; }
+    public String toString() { return _isSelf ? selfToken : name; }
 
     public boolean isSelf() { return _isSelf; }
 
@@ -38,9 +39,10 @@ public class NamedLocation extends Condition {
         Parser baseParser =
             CharacterParser.noneOf("()[],;").plus().trim().flatten().map(
                 (String word) -> {
-                    if (word.equals("SELF")) return new NamedLocation();
+                    if (word.equals(selfToken)) return new NamedLocation();
                     else return new NamedLocation(word);
             });
+        
         Parser parser = baseParser.or(
             CharacterParser.of('(')
             .seq(baseParser)
