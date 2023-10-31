@@ -325,14 +325,19 @@ function resetInterpreter(){
     setResetInterpreterLoading(false);
   }
 
+  function modelCheckStop(){
+    axios.get(server + "/modelCheckStop")
+         .then((_) => { console.log("Stopped all MC tasks as requested by the user."); });
+  }
+
   function modelCheck(){
     if(built == null){
       alert("Build model first.");
       return;
     }
     
-    setMCLoading(true);
     setMCResponse([]);
+    setMCLoading(true);
     
     if(symbolicBuild && radioValue == 1){
       alert("Cannot explicitly model check with abstract model. Build explicit model.");
@@ -557,8 +562,10 @@ function resetInterpreter(){
                               />
                               }
                               <Button variant="primary" size="lg" disabled={mcloading} onClick={modelCheck}>
-                                Start
-                                { mcloading && spinner}
+                                Start { mcloading && spinner}
+                              </Button>
+                              <Button variant="danger" size="lg" onClick={modelCheckStop}>
+                                Stop
                               </Button>
                     </InputGroup>
 
