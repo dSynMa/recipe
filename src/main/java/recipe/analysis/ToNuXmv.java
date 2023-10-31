@@ -924,12 +924,8 @@ public class ToNuXmv {
                                         Expression<Boolean> getterGuardExpr = getProcess.getMessageGuard();
                                         if (getterGuardExpr instanceof NamedLocation) {
                                             NamedLocation getterLocation = (NamedLocation) getterGuardExpr;
-                                            // GET@SELF never succeeds by definition
-                                            if (getterLocation.isSelf()) continue getterTrLoop;
+                                            if (getterLocation.isSelf()) throw new Exception("GET@SELF is not allowed.");
                                             else if (!getterLocation.toString().equals(sendingAgentName)) continue getterTrLoop;
-                                            // TODO If agent A does SUPPLY@TRUE, will it synchronize with GET@A ?
-                                            // TODO Viceversa: if A does SUPPLY@SELF will it sync with GET@TRUE ?
-                                            // Here I am assuming it can
                                         }
 
                                         getterGuardExpr = getterGuardExpr.relabel(v -> {
