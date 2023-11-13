@@ -315,7 +315,7 @@ public class Server {
             List<LTOL> specs = toLtl.getLeft();
             obsMap = toLtl.getRight();
             String spec = specs.get(0).toString();
-            String unparsedSpec = system.getUnparsedSpecs().get(i);
+            String unparsedSpec = system.getUnparsedSpecs().get(i).trim();
 
             String info = String.format("[%d]  %s, %s", i, unparsedSpec, mcConfig.type);
             logger.info(info);
