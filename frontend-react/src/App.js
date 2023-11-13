@@ -497,7 +497,7 @@ function App() {
       </Modal>
       <Container fluid className='text-center' id="TabContainer">
         <Row className="justify-content-md-center">
-          <Col xs={12} md={10} xl={8}>
+          <Col xs={12} xl={10} xxl={8}>
             <Navbar expand="xs">
               <Navbar.Brand>R-CHECK</Navbar.Brand>
               <Nav className="justify-content-end">
@@ -507,7 +507,7 @@ function App() {
           </Col>
         </Row>
         <Row className="justify-content-md-center">
-          <Col xs={12} md={10} xl={8}>
+          <Col xs={12} xl={10} xxl={8}>
             <Tabs defaultActiveKey="ed" id="uncontrolled-tab-example" className="mb-3"
               onSelect={(e) => { if (e === "interpreter") setInterpreterBadge(false); }}>
               <Tab eventKey="ed" title="Editor" style={TabStyle}>
@@ -758,7 +758,7 @@ function App() {
           </Col>
         </Row>
         <Row className="justify-content-md-center">
-          <Col xs={12} md={10} xl={8}>
+          <Col xs={12} xl={10} xxl={8}>
             <hr />
             {/* <Button variant="primary" 
                         size="lg" 
