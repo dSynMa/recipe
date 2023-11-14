@@ -196,28 +196,24 @@ public class NuXmvBatch {
         return result;
     }
 
-    public Pair<Boolean, String> modelCheck(String property, boolean bounded, int steps, boolean bmc) throws Exception {
-        if (!bmc && !bounded)
-            steps = -1;
-        Path scriptFile = makeScript(true, steps, bmc);
-        // BufferedReader reader = callNuXmv(scriptFile);
+    public NuXmvResult exec(Path scriptFile) throws IOException {
         Process process = callNuXmv(scriptFile);
         NuXmvResult result = readFrom(process);
         process.destroy();
         processes.remove(process);
         Files.deleteIfExists(scriptFile);
-        if (!result.infinitePrecisionError)
-            return result.toPair();
-        // Previous call failed due to infinite-precision variables
-        else {
-            scriptFile = makeScript(false, steps, bmc);
-            process = callNuXmv(scriptFile);
-            result = readFrom(process);
-            process.destroy();
-            processes.remove(process);
-            Files.deleteIfExists(scriptFile);
-            return result.toPair();
-        }
+        return result;
+    }
 
+    public Pair<Boolean, String> modelCheck(String property, boolean bounded, int steps, boolean bmc) throws Exception {
+        if (!bmc && !bounded)
+            steps = -1;
+        Path scriptFile = makeScript(true, steps, bmc);
+        NuXmvResult result = exec(scriptFile);
+        if (!result.infinitePrecisionError) return result.toPair();
+        // Previous call failed due to infinite-precision variables
+        scriptFile = makeScript(false, steps, bmc);
+        result = exec(scriptFile);
+        return result.toPair();
     }
 }
