@@ -588,7 +588,7 @@ function App() {
                               {x.result == "true" ? "pass" : x.result == "false" ? "fail" : x.result}
                             </Badge>
                           }
-                          {x.result === "error" || x.result === "unknown" &&
+                          {(x.result == "error" || x.result == "unknown") &&
                             <OverlayTrigger placement='bottom' overlay={<Tooltip>{x.output}</Tooltip>}>
                               <Badge bg={"secondary"}>{x.result}</Badge>
                             </OverlayTrigger>
