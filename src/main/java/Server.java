@@ -35,6 +35,7 @@ import java.util.logging.Logger;
 
 public class Server {
     NuXmvInteraction nuXmvInteraction;
+    NuXmvBatch nuXmvBatch;
     System system;
     Map<String, Observation> obsMap;
 
@@ -45,13 +46,7 @@ public class Server {
     MCConfig mcConfig;
 
     private static Logger logger = Logger.getLogger(Server.class.getName());
-    
-
     private final ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-
-    // TODO can we use multiple nuXmvInteraction and parallelize this?
-    private final ExecutorService mcService = Executors.newFixedThreadPool(1);
-    private Semaphore systemSem = new Semaphore(1);
 
     private List<JSONObject> renderSVGs (JSONObject response) {
         List<JSONObject> svgs = new ArrayList<>();
@@ -194,6 +189,7 @@ public class Server {
                 nuXmvInteraction = null;
             }
             nuXmvInteraction = new NuXmvInteraction(system);
+            nuXmvBatch = new NuXmvBatch(system);
             Pair<Boolean, String> initialise = nuXmvInteraction.initialise(buildType);
 
             if(initialise.getLeft()){
@@ -302,20 +298,18 @@ public class Server {
         JSONObject resultJSON = new JSONObject();
         Pair<Boolean, String> result;
         try {
-            systemSem.acquire();
-
-            // Prune other ltol formulas
+            // Convert i-th formula
+            String unparsedSpec = system.getUnparsedSpecs().get(i).trim();
             List<LTOL> oldSpecs = system.getSpecs();
             LTOL ltol = oldSpecs.get(i);
             List<LTOL> singleton = new ArrayList<>(1);
             singleton.add(ltol);
-            system.setSpecs(singleton);
-            
-            Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
+
+
+            Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(singleton);
             List<LTOL> specs = toLtl.getLeft();
             obsMap = toLtl.getRight();
             String spec = specs.get(0).toString();
-            String unparsedSpec = system.getUnparsedSpecs().get(i).trim();
 
             String info = String.format("[%d]  %s, %s", i, unparsedSpec, mcConfig.type);
             logger.info(info);
@@ -328,15 +322,13 @@ public class Server {
                     // Stop NuXmv
                     nuxmv.stopNuXmvThread();
                     break;
+                case BMC:
+                    result = nuXmvBatch.modelCheckBmc(spec, mcConfig.isBounded(), mcConfig.getBound());
+                    break;
                 default:
-                    NuXmvBatch n = new NuXmvBatch(system);
-                    result = n.modelCheck(spec, mcConfig.isBounded(), mcConfig.getBound(), mcConfig.getType() == MCType.BMC);
+                    result = nuXmvBatch.modelCheckIc3(spec, mcConfig.isBounded(), mcConfig.getBound());
                     break;
             }
-
-            // Restore all formulas
-            system.setSpecs(oldSpecs);
-            systemSem.release();
 
             resultJSON.put("spec", unparsedSpec);
 
@@ -369,7 +361,7 @@ public class Server {
         try {
             int id = Integer.valueOf(idString);
             // MCConfig config = MCConfig.ofRequest(req);
-            Future<JSONObject> future = this.mcService.submit(new MCWorker(id));
+            Future<JSONObject> future = this.service.submit(new MCWorker(id));
             result = future.get();
             info = String.format("[%s] -- DONE", idString);
         } catch (Exception e) {
