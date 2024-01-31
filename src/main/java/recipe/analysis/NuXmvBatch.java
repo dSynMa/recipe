@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -20,14 +21,15 @@ import org.json.JSONObject;
 import recipe.Config;
 import recipe.lang.System;
 import recipe.lang.agents.ProcessTransition;
+import recipe.lang.ltol.LTOL;
 import recipe.lang.utils.Pair;
 
 import java.util.logging.Logger;
 
 
 public class NuXmvBatch {
-    Path path;
     System system;
+    List<LTOL> allSpecs;
 
     private static Logger logger = Logger.getLogger(NuXmvBatch.class.getName());
     public static LinkedList<Process> processes = new LinkedList<>();
@@ -43,11 +45,7 @@ public class NuXmvBatch {
 
     public NuXmvBatch(System system) throws Exception {
         this.system = system;
-        String nuxmvScript = ToNuXmv.transform(system);
-        Path smvPath = Path.of("./forInteraction.smv");
-        Files.deleteIfExists(smvPath);
-        path = Files.createFile(smvPath).toRealPath();
-        Files.write(path, nuxmvScript.getBytes(StandardCharsets.UTF_8));
+        this.allSpecs = new ArrayList<>(system.getSpecs());
     }
 
     public JSONObject outputToJSON(String nuxmvSimOutput) {
@@ -105,15 +103,22 @@ public class NuXmvBatch {
         return jsonObject;
     }
 
-    public Pair<Boolean, String> pickInitialState(String constraint) throws IOException {
+    public Pair<Boolean, String> pickInitialState(String constraint) throws Exception {
         Path scriptFile = Files.createTempFile("rcheck", "_script.smv");
+        Path modelFile = Files.createTempFile("rcheck", "_model.smv");
         Files.write(scriptFile, ("go_msat\nmsat_pick_state -v -c \"" + constraint + "\"\nquit").getBytes(StandardCharsets.UTF_8));
-        NuXmvResult result = callAndRead(scriptFile);
+        String nuxmvScript;
+        synchronized (system) {
+            system.setSpecs(allSpecs);
+            nuxmvScript = ToNuXmv.transform(system);
+        }
+        Files.write(modelFile, nuxmvScript.getBytes(StandardCharsets.UTF_8));
+        NuXmvResult result = callAndRead(scriptFile, modelFile);
         return result.toPair();
     }
 
-    private NuXmvResult callAndRead(Path scriptFile) throws IOException {
-        Process proc = callNuXmv(scriptFile);
+    private NuXmvResult callAndRead(Path scriptFile, Path modelFile) throws IOException {
+        Process proc = callNuXmv(scriptFile, modelFile);
         processes.add(proc);
         NuXmvResult result = readFrom(proc);
         processes.remove(proc);
@@ -174,10 +179,9 @@ public class NuXmvBatch {
         return path;
     }
 
-    private Process callNuXmv(Path scriptFile) throws IOException {
+    private Process callNuXmv(Path scriptFile, Path modelFile) throws IOException {
         String nuxmvPath = Config.getNuxmvPath();
-        ProcessBuilder builder = new ProcessBuilder(nuxmvPath, "-source", scriptFile.toRealPath().toString(),
-                path.toString());
+        ProcessBuilder builder = new ProcessBuilder(nuxmvPath, "-source", scriptFile.toRealPath().toString(), modelFile.toRealPath().toString());
         builder.redirectErrorStream(true);
         Process process = builder.start();
         processes.add(process);
@@ -237,41 +241,59 @@ public class NuXmvBatch {
         return result;
     }
 
-    public Pair<Boolean, String> modelCheckIc3(String property, boolean bounded, int steps) throws Exception {
+    public Pair<Boolean, String> modelCheckIc3(String property, boolean bounded, int steps, int propertyIndex) throws Exception {
         if (!bounded) steps = -1;
         Path scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, Cmd.IC3_INVAR, Cmd.QUIT);
-        NuXmvResult result = callAndRead(scriptFile);
+        Path modelFile = Files.createTempFile("rcheck", "_model.smv");
+        String nuxmvScript;
+        synchronized (system) {
+            List<LTOL> singleton = new ArrayList<>();
+            singleton.add(allSpecs.get(propertyIndex));
+            system.setSpecs(singleton);
+            nuxmvScript = ToNuXmv.transform(system);
+        }
+        Files.write(modelFile, nuxmvScript.getBytes(StandardCharsets.UTF_8));
+
+        NuXmvResult result = callAndRead(scriptFile, modelFile);
         if (result.success()) return result.toPair();
         // Previous call failed due to infinite-precision variables
         else if (result.err == Error.NOT_INVAR) {
             // Property was not an INVARSPEC
             scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, Cmd.IC3_LTL, Cmd.QUIT);
-            result = callAndRead(scriptFile);
+            result = callAndRead(scriptFile, modelFile);
             return result.toPair();
         }
         else if (result.err == Error.INF_PRECISION) {
             // try INVARSPEC checking without boolean model
             scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.IC3_INVAR, Cmd.QUIT);
-            result = callAndRead(scriptFile);
+            result = callAndRead(scriptFile, modelFile);
             if (result.success()) return result.toPair();
             scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.IC3_LTL, Cmd.QUIT);
-            return callAndRead(scriptFile).toPair();
+            return callAndRead(scriptFile, modelFile).toPair();
         }
         // If we end up here, there's something wrong
         result.err = Error.OTHER;
         return result.toPair();
     }
 
-    public Pair<Boolean, String> modelCheckBmc(String property, boolean bounded, int steps) throws Exception {
+    public Pair<Boolean, String> modelCheckBmc(String property, boolean bounded, int steps, int propertyIndex) throws Exception {
         if (!bounded) steps = -1;
         Cmd bmcCommand = bounded ? Cmd.BMC : Cmd.INC_BMC;
         Path scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, bmcCommand, Cmd.QUIT);
-        NuXmvResult result = callAndRead(scriptFile);
+        Path modelFile = Files.createTempFile("rcheck", "_model.smv");
+        String nuxmvScript;
+        synchronized (system) {
+            List<LTOL> singleton = new ArrayList<>();
+            singleton.add(allSpecs.get(propertyIndex));
+            system.setSpecs(singleton);
+            nuxmvScript = ToNuXmv.transform(system);
+        }
+        NuXmvResult result = callAndRead(scriptFile, modelFile);
         if (result.success()) return result.toPair();
         
         else if (result.err == Error.INF_PRECISION) {
             scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, bmcCommand, Cmd.QUIT);
-            return callAndRead(scriptFile).toPair();
+            return callAndRead(scriptFile, modelFile).toPair();
         }
         // If we end up here, there's something wrong
         result.err = Error.OTHER;
