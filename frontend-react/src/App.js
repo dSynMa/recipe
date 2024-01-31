@@ -190,9 +190,10 @@ function App() {
     reader.readAsText(file);
   }
 
-  function loadTraceIntoInterpreter(output) {
+  function loadTraceIntoInterpreter(i, output) {
     const params = new URLSearchParams();
     params.append("output", encodeURIComponent(output));
+    params.append("index", encodeURIComponent(i));
     axios
       .get(server + "/interpretLoad", { params })
       .then((response) => {
@@ -600,7 +601,7 @@ function App() {
                         <Col xs={3} style={{ textAlign: "end" }} className="align-self-center">
                           {/* <div className="d-grid"> */}
                           <Dropdown as={ButtonGroup}>
-                            <Button onClick={() => loadTraceIntoInterpreter(mcresponse[i].output)}>
+                            <Button onClick={() => loadTraceIntoInterpreter(i, mcresponse[i].output)}>
                               Load into interpreter
                             </Button>
                             <Dropdown.Toggle split id="dropdown-split-basic" />
