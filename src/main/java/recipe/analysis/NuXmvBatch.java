@@ -257,24 +257,27 @@ public class NuXmvBatch {
         Files.write(modelFile, nuxmvScript.getBytes(StandardCharsets.UTF_8));
 
         NuXmvResult result = callAndRead(scriptFile, modelFile);
-        if (result.success()) return result.toPair();
-        // Previous call failed due to infinite-precision variables
-        else if (result.err == Error.NOT_INVAR) {
+        if (result.err == Error.NOT_INVAR) {
             // Property was not an INVARSPEC
             scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, Cmd.IC3_LTL, Cmd.QUIT);
             result = callAndRead(scriptFile, modelFile);
-            return result.toPair();
         }
-        else if (result.err == Error.INF_PRECISION) {
+        // Previous call failed due to infinite-precision variables
+        if (result.err == Error.INF_PRECISION) {
             // try INVARSPEC checking without boolean model
             scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.IC3_INVAR, Cmd.QUIT);
             result = callAndRead(scriptFile, modelFile);
-            if (result.success()) return result.toPair();
-            scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.IC3_LTL, Cmd.QUIT);
-            return callAndRead(scriptFile, modelFile).toPair();
         }
-        // If we end up here, there's something wrong
-        result.err = Error.OTHER;
+        if (!result.success()) {
+            // try IC3 checking without boolean model
+            scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.IC3_LTL, Cmd.QUIT);
+            result = callAndRead(scriptFile, modelFile);
+        }
+        if (!result.success()) {
+            // If we end up here, there's something wrong
+            result.err = Error.OTHER;
+        }
+        Files.deleteIfExists(modelFile);
         return result.toPair();
     }
 
@@ -291,14 +294,16 @@ public class NuXmvBatch {
             nuxmvScript = ToNuXmv.transform(system);
         }
         NuXmvResult result = callAndRead(scriptFile, modelFile);
-        if (result.success()) return result.toPair();
-        
-        else if (result.err == Error.INF_PRECISION) {
+        if (result.err == Error.INF_PRECISION) {
+            // retry without build_boolean
             scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, bmcCommand, Cmd.QUIT);
-            return callAndRead(scriptFile, modelFile).toPair();
+            result = callAndRead(scriptFile, modelFile);
         }
-        // If we end up here, there's something wrong
-        result.err = Error.OTHER;
+        if (!result.success()) {
+            // If we end up here, there's something wrong
+            result.err = Error.OTHER;
+        }
+        Files.deleteIfExists(modelFile);
         return result.toPair();
     }
 }
