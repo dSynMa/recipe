@@ -37,6 +37,7 @@ public class Server {
     NuXmvInteraction nuXmvInteraction;
     NuXmvBatch nuXmvBatch;
     System system;
+    Map<String, Observation> obsMap;
 
     Interpreter interpreter;
     Map<String, String> latestDots = new HashMap<>();
@@ -292,26 +293,28 @@ public class Server {
         }
     }
 
-    private Pair<List<LTOL>, Map<String, Observation>> toLtl(int index) throws Exception {
-        List<LTOL> singleton = system.getSpecs().subList(index, index+1);
-        Pair<List<LTOL>, Map<String, Observation>> result = ToNuXmv.ltolToLTLAndObservationVariables(singleton);
-        java.lang.System.out.println(result.toString());
-        return result;
-    }
-
 
     private JSONObject doModelCheck(int i) {
         JSONObject resultJSON = new JSONObject();
         Pair<Boolean, String> result;
         try {
+            // Convert i-th formula
             String unparsedSpec = system.getUnparsedSpecs().get(i).trim();
-            Pair<List<LTOL>, Map<String, Observation>> toLtl = toLtl(i);
+            List<LTOL> oldSpecs = system.getSpecs();
+            LTOL ltol = oldSpecs.get(i);
+            List<LTOL> singleton = new ArrayList<>(1);
+            singleton.add(ltol);
+
+
+            Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(singleton);
+            List<LTOL> specs = toLtl.getLeft();
+            obsMap = toLtl.getRight();
+            String spec = specs.get(0).toString();
 
             String info = String.format("[%d]  %s, %s", i, unparsedSpec, mcConfig.type);
             logger.info(info);
             switch (mcConfig.getType()) {
                 case BDD:
-                    String spec = toLtl.getLeft().get(0).toString();
                     NuXmvInteraction nuxmv = new NuXmvInteraction(system);
                     nuxmv.initialise(true);
                     nuxmv.initialise(mcConfig.getType() == MCType.BMC);
@@ -320,10 +323,10 @@ public class Server {
                     nuxmv.stopNuXmvThread();
                     break;
                 case BMC:
-                    result = nuXmvBatch.modelCheckBmc(toLtl, mcConfig.isBounded(), mcConfig.getBound());
+                    result = nuXmvBatch.modelCheckBmc(spec, mcConfig.isBounded(), mcConfig.getBound());
                     break;
                 default:
-                    result = nuXmvBatch.modelCheckIc3(toLtl, mcConfig.isBounded(), mcConfig.getBound());
+                    result = nuXmvBatch.modelCheckIc3(spec, mcConfig.isBounded(), mcConfig.getBound());
                     break;
             }
 
@@ -483,13 +486,9 @@ public class Server {
     public String loadInterpreter(Request req) {
         // Load trace into interpreter
         String output = req.getQuery().get("output");
-        int index = Integer.parseInt(req.getQuery().get("index"));
         JSONObject response = new JSONObject();
 
         try {
-            Pair<List<LTOL>,Map<String, Observation>> toLtl = toLtl(index);
-            Map<String, Observation> obsMap = toLtl.getRight();
-    
             interpreter = Interpreter.ofTrace(system, obsMap, output);
             List<JSONObject> trace = interpreter.traceToJSON();
             response.put("svgs", renderSVGs(trace.get(trace.size()-1)));
@@ -509,9 +508,6 @@ public class Server {
         JSONArray json = new JSONArray(toks);
 
         try {
-            Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
-            Map<String, Observation> obsMap = toLtl.getRight();
-    
             interpreter = Interpreter.ofJSON(system, obsMap, json);
             return "{}";
         } catch (Exception e) {
