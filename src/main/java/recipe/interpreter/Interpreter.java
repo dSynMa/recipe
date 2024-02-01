@@ -15,6 +15,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import recipe.analysis.NuXmvBatch;
+import recipe.analysis.ToNuXmv;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
@@ -85,7 +86,9 @@ public class Interpreter {
         return result;
     }
 
-    public static Interpreter ofJSON(recipe.lang.System s, Map<String,Observation> obsMap, JSONArray json) throws Exception {
+    public static Interpreter ofJSON(recipe.lang.System s, JSONArray json) throws Exception {
+        Map<String,Observation> obsMap = ToNuXmv.ltolToLTLAndObservationVariables(s.getSpecs()).getRight();
+        
         List<JSONObject> list = new ArrayList<>(json.length());
         for (int i = 0; i < json.length(); i++) {
             list.add(json.getJSONObject(i));
@@ -93,7 +96,7 @@ public class Interpreter {
         return Interpreter.ofJSON(s, obsMap, list);
     }
 
-    public static Interpreter ofJSON(recipe.lang.System s, Map<String,Observation> obsMap, List<JSONObject> states) throws Exception {
+    private static Interpreter ofJSON(recipe.lang.System s, Map<String,Observation> obsMap, List<JSONObject> states) throws Exception {
         if (states.size() == 0) {
             throw new Exception("Empty JSON");
         }
@@ -163,7 +166,9 @@ public class Interpreter {
      * @param trace a nuXmv trace
      * @return an instance of Interpreter
      */
-    public static Interpreter ofTrace(recipe.lang.System s, Map<String,Observation> obsMap, String trace) throws Exception {
+    public static Interpreter ofTrace(recipe.lang.System s, String trace) throws Exception {
+        Map<String,Observation> obsMap = ToNuXmv.ltolToLTLAndObservationVariables(s.getSpecs()).getRight();
+        
         // Find states that are loop-starts
         Matcher m = Pattern.compile(
             "-- Loop starts here[\s\n]*-> State: 1.([0-9]+)",
