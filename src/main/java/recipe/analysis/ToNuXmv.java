@@ -277,11 +277,16 @@ public class ToNuXmv {
     }
 
     public static String transform(System system) throws Exception {
-        return transform(system, false);
+        Pair<List<LTOL>, Map<String, Observation>> specsAndObs = ltolToLTLAndObservationVariables(system.getSpecs());
+        return transform(system, specsAndObs, false);
+    }
+
+    public static String transform(System system, Pair<List<LTOL>, Map<String, Observation>> specsAndObs) throws Exception {
+        return transform(system, specsAndObs, false);
     }
 
     //TODO use sendTagsAsVars
-    public static String transform(System system, boolean sendTagsAsVars) throws Exception {
+    public static String transform(System system, Pair<List<LTOL>, Map<String, Observation>> specsAndObs, boolean sendTagsAsVars) throws Exception {
         GuardReference.resolve = true;
 
         int unlabelledCounter = 0;
@@ -294,7 +299,6 @@ public class ToNuXmv {
         String init = "INIT\n";
         String trans = "";
 
-        Pair<List<LTOL>, Map<String, Observation>> specsAndObs = ltolToLTLAndObservationVariables(system.getSpecs());
         List<LTOL> specs = specsAndObs.getLeft();
         Map<String, Observation> observations = specsAndObs.getRight();
 
