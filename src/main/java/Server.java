@@ -37,7 +37,6 @@ public class Server {
     NuXmvInteraction nuXmvInteraction;
     NuXmvBatch nuXmvBatch;
     System system;
-    Map<String, Observation> obsMap;
 
     Interpreter interpreter;
     Map<String, String> latestDots = new HashMap<>();
@@ -300,15 +299,10 @@ public class Server {
         try {
             // Convert i-th formula
             String unparsedSpec = system.getUnparsedSpecs().get(i).trim();
-            List<LTOL> oldSpecs = system.getSpecs();
-            LTOL ltol = oldSpecs.get(i);
-            List<LTOL> singleton = new ArrayList<>(1);
-            singleton.add(ltol);
-
+            List<LTOL> singleton = system.getSpecs().subList(i, i+1);
 
             Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(singleton);
             List<LTOL> specs = toLtl.getLeft();
-            obsMap = toLtl.getRight();
             String spec = specs.get(0).toString();
 
             String info = String.format("[%d]  %s, %s", i, unparsedSpec, mcConfig.type);
@@ -489,7 +483,7 @@ public class Server {
         JSONObject response = new JSONObject();
 
         try {
-            interpreter = Interpreter.ofTrace(system, obsMap, output);
+            interpreter = Interpreter.ofTrace(system, output);
             List<JSONObject> trace = interpreter.traceToJSON();
             response.put("svgs", renderSVGs(trace.get(trace.size()-1)));
             response.put("trace", trace);
@@ -508,7 +502,7 @@ public class Server {
         JSONArray json = new JSONArray(toks);
 
         try {
-            interpreter = Interpreter.ofJSON(system, obsMap, json);
+            interpreter = Interpreter.ofJSON(system, json);
             return "{}";
         } catch (Exception e) {
             return String.format("{ \"error\" : \"%s\"}", e.getMessage());
