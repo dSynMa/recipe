@@ -293,10 +293,7 @@ public class Server {
     }
 
     private Pair<List<LTOL>, Map<String, Observation>> toLtl(int index) throws Exception {
-        List<LTOL> oldSpecs = system.getSpecs();
-        LTOL ltol = oldSpecs.get(index);
-        List<LTOL> singleton = new ArrayList<>(1);
-        singleton.add(ltol);
+        List<LTOL> singleton = system.getSpecs().subList(index, index+1);
         Pair<List<LTOL>, Map<String, Observation>> result = ToNuXmv.ltolToLTLAndObservationVariables(singleton);
         java.lang.System.out.println(result.toString());
         return result;
@@ -307,15 +304,14 @@ public class Server {
         JSONObject resultJSON = new JSONObject();
         Pair<Boolean, String> result;
         try {
-            // Convert i-th formula
             String unparsedSpec = system.getUnparsedSpecs().get(i).trim();
-            Pair<List<LTOL>,Map<String, Observation>> toLtl = toLtl(i);
-            String spec = toLtl.getLeft().get(0).toString();
+            Pair<List<LTOL>, Map<String, Observation>> toLtl = toLtl(i);
 
             String info = String.format("[%d]  %s, %s", i, unparsedSpec, mcConfig.type);
             logger.info(info);
             switch (mcConfig.getType()) {
                 case BDD:
+                    String spec = toLtl.getLeft().get(0).toString();
                     NuXmvInteraction nuxmv = new NuXmvInteraction(system);
                     nuxmv.initialise(true);
                     nuxmv.initialise(mcConfig.getType() == MCType.BMC);
@@ -324,10 +320,10 @@ public class Server {
                     nuxmv.stopNuXmvThread();
                     break;
                 case BMC:
-                    result = nuXmvBatch.modelCheckBmc(spec, mcConfig.isBounded(), mcConfig.getBound(), i);
+                    result = nuXmvBatch.modelCheckBmc(toLtl, mcConfig.isBounded(), mcConfig.getBound());
                     break;
                 default:
-                    result = nuXmvBatch.modelCheckIc3(spec, mcConfig.isBounded(), mcConfig.getBound(), i);
+                    result = nuXmvBatch.modelCheckIc3(toLtl, mcConfig.isBounded(), mcConfig.getBound());
                     break;
             }
 
