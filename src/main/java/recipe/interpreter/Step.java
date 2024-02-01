@@ -116,8 +116,6 @@ public class Step {
                 if (obsVar.equals("no-observations")) continue;
                 Expression<recipe.lang.types.Boolean> observation = obsMap.get(obsVar).getObservation();
                 AgentInstance sender = this.inboundTransition.getProducer();
-                System.out.println(observation.toString());
-                System.out.println(sender.getLabel());
                 Store senderStore = this.parent.stores.get(sender);
                 try {
                     SendProcess sendProcess = (SendProcess) this.inboundTransition.getProducerTransition().getLabel();

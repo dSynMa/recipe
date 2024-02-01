@@ -65,10 +65,21 @@ public class ToNuXmv {
                                                                             Map<String, Expression> message,
                                                                             TypedValue sender,
                                                                             Expression channel) throws Exception {
+        return specialiseObservationToSendTransition(cvs, obs, sendGuard, message, sender, channel, Condition.getFalse());
+    }
+
+    public static Expression<Boolean> specialiseObservationToSendTransition(Map<String, Type> cvs,
+                                                                            Expression<Boolean> obs,
+                                                                            Expression<Boolean> sendGuard,
+                                                                            Map<String, Expression> message,
+                                                                            TypedValue sender,
+                                                                            Expression channel,
+                                                                            TypedValue<Boolean> p2p) throws Exception {
         //handle message and sender variables
         Expression<Boolean> observation = obs.relabel((v) -> message.containsKey(v.getName()) ? message.get(v.getName()) : v)
                                                 .relabel((v) -> v.getName().equals("sender") ? sender : v)
-                                                .relabel((v) -> v.getName().equals(Config.channelLabel) ? channel : v);
+                                                .relabel((v) -> v.getName().equals(Config.channelLabel) ? channel : v)
+                                                .relabel((v) -> v.getName().equals("p2p") ? p2p : v);
         observation = observation.simplify();
         return handleCVsInObservation(cvs, observation, sendGuard).simplify();
     }
@@ -857,12 +868,29 @@ public class ToNuXmv {
                                 : v.sameTypeWithName(sendingAgentName + "-" + v);
                         }).simplify();
 
+                        //Dealing with LTOL observations
+                        for(Map.Entry<String, Observation> entry : observations.entrySet()){
+                            Observation obs = entry.getValue();
+                            String var = entry.getKey();
+
+                            Expression<Boolean> observationCondition = specialiseObservationToSendTransition(
+                                    commVariableReferences(system.getCommunicationVariables()),
+                                    obs.getObservation(),
+                                    supplyGuardExpr,
+                                    relabelledMessage,
+                                    sendingAgentNameValue,
+                                    Condition.getFalse(),
+                                    Condition.getTrue());
+
+                            supplyEffects.add("next(" + var + ") = (" + observationCondition + ")");
+                        }
+
+
                         //Now we will iterate over all other agents, and for every get transition,
                         // we create predicates for when the above send transition can trigger the receive transition.
                         // List<String> agentReceivePreds = new ArrayList<>();
                         // List<String> agentReceiveProgressConds = new ArrayList<>();
 
-                        
                         for (int j = 0; j < agentInstances.size(); j++) {
                             if (i == j) continue;
                             AgentInstance getterInstance = agentInstances.get(j);

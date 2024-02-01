@@ -35,6 +35,7 @@ public class Observation {
         cvAndMsg.setAll(messageVars);
         cvAndMsg.set(Config.channelLabel, Enum.getEnum(Config.channelLabel));
         cvAndMsg.set("sender", Config.getAgentType());
+        cvAndMsg.set("p2p", Boolean.getType());
         cvAndMsg.setAll(agentParameters);
         cvAndMsg.addPredicate("exists");
         cvAndMsg.addPredicate("forall");
