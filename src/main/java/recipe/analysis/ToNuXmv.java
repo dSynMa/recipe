@@ -305,6 +305,10 @@ public class ToNuXmv {
             noObservations += " & next(" + entry.getKey() + ") = FALSE";
         }
 
+        for(String obs : observations.keySet()){
+            init += "\t& " + obs + " = FALSE\n";
+        }
+
         List<AgentInstance> agentInstances = system.getAgentInstances();
         Map<String, List<String>> agentSendPreds = new HashMap<>();
         Map<String, List<String>> agentSendProgressConds = new HashMap<>();
@@ -419,11 +423,6 @@ public class ToNuXmv {
 
             init += "\t& " + sendingAgent.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
             init += "\t& " + sendingAgentInstance.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
-
-            for(String obs : observations.keySet()){
-                init += "\t& " + obs + " = FALSE\n";
-            }
-            ///////////////
 
 
             //For each state of the sending agents we are going to iterate over all of its possible send transitions
