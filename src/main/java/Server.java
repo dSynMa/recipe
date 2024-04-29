@@ -42,6 +42,8 @@ public class Server {
     Map<String, String> latestDots = new HashMap<>();
     Map<String, String> latestDotsInterpreter = new ConcurrentHashMap<>();
 
+    List<LTOL> specsToVerify;
+
     MCConfig mcConfig;
 
     private static Logger logger = Logger.getLogger(Server.class.getName());
@@ -137,12 +139,14 @@ public class Server {
 
     private class MCWorker implements Callable<JSONObject> {
         private int i;
+        private LTOL spec;
 
-        public MCWorker(int i) {
+        public MCWorker(int i, LTOL spec) {
             this.i = i;
+            this.spec = spec;
         }
         public JSONObject call() throws Exception {
-            return doModelCheck(i);
+            return doModelCheck(i, spec);
         }
     }
 
@@ -266,7 +270,6 @@ public class Server {
         public MCType getType() { return type; }
         public int getBound() { return bound; }
         public boolean isBounded() { return bound > -1; }
-        // public MCConfig() { this.type = MCType.BDD; this.bound = -1; }
         public MCConfig(MCType type, int bound) { this.type = type; this.bound = bound; }
 
         public static MCConfig ofRequest(Request req) {
@@ -293,18 +296,11 @@ public class Server {
     }
 
 
-    private JSONObject doModelCheck(int i) {
+    private JSONObject doModelCheck(int i, LTOL spec) {
         JSONObject resultJSON = new JSONObject();
         Pair<Boolean, String> result;
         try {
-            // Convert i-th formula
             String unparsedSpec = system.getUnparsedSpecs().get(i).trim();
-            List<LTOL> singleton = system.getSpecs().subList(i, i+1);
-
-            Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(singleton);
-            List<LTOL> specs = toLtl.getLeft();
-            String spec = specs.get(0).toString();
-
             String info = String.format("[%d]  %s, %s", i, unparsedSpec, mcConfig.type);
             logger.info(info);
             switch (mcConfig.getType()) {
@@ -312,15 +308,15 @@ public class Server {
                     NuXmvInteraction nuxmv = new NuXmvInteraction(system);
                     nuxmv.initialise(true);
                     nuxmv.initialise(mcConfig.getType() == MCType.BMC);
-                    result = nuxmv.modelCheck(spec, mcConfig.isBounded(), mcConfig.getBound());
+                    result = nuxmv.modelCheck(spec.toString(), mcConfig.isBounded(), mcConfig.getBound());
                     // Stop NuXmv
                     nuxmv.stopNuXmvThread();
                     break;
                 case BMC:
-                    result = nuXmvBatch.modelCheckBmc(spec, mcConfig.isBounded(), mcConfig.getBound());
+                    result = nuXmvBatch.modelCheckBmc(spec.toString(), mcConfig.isBounded(), mcConfig.getBound());
                     break;
                 default:
-                    result = nuXmvBatch.modelCheckIc3(spec, mcConfig.isBounded(), mcConfig.getBound());
+                    result = nuXmvBatch.modelCheckIc3(spec.toString(), mcConfig.isBounded(), mcConfig.getBound());
                     break;
             }
 
@@ -354,8 +350,7 @@ public class Server {
         String info = "";
         try {
             int id = Integer.valueOf(idString);
-            // MCConfig config = MCConfig.ofRequest(req);
-            Future<JSONObject> future = this.service.submit(new MCWorker(id));
+            Future<JSONObject> future = this.service.submit(new MCWorker(id, specsToVerify.get(id)));
             result = future.get();
             info = String.format("[%s] -- DONE", idString);
         } catch (Exception e) {
@@ -391,6 +386,10 @@ public class Server {
                 JSONObject jsonObject = new JSONObject();
                 JSONArray array = new JSONArray();
                 mcConfig = MCConfig.ofRequest(req);
+
+                specsToVerify = new ArrayList<>(system.getUnparsedSpecs().size());
+                Pair<List<LTOL>, Map<String, Observation>> specsAndObs = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
+                specsToVerify = specsAndObs.getLeft();
 
                 for(int i = 0; i < system.getUnparsedSpecs().size(); i++) {
                     JSONObject jo = new JSONObject();
