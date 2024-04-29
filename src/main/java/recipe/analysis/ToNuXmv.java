@@ -1066,14 +1066,33 @@ public class ToNuXmv {
                                         }
                                         String lbl = splyLbl + "-" + getLbl;
 
+                                        String supplyGuardStr = supplyGuardExprHere.toString();
+                                        String getterGuardStr = getterGuardExprHere.toString();
+
+                                        if (supplyGuardExprHere instanceof NamedLocation) {
+                                            // In the case SUPPLY@SELF, then a GET can only succeed if it refers to the name of the supplier
+                                            if (((NamedLocation) supplyGuardExprHere).isSelf()) {
+                                                supplyGuardStr = getterGuardExprHere instanceof NamedLocation
+                                                    ? sendingAgentName + " = " + getterGuardExprHere.toString()
+                                                    : "FALSE";
+                                            }
+                                            else {
+                                                supplyGuardStr = getterName + " = " + supplyGuardExprHere.toString();
+                                            }
+                                        }
+
+                                        if (getterGuardExprHere instanceof NamedLocation) {
+                                            getterGuardStr = sendingAgentName + " = " + getterGuardExprHere.toString();
+                                        }
+
                                         define += String.format(
                                             "\t%s := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s) \n\t\t& (%s);\n",
                                             lbl,
                                             String.join(" & ", supplyTriggeredIf),
-                                            (supplyGuardExprHere instanceof NamedLocation) ? "TRUE" : supplyGuardExprHere.toString(),
+                                            supplyGuardStr,
                                             String.join(" & ", supplyEffects),
                                             String.join(" & ", getTriggeredIf),
-                                            (getterGuardExprHere instanceof NamedLocation) ? "TRUE" : getterGuardExprHere.toString(),
+                                            getterGuardStr,
                                             String.join(" & ", getEffects));
                                         getSupplyTrans.add(lbl);
                                         
@@ -1081,10 +1100,10 @@ public class ToNuXmv {
                                             "\t%s-progress := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s);\n",
                                             lbl,
                                             String.join(" & ", supplyTriggeredIf),
-                                            (supplyGuardExprHere instanceof NamedLocation) ? "TRUE" : supplyGuardExprHere.toString(),
+                                            supplyGuardStr,
                                             String.join(" & ", getTriggeredIf),
-                                            (getterGuardExprHere instanceof NamedLocation) ? "TRUE" : getterGuardExprHere.toString());
-                                        progress.add(String.format("%s-progress", lbl));
+                                            getterGuardStr,
+                                        progress.add(String.format("%s-progress", lbl)));
                                         
                                     } // getter transition loop
                             } //getter state loop
