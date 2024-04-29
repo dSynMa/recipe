@@ -260,7 +260,10 @@ public class System{
                                 }
 
                                 for(Map.Entry<String, List<AgentInstance>> entry : agentsToInstances.entrySet()){
-                                    Enum agentType = new Enum(entry.getKey(), entry.getValue().stream().map(AgentInstance::toString).toList());
+                                    List<String> instances = new LinkedList<String>(entry.getValue().stream().map(AgentInstance::toString).toList());
+                                    instances.add("no-agent");
+                                    Enum agentType = new Enum(entry.getKey(), instances);
+                                    
                                     Config.addAgentTypeName(entry.getKey(), entry.getValue().get(0).getAgent());
 
                                     if(entry.getValue().size() > 0) {

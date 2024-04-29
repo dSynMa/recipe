@@ -59,13 +59,23 @@ import recipe.lang.utils.exceptions.TypeCreationException;
 
 public class ToNuXmv {
 
-    public static Expression<Boolean> specialiseObservationToSendTransition(Map<String, Type> cvs,
-                                                                            Expression<Boolean> obs,
-                                                                            Expression<Boolean> sendGuard,
-                                                                            Map<String, Expression> message,
-                                                                            TypedValue sender,
-                                                                            Expression channel) throws Exception {
-        return specialiseObservationToSendTransition(cvs, obs, sendGuard, message, sender, channel, Condition.getFalse());
+    private static Expression sendRename(TypedVariable v, TypedValue sender, Expression channel, TypedValue noAgent) {
+        String vName = v.getName();
+        
+        if (vName.equals("sender") || vName.equals("producer")) { return sender; }
+        if (vName.equals("supplier") || vName.equals("getter")) { return noAgent; }
+        if (vName.equals(Config.channelLabel)) { return channel; }
+        if (vName.equals(Config.p2pLabel)) { return Condition.getFalse(); }
+        return v;
+    }
+    private static Expression supplyRename(TypedVariable v, TypedValue supplier, TypedValue getter, TypedValue noAgent) {
+        String vName = v.getName();
+        if (vName.equals("supplier") || vName.equals("producer")) { return supplier; }
+        if (vName.equals("getter")) { return getter; }
+        if (vName.equals("sender")) { return noAgent; }
+        if (vName.equals(Config.channelLabel)) { return Condition.getFalse(); }
+        if (vName.equals(Config.p2pLabel)) { return Condition.getTrue(); }
+        return v;
     }
 
     public static Expression<Boolean> specialiseObservationToSendTransition(Map<String, Type> cvs,
@@ -73,13 +83,32 @@ public class ToNuXmv {
                                                                             Expression<Boolean> sendGuard,
                                                                             Map<String, Expression> message,
                                                                             TypedValue sender,
-                                                                            Expression channel,
-                                                                            TypedValue<Boolean> p2p) throws Exception {
-        //handle message and sender variables
-        Expression<Boolean> observation = obs.relabel((v) -> message.containsKey(v.getName()) ? message.get(v.getName()) : v)
-                                                .relabel((v) -> v.getName().equals("sender") ? sender : v)
-                                                .relabel((v) -> v.getName().equals(Config.channelLabel) ? channel : v)
-                                                .relabel((v) -> v.getName().equals("p2p") ? p2p : v);
+                                                                            TypedValue noAgent,
+                                                                            Expression channel) throws Exception 
+    {
+        Expression<Boolean> o = obs.relabel((v) -> sendRename(v, sender, channel, noAgent) );
+        return specialiseObservationToTransition(cvs, o, sendGuard, message);
+    }
+
+    public static Expression<Boolean> specialiseObservationToSupplyTransition(Map<String, Type> cvs,
+                                                                              Expression<Boolean> obs,
+                                                                              Expression<Boolean> supplyGuard,
+                                                                              Map<String, Expression> message,
+                                                                              TypedValue supplier,
+                                                                              TypedValue getter,
+                                                                              TypedValue noAgent) throws Exception
+    {
+        Expression<Boolean> o = obs.relabel((v) -> supplyRename(v, supplier, getter, noAgent));
+        return specialiseObservationToTransition(cvs, o, supplyGuard, message);
+    }
+
+
+    public static Expression<Boolean> specialiseObservationToTransition(Map<String, Type> cvs,
+                                                                            Expression<Boolean> obs,
+                                                                            Expression<Boolean> sendGuard,
+                                                                            Map<String, Expression> message) throws Exception {
+        //handle message variables
+        Expression<Boolean> observation = obs.relabel((v) -> message.containsKey(v.getName()) ? message.get(v.getName()) : v);
         observation = observation.simplify();
         return handleCVsInObservation(cvs, observation, sendGuard).simplify();
     }
@@ -319,6 +348,7 @@ public class ToNuXmv {
         List<AgentInstance> agentInstances = system.getAgentInstances();
         Map<String, List<String>> agentSendPreds = new HashMap<>();
         Map<String, List<String>> agentSendProgressConds = new HashMap<>();
+        TypedValue noAgent = new TypedValue(Config.getAgentType(), "no-agent");
 
         Set<String> sendProcessNames = new HashSet<>();
         Set<String> receiveProcessNames = new HashSet<>();
@@ -512,6 +542,7 @@ public class ToNuXmv {
                                     sendGuardExpr,
                                     relabelledMessage,
                                     sendingAgentNameValue,
+                                    noAgent,
                                     sendingOnThisChannelVarOrVal);
 
                             sendEffects.add("next(" + var + ") = (" + observationCondition + ")");
@@ -868,24 +899,6 @@ public class ToNuXmv {
                                 : v.sameTypeWithName(sendingAgentName + "-" + v);
                         }).simplify();
 
-                        //Dealing with LTOL observations
-                        for(Map.Entry<String, Observation> entry : observations.entrySet()){
-                            Observation obs = entry.getValue();
-                            String var = entry.getKey();
-
-                            Expression<Boolean> observationCondition = specialiseObservationToSendTransition(
-                                    commVariableReferences(system.getCommunicationVariables()),
-                                    obs.getObservation(),
-                                    supplyGuardExpr,
-                                    relabelledMessage,
-                                    sendingAgentNameValue,
-                                    Condition.getFalse(),
-                                    Condition.getTrue());
-
-                            supplyEffects.add("next(" + var + ") = (" + observationCondition + ")");
-                        }
-
-
                         //Now we will iterate over all other agents, and for every get transition,
                         // we create predicates for when the above send transition can trigger the receive transition.
                         // List<String> agentReceivePreds = new ArrayList<>();
@@ -896,6 +909,7 @@ public class ToNuXmv {
                             AgentInstance getterInstance = agentInstances.get(j);
                             Agent getterAgent = getterInstance.getAgent();
                             String getterName = getterInstance.getLabel();
+                            TypedValue getterNameValue = new TypedValue(Config.getAgentType(), getterName);
 
                             //relabelling supplyGuard
                             // remove @s
@@ -982,6 +996,24 @@ public class ToNuXmv {
                                             }
                                             return null;
                                         }).simplify();
+
+                                        //Dealing with LTOL observations
+                                        for(Map.Entry<String, Observation> entry : observations.entrySet()){
+                                            Observation obs = entry.getValue();
+                                            String var = entry.getKey();
+
+                                            Expression<Boolean> observationCondition = specialiseObservationToSupplyTransition(
+                                                    commVariableReferences(system.getCommunicationVariables()),
+                                                    obs.getObservation(),
+                                                    supplyGuardExpr,
+                                                    relabelledMessage,  
+                                                    sendingAgentNameValue,
+                                                    getterNameValue,
+                                                    noAgent);
+
+                                            getEffects.add("next(" + var + ") = (" + observationCondition + ")");
+                                        }
+
 
 
                                         //for each variable update, if the updates uses a message variable that is

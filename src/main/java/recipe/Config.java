@@ -15,6 +15,7 @@ import java.util.Map;
 
 public class Config {
     public static final String channelLabel = "channel";
+    public static final String p2pLabel = "p2p";
 
     public static void reset(){
         agentEnumTypeNames.clear();
