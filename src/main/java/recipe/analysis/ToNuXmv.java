@@ -331,7 +331,7 @@ public class ToNuXmv {
         String broadcastChannel = "broadcast";
 
         String define = "DEFINE\n";
-        String init = "INIT\n";
+        String init = "INIT\n    TRUE\n";
         String trans = "";
 
         Pair<List<LTOL>, Map<String, Observation>> specsAndObs = ltolToLTLAndObservationVariables(system.getSpecs());
