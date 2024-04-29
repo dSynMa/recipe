@@ -62,7 +62,7 @@ public class ToNuXmv {
     private static Expression sendRename(TypedVariable v, TypedValue sender, Expression channel, TypedValue noAgent) {
         String vName = v.getName();
         
-        if (vName.equals("sender") || vName.equals("producer")) { return sender; }
+        if (vName.equals("sender") || vName.equals("producer") || vName.equals("initiator")) { return sender; }
         if (vName.equals("supplier") || vName.equals("getter")) { return noAgent; }
         if (vName.equals(Config.channelLabel)) { return channel; }
         if (vName.equals(Config.p2pLabel)) { return Condition.getFalse(); }
@@ -71,7 +71,7 @@ public class ToNuXmv {
     private static Expression supplyRename(TypedVariable v, TypedValue supplier, TypedValue getter, TypedValue noAgent) {
         String vName = v.getName();
         if (vName.equals("supplier") || vName.equals("producer")) { return supplier; }
-        if (vName.equals("getter")) { return getter; }
+        if (vName.equals("getter") || vName.equals("initiator")) { return getter; }
         if (vName.equals("sender")) { return noAgent; }
         if (vName.equals(Config.channelLabel)) { return Condition.getFalse(); }
         if (vName.equals(Config.p2pLabel)) { return Condition.getTrue(); }
