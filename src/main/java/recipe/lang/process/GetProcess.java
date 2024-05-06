@@ -14,9 +14,9 @@ import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.location.Location;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.NamedLocation;
 import recipe.lang.types.Boolean;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
@@ -25,21 +25,21 @@ import static recipe.Config.commVariableReferences;
 
 public class GetProcess extends BasicProcess {
 
-    public Expression<Boolean> messageGuard;
+    private Location location;
 
-    public Expression<Boolean> getMessageGuard() {
-        return messageGuard;
+    public Location getLocation() {
+        return location;
     }
 
-    public GetProcess(String label, Expression<Boolean> psi, Expression<Boolean> messageGuard, Map<String, Expression> update) {
+    public GetProcess(String label, Expression<Boolean> psi, Location location, Map<String, Expression> update) {
         this.label = label;
         this.psi = psi;
-        this.messageGuard = messageGuard;
+        this.location = location;
         this.update = update;
     }
 
     public String toString() {
-        return "<" + psi.toString() + ">GET@(" + messageGuard + ")[" + update + "]";
+        return "<" + psi.toString() + ">GET@(" + location.toString() + ")[" + update + "]";
     }
 
     @Override
@@ -67,8 +67,7 @@ public class GetProcess extends BasicProcess {
                 TypingContext.union(localContext, commVariableReferences(communicationContext));
         Parser localAssignment = Parsing.assignmentListParser(localContext, localAndChannelAndMessageContext);
         Parser localGuard = Condition.typeParser(localAndChannelAndMessageContext);
-        Parser messageGuard = Condition.typeParser(localAndChannelAndCommunicationContext);
-        Parser namedLocationParser = NamedLocation.parser();
+        Parser locationParser = Location.parser(localAndChannelAndCommunicationContext);
 
         Parser delimetedCondition =
                 (CharacterParser.of('<').trim())
@@ -83,17 +82,17 @@ public class GetProcess extends BasicProcess {
                         .seq(delimetedCondition.trim())
                         // .seq((((Enum.getEnum(Config.channelLabel).valueParser()).seq(StringParser.of("?").trim())).or(localChannelVars.variableParser().seq(StringParser.of("?").trim()))))
                         .seq((StringParser.of("GET@").trim()))
-                        .seq(messageGuard.trim().or(namedLocationParser))
+                        .seq(locationParser)
                         .seq((CharacterParser.of('[').trim()))
                         .seq(localAssignment.optional(new HashMap<String, Expression>()))
                         .seq((CharacterParser.of(']').trim()))
                         .map((List<Object> values) -> {
                             String label = (String) values.get(0);
                             Expression<Boolean> psi = (Expression<Boolean>) values.get(1);
-                            Expression<Boolean> locationPredicate = (Expression<Boolean>) values.get(3);
+                            Location loc = (Location) values.get(3);
                             Map<String, Expression> update = (Map<String, Expression>) values.get(5);
                             if(label != null) label = label.replace(":", "").trim();
-                            GetProcess action = new GetProcess(label, psi, locationPredicate, update);
+                            GetProcess action = new GetProcess(label, psi, loc, update);
                             return action;
                         });
         return parser;
@@ -101,6 +100,6 @@ public class GetProcess extends BasicProcess {
 
     @Override
     public String prettyPrintLabel() {
-        return ((label == null || label == "") ? getMessageGuard().toString() : label);// + " [get]";
+        return ((label == null || label == "") ? getLocation().toString() : label);// + " [get]";
     }
 }

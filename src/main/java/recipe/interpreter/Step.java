@@ -16,8 +16,11 @@ import recipe.lang.agents.ProcessTransition;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.location.Location;
+import recipe.lang.expressions.location.NamedLocation;
+import recipe.lang.expressions.location.PredicateLocation;
+import recipe.lang.expressions.location.SelfLocation;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.NamedLocation;
 import recipe.lang.ltol.Observation;
 import recipe.lang.process.BasicProcess;
 import recipe.lang.process.BasicProcessWithMessage;
@@ -508,26 +511,19 @@ public class Step {
                             boolean getPsiSat = Condition.getTrue().equals(getPsi.valueIn(instStore));
                             if (!getPsiSat) continue;
                             // Check if predicates match
-                            Expression<recipe.lang.types.Boolean> splyGuard = splyProc.getMessageGuard();
-                            Expression<recipe.lang.types.Boolean> getGuard = getProc.getMessageGuard();
+                            Location splyLoc = splyProc.getLocation();
+                            Location getLoc = getProc.getLocation();
 
-                            if (splyGuard instanceof NamedLocation) {
-                                boolean isSelf = ((NamedLocation) splyGuard).isSelf();
-                                // SPLY@SELF = Only getters that know the supplier's name will be served
-                                if (isSelf && !getGuard.toString().equals(supplier.getLabel())) continue;
-                                // SPLY@foo = Only getter with name foo will be served
-                                if (!isSelf && !splyGuard.toString().equals(getter.getLabel())) continue;
+                            // If SUPPLY@SELF and GET@predicate, skip
+                            if (splyLoc instanceof SelfLocation && !(getLoc instanceof NamedLocation)) continue;
+                            // If getter is not getting at the supplier's location, skip
+                            if (getLoc instanceof NamedLocation && !getLoc.matchName(supplier.getLabel())) continue;
+                            if (getLoc instanceof PredicateLocation) {
+                                Boolean check = Condition.getTrue().equals(getLoc.getPredicate().valueIn(supplierStore));
+                                if (!check) continue;
                             }
-                            if (getGuard instanceof NamedLocation) {
-                                boolean isSelf = ((NamedLocation) getGuard).isSelf();
-                                // GET@SELF = Only suppliers that know the getter's name will be chosen
-                                if (isSelf && !splyGuard.toString().equals(getter.getLabel())) continue;
-                                // GET@foo = Only supplier with name foo will be chosen
-                                if (!isSelf && !getGuard.toString().equals(supplier.getLabel())) continue;
-                            }
-                            if (!(splyGuard instanceof NamedLocation) && !Condition.getTrue().equals(splyGuard.valueIn(getterStore))) continue;
-                            if (!(getGuard instanceof NamedLocation) && !Condition.getTrue().equals(getGuard.valueIn(supplierStore))) continue;
 
+                            // If we are here, we have a rendez-vous
                             Transition tr = new SupplyGetTransition();
                             tr.setProducer(supplier, sply);
                             tr.pushConsumer(getter, get);

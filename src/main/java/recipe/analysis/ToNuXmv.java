@@ -29,12 +29,16 @@ import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.Predicate;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.location.AnyLocation;
+import recipe.lang.expressions.location.Location;
+import recipe.lang.expressions.location.NamedLocation;
+import recipe.lang.expressions.location.PredicateLocation;
+import recipe.lang.expressions.location.SelfLocation;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.GuardReference;
 import recipe.lang.expressions.predicate.Implies;
 import recipe.lang.expressions.predicate.IsEqualTo;
-import recipe.lang.expressions.predicate.NamedLocation;
 import recipe.lang.expressions.predicate.Not;
 import recipe.lang.expressions.predicate.Or;
 import recipe.lang.ltol.LTOL;
@@ -92,14 +96,14 @@ public class ToNuXmv {
 
     public static Expression<Boolean> specialiseObservationToSupplyTransition(Map<String, Type> cvs,
                                                                               Expression<Boolean> obs,
-                                                                              Expression<Boolean> supplyGuard,
+                                                                              Expression<Boolean> getGuard,
                                                                               Map<String, Expression> message,
                                                                               TypedValue supplier,
                                                                               TypedValue getter,
                                                                               TypedValue noAgent) throws Exception
     {
         Expression<Boolean> o = obs.relabel((v) -> supplyRename(v, supplier, getter, noAgent));
-        return specialiseObservationToTransition(cvs, o, supplyGuard, message);
+        return specialiseObservationToTransition(cvs, o, getGuard, message);
     }
 
 
@@ -890,46 +894,22 @@ public class ToNuXmv {
                         for (Map.Entry<String, Expression> entry : supplyProcess.getMessage().entrySet()) {
                             relabelledMessage.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + ((TypedVariable) v).getName())).simplify());
                         }
-                        //relabelling supplier agent variables in guard
-                        Expression<Boolean> supplyGuardExpr = supplyProcess.getMessageGuard().relabel(v -> {
-                            //relabelling local variables to those of the sending agents
-                            return isCvRef(system, v.getName())
-                                ? v
-                                : v.sameTypeWithName(sendingAgentName + "-" + v);
-                        }).simplify();
+                        Location supplyLoc = supplyProcess.getLocation();
+                        if (!(supplyLoc instanceof SelfLocation || supplyLoc instanceof AnyLocation)) {
+                            throw new Exception(
+                                "SUPPLY@" + supplyLoc.toString() + " not allowed " +
+                                "(use either SUPPLY@SELF or SUPPLY@ANY).");
+                        }
 
                         //Now we will iterate over all other agents, and for every get transition,
-                        // we create predicates for when the above send transition can trigger the receive transition.
-                        // List<String> agentReceivePreds = new ArrayList<>();
-                        // List<String> agentReceiveProgressConds = new ArrayList<>();
-
+                        // we create predicates for when the above supply transition can trigger the get transition.
+                        
                         for (int j = 0; j < agentInstances.size(); j++) {
                             if (i == j) continue;
                             AgentInstance getterInstance = agentInstances.get(j);
                             Agent getterAgent = getterInstance.getAgent();
                             String getterName = getterInstance.getLabel();
                             TypedValue getterNameValue = new TypedValue(Config.getAgentType(), getterName);
-
-                            //relabelling supplyGuard
-                            // remove @s
-                            Expression<Boolean> supplyGuardExprHere = supplyGuardExpr.relabel(v -> {
-                                return v.getName().startsWith("@") ? ((TypedVariable) v).sameTypeWithName(v.getName().substring(1)) : v;
-                            });
-
-                            // rename references to cvs to receiving agents cv
-                            supplyGuardExprHere = supplyGuardExprHere.relabel(v -> {
-                                //if v is just the special variable we use in our syntax to refer to the current
-                                // channel being sent on, then replace it with the sending transitions channel reference
-                                try {
-                                    //relabelling cvs to those of the receiving agents
-                                    return isCvRef(system, v.getName())
-                                            ? getterAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(getterName + "-" + vv))
-                                            : v;
-                                } catch (RelabellingTypeException | MismatchingTypeException e) {
-                                    e.printStackTrace();
-                                }
-                                return null;
-                            }).simplify();
 
                             for (State getterState : getterAgent.getStates()) {
                                 Set<ProcessTransition> getTransitions = agentStateGetTransitionMap.get(getterAgent).get(getterState);
@@ -962,14 +942,15 @@ public class ToNuXmv {
 
 
                                         // Handle message guard
-                                        Expression<Boolean> getterGuardExpr = getProcess.getMessageGuard();
-                                        if (getterGuardExpr instanceof NamedLocation) {
-                                            NamedLocation getterLocation = (NamedLocation) getterGuardExpr;
-                                            if (getterLocation.isSelf()) throw new Exception("GET@SELF is not allowed.");
-                                            else if (!getterLocation.toString().equals(sendingAgentName)) continue getterTrLoop;
-                                        }
+                                        Location getterLoc = getProcess.getLocation();
 
-                                        getterGuardExpr = getterGuardExpr.relabel(v -> {
+                                        // Static checks
+                                        if (supplyLoc instanceof SelfLocation && !(getterLoc instanceof NamedLocation)) continue getterTrLoop;                                        // If getter is getting from the wrong location, skip
+                                        if (getterLoc instanceof NamedLocation && !getterLoc.matchName(sendingAgentName)) continue getterTrLoop;
+
+                                        Expression<Boolean> getterPredicate = getterLoc.getPredicate();
+                                        
+                                        getterPredicate = getterPredicate.relabel(v -> {
                                             //relabelling local variables to those of the sending agents
                                             return isCvRef(system, v.getName())
                                                 ? v
@@ -977,12 +958,12 @@ public class ToNuXmv {
                                         }).simplify();
                                         //relabelling getterGuard
                                         // remove @s
-                                        Expression<Boolean> getterGuardExprHere = getterGuardExpr.relabel(v -> {
+                                        getterPredicate = getterPredicate.relabel(v -> {
                                             return v.getName().startsWith("@") ? ((TypedVariable) v).sameTypeWithName(v.getName().substring(1)) : v;
                                         });
 
                                         // rename references to cvs to receiving agents cv
-                                        getterGuardExprHere = getterGuardExprHere.relabel(v -> {
+                                        getterPredicate = getterPredicate.relabel(v -> {
                                             //if v is just the special variable we use in our syntax to refer to the current
                                             // channel being sent on, then replace it with the sending transitions channel reference
                                             try {
@@ -1004,7 +985,7 @@ public class ToNuXmv {
                                             Expression<Boolean> observationCondition = specialiseObservationToSupplyTransition(
                                                     commVariableReferences(system.getCommunicationVariables()),
                                                     obs.getObservation(),
-                                                    supplyGuardExpr,
+                                                    getterPredicate,
                                                     relabelledMessage,  
                                                     sendingAgentNameValue,
                                                     getterNameValue,
@@ -1012,8 +993,6 @@ public class ToNuXmv {
 
                                             getEffects.add("next(" + var + ") = (" + observationCondition + ")");
                                         }
-
-
 
                                         //for each variable update, if the updates uses a message variable that is
                                         // not set by the send transition, then exit
@@ -1050,8 +1029,7 @@ public class ToNuXmv {
                                                 getEffects.add(String.format("keep-all-%s", otherName));
                                         }
                                         // TODO add "falsify-" defines to allow mentioning labelled get/supply actions in specs
-                                        // TODO deal with LTOL observations
-
+ 
                                         String splyLbl = sendingAgentName + "-";
                                         String getLbl = getterName + "-";
                                         if (supplyProcess.getLabel() != null && !supplyProcess.getLabel().equals("")) {
@@ -1066,30 +1044,13 @@ public class ToNuXmv {
                                         }
                                         String lbl = splyLbl + "-" + getLbl;
 
-                                        String supplyGuardStr = supplyGuardExprHere.toString();
-                                        String getterGuardStr = getterGuardExprHere.toString();
-
-                                        if (supplyGuardExprHere instanceof NamedLocation) {
-                                            // In the case SUPPLY@SELF, then a GET can only succeed if it refers to the name of the supplier
-                                            if (((NamedLocation) supplyGuardExprHere).isSelf()) {
-                                                supplyGuardStr = getterGuardExprHere instanceof NamedLocation
-                                                    ? sendingAgentName + " = " + getterGuardExprHere.toString()
-                                                    : "FALSE";
-                                            }
-                                            else {
-                                                supplyGuardStr = getterName + " = " + supplyGuardExprHere.toString();
-                                            }
-                                        }
-
-                                        if (getterGuardExprHere instanceof NamedLocation) {
-                                            getterGuardStr = sendingAgentName + " = " + getterGuardExprHere.toString();
-                                        }
+                                        // String supplyGuardStr = supplyGuardExprHere.toString();
+                                        String getterGuardStr = getterPredicate.toString();
 
                                         define += String.format(
-                                            "\t%s := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s) \n\t\t& (%s);\n",
+                                            "\t%s := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s) \n\t\t& (%s);\n",
                                             lbl,
                                             String.join(" & ", supplyTriggeredIf),
-                                            supplyGuardStr,
                                             String.join(" & ", supplyEffects),
                                             String.join(" & ", getTriggeredIf),
                                             getterGuardStr,
@@ -1097,10 +1058,9 @@ public class ToNuXmv {
                                         getSupplyTrans.add(lbl);
                                         
                                         define += String.format(
-                                            "\t%s-progress := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s);\n",
+                                            "\t%s-progress := (%s)\n\t\t& (%s)\n\t\t& (%s);\n",
                                             lbl,
                                             String.join(" & ", supplyTriggeredIf),
-                                            supplyGuardStr,
                                             String.join(" & ", getTriggeredIf),
                                             getterGuardStr,
                                         progress.add(String.format("%s-progress", lbl)));

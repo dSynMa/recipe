@@ -8,9 +8,9 @@ import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.location.Location;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.NamedLocation;
 import recipe.lang.types.Boolean;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
@@ -21,22 +21,22 @@ import static recipe.Config.commVariableReferences;
 
 public class SupplyProcess extends BasicProcessWithMessage {
 
-    public Expression<Boolean> getMessageGuard() {
-        return messageGuard;
+    public Location getLocation() {
+        return location;
     }
 
-    public Expression<Boolean> messageGuard;
+    private Location location;
 
-    public SupplyProcess(String label, Expression<Boolean> psi, Expression<Boolean> messageGuard, Map<String, Expression> message, Map<String, Expression> update) {
+    public SupplyProcess(String label, Expression<Boolean> psi, Location location, Map<String, Expression> message, Map<String, Expression> update) {
         this.label = label;
         this.psi = psi;
-        this.messageGuard = messageGuard;
+        this.location = location;
         this.message = message;
         this.update = update;
     }
 
     public String toString() {
-        return "<" + psi.toString() + ">SUPPLY@(" + messageGuard + ")(" + message + ")[" + update + "]";
+        return "<" + psi.toString() + ">SUPPLY@(" + location.toString() + ")(" + message + ")[" + update + "]";
     }
 
     public Set<Transition> asTransitionSystem(State start, State end){
@@ -72,17 +72,15 @@ public class SupplyProcess extends BasicProcessWithMessage {
         TypingContext localAndChannelAndCommunicationContext =
                 TypingContext.union(localContext, commVariableReferences(communicationContext));
 
-        Parser messageGuard = Condition.typeParser(localAndChannelAndCommunicationContext);
-
         Parser messageAssignment = Parsing.assignmentListParser(messageContext, localAndChannelAndCommunicationContext);
         Parser localAssignment = Parsing.assignmentListParser(localContext, localContext);
-        Parser namedLocationParser = NamedLocation.parser();
+        Parser locationParser = Location.parser(localAndChannelAndCommunicationContext);
         
         Parser parser = ((CharacterParser.word().plus().trim()).flatten()
                         .seq(CharacterParser.of(':').trim()).flatten()).optional().flatten()
                         .seq(delimetedCondition.trim())
                         .seq(StringParser.of("SUPPLY@").trim())
-                        .seq(messageGuard.trim().or(namedLocationParser))
+                        .seq(locationParser)
                         .seq((CharacterParser.of('(').trim()))
                         .seq(messageAssignment)
                         .seq((CharacterParser.of(')').trim()))
@@ -92,12 +90,12 @@ public class SupplyProcess extends BasicProcessWithMessage {
                         .map((List<Object> values) -> {
                             String label = ((String) values.get(0));
                             Expression<Boolean> psi = (Expression<Boolean>) values.get(1);
-                            Expression channel = (Expression) values.get(3);
+                            Location loc = (Location) values.get(3);
                             Map<String, Expression> message = (Map<String, Expression>) values.get(5);
                             Map<String, Expression> update = (Map<String, Expression>) values.get(8);                    
                             
                             if(label != null) label = label.replace(":", "").trim();
-                            SupplyProcess action = new SupplyProcess(label, psi, channel, message, update);
+                            SupplyProcess action = new SupplyProcess(label, psi, loc, message, update);
                             return action;
                         });
 
@@ -106,6 +104,6 @@ public class SupplyProcess extends BasicProcessWithMessage {
     
     @Override
     public String prettyPrintLabel() {
-        return ((label == null || label == "") ? getMessageGuard().toString() : label);
+        return ((label == null || label == "") ? getLocation().toString() : label);
     }
 }
