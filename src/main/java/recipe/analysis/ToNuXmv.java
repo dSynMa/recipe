@@ -94,15 +94,33 @@ public class ToNuXmv {
         return specialiseObservationToTransition(cvs, o, sendGuard, message);
     }
 
+    private static Expression specializeSupplierCV(TypedVariable v, Agent supplierAgent, TypedValue supplier) {
+        if (!v.getName().startsWith("supplier-")) return v;
+        try {
+            TypedVariable vv = v.sameTypeWithName(v.getName().replaceFirst("supplier-", ""));
+            Expression exp = supplierAgent.getRelabel().get(vv);
+            String supplierName = supplier.getValue().toString();
+            return exp.relabel((x) -> ((TypedVariable) x).sameTypeWithName(supplierName.toString() + "-" + x));
+        } catch (Exception e) {
+            // WE TRIED
+            e.printStackTrace();
+            return v.sameTypeWithName(v.getName() + "-NOT-FOUND");
+        }
+    }
+
     public static Expression<Boolean> specialiseObservationToSupplyTransition(Map<String, Type> cvs,
                                                                               Expression<Boolean> obs,
                                                                               Expression<Boolean> getGuard,
                                                                               Map<String, Expression> message,
                                                                               TypedValue supplier,
                                                                               TypedValue getter,
-                                                                              TypedValue noAgent) throws Exception
+                                                                              TypedValue noAgent,
+                                                                              Agent supplierAgent) throws Exception
     {
-        Expression<Boolean> o = obs.relabel((v) -> supplyRename(v, supplier, getter, noAgent));
+        Expression<Boolean> o = quantToSupplier(cvs, obs);
+        java.lang.System.out.println(o);
+        o = o.relabel((v) -> specializeSupplierCV(v, supplierAgent, supplier));
+        o = o.relabel((v) -> supplyRename(v, supplier, getter, noAgent));
         return specialiseObservationToTransition(cvs, o, getGuard, message);
     }
 
@@ -112,7 +130,7 @@ public class ToNuXmv {
                                                                             Expression<Boolean> sendGuard,
                                                                             Map<String, Expression> message) throws Exception {
         //handle message variables
-        Expression<Boolean> observation = obs.relabel((v) -> message.containsKey(v.getName()) ? message.get(v.getName()) : v);
+        Expression<Boolean> observation = obs.relabel((v) -> message.getOrDefault(v.getName(), v));
         observation = observation.simplify();
         return handleCVsInObservation(cvs, observation, sendGuard).simplify();
     }
@@ -159,6 +177,35 @@ public class ToNuXmv {
         return conditions;
     }
 
+    /**  Statically transform exists(phi(cv)) and forall(phi(cv)) into phi(supplier-cv)
+    */
+    public static Expression<Boolean> quantToSupplier(Map<String, Type> cvs, Expression<Boolean> obs) throws RelabellingTypeException, MismatchingTypeException {
+        if (obs instanceof And) {
+            And obss = (And) obs;
+            return new And(quantToSupplier(cvs, obss.getLhs()), quantToSupplier(cvs, obss.getRhs()));
+        } else if (obs instanceof Or) {
+            Or obss = (Or) obs;
+            return new Or(quantToSupplier(cvs, obss.getLhs()), quantToSupplier(cvs, obss.getRhs()));
+        } else if (obs instanceof Not) {
+            Not obss = (Not) obs;
+            return new Not(quantToSupplier(cvs, obss.getArgument()));
+        } else if (obs instanceof Implies) {
+            Implies obss = (Implies) obs;
+            return new Implies(quantToSupplier(cvs, obss.getLhs()), quantToSupplier(cvs, obss.getRhs()));
+        } else if (obs instanceof IsEqualTo) {
+            IsEqualTo obss = (IsEqualTo) obs;
+            return new IsEqualTo(quantToSupplier(cvs, obss.getLhs()), quantToSupplier(cvs, obss.getRhs()));
+        } else if (obs instanceof Predicate) {
+            Predicate obss = (Predicate) obs;
+            Expression<Boolean> expr = obss.getInput();
+            return expr.relabel((v) -> cvs.containsKey("@"+v.getName()) ? v.sameTypeWithName("supplier-" + v.getName()) : v);
+        }
+
+        return obs;
+    }
+
+
+
     public static Expression<Boolean> handleCVsInObservation(Map<String, Type> cvs, Expression<Boolean> obs, Expression<Boolean> sendGuard) throws Exception {
         if(obs.getClass().equals(And.class)){
             And obss = (And) obs;
@@ -168,7 +215,7 @@ public class ToNuXmv {
             return new Or(handleCVsInObservation(cvs, obss.getLhs(), sendGuard), handleCVsInObservation(cvs, obss.getRhs(), sendGuard));
         } else if(obs.getClass().equals(Not.class)){
             Not obss = (Not) obs;
-            return new Not(handleCVsInObservation(cvs, obss, sendGuard));
+            return new Not(handleCVsInObservation(cvs, obss.getArgument(), sendGuard));
         } else if(obs.getClass().equals(Implies.class)){
             Implies obss = (Implies) obs;
             return new Implies(handleCVsInObservation(cvs, obss.getLhs(), sendGuard), handleCVsInObservation(cvs, obss.getRhs(), sendGuard));
@@ -989,7 +1036,8 @@ public class ToNuXmv {
                                                     relabelledMessage,  
                                                     sendingAgentNameValue,
                                                     getterNameValue,
-                                                    noAgent);
+                                                    noAgent,
+                                                    sendingAgent);
 
                                             getEffects.add("next(" + var + ") = (" + observationCondition + ")");
                                         }
@@ -1044,7 +1092,6 @@ public class ToNuXmv {
                                         }
                                         String lbl = splyLbl + "-" + getLbl;
 
-                                        // String supplyGuardStr = supplyGuardExprHere.toString();
                                         String getterGuardStr = getterPredicate.toString();
 
                                         define += String.format(

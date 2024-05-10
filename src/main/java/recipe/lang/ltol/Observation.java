@@ -7,10 +7,12 @@ import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.*;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
+import recipe.lang.types.Type;
 import recipe.lang.utils.TypingContext;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.utils.exceptions.RelabellingTypeException;
 
+import java.util.Map;
 import java.util.function.Function;
 
 public class Observation {
@@ -31,6 +33,12 @@ public class Observation {
 
     public static org.petitparser.parser.Parser parser(TypingContext commonVars, TypingContext messageVars, TypingContext agentParameters) throws Exception {
         TypingContext cvAndMsg = new TypingContext();
+        
+        // For p2p observations about the supplier's cvs
+        for(Map.Entry<String, Type> en : commonVars.getVarType().entrySet()) {
+            cvAndMsg.set("supplier-" + en.getKey(), en.getValue());
+        }
+        
         cvAndMsg.setAll(commonVars);
         cvAndMsg.setAll(messageVars);
         cvAndMsg.set(Config.channelLabel, Enum.getEnum(Config.channelLabel));
