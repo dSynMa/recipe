@@ -1,19 +1,31 @@
-channels: c
-enum rolevals {clnt, srv}
-enum msgvals {reserve, request, release, buy, connect, full}
-message-structure: MSG : msgvals
-communication-variables: cv : rolevals
+channels: none
+
+enum myEnum { foo, bar, baz }
+
+message-structure: MSG : bool
+communication-variables: c : myEnum
 
 agent Client
-    local: role : rolevals, counter : integer
-    init: role == clnt && counter == 0
-    relabel:
-        cv <- role
+    local: q : myEnum
+    init: TRUE
+    relabel: c <- q
     receive-guard: (channel == *)
 
     repeat: (
-            s: <TRUE> SUPPLY@TRUE(MSG := release)[counter := counter + 1]
+            splySelf: <TRUE> SUPPLY@SELF()[]
             +
-            g: <TRUE> GET@TRUE[]
+            getOne: <TRUE> GET@one[]
+            +
+            bcast: <TRUE> *! TRUE ()[]
             )
+
 system = Client(one,TRUE) | Client(two,TRUE) | Client(three,TRUE)
+
+
+SPEC G F <p2p> TRUE
+SPEC G F <exists(c=foo)> TRUE
+SPEC G F <supplier-c=foo> TRUE
+SPEC G F <getter == three> TRUE
+SPEC G F <initiator == three> TRUE
+SPEC G F <supplier == one> TRUE
+SPEC G F <producer == one> TRUE
