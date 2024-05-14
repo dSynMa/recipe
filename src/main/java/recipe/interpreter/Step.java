@@ -516,10 +516,13 @@ public class Step {
 
                             // If SUPPLY@SELF and GET@predicate, skip
                             if (splyLoc instanceof SelfLocation && !(getLoc instanceof NamedLocation)) continue;
-                            // If getter is not getting at the supplier's location, skip
-                            if (getLoc instanceof NamedLocation && !getLoc.matchName(supplier.getLabel())) continue;
+                            if (getLoc instanceof NamedLocation) {
+                                TypedValue supplierTV = new TypedValue<Type>(Config.getAgentType(), supplier.getLabel());
+                                Boolean check = Condition.getTrue().equals(getLoc.getPredicate(supplierTV).valueIn(getterStore));
+                                if (!check) continue;
+                            }
                             if (getLoc instanceof PredicateLocation) {
-                                Boolean check = Condition.getTrue().equals(getLoc.getPredicate().valueIn(supplierStore));
+                                Boolean check = Condition.getTrue().equals(getLoc.getPredicate(null).valueIn(supplierStore));
                                 if (!check) continue;
                             }
 

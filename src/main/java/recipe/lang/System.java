@@ -35,6 +35,7 @@ public class System{
     Map<String, Type> guardDefinitions;
     Set<Agent> agents;
     List<AgentInstance> agentsInstances;
+    List<String> agentInstanceLabels;
 
     public List<LTOL> getSpecs() {
         return specs;
@@ -74,7 +75,8 @@ public class System{
 
     public System(Map<String, Type> messageStructure, Map<String, Type> communicationVariables,
                   Map<String, Type> guardDefinitions, Set<Agent> agents,
-                  List<AgentInstance> agentsInstances, List<LTOL> specs) throws Exception {
+                  List<AgentInstance> agentsInstances, List<String> agentsInstanceLabels,
+                  List<LTOL> specs) throws Exception {
         if(!validate(messageStructure, communicationVariables, guardDefinitions, agents)){
             throw new Exception("Message and communication variables, and guard definition names need to be disjoint, " +
                     "and they also need to be disjoin with each agent's local variables.");
@@ -84,6 +86,7 @@ public class System{
         this.guardDefinitions = guardDefinitions;
         this.agents = agents;
         this.agentsInstances = agentsInstances;
+        this.agentInstanceLabels = agentsInstanceLabels;
         this.specs = specs;
     }
 
@@ -150,6 +153,15 @@ public class System{
                             }
                             return values;
                         }).or(FailureParser.withMessage("Error in channels definition.")))
+                        .seq(labelledParser("agent-names", channelValues())
+                            .mapWithSideEffects((List<String> values) -> {
+                                try {
+                                    Enum locationEnum = new Enum(Config.locationLabel, values);
+                                } catch (TypeCreationException e) {
+                                    e.printStackTrace();
+                                }
+                                return values;
+                        }))
                         .seq(Parsing.enumDefinitionParser().star().or(FailureParser.withMessage("Error in enum definitions.")))
                         .seq(labelledParser("message-structure", typedVariableList())
                                 .map((List<TypedVariable> values) -> {
@@ -213,14 +225,14 @@ public class System{
                              .delimitedBy((CharacterParser.of(';').or(CharacterParser.of('\n'))).trim())
                              .optional(new ArrayList<>()))
                         .map((List<Object> values) -> {
-                            // Set<String> channels = new HashSet<>((List<String>) values.get(0));
+                            List<String> agentInstanceLabels = (List<String>) values.get(1);
                             Map<String, Type> messageStructure = messageContext.get().getVarType();
                             Map<String, Type> communicationVariables = communicationContext.get().getVarType();
-                            Map<String, Type> guardDefinitions = (Map<String, Type>) values.get(4);
-                            List<AgentInstance> agentInstances = (List) values.get(6);
+                            Map<String, Type> guardDefinitions = (Map<String, Type>) values.get(5);
+                            List<AgentInstance> agentInstances = (List) values.get(7);
 
                             List<String> specsStrings = new ArrayList<>();
-                            for(Object obj : (List<Object>) values.get(7)){
+                            for(Object obj : (List<Object>) values.get(8)){
                                 if(obj.getClass().equals(String.class)){
                                     String[] spec = ((String) obj).split("(?=SPEC)");
                                     specsStrings.addAll(List.of(spec));
@@ -232,7 +244,7 @@ public class System{
 
                             System system = null;
                             try {
-                                system = new System(messageStructure, communicationVariables, guardDefinitions, agents.get(), agentInstances, new ArrayList<>());
+                                system = new System(messageStructure, communicationVariables, guardDefinitions, agents.get(), agentInstances, agentInstanceLabels, new ArrayList<>());
 
                                 List<String> agentNames = new ArrayList<>();
                                 for(Agent agent : agents.get()) {
@@ -244,13 +256,15 @@ public class System{
                                 }
 
                                 Map<String, List<AgentInstance>> agentsToInstances = new HashMap<>();
-                                List<String> agentInstanceLabels = new ArrayList<>();
+                                Set<String> usedInstanceLabels = new HashSet<>();
                                 for(AgentInstance instance : agentInstances){
-                                    if(agentInstanceLabels.contains(instance.getLabel())){
-                                        throw new Exception("Multiple agent instances named " + instance.getLabel());
+                                    if (!agentInstanceLabels.contains(instance.getLabel())) {
+                                        throw new Exception("Instance name " + instance.getLabel() + " was not declared");
                                     }
-                                    else{
-                                        agentInstanceLabels.add(instance.getLabel());
+                                    if (usedInstanceLabels.contains(instance.getLabel())){
+                                        throw new Exception("Multiple agent instances named " + instance.getLabel());
+                                    } else {
+                                        usedInstanceLabels.add(instance.getLabel());
                                     }
                                     String typeName = instance.getAgent().getName();
                                     if(!agentsToInstances.containsKey(typeName)){

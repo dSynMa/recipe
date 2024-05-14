@@ -999,16 +999,17 @@ public class ToNuXmv {
                                         Location getterLoc = getProcess.getLocation();
 
                                         // Static checks
-                                        if (supplyLoc instanceof SelfLocation && !(getterLoc instanceof NamedLocation)) continue getterTrLoop;                                        // If getter is getting from the wrong location, skip
-                                        if (getterLoc instanceof NamedLocation && !getterLoc.matchName(sendingAgentName)) continue getterTrLoop;
+                                        if (supplyLoc instanceof SelfLocation && !(getterLoc instanceof NamedLocation)) continue getterTrLoop;
 
-                                        Expression<Boolean> getterPredicate = getterLoc.getPredicate();
+                                        Expression<Boolean> getterPredicate = getterLoc.getPredicate(sendingAgentNameValue);
                                         
                                         getterPredicate = getterPredicate.relabel(v -> {
                                             //relabelling local variables to those of the sending agents
                                             return isCvRef(system, v.getName())
                                                 ? v
-                                                : v.sameTypeWithName(getterName + "-" + v);
+                                                : getterAgent.getStore().getAttributes().containsKey(v.getName()) 
+                                                ? v.sameTypeWithName(getterName + "-" + v)
+                                                : v;
                                         }).simplify();
                                         //relabelling getterGuard
                                         // remove @s
