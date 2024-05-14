@@ -44,7 +44,7 @@ public class TypedVariable<T extends Type> implements Expression<T> {
     public TypedValue<T> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException {
 
         TypedValue<T> result = store.getValue(this);
-        // System.err.printf("Evaluating %s on store %s yields %s\n", this, store, result);
+        if (result == null) System.err.printf("Evaluating %s : %s on store %s yields %s\n", this, this.type, store, result);
         return result;
     }
 
