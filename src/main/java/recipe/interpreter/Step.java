@@ -353,7 +353,7 @@ public class Step {
             handleEvaluationException(e);
         }
 
-        // Compute available transitions (put/receive)
+        // Compute available transitions (send/receive)
         interpreter.sys.getAgentInstances().forEach(sender -> {
             ConcreteStore senderStore = stores.get(sender);
             Set<ProcessTransition> instSends = interpreter.sends.get(senderStore.getState());
