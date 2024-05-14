@@ -1,25 +1,27 @@
 channels: none
-
+agent-names: one, two, three
 enum myEnum { foo, bar, baz }
 
-message-structure: MSG : bool
+message-structure: MSG : location
 communication-variables: c : myEnum
 
 agent Client
-    local: q : myEnum
-    init: TRUE
+    local: q : myEnum, x : location
+    init: x == myself
     relabel: c <- q
     receive-guard: (channel == *)
 
     repeat: (
-            splySelf: <TRUE> SUPPLY@SELF()[]
+            splyAtSelf: <TRUE> SUPPLY@SELF()[]
             +
-            getOne: <TRUE> GET@one[]
+            getAtX: <TRUE> GET@x[]
             +
-            bcast: <TRUE> *! TRUE ()[]
+            bcastSend: <TRUE> *! TRUE(MSG := myself)[x := myself]
+            + 
+            bcastRecv:  <TRUE> *? [x := MSG]
             )
 
-system = Client(one,TRUE) | Client(two,TRUE) | Client(three,TRUE)
+system = Client(one,TRUE) | Client(two,TRUE) | Client(three, TRUE)
 
 
 SPEC G F <p2p> TRUE

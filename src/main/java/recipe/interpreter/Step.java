@@ -32,6 +32,7 @@ import recipe.lang.store.CompositeStore;
 import recipe.lang.store.ConcreteStore;
 import recipe.lang.store.Store;
 import recipe.lang.types.Type;
+import recipe.lang.types.UnionType;
 import recipe.lang.utils.Pair;
 import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
@@ -114,32 +115,62 @@ public class Step {
     public boolean satisfies(Map<String,Observation> obsMap, JSONObject constraint) {
         // LTOL
         JSONObject ltol = constraint.optJSONObject("___LTOL___");
+        UnionType agentType;
+        TypedValue noAgent;
+        try {
+            agentType = Config.getAgentType();
+            noAgent = new TypedValue<Type>(agentType, "no-agent");
+        } catch (Exception e) {
+            handleEvaluationException(e);
+            return false;
+        }
         if (ltol != null) {
             for (String obsVar : ltol.keySet()) {
                 if (obsVar.equals("no-observations")) continue;
                 Expression<recipe.lang.types.Boolean> observation = obsMap.get(obsVar).getObservation();
-                AgentInstance sender = this.inboundTransition.getProducer();
-                Store senderStore = this.parent.stores.get(sender);
+                AgentInstance producer = this.inboundTransition.getProducer();
+                Store producerStore = this.parent.stores.get(producer);
                 try {
-                    SendProcess sendProcess = (SendProcess) this.inboundTransition.getProducerTransition().getLabel();
-                    Expression chanExpr = sendProcess.getChannel();
-                    TypedValue chan = chanExpr.valueIn(senderStore);
+                    TypedValue producerTV = new TypedValue<Type>(agentType, producer.getLabel());
                     Map<TypedVariable, TypedValue> mp = new HashMap<>();
-                    mp.put(new TypedVariable<Type>(chan.getType(), "channel"), chan);
-                    recipe.lang.types.Enum senderEnum = recipe.lang.types.Enum.getEnum(sender.getAgent().getName());
-                    TypedValue senderName = null;
-                    for (TypedValue tv : senderEnum.getAllValues()) {
-                        // In some cases the agent instance name gets
-                        // treated like a variable. So we just add variables
-                        mp.put(new TypedVariable<Type>(tv.getType(), tv.toString()), tv);
-                        if (tv.toString().equals(sender.getLabel())) {
-                            senderName = tv;
-                            break;
+                    BasicProcessWithMessage proc = this.inboundTransition.getProducerProcess();
+                    if (proc instanceof SendProcess) {
+                        // If obs talks about supplier-<cv> then it is False
+                        for (Expression sub : observation.subformulas()) {
+                            if (sub instanceof TypedVariable && sub.toString().startsWith("supplier-")) {
+                                // If the observation was supposed to be satisfied then something's wrong
+                                if (ltol.get(obsVar).equals("TRUE")) return false;
+                                continue;
+                            }
                         }
+                        SendProcess sendProcess = (SendProcess) proc;
+                        Expression chanExpr = sendProcess.getChannel();   
+                        TypedValue chan = chanExpr.valueIn(producerStore);
+                        mp.put(new TypedVariable<Type>(chan.getType(), "channel"), chan);
+                        mp.put(new TypedVariable<Type>(agentType, "sender"), producerTV);
+                        mp.put(new TypedVariable<Type>(agentType, "initiator"), producerTV);
+                        mp.put(new TypedVariable<Type>(agentType, "producer"), producerTV);
+                        mp.put(new TypedVariable<Type>(agentType, "getter"), noAgent);
+                        mp.put(new TypedVariable<Type>(agentType, "supplier"), noAgent);
                     }
-                    mp.put(new TypedVariable<Type>(Config.getAgentType(), "sender"), senderName);
-                    Pair<Store, TypedValue> msgPair = makeMessageStore(senderStore, sendProcess, this.sys);
-                    Store store = new ConcreteStore(mp).push(msgPair.getLeft());
+                    if (proc instanceof SupplyProcess) {
+                        TypedValue getter = new TypedValue<Type>(agentType, this.inboundTransition.getInitiator().getLabel());
+                        mp.put(new TypedVariable<Type>(agentType, "sender"), noAgent);
+                        mp.put(new TypedVariable<Type>(agentType, "initiator"), getter);
+                        mp.put(new TypedVariable<Type>(agentType, "producer"), producerTV);
+                        mp.put(new TypedVariable<Type>(agentType, "getter"), getter);
+                        mp.put(new TypedVariable<Type>(agentType, "supplier"), producerTV);
+                        
+                    }
+                    Pair<Store, TypedValue> msgPair = makeMessageStore(producerStore, proc, this.sys);
+                    CompositeStore store = new ConcreteStore(mp).push(msgPair.getLeft());
+                    if (proc instanceof SupplyProcess) {
+                        observation = observation.relabel(
+                            (v) -> v.getName().startsWith("supplier-")
+                            ? v.sameTypeWithName(v.getName().replaceFirst("supplier-", ""))
+                            : v);
+                        store.push(producerStore);
+                    }
                     boolean isObserved = Condition.getTrue().equals(observation.valueIn(store));
                     if (isObserved != ltol.get(obsVar).equals("TRUE")) {
                         System.out.printf(">> %s (%s): expected %s, got %s\n", obsVar, observation, ltol.get(obsVar), isObserved);
@@ -147,8 +178,7 @@ public class Step {
                     }
                 } catch (Exception e) {
                     handleEvaluationException(e);
-                    // If the observation was supposed to be satisfied
-                    // then something's wrong
+                    // If the observation was supposed to be satisfied then something's wrong
                     if (ltol.get(obsVar).equals("TRUE"))
                         return false;
                 }

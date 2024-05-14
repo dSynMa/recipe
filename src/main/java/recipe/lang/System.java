@@ -134,6 +134,7 @@ public class System{
         AtomicReference<TypingContext> messageContext = new AtomicReference<>(new TypingContext());
         AtomicReference<TypingContext> communicationContext = new AtomicReference<>(new TypingContext());
         AtomicReference<TypingContext> guardDefinitionsContext = new AtomicReference<>(new TypingContext());
+        AtomicReference<Enum> locationEnum = new AtomicReference<>(null);
         AtomicReference<Set<Agent>> agents = new AtomicReference<>(new HashSet<>());
 
         parser.set((labelledParser("channels", channelValues())
@@ -156,7 +157,7 @@ public class System{
                         .seq(labelledParser("agent-names", channelValues())
                             .mapWithSideEffects((List<String> values) -> {
                                 try {
-                                    Enum locationEnum = new Enum(Config.locationLabel, values);
+                                    locationEnum.set(new Enum(Config.locationLabel, values));
                                 } catch (TypeCreationException e) {
                                     e.printStackTrace();
                                 }
@@ -187,7 +188,7 @@ public class System{
                                 (List<TypingContext> context) ->
                                 {
                                     try {
-                                        Parser agent = Agent.parser(context.get(0), context.get(1), context.get(2)).plus();//.seq((StringParser.of("system").trim()).and());
+                                        Parser agent = Agent.parser(context.get(0), context.get(1), context.get(2), locationEnum.get()).plus();
                                         return agent;
                                     } catch (Exception e) {
                                         e.printStackTrace();
@@ -284,13 +285,16 @@ public class System{
                                         Agent agent = entry.getValue().get(0).getAgent();
                                         Map<String, TypedVariable> name = new HashMap<>();
                                         TypedVariable nameVar = new TypedVariable(agentType, "name");
+                                        TypedVariable selfVar = new TypedVariable(agentType, Config.myselfKeyword);
                                         name.put("name", nameVar);
+                                        name.put(Config.myselfKeyword, selfVar);
                                         Store nameStore = new Store(name);
                                         agent.getStore().update(nameStore);
 
                                         for (AgentInstance agentInstance : entry.getValue()) {
                                             TypedValue nameVal = new TypedValue(agentType, agentInstance.getLabel());
                                             agentInstance.updateInit(new And(agentInstance.getInit(), new IsEqualTo(nameVar, nameVal)));
+                                            agentInstance.updateInit(new And(agentInstance.getInit(), new IsEqualTo(selfVar, nameVal)));
                                         }
                                     }
                                 }

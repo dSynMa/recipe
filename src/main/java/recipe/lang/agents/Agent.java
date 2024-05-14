@@ -8,6 +8,8 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
+
+import recipe.Config;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
@@ -195,7 +197,8 @@ public class Agent {
 
     public static org.petitparser.parser.Parser parser(TypingContext messageContext,
                                                        TypingContext communicationContext,
-                                                       TypingContext guardDefinitionContext) throws Exception {
+                                                       TypingContext guardDefinitionContext,
+                                                       recipe.lang.types.Enum locationEnum) throws Exception {
         SettableParser parser = SettableParser.undefined();
         Function<TypingContext, Parser> process = (TypingContext localContext) -> {
             try {
@@ -220,11 +223,16 @@ public class Agent {
                     .seq(name.or(FailureParser.withMessage("Could not parse agent name.")))
                     .seq(Parsing.labelledParser("local", Parsing.typedVariableList().optional(new ArrayList<>()))
                             .mapWithSideEffects((List<TypedVariable> values) -> {
-                                localContext.get().clear();
-                                localContext.get().setAll(new TypingContext(values));
-                                Map<String, TypedVariable> vars = new HashMap();
-                                for(TypedVariable var : values){
-                                    vars.put(var.getName(), new TypedVariable(var.getType(), var.getName()));
+                                Map<String, TypedVariable> vars = new HashMap<>();
+                                try {
+                                    values.add(new TypedVariable(locationEnum, Config.myselfKeyword));
+                                    localContext.get().clear();
+                                    localContext.get().setAll(new TypingContext(values));
+                                    for(TypedVariable var : values){
+                                        vars.put(var.getName(), new TypedVariable(var.getType(), var.getName()));
+                                    }
+                                } catch (Exception e) {
+                                    e.printStackTrace();
                                 }
                                 return vars;
                             }).optional(new HashMap<>())) //.or(LazyParser.failingParser(nameString, "Could not parse agent's local definition."))))

@@ -13,6 +13,8 @@ interface Transition {
     public AgentInstance getProducer();
     // Consumers = either receiver or getter (the one(s) that use data)
     public Set<AgentInstance> getConsumers();
+    // Initiator = either sender or getter
+    public AgentInstance getInitiator();
     public ProcessTransition getProducerTransition();
     public BasicProcessWithMessage getProducerProcess();
     public ProcessTransition findTransitionForAgent(AgentInstance instance);

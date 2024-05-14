@@ -16,6 +16,7 @@ import recipe.lang.expressions.TypedVariable;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Number;
 import recipe.lang.types.Type;
+import recipe.lang.types.Enum;
 import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.AttributeTypeException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
@@ -134,7 +135,7 @@ public class ConcreteStore extends Store {
         return this.push(top);
     }
 
-    public Store push(Store s) {
+    public CompositeStore push(Store s) {
         CompositeStore result = new CompositeStore();
         result.push(this);
         result.push(s);
@@ -158,6 +159,16 @@ public class ConcreteStore extends Store {
     public ConcreteStore(JSONObject obj, AgentInstance instance) {
         this.agent = instance.getAgent();
         data = new HashMap<TypedVariable, TypedValue>();
+        try {
+            Enum locationEnum = Enum.getEnum(recipe.Config.locationLabel);
+            TypedVariable myselfVar = new TypedVariable<Type>(locationEnum, recipe.Config.myselfKeyword);
+            TypedValue myselfVal = new TypedValue<Enum>(locationEnum, instance.getLabel());
+            data.put(myselfVar, myselfVal);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
         state = new State<Integer>(
             agent.getName(),
             Integer.valueOf(obj.getString("automaton-state"))
@@ -170,11 +181,6 @@ public class ConcreteStore extends Store {
                     if (v != null) {
                         TypedValue val = typedValueFactory(v.getType(), obj.getString(var));
                         this.data.put(v, val);
-                        // System.out.println(v.getName());
-                        // // System.out.println(v.getType());
-                        // System.out.println(var);
-                        // System.out.println(val.getValue());
-                        // System.out.println(val.getType());
                     }
                 } catch (AttributeNotInStoreException x) {
                     System.out.println(var + " not found");

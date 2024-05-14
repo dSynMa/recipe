@@ -50,22 +50,6 @@ class SendReceiveTransition implements Transition {
         return result;
     }
 
-    // public void prettyPrint(PrintStream stream) {
-    //     stream.println("--- transition ---");
-    //     stream.print("Sender:\n");
-    //     stream.printf("\n%s (%s)\t\t%s\n", sender.getLabel(), sender.getAgent().getName(), send);
-    //     stream.print("Receivers:\n");
-    //     for (AgentInstance receiver : receivers.keySet()) {
-    //         stream.printf("%s (%s)\t\t%s\n", receiver.getLabel(), receiver.getAgent().getName(), receivers.get(receiver));
-    //     }
-    //     stream.println("------------------");
-    // }
-
-    // @Override
-    // public SendProcess getInitiatorProcess() {
-    //     return (SendProcess) send.getLabel();
-    // }
-
     @Override
     public void setProducer(AgentInstance instance, ProcessTransition transition) throws Exception {
         sender = instance;
@@ -105,5 +89,10 @@ class SendReceiveTransition implements Transition {
     @Override
     public Boolean satisfies(JSONObject constraint) {
         return true;
+    }
+
+    @Override
+    public AgentInstance getInitiator() {
+        return sender;
     }
 }

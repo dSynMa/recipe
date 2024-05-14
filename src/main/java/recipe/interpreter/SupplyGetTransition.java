@@ -107,4 +107,9 @@ class SupplyGetTransition implements Transition {
         }
         return true;
     }
+
+    @Override
+    public AgentInstance getInitiator() {
+        return getter;
+    }
 }
