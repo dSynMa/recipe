@@ -32,7 +32,6 @@ import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.location.AnyLocation;
 import recipe.lang.expressions.location.Location;
 import recipe.lang.expressions.location.NamedLocation;
-import recipe.lang.expressions.location.PredicateLocation;
 import recipe.lang.expressions.location.SelfLocation;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
@@ -90,6 +89,15 @@ public class ToNuXmv {
                                                                             TypedValue noAgent,
                                                                             Expression channel) throws Exception 
     {
+        // If obs talks about supplier-<cv> then it is False
+        for (Expression<Boolean> sub : obs.subformulas()) {
+            if (sub instanceof TypedVariable) {
+                if (sub.toString().startsWith("supplier-")) return Condition.getFalse();
+            }
+        }
+
+
+
         Expression<Boolean> o = obs.relabel((v) -> sendRename(v, sender, channel, noAgent) );
         return specialiseObservationToTransition(cvs, o, sendGuard, message);
     }
@@ -118,7 +126,6 @@ public class ToNuXmv {
                                                                               Agent supplierAgent) throws Exception
     {
         Expression<Boolean> o = quantToSupplier(cvs, obs);
-        java.lang.System.out.println(o);
         o = o.relabel((v) -> specializeSupplierCV(v, supplierAgent, supplier));
         o = o.relabel((v) -> supplyRename(v, supplier, getter, noAgent));
         return specialiseObservationToTransition(cvs, o, getGuard, message);
