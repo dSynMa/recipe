@@ -31,3 +31,7 @@ SPEC G F <getter == three> TRUE
 SPEC G F <initiator == three> TRUE
 SPEC G F <supplier == one> TRUE
 SPEC G F <producer == one> TRUE
+
+# initiator = either getter or sender (who initiates the transition)
+# producer = either supplier or sender (where message originates from)
+# supplier-x = variable x of supplying agent
