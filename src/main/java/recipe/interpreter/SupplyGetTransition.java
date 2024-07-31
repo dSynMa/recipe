@@ -3,14 +3,25 @@ package recipe.interpreter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.json.JSONObject;
 
+import recipe.Config;
+import recipe.analysis.ToNuXmv;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
+import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.TypedVariable;
+import recipe.lang.expressions.location.Location;
 import recipe.lang.process.BasicProcessWithMessage;
 import recipe.lang.process.GetProcess;
+import recipe.lang.process.SupplyProcess;
+import recipe.lang.types.Type;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
+import recipe.lang.utils.exceptions.RelabellingTypeException;
 
 class SupplyGetTransition implements Transition {
     private AgentInstance supplier;
@@ -111,5 +122,50 @@ class SupplyGetTransition implements Transition {
     @Override
     public AgentInstance getInitiator() {
         return getter;
+    }
+
+    @Override
+    public Expression<recipe.lang.types.Boolean> getSpecializedObservation(Map<String, Type> cvs, Expression<recipe.lang.types.Boolean> obs) throws Exception {
+        Type agentType = Config.getAgentType();
+        TypedValue supplierTV = new TypedValue<Type>(agentType, supplier.getLabel());
+        TypedValue getterTV = new TypedValue<Type>(agentType, getter.getLabel());
+        SupplyProcess supplyProcess = (SupplyProcess) getProducerProcess();
+        GetProcess getProcess = (GetProcess) get.getLabel();
+        
+        // Handle message guard
+        Location getterLoc = getProcess.getLocation();
+        Expression<recipe.lang.types.Boolean> getterPredicate = getterLoc.getPredicate(supplierTV);
+        
+        getterPredicate = getterPredicate.relabel(v -> {
+            //relabelling local variables to those of the sending agents
+            return cvs.containsKey("@" + v.getName())
+                ? v
+                : getter.getAgent().getStore().getAttributes().containsKey(v.getName()) 
+                ? v.sameTypeWithName(getter.getLabel() + "-" + v)
+                : v;
+        }).simplify();
+        //relabelling getterGuard
+        // remove @s
+        getterPredicate = getterPredicate.relabel(v -> {
+            return v.getName().startsWith("@") ? ((TypedVariable) v).sameTypeWithName(v.getName().substring(1)) : v;
+        });
+
+        // rename references to cvs to receiving agents cv
+        getterPredicate = getterPredicate.relabel(v -> {
+            //if v is just the special variable we use in our syntax to refer to the current
+            // channel being sent on, then replace it with the sending transitions channel reference
+            try {
+                //relabelling cvs to those of the supplier
+                return cvs.containsKey("@" + v.getName())
+                        ? supplier.getAgent().getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(supplier.getLabel() + "-" + vv))
+                        : v;
+            } catch (RelabellingTypeException | MismatchingTypeException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }).simplify();
+
+        return ToNuXmv.specialiseObservationToSupplyTransition(
+            cvs, obs, getterPredicate, supplyProcess.getMessage(), supplierTV, getterTV, Config.getNoAgent(), supplier.getAgent());
     }
 }

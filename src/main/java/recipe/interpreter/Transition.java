@@ -1,12 +1,15 @@
 package recipe.interpreter;
 
+import java.util.Map;
 import java.util.Set;
 
 import org.json.JSONObject;
 
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
+import recipe.lang.expressions.Expression;
 import recipe.lang.process.BasicProcessWithMessage;
+import recipe.lang.types.Type;
 
 interface Transition {
     // Producer = either sender or supplier (the one that provides data)
@@ -23,4 +26,6 @@ interface Transition {
     public JSONObject toJSON();
 
     public Boolean satisfies(JSONObject constraint);
+
+    public Expression<recipe.lang.types.Boolean> getSpecializedObservation(Map<String, Type> cvs, Expression<recipe.lang.types.Boolean> obs) throws Exception;
 }

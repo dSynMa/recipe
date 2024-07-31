@@ -8,11 +8,17 @@ import java.util.Set;
 
 import org.json.JSONObject;
 
+import recipe.Config;
+import recipe.analysis.ToNuXmv;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
+import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.process.BasicProcessWithMessage;
 import recipe.lang.process.ReceiveProcess;
 import recipe.lang.process.SendProcess;
+import recipe.lang.types.Type;
+
 
 class SendReceiveTransition implements Transition {
     private AgentInstance sender;
@@ -94,5 +100,21 @@ class SendReceiveTransition implements Transition {
     @Override
     public AgentInstance getInitiator() {
         return sender;
+    }
+
+    @Override
+    public Expression<recipe.lang.types.Boolean> getSpecializedObservation(Map<String, Type> cvs, Expression<recipe.lang.types.Boolean> obs) throws Exception {
+        Type agentType = Config.getAgentType();
+        TypedValue<Type> producerTV = new TypedValue<Type>(agentType, getProducer().getLabel());
+        SendProcess sendProcess = (SendProcess) getProducerProcess();
+        
+        Expression<recipe.lang.types.Boolean> msgGuard = sendProcess.getMessageGuard().relabel(v -> {
+                return cvs.containsKey("@" + v.getName())
+                    ? v
+                    : v.sameTypeWithName(getProducer().getLabel() + "-" + v);
+        }).simplify();
+
+        return ToNuXmv.specialiseObservationToSendTransition(
+            cvs, obs, msgGuard, sendProcess.getMessage(), producerTV, Config.getNoAgent(),  sendProcess.getChannel());
     }
 }
