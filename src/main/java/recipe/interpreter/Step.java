@@ -31,6 +31,7 @@ import recipe.lang.process.SupplyProcess;
 import recipe.lang.store.CompositeStore;
 import recipe.lang.store.ConcreteStore;
 import recipe.lang.store.Store;
+import recipe.lang.types.Boolean;
 import recipe.lang.types.Type;
 import recipe.lang.types.UnionType;
 import recipe.lang.utils.Pair;
@@ -125,12 +126,12 @@ public class Step {
             return false;
         }
         if (ltol != null) {
+            AgentInstance producer = this.inboundTransition.getProducer();
             for (String obsVar : ltol.keySet()) {
                 if (obsVar.equals("no-observations")) continue;
                 Expression<recipe.lang.types.Boolean> observation = obsMap.get(obsVar).getObservation();
-                AgentInstance producer = this.inboundTransition.getProducer();
-                Store producerStore = this.parent.stores.get(producer);
                 try {
+                    Store producerStore = this.parent.stores.get(producer);
                     TypedValue producerTV = new TypedValue<Type>(agentType, producer.getLabel());
                     Map<TypedVariable, TypedValue> mp = new HashMap<>();
                     BasicProcessWithMessage proc = this.inboundTransition.getProducerProcess();
@@ -171,6 +172,11 @@ public class Step {
                             : v);
                         store.push(producerStore);
                     }
+                    
+                    observation = inboundTransition.getSpecializedObservation(
+                        this.sys.getCommunicationVariables(),
+                        observation);
+                    
                     boolean isObserved = Condition.getTrue().equals(observation.valueIn(store));
                     if (isObserved != ltol.get(obsVar).equals("TRUE")) {
                         System.out.printf(">> %s (%s): expected %s, got %s\n", obsVar, observation, ltol.get(obsVar), isObserved);
@@ -548,11 +554,11 @@ public class Step {
                             if (splyLoc instanceof SelfLocation && !(getLoc instanceof NamedLocation)) continue;
                             if (getLoc instanceof NamedLocation) {
                                 TypedValue supplierTV = new TypedValue<Type>(Config.getAgentType(), supplier.getLabel());
-                                Boolean check = Condition.getTrue().equals(getLoc.getPredicate(supplierTV).valueIn(getterStore));
+                                boolean check = Condition.getTrue().equals(getLoc.getPredicate(supplierTV).valueIn(getterStore));
                                 if (!check) continue;
                             }
                             if (getLoc instanceof PredicateLocation) {
-                                Boolean check = Condition.getTrue().equals(getLoc.getPredicate(null).valueIn(supplierStore));
+                                boolean check = Condition.getTrue().equals(getLoc.getPredicate(null).valueIn(supplierStore));
                                 if (!check) continue;
                             }
 
