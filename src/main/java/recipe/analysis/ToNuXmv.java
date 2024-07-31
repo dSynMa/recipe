@@ -132,7 +132,7 @@ public class ToNuXmv {
     }
 
 
-    public static Expression<Boolean> specialiseObservationToTransition(Map<String, Type> cvs,
+    protected static Expression<Boolean> specialiseObservationToTransition(Map<String, Type> cvs,
                                                                             Expression<Boolean> obs,
                                                                             Expression<Boolean> sendGuard,
                                                                             Map<String, Expression> message) throws Exception {
