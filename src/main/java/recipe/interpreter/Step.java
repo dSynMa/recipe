@@ -119,7 +119,7 @@ public class Step {
         TypedValue noAgent;
         try {
             agentType = Config.getAgentType();
-            noAgent = new TypedValue<Type>(agentType, "no-agent");
+            noAgent = Config.getNoAgent();
         } catch (Exception e) {
             handleEvaluationException(e);
             return false;

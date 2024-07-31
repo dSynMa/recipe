@@ -410,7 +410,7 @@ public class ToNuXmv {
         List<AgentInstance> agentInstances = system.getAgentInstances();
         Map<String, List<String>> agentSendPreds = new HashMap<>();
         Map<String, List<String>> agentSendProgressConds = new HashMap<>();
-        TypedValue noAgent = new TypedValue(Config.getAgentType(), "no-agent");
+        TypedValue noAgent = Config.getNoAgent();
 
         Set<String> sendProcessNames = new HashSet<>();
         Set<String> receiveProcessNames = new HashSet<>();

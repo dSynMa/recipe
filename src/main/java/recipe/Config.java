@@ -2,9 +2,11 @@ package recipe;
 
 import recipe.lang.System;
 import recipe.lang.agents.Agent;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.types.Type;
 import recipe.lang.types.UnionType;
 import recipe.lang.utils.TypingContext;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,6 +20,8 @@ public class Config {
     public static final String channelLabel = "channel";
     public static final String p2pLabel = "p2p";
     public static final String myselfKeyword = "myself";
+    public static final String noAgentString = "no-agent";
+    protected static TypedValue noAgent = null;
 
     public static void reset(){
         agentEnumTypeNames.clear();
@@ -29,6 +33,13 @@ public class Config {
 
     public static UnionType getAgentType() throws Exception {
         return agentType;
+    }
+
+    public static TypedValue getNoAgent() throws MismatchingTypeException {
+        if (noAgent == null) {
+            noAgent = new TypedValue(agentType,  noAgentString);
+        }
+        return noAgent;
     }
 
     public static List<String> getAgentTypeNames(){

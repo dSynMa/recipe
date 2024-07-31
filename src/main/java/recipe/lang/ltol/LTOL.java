@@ -348,7 +348,7 @@ public abstract class LTOL {
 
             for (Object concreteVar : possibleAgentInstances) {
                 TypedValue value = (TypedValue) concreteVar;
-                if (value.getValue().equals("no-agent")) continue;
+                if (value.getValue().equals(Config.noAgentString)) continue;
                 possibleAgentInstancesNames.add((String) value.getValue());
                 possibleAgentTypes.add(Config.getAgent(value.getType().name()));
                 agentInstanceNameToType.put((String) value.getValue(), value.getType());
