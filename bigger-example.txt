@@ -1,5 +1,4 @@
 channels: a, empty
-agent-names: one, two, three
 enum msgvals {team, form, assemble}
 
 message-structure: MSG : msgvals, NO : int, LNK : channel

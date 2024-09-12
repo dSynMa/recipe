@@ -1,5 +1,4 @@
 channels: none
-agent-names: one, two, three
 enum myEnum { foo, bar, baz }
 
 message-structure: MSG : location

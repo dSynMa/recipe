@@ -1,5 +1,4 @@
 channels: c, empty, g1, g2,vmm1,vmm2,vmm3,t
-agent-names: client1, client2, client3, manager, machine1, machine2, machine3
 enum rolevals {clnt, vm, mgr}
 enum msgvals {reserve, request, release, buy, connect, full,complete}
 message-structure: MSG : msgvals, LNK : channel

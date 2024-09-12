@@ -35,7 +35,6 @@ public class System{
     Map<String, Type> guardDefinitions;
     Set<Agent> agents;
     List<AgentInstance> agentsInstances;
-    List<String> agentInstanceLabels;
 
     public List<LTOL> getSpecs() {
         return specs;
@@ -75,8 +74,7 @@ public class System{
 
     public System(Map<String, Type> messageStructure, Map<String, Type> communicationVariables,
                   Map<String, Type> guardDefinitions, Set<Agent> agents,
-                  List<AgentInstance> agentsInstances, List<String> agentsInstanceLabels,
-                  List<LTOL> specs) throws Exception {
+                  List<AgentInstance> agentsInstances, List<LTOL> specs) throws Exception {
         if(!validate(messageStructure, communicationVariables, guardDefinitions, agents)){
             throw new Exception("Message and communication variables, and guard definition names need to be disjoint, " +
                     "and they also need to be disjoin with each agent's local variables.");
@@ -86,8 +84,16 @@ public class System{
         this.guardDefinitions = guardDefinitions;
         this.agents = agents;
         this.agentsInstances = agentsInstances;
-        this.agentInstanceLabels = agentsInstanceLabels;
         this.specs = specs;
+
+        Enum locationEnum = Enum.getEnum(Config.locationLabel);
+        List<String> locations = new ArrayList<>();
+        for (AgentInstance instance : agentsInstances) {
+            locations.add(instance.getLabel());
+        }
+
+        locationEnum.setValues(locations);
+
     }
 
     public static boolean validate(Map<String, Type> messageStructure, Map<String, Type> communicationVariables,
@@ -129,13 +135,17 @@ public class System{
 
         SettableParser parser = SettableParser.undefined();
 
-//        AtomicReference<TypingContext> channelContext = new AtomicReference<>(new TypingContext());
         AtomicReference<String> error = new AtomicReference<>("");
         AtomicReference<TypingContext> messageContext = new AtomicReference<>(new TypingContext());
         AtomicReference<TypingContext> communicationContext = new AtomicReference<>(new TypingContext());
         AtomicReference<TypingContext> guardDefinitionsContext = new AtomicReference<>(new TypingContext());
         AtomicReference<Enum> locationEnum = new AtomicReference<>(null);
         AtomicReference<Set<Agent>> agents = new AtomicReference<>(new HashSet<>());
+        try {
+            locationEnum.set(new Enum(Config.locationLabel, new ArrayList<String>()));
+        } catch (TypeCreationException e) {
+            e.printStackTrace();
+        }
 
         parser.set((labelledParser("channels", channelValues())
                         .mapWithSideEffects((List<String> values) -> {
@@ -154,15 +164,6 @@ public class System{
                             }
                             return values;
                         }).or(FailureParser.withMessage("Error in channels definition.")))
-                        .seq(labelledParser("agent-names", channelValues())
-                            .mapWithSideEffects((List<String> values) -> {
-                                try {
-                                    locationEnum.set(new Enum(Config.locationLabel, values));
-                                } catch (TypeCreationException e) {
-                                    e.printStackTrace();
-                                }
-                                return values;
-                        }))
                         .seq(Parsing.enumDefinitionParser().star().or(FailureParser.withMessage("Error in enum definitions.")))
                         .seq(labelledParser("message-structure", typedVariableList())
                                 .map((List<TypedVariable> values) -> {
@@ -226,14 +227,13 @@ public class System{
                              .delimitedBy((CharacterParser.of(';').or(CharacterParser.of('\n'))).trim())
                              .optional(new ArrayList<>()))
                         .map((List<Object> values) -> {
-                            List<String> agentInstanceLabels = (List<String>) values.get(1);
                             Map<String, Type> messageStructure = messageContext.get().getVarType();
                             Map<String, Type> communicationVariables = communicationContext.get().getVarType();
-                            Map<String, Type> guardDefinitions = (Map<String, Type>) values.get(5);
-                            List<AgentInstance> agentInstances = (List) values.get(7);
+                            Map<String, Type> guardDefinitions = (Map<String, Type>) values.get(4);
+                            List<AgentInstance> agentInstances = (List) values.get(6);
 
                             List<String> specsStrings = new ArrayList<>();
-                            for(Object obj : (List<Object>) values.get(8)){
+                            for(Object obj : (List<Object>) values.get(7)){
                                 if(obj.getClass().equals(String.class)){
                                     String[] spec = ((String) obj).split("(?=SPEC)");
                                     specsStrings.addAll(List.of(spec));
@@ -245,8 +245,6 @@ public class System{
 
                             System system = null;
                             try {
-                                system = new System(messageStructure, communicationVariables, guardDefinitions, agents.get(), agentInstances, agentInstanceLabels, new ArrayList<>());
-
                                 List<String> agentNames = new ArrayList<>();
                                 for(Agent agent : agents.get()) {
                                     if(agentNames.contains(agent.getName())){
@@ -259,9 +257,6 @@ public class System{
                                 Map<String, List<AgentInstance>> agentsToInstances = new HashMap<>();
                                 Set<String> usedInstanceLabels = new HashSet<>();
                                 for(AgentInstance instance : agentInstances){
-                                    if (!agentInstanceLabels.contains(instance.getLabel())) {
-                                        throw new Exception("Instance name " + instance.getLabel() + " was not declared");
-                                    }
                                     if (usedInstanceLabels.contains(instance.getLabel())){
                                         throw new Exception("Multiple agent instances named " + instance.getLabel());
                                     } else {
@@ -273,6 +268,8 @@ public class System{
                                     }
                                     agentsToInstances.get(typeName).add(instance);
                                 }
+                                system = new System(messageStructure, communicationVariables, guardDefinitions, agents.get(), agentInstances, new ArrayList<>());
+
 
                                 for(Map.Entry<String, List<AgentInstance>> entry : agentsToInstances.entrySet()){
                                     List<String> instances = new LinkedList<String>(entry.getValue().stream().map(AgentInstance::toString).toList());

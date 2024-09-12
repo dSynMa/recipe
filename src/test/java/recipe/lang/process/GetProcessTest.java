@@ -19,7 +19,9 @@ import java.util.List;
 
 public class GetProcessTest {
     static List<String> channels;
+    static List<String> locations;
     static Enum channelEnum;
+    static Enum locationEnum;
 
     @BeforeClass
     public static void init() throws TypeCreationException {
@@ -27,8 +29,11 @@ public class GetProcessTest {
         channels = new ArrayList<>();
         channels.add("A");
         channels.add("*");
+        locations = new ArrayList<>();
+        locations.add("agent");
 
         channelEnum = new Enum(Config.channelLabel, channels);
+        locationEnum = new Enum(Config.locationLabel, locations);
     }
 
     @Test
@@ -43,6 +48,7 @@ public class GetProcessTest {
         communicationContext.set("g", Boolean.getType());
 
         localContext.set("c", channelEnum);
+        localContext.set("agentName", locationEnum);
 
         Parser parser = GetProcess.parser(messageContext, localContext, communicationContext);
 

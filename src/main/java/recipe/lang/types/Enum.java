@@ -35,6 +35,10 @@ public class Enum extends Type {
         return values;
     }
 
+    public void setValues(List<String> values) {
+        this.values = values;
+    }
+
     public static Enum getEnum(String name) throws Exception {
         if(existing.containsKey(name)) return existing.get(name);
         else throw new Exception("No such enum: " + name);

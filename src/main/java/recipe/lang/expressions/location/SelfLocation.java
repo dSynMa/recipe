@@ -1,5 +1,7 @@
 package recipe.lang.expressions.location;
 
+import org.petitparser.parser.primitive.StringParser;
+
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.types.Boolean;
@@ -13,4 +15,8 @@ public class SelfLocation extends Location {
 
     @Override
     public String toString() { return selfToken; }
+
+    public static org.petitparser.parser.Parser parser() throws Exception {
+        return StringParser.of(selfToken).map((String self) -> {return new SelfLocation();});
+    }
 }

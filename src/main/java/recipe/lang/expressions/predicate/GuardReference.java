@@ -107,7 +107,6 @@ public class GuardReference extends Condition {
 
                     try{
                         Guard guardType = (Guard) context.get(label);
-//                                Guard.getGuardDefinition(label);
                         TypedVariable[] params = guardType.getParameters();
                         for(int i = 0 ; i < paramValsUntyped.size(); i++){
                             if(!paramValsUntyped.get(i).equals(',')){
