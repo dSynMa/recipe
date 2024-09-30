@@ -1,4 +1,4 @@
-# recipe
+# ReCiPe
 
 This is a repository for tooling to support the [ReCiPe formalism](https://arxiv.org/abs/2104.10998) for modelling and verification of reconfigurable multi-agent systems.
 
