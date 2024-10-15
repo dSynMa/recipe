@@ -27,12 +27,12 @@ Simulation will show changes in variables in the next state only, with the excep
 ### Compilation
 
 This project was compiled and tested successfully with:
-1. Java 15
+1. Java 18
 2. [nuXmv 2.0.0](https://nuxmv.fbk.eu/)
 3. Maven 4
 4. NPM (to use frontend)
 
-We suggest using the same or similar versions for compilation and running. Check pom.xml for the right versions.
+We suggest using the same or similar versions for compilation and running. Check `pom.xml` for the right versions.
 
 For compilation to a single jar file simple run `mvn clean package`, and the jar file `target/recipe-0.1.jar` will be produced.
 
@@ -41,7 +41,7 @@ For compilation to a single jar file simple run `mvn clean package`, and the jar
 
 We assume that the following commands are available from the environment PATH variable:
 1. `nuxmv` (for analysis and simulation)
-2. `npm' (for frontend)
+2. `npm` (for frontend)
 
 Or for the case of nuxmv:
 
