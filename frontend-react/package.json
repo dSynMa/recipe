@@ -14,7 +14,7 @@
     "d3-graphviz": "^4.0.0",
     "dotenv": "^10.0.0",
     "graphviz-react": "^1.2.0",
-    "react": "~17",
+    "react": "^17.0.2",
     "react-ace": "^9.5.0",
     "react-app-rewired": "^2.1.8",
     "react-bootstrap": "^2.0.2",
@@ -28,7 +28,7 @@
     "web-vitals": "^1.1.2"
   },
   "scripts": {
-    "start": "react-scripts --max_old_space_size=4096 start",
+    "start": "react-scripts --max_old_space_size=4096 start --openssl-legacy-provider",
     "predeploy": "react-scripts --max_old_space_size=4096 build",
     "build": "react-scripts build",
     "test": "react-scripts test",
