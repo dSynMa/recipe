@@ -7,10 +7,8 @@ import axios from "axios";
 import { useFetch } from "./hooks";
 import Graph from "./Graph";
 
-import Viz from "viz.js";
 import * as All from "./mode-recipe";
 import "ace-builds/src-noconflict/theme-tomorrow";
-import ReactHtmlParser from 'react-html-parser';
 
 const server = 'http://localhost:54044';
 
