@@ -22,6 +22,7 @@ public class IsEqualToTest {
         channels.add("A");
         channels.add("*");
 
+        Enum.clear();
         channelEnum = new Enum("channels", channels);
     }
 
