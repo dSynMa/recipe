@@ -32,7 +32,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.Semaphore;
 import java.util.logging.Logger;
 
 public class Server {
@@ -49,14 +48,15 @@ public class Server {
     MCConfig mcConfig;
 
     private static Logger logger = Logger.getLogger(Server.class.getName());
-    private final ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+    private ExecutorService service;
+    private final ExecutorService svgService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());;
 
     private List<JSONObject> renderSVGs (JSONObject response) {
         List<JSONObject> svgs = new ArrayList<>();
         List<Future<JSONObject>> futures = new ArrayList<>(system.getAgentInstances().size());
 
         for(AgentInstance agentInstance : system.getAgentInstances()) {
-            futures.add(this.service.submit(new SVGWorker(agentInstance, response)));
+            futures.add(this.svgService.submit(new SVGWorker(agentInstance, response)));
         }
         try {
             for(Future<JSONObject> f : futures) {
@@ -96,21 +96,21 @@ public class Server {
 
             String query = String.format("/state/%s/**state**", name);
             String queryTransition = String.format("/state/%s/**last_transition**", name);
-            
+
             Object stateQueryResult = response.query(query);
             Object trQueryResult = response.query(queryTransition);
 
             if(stateQueryResult != null){
                 String state = stateQueryResult.toString();
-                
+
                 // Remove closing brace and past highlighting
                 digraph = digraph.substring(0, digraph.length()-1);
                 digraph = digraph.replaceAll(";[\r\n ]*[^;]+[\r\n ]*\\[color=red\\][\r\n ]*;", ";");
                 digraph = digraph.replace("width=1,color=red", "width=1");
-                
+
                 // Highlight current state
                 digraph += state + "[color=red];";
-            
+
                 // Highlight last transition
                 if (trQueryResult != null) {
                     String queryFromState = String.format("/state/%s/**from_state**", name);
@@ -118,10 +118,10 @@ public class Server {
                     String fromState = response.query(queryFromState).toString();
                     String lbl = response.query(queryLbl).toString();
                     String lastTr = trQueryResult.toString();
-                    
-                    
+
+
                     String newTr = String.format("%s -> %s[label=\"%s\",labeltooltip=\"%s\",width=1];", fromState, state, lbl, lastTr);
-                    
+
                     digraph = digraph.replace(newTr, "\n");
                     digraph += newTr.replace("];", ",color=red];");
                 }
@@ -152,6 +152,16 @@ public class Server {
         }
     }
 
+    public Server(int threads) {
+        threads = Math.max(threads, 1);
+        threads = Math.min(threads, Runtime.getRuntime().availableProcessors());
+        if (threads == 1) {
+            service = Executors.newSingleThreadExecutor();
+        }
+        else {
+            service = Executors.newFixedThreadPool(threads);
+        }
+    }
 
     @Route("/")
     public String index() {
@@ -609,10 +619,13 @@ public class Server {
     }
 
     public static String start() throws Exception {
-//        int port = freePort();
+        return start(1);
+    }
+
+    public static String start(int threads) throws Exception {
         int port = 54044;
         app = Flak.createHttpApp(port);
-        app.scan(new Server());
+        app.scan(new Server(threads));
         cors();
         app.start();
         return app.getRootUrl();

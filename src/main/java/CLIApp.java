@@ -47,8 +47,7 @@ public class CLIApp
         Option bmc = new Option("bmc", "bmc", true, "info: bounded model checks input script file\nargs: bound (by default 10)");
         Option simulation = new Option("sim", "simulate", false, "info: opens file in simulation mode");
         Option gui = new Option("g", "gui", false, "info: opens gui");
-
-//        input.setRequired(true);
+        Option threads = new Option("t", "threads", true, "info: how many threads to use in model-checking (gui only)");
 
         options.addOption(input);
         options.addOption(nuxmv);
@@ -57,6 +56,7 @@ public class CLIApp
         options.addOption(bmc);
         options.addOption(simulation);
         options.addOption(gui);
+        options.addOption(threads);
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -67,12 +67,24 @@ public class CLIApp
         } catch (ParseException e) {
             System.out.println(e.getMessage());
             formatter.printHelp("recipe", options);
-
             System.exit(1);
         }
 
         if(cmd.hasOption("gui")){
-            Server.start();
+            int numThreads = Runtime.getRuntime().availableProcessors();
+            if(cmd.hasOption("threads")){
+                String cliThreads = cmd.getOptionValue("threads");
+                System.err.println(cliThreads);
+                try {
+                    numThreads = Integer.parseInt(cliThreads);
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    numThreads = Runtime.getRuntime().availableProcessors();
+                    System.err.printf("[WARNING] failed to parse --threads %s, will use %d%n", cliThreads, numThreads);
+                }
+            }
+
+            Server.start(numThreads);
             ProcessBuilder processBuilder = new ProcessBuilder();
             File dir = new File(System.getProperty("user.dir") + File.separator + "frontend-react");
 
