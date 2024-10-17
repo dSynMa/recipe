@@ -22,8 +22,10 @@ import recipe.lang.types.Enum;
 import recipe.lang.utils.Pair;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -161,6 +163,11 @@ public class Server {
         Enum.clear();
         String script = req.getQuery().get("script").trim();
         try {
+            script = java.net.URLDecoder.decode(script, StandardCharsets.UTF_8.name());
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        try {
             system = recipe.lang.System.parser().end().parse(script).get();
             if(nuXmvInteraction != null){
                 nuXmvInteraction.stopNuXmvThread();
@@ -183,6 +190,12 @@ public class Server {
         latestDotsInterpreter = new ConcurrentHashMap<>();
 
         String script = req.getQuery().get("script").trim();
+        try {
+            script = java.net.URLDecoder.decode(script, StandardCharsets.UTF_8.name());
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+
         Boolean buildType = Boolean.valueOf(req.getQuery().get("symbolic").trim());
         JSONObject response = new JSONObject();
         try {
@@ -479,6 +492,12 @@ public class Server {
     public String loadInterpreter(Request req) {
         // Load trace into interpreter
         String output = req.getQuery().get("output");
+        try {
+            output = java.net.URLDecoder.decode(output, StandardCharsets.UTF_8.name());
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+
         JSONObject response = new JSONObject();
 
         try {
