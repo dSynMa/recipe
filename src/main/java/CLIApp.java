@@ -72,9 +72,9 @@ public class CLIApp
 
         if(cmd.hasOption("gui")){
             int numThreads = Runtime.getRuntime().availableProcessors();
+            int serverPort = 3000;
             if(cmd.hasOption("threads")){
                 String cliThreads = cmd.getOptionValue("threads");
-                System.err.println(cliThreads);
                 try {
                     numThreads = Integer.parseInt(cliThreads);
                 } catch (NumberFormatException e) {
@@ -83,12 +83,25 @@ public class CLIApp
                     System.err.printf("[WARNING] failed to parse --threads %s, will use %d%n", cliThreads, numThreads);
                 }
             }
+            if(cmd.hasOption("port")){
+                String cliPort = cmd.getOptionValue("port");
+                try {
+                    serverPort = Integer.parseInt(cliPort);
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    serverPort = 3000;
+                    System.err.printf("[WARNING] failed to parse --port %s, will use %d%n", cliPort, serverPort);
+                }
+            }
 
             Server.start(numThreads);
             ProcessBuilder processBuilder = new ProcessBuilder();
             File dir = new File(System.getProperty("user.dir") + File.separator + "frontend-react");
 
             processBuilder.directory(dir);
+            if (serverPort != 3000) {
+                processBuilder.environment().put("PORT", String.valueOf(serverPort));
+            }
             processBuilder.command(npm, "start");
             Process exec = processBuilder.start();
 
