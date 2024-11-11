@@ -47,7 +47,8 @@ public class CLIApp
         Option bmc = new Option("bmc", "bmc", true, "info: bounded model checks input script file\nargs: bound (by default 10)");
         Option simulation = new Option("sim", "simulate", false, "info: opens file in simulation mode");
         Option gui = new Option("g", "gui", false, "info: opens gui");
-        Option threads = new Option("t", "threads", true, "info: how many threads to use in model-checking (gui only)");
+        Option threads = new Option("t", "threads", true, "info: how many threads to use in model-checking (gui only, default=num of hw threads)");
+        Option port = new Option("p", "port", true, "info: port the GUI server will listen to (default 3000)");
 
         options.addOption(input);
         options.addOption(nuxmv);
@@ -57,6 +58,7 @@ public class CLIApp
         options.addOption(simulation);
         options.addOption(gui);
         options.addOption(threads);
+        options.addOption(port);
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
