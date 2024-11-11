@@ -54,15 +54,19 @@ For windows users: make sure that you can access the localhost and that your fir
 After compilation, run the jar, e.g.`java -jar ./target/rcheck-0.1.jar` with the below arguments for the CLI functionality:
 
 ```
- -i,--input <arg>   info: input recipe script file
- -d,--dot           info: output agents DOT files
- -n,--smv           info: output to smv file
-                    args: <recipe script>
- -mc,--mc           info: model checks input script file
- -bmc,--bmc <arg>   info: bounded model checks input script file
-                    args: bound (by default 10)
- -sim,--simulate    info: opens file in simulation mode
- ```
+ -bmc,--bmc <arg>     info: bounded model checks input script file
+                      args: bound (by default 10)
+ -d,--dot             info: output agents DOT files
+ -g,--gui             info: opens gui
+ -i,--input <arg>     info: input recipe script file
+                      args: <recipe script>
+ -mc,--mc             info: model checks input script file
+ -n,--smv             info: output to smv file
+ -p,--port <arg>      info: port the GUI server will listen to (default
+                      3000)
+ -sim,--simulate      info: opens file in simulation mode
+ -t,--threads <arg>   info: how many threads to use in model-checking (gui
+                      only, default=num of hw threads) ```
 
 and with the following to run the GUI app:
 ```
