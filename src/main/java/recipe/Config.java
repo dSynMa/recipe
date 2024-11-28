@@ -21,6 +21,7 @@ public class Config {
     public static final String p2pLabel = "p2p";
     public static final String myselfKeyword = "myself";
     public static final String noAgentString = "no-agent";
+    public static final String rcheckPath = "rcheck/bin/cli.js";
     protected static TypedValue noAgent = null;
 
     public static void reset(){
