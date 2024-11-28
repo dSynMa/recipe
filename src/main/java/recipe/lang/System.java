@@ -89,6 +89,85 @@ public class System{
         return agentsInstances;
     }
 
+
+    public static System deserialize (JSONObject obj) throws Exception {
+        Enum.clear();
+        Guard.clear();
+        Config.reset();
+        Deserialization.checkType(obj, "Model");
+
+        // CHANNELS ///////////////////////////////////////////////////////////
+        List<String> valuesWithBroadcast = new ArrayList<>();
+        valuesWithBroadcast.add(Config.broadcast);
+        if (obj.has("channels")) {
+            JSONArray jChannels = obj.getJSONArray("channels");    
+            for (int i=0; i<jChannels.length(); i++) {
+                JSONObject chan = jChannels.getJSONObject(i);
+                valuesWithBroadcast.add(chan.getString("name"));
+            }
+        }
+        new Enum(Config.channelLabel, valuesWithBroadcast);
+        
+        // ENUMS //////////////////////////////////////////////////////////////
+        if (obj.has("enums")) {
+            JSONArray jEnums = obj.getJSONArray("enums");
+            for (int i=0; i<jEnums.length(); i++) {
+                JSONObject en = jEnums.getJSONObject(i);
+                List<String> cases = new ArrayList<>();
+                JSONArray jCases = en.getJSONArray("cases");
+                for (int j=0; j<jCases.length(); j++){
+                    JSONObject c = jCases.getJSONObject(j);
+                    cases.add(c.getString("name"));
+                }
+                new Enum(en.getString("name"), cases);   
+            }
+        }
+        // MESSAGE STRUCTURE //////////////////////////////////////////////////
+        Map<String, Type> msgStruct = new HashMap<>();
+        if (obj.has("msgStructs")) {
+            JSONArray jMsgStructs = obj.getJSONArray("msgStructs");
+            for (int i=0; i<jMsgStructs.length(); i++){
+                JSONObject ms = jMsgStructs.getJSONObject(i);
+                String msgName = ms.getString("name");
+                Type msgType = Deserialization.deserializeType(ms);
+                msgStruct.put(msgName, msgType);
+            }
+        }
+        // PROPERTY IDENTIFIERS ///////////////////////////////////////////////
+        Map<String, Type> propIds = new HashMap<>();
+        if (obj.has("commVars")) {
+            JSONArray jPropIds = obj.getJSONArray("commVars");
+            for (int i=0; i<jPropIds.length(); i++) {
+                JSONObject jPrId = jPropIds.getJSONObject(i);
+                String name = jPrId.getString("name");
+                Type type = Deserialization.deserializeType(jPrId);
+                propIds.put(name, type);
+            }
+        }
+        // GUARDS ////////////////////////////////////////////////////////////
+        Map<String, Type> guardDefinitions = new HashMap<>();
+        if (obj.has("guards")) {
+            JSONArray jGuards = obj.getJSONArray("guards");
+            for (int i=0; i<jGuards.length(); i++) {
+                GuardDefinition gd = GuardDefinition.deserialize(jGuards.getJSONObject(i));
+                Guard.setDefinition(gd.getName(), gd);
+                guardDefinitions.put(gd.getName(), gd.getType());
+            }
+        }
+
+        // AGENTS /////////////////////////////////////////////////////////////
+        JSONArray jAgents = obj.getJSONArray("agents");
+        for (int i=0; i<jAgents.length(); i++){
+            JSONObject jAgent = jAgents.getJSONObject(i);
+            Agent.deserialize(jAgent, null);
+        }
+
+
+        return null;
+
+    }
+
+
     public System(Map<String, Type> messageStructure, Map<String, Type> communicationVariables,
                   Map<String, Type> guardDefinitions, Set<Agent> agents,
                   List<AgentInstance> agentsInstances, List<LTOL> specs) throws Exception {
