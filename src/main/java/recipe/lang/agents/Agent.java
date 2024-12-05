@@ -111,6 +111,63 @@ public class Agent {
         this.initialState = initialState;
     }
 
+    public static Agent ofRepeat(
+            String name, Store store, Expression<Boolean> init, Map<TypedVariable, Expression> relabel,
+            Expression<Boolean> receiveGuardCondition, Process repeat) {
+
+        State startState = new State<Integer>(Integer.valueOf(0));
+        // State startState = new State("0");
+        Process.stateSeed = 0;
+        Set<Transition> transitions = repeat.asTransitionSystem(startState, startState);
+        Set<ProcessTransition> sendTransitions = new HashSet<>();
+        Set<ProcessTransition> receiveTransitions = new HashSet<>();
+        Set<ProcessTransition> getTransitions = new HashSet<>();
+        Set<ProcessTransition> supplyTransitions = new HashSet<>();
+
+        Set<Process> actions = new HashSet<>();
+        transitions.forEach(tt -> {
+            if (tt.getClass().equals(ProcessTransition.class)) {
+                ProcessTransition t = (ProcessTransition) tt;
+                if (t.getLabel().getClass().equals(SendProcess.class)) {
+                    sendTransitions.add(t);
+                } else if (t.getLabel().getClass().equals(ReceiveProcess.class)) {
+                    receiveTransitions.add(t);
+                } else if (t.getLabel().getClass().equals(GetProcess.class)) {
+                    getTransitions.add(t);
+                } else if (t.getLabel().getClass().equals(SupplyProcess.class)) {
+                    supplyTransitions.add(t);
+                }
+
+                actions.add(t.getLabel());
+            }
+        });
+        Set<State> states = new HashSet<>();
+        for (Transition tt : transitions) {
+            if (tt.getClass().equals(ProcessTransition.class)) {
+                ProcessTransition t = (ProcessTransition) tt;
+                t.getSource().setAgent(name);
+                t.getDestination().setAgent(name);
+                t.setAgent(name);
+                states.add(t.getSource());
+                states.add(t.getDestination());
+            }
+        }
+        Agent agent = new Agent(name,
+                store,
+                init,
+                states,
+                sendTransitions,
+                receiveTransitions,
+                actions,
+                startState,
+                receiveGuardCondition,
+                getTransitions,
+                supplyTransitions);
+
+        agent.setRelabel(relabel);
+        return agent;
+    }
+
     public String getName() {
         return this.name;
     }
@@ -302,60 +359,7 @@ public class Agent {
                         Map<TypedVariable, Expression> relabel = (Map<TypedVariable, Expression>) values.get(4);
                         Expression<Boolean> receiveGuardCondition = (Expression<Boolean>) values.get(5);
                         Process repeat = (Process) values.get(6);
-                        State startState = new State<Integer>(Integer.valueOf(0));
-                        // State startState = new State("0");
-                        Process.stateSeed = 0;
-                        Set<Transition> transitions = repeat.asTransitionSystem(startState, startState);
-                        Set<ProcessTransition> sendTransitions = new HashSet<>();
-                        Set<ProcessTransition> receiveTransitions = new HashSet<>();
-                        Set<ProcessTransition> getTransitions = new HashSet<>();
-                        Set<ProcessTransition> supplyTransitions = new HashSet<>();
-
-                        Set<Process> actions = new HashSet<>();
-                        transitions.forEach(tt -> {
-                            if (tt.getClass().equals(ProcessTransition.class)) {
-                                ProcessTransition t = (ProcessTransition) tt;
-                                if (t.getLabel().getClass().equals(SendProcess.class)) {
-                                    sendTransitions.add(t);
-                                } else if (t.getLabel().getClass().equals(ReceiveProcess.class)) {
-                                    receiveTransitions.add(t);
-                                } else if (t.getLabel().getClass().equals(GetProcess.class)) {
-                                    getTransitions.add(t);
-                                } else if (t.getLabel().getClass().equals(SupplyProcess.class)) {
-                                    supplyTransitions.add(t);
-                                }
-
-                                actions.add(t.getLabel());
-                            }
-                        });
-                        Set<State> states = new HashSet<>();
-                        for (Transition tt : transitions) {
-                            if (tt.getClass().equals(ProcessTransition.class)) {
-                                ProcessTransition t = (ProcessTransition) tt;
-                                t.getSource().setAgent(agentName);
-                                t.getDestination().setAgent(agentName);
-                                t.setAgent(agentName);
-
-                                states.add(t.getSource());
-                                states.add(t.getDestination());
-                            }
-                        }
-
-                        Agent agent = new Agent(agentName,
-                                store,
-                                init,
-                                states,
-                                sendTransitions,
-                                receiveTransitions,
-                                actions,
-                                startState,
-                                receiveGuardCondition,
-                                getTransitions,
-                                supplyTransitions);
-
-                        agent.setRelabel(relabel);
-
-                        return agent;
+                        return Agent.ofRepeat(agentName, store, init, relabel, receiveGuardCondition, repeat);
                     } catch (AttributeTypeException e) {
                         e.printStackTrace();
                     } catch (Exception e) {
@@ -504,17 +508,17 @@ public class Agent {
         return false;
     }
 
-    public static Agent deserialize(JSONObject jAgent, TypingContext ctx) throws Exception {
+    public static Agent deserialize(JSONObject jAgent, TypingContext parentContext) throws Exception {
         Deserialization.checkType(jAgent, "Agent");
         String name = jAgent.getString("name");
         Map<String, TypedVariable> localVars = new HashMap<>();
         TypingContext context = new TypingContext();
-        if (ctx != null) {
-            context.setAll(ctx);
+        if (parentContext != null) {
+            context.setAll(parentContext);
         }
-        if (jAgent.has("locals")){
+        if (jAgent.has("locals")) {
             JSONArray jLocals = jAgent.getJSONArray("locals");
-            for (int i=0; i<jLocals.length(); i++){
+            for (int i = 0; i < jLocals.length(); i++) {
                 JSONObject local = jLocals.getJSONObject(i);
                 String locName = local.getString("name");
                 Type type = Deserialization.deserializeType(local);
@@ -522,10 +526,23 @@ public class Agent {
                 localVars.put(locName, new TypedVariable<Type>(type, locName));
             }
         }
+        Map<TypedVariable, Expression> relabel = new HashMap<>();
+        if (jAgent.has("relabels")) {
+            JSONArray jRelabels = jAgent.getJSONArray("relabels");
+            for (int i = 0; i < jRelabels.length(); i++) {
+                JSONObject jRelabel = jRelabels.getJSONObject(i);
+                String varName = jRelabel.getJSONObject("var").getString("$refText");
+                Type t = context.get(varName);
+                Expression expr = Deserialization.deserializeExpr(jRelabel, context);
+                relabel.put(new TypedVariable<Type>(t, varName), expr);
+            }
+        }
         Store store = new Store(localVars);
+        System.out.println(store.getAttributes());
         Expression init = Deserialization.deserializeExpr(jAgent.getJSONObject("init"), context);
         Expression recvGuard = Deserialization.deserializeExpr(jAgent.getJSONObject("recvguard"), context);
+        Process repeat = Process.deserialize(jAgent.getJSONObject("repeat"), context);
 
-        return null;
+        return Agent.ofRepeat(name, store, init, relabel, recvGuard, repeat);
     }
 }
