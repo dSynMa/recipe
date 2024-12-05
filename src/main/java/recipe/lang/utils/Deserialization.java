@@ -139,7 +139,9 @@ public class Deserialization {
                 type = context.get(name);
                 return new TypedVariable<Type>(type, name);
             case "AutomatonState":
-                return new TypedVariable<Integer>(Integer.getType(), "automaton-state");
+                return new TypedVariable<Integer>(
+                    Integer.getType(), 
+                    jExpr.getJSONObject("instance").getString("$refText") + "-automaton-state");
             case "QualifiedRef":
                 String instance = jExpr.getJSONObject("instance").getString("$refText");
                 String variable = jExpr.getJSONObject("variable").getString("$refText");
