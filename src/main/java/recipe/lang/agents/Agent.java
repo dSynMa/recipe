@@ -479,21 +479,22 @@ public class Agent {
         // }
     }
 
-    public List<TypedVariable> getAllTransitionLabels() {
-        List<TypedVariable> labels = new ArrayList<>();
-        for (ProcessTransition process : this.sendTransitions) {
+    public List<TypedVariable<Boolean>> getAllTransitionLabels() {
+        int sz = (
+            this.sendTransitions.size() + this.receiveTransitions.size() +
+            this.supplyTransitions.size() + this.getTransitions.size());
+        List<ProcessTransition> allTransitions = new ArrayList<>(sz);
+        allTransitions.addAll(sendTransitions);
+        allTransitions.addAll(receiveTransitions);
+        allTransitions.addAll(supplyTransitions);
+        allTransitions.addAll(getTransitions);
+        List<TypedVariable<Boolean>> labels = new ArrayList<>(sz);
+        for (ProcessTransition process : allTransitions) {
             String label = process.getLabel().getLabel();
-            if (label != null) {
+            if (label != null && !label.equals("")) {
                 labels.add(new TypedVariable<Boolean>(Boolean.getType(), label));
             }
         }
-        for (ProcessTransition process : this.receiveTransitions) {
-            String label = process.getLabel().getLabel();
-            if (label != null) {
-                labels.add(new TypedVariable<Boolean>(Boolean.getType(), label));
-            }
-        }
-
         return labels;
     }
 
