@@ -18,6 +18,7 @@ import java.util.Map;
 public class Config {
     public static final String locationLabel = "location";
     public static final String channelLabel = "channel";
+    public static final String chanLabel = "chan";
     public static final String p2pLabel = "p2p";
     public static final String myselfKeyword = "myself";
     public static final String noAgentString = "no-agent";
