@@ -1,8 +1,6 @@
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,18 +16,13 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
-import org.json.JSONTokener;
 import org.petitparser.context.ParseError;
-import org.petitparser.context.Result;
-import org.petitparser.parser.Parser;
 
-import recipe.Config;
+import recipe.RCheckInterop;
 import recipe.analysis.NuXmvInteraction;
 import recipe.analysis.ToNuXmv;
 import recipe.lang.utils.Pair;
-import recipe.lang.utils.exceptions.ParsingException;
 
 public class CLIApp {
     static boolean isWindows() {
@@ -96,28 +89,17 @@ public class CLIApp {
 
     private static void runCli(CommandLine cmd) throws Exception, IOException {
         Path inputFilePath = Path.of(cmd.getOptionValue("i"));
-        String script = String.join("\n", Files.readAllLines(inputFilePath));
-        
         String transform = "";
         recipe.lang.System system = null;
+        
         try {
-            JSONObject jo = parseWithRCheck(inputFilePath);
-            recipe.lang.System x = recipe.lang.System.deserialize(jo);
-
-            Parser systemParser = recipe.lang.System.parser().end();
-            Result r = systemParser.parse(script);
-            if (r.isFailure()) {
-                System.out.println(r.getMessage());
-                System.out.println(r.getPosition());
-                System.out.println("Could not parse the following: \n" + script.substring(r.getPosition()));
-                return;
-            }
-            system = r.get();
-
+            JSONObject jo = RCheckInterop.parse(inputFilePath);
+            system = recipe.lang.System.deserialize(jo);
             transform = ToNuXmv.transform(system);
         } catch (Exception e) {
+            e.printStackTrace();
             System.out.println(e.getMessage());
-            System.exit(1);
+            System.exit(6);
         }
 
         if (cmd.hasOption("smv")) {
@@ -246,26 +228,6 @@ public class CLIApp {
         }
     }
 
-
-    private static JSONObject parseWithRCheck(Path inputFilePath) throws IOException, InterruptedException, ParsingException {
-        ProcessBuilder builder = new ProcessBuilder(Config.rcheckPath, "generate", inputFilePath.toRealPath().toString());
-        Process process = builder.start();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        JSONTokener jt = new JSONTokener(reader);
-        try {
-            JSONObject jo = new JSONObject(jt);
-            return jo;
-        } catch (JSONException ext) {
-            BufferedReader errReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-            StringBuilder sb = new StringBuilder();
-            for (String line; (line = errReader.readLine())!= null; sb.append(line));
-            throw new ParsingException(sb.toString());
-        } finally {
-            process.waitFor();
-            process.destroy();
-            reader.close();
-        }
-    }
 
     private static void runGui(CommandLine cmd) throws Exception, IOException {
         int numThreads = Runtime.getRuntime().availableProcessors();
