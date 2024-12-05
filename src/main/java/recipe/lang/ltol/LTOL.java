@@ -140,7 +140,7 @@ public abstract class LTOL {
                             String agentType = (String) types.get(i);
                             if(agentType == "Agent") {
                                 return Config.getAgentType();
-                            } else{
+                            } else {
                                 type.addType(Enum.getEnum(agentType));
                             }
                         }
@@ -375,7 +375,7 @@ public abstract class LTOL {
 
             for(LTOL ltol1 : possibleValues){
                 for(String agentName : possibleAgentInstancesNames){
-                    LTOL ltol2 = ltol1.rename((x) -> labelledPossibleReferences.contains(x) ? new TypedVariable(x.getType(), x.toString().replaceAll("^" + var.toString(), agentName)) : x);
+                    LTOL ltol2 = ltol1.rename((x) -> containsQualified(labelledPossibleReferences, possibleAgentTypes, x) ? new TypedVariable(x.getType(), x.toString().replaceAll("^" + var.toString(), agentName)) : x);
                     Type agentType = agentInstanceNameToType.get(agentName);
                     for(TypedVariable agentVar : vars) {
                         ltol2 = ltol2.rename((x) -> x.getName().equals(agentVar.getName()) ? new TypedVariable(agentType, agentName) : x);
@@ -389,6 +389,24 @@ public abstract class LTOL {
         }
 
         return possibleValues;
+    }
+
+    private static boolean containsQualified(Set<TypedVariable> set, Set<Agent> possibleAgentTypes, TypedVariable x) {
+        String unqualifiedName = x.getName().split("-")[1];
+        // Find a matching local variable and set x's type to that
+        for (Agent a : possibleAgentTypes) {
+            for (TypedVariable tv : a.getStore().getAttributes().values()) {
+                if (tv.getName().equals(unqualifiedName)) {
+                    TypedVariable<Type> xWithType = new TypedVariable<>(tv.getType(), x.getName());
+                    // Now check for inclusion
+                    for (TypedVariable typedVariable : set) {
+                        if (typedVariable.equals(xWithType)) return true;
+                    }
+                }
+            }
+        }
+        // Nothing was found :(
+        return false;
     }
 
     private static java.lang.Boolean nestedQuantifiers(Observation observation){

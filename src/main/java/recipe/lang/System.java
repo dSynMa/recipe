@@ -29,6 +29,7 @@ import recipe.Config;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.definitions.GuardDefinition;
+import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.And;
@@ -95,6 +96,7 @@ public class System{
         Guard.clear();
         Config.reset();
         Deserialization.checkType(obj, "Model");
+        TypingContext ctx = new TypingContext();
 
         // CHANNELS ///////////////////////////////////////////////////////////
         List<String> valuesWithBroadcast = new ArrayList<>();
@@ -106,7 +108,10 @@ public class System{
                 valuesWithBroadcast.add(chan.getString("name"));
             }
         }
-        new Enum(Config.channelLabel, valuesWithBroadcast);
+        Enum chanEnum = new Enum(Config.channelLabel, valuesWithBroadcast);
+        for (String chan : valuesWithBroadcast) {
+            ctx.set(chan, chanEnum);
+        }
         
         // ENUMS //////////////////////////////////////////////////////////////
         if (obj.has("enums")) {
@@ -119,7 +124,10 @@ public class System{
                     JSONObject c = jCases.getJSONObject(j);
                     cases.add(c.getString("name"));
                 }
-                new Enum(en.getString("name"), cases);   
+                Enum newEnum = new Enum(en.getString("name"), cases);
+                for (String c : cases) {
+                    ctx.set(c, newEnum);
+                }
             }
         }
         // MESSAGE STRUCTURE //////////////////////////////////////////////////
@@ -131,17 +139,19 @@ public class System{
                 String msgName = ms.getString("name");
                 Type msgType = Deserialization.deserializeType(ms);
                 msgStruct.put(msgName, msgType);
+                ctx.set(msgName, msgType);
             }
         }
         // PROPERTY IDENTIFIERS ///////////////////////////////////////////////
         Map<String, Type> propIds = new HashMap<>();
-        if (obj.has("commVars")) {
-            JSONArray jPropIds = obj.getJSONArray("commVars");
+        if (obj.has("propVars")) {
+            JSONArray jPropIds = obj.getJSONArray("propVars");
             for (int i=0; i<jPropIds.length(); i++) {
                 JSONObject jPrId = jPropIds.getJSONObject(i);
                 String name = jPrId.getString("name");
                 Type type = Deserialization.deserializeType(jPrId);
                 propIds.put(name, type);
+                ctx.set(name, type);
             }
         }
         // GUARDS ////////////////////////////////////////////////////////////
@@ -152,19 +162,60 @@ public class System{
                 GuardDefinition gd = GuardDefinition.deserialize(jGuards.getJSONObject(i));
                 Guard.setDefinition(gd.getName(), gd);
                 guardDefinitions.put(gd.getName(), gd.getType());
+                ctx.set(gd.getName(), gd.getType());
+            }
+        }
+        // AGENTS /////////////////////////////////////////////////////////////
+        JSONArray jAgents = obj.getJSONArray("agents");
+        Map<String, Agent> agents = new HashMap<>();
+        Map<Agent, List<String>> agentsToInstances = new HashMap<>();
+
+        for (int i=0; i<jAgents.length(); i++){
+            Agent agent = Agent.deserialize(jAgents.getJSONObject(i), ctx);
+            agents.put(agent.getName(), agent);
+            if (!agentsToInstances.containsKey(agent)) {
+                List<String> lst = new ArrayList<>();
+                lst.add(Config.noAgentString);
+                agentsToInstances.put(agent, lst);
+            }
+        }
+        // INSTANCES //////////////////////////////////////////////////////////
+        JSONArray jInstances = obj.getJSONArray("system");
+        List<AgentInstance> instances = new ArrayList<>(jInstances.length());
+
+        for (int i = 0; i < jInstances.length(); i++) {
+            JSONObject jInstance = jInstances.getJSONObject(i);
+            Agent agent = agents.get(jInstance.getJSONObject("agent").getString("$refText"));
+            String name = jInstance.getString("name");
+            agentsToInstances.get(agent).add(name);
+            Expression init = Deserialization.deserializeExpr(jInstance.getJSONObject("init"), ctx);
+            instances.add(new AgentInstance(name, init, agent));
+            // instanceNames.add(name);
+            ctx.set(name, Config.getAgentType());
+        }
+        Set<Agent> agentsSet = new HashSet<>(agents.values());
+        List<String> allInstanceNames = new ArrayList<>();
+        allInstanceNames.add(Config.noAgentString);
+        for (Agent agent : agentsToInstances.keySet()) {
+            allInstanceNames.addAll(agentsToInstances.get(agent));
+            Enum agentEnum = new Enum(agent.getName(), agentsToInstances.get(agent));
+            ctx.set(agent.getName(), agentEnum);
+            Config.addAgentTypeName(agent.getName(), agent);
+        }
+        new Enum(Config.locationLabel, allInstanceNames);
+
+        // SPECS //////////////////////////////////////////////////////////////
+        List<LTOL> specs = new ArrayList<>();
+        if (obj.has("specs")) {
+            JSONArray jSpecs = obj.getJSONArray("specs");
+            specs = new ArrayList<>(jSpecs.length());
+            for (int i = 0; i < jSpecs.length(); i++) {
+                LTOL spec = Deserialization.deserializeLTOL(jSpecs.getJSONObject(i), ctx);
+                specs.add(spec);
             }
         }
 
-        // AGENTS /////////////////////////////////////////////////////////////
-        JSONArray jAgents = obj.getJSONArray("agents");
-        for (int i=0; i<jAgents.length(); i++){
-            JSONObject jAgent = jAgents.getJSONObject(i);
-            Agent.deserialize(jAgent, null);
-        }
-
-
-        return null;
-
+        return new System(msgStruct, propIds, guardDefinitions, agentsSet, instances, specs);
     }
 
 
