@@ -379,7 +379,6 @@ public abstract class LTOL {
                     Type agentType = agentInstanceNameToType.get(agentName);
                     for(TypedVariable agentVar : vars) {
                         ltol2 = ltol2.rename((x) -> x.getName().equals(agentVar.getName()) ? new TypedVariable(agentType, agentName) : x);
-                        java.lang.System.out.println(ltol2.toString());
                         newPossibleValues.add(ltol2);
                     }
                 }

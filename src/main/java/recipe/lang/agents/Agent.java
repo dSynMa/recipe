@@ -539,7 +539,6 @@ public class Agent {
             }
         }
         Store store = new Store(localVars);
-        System.out.println(store.getAttributes());
         Expression init = Deserialization.deserializeExpr(jAgent.getJSONObject("init"), context);
         Expression recvGuard = Deserialization.deserializeExpr(jAgent.getJSONObject("recvguard"), context);
         Process repeat = Process.deserialize(jAgent.getJSONObject("repeat"), context);
