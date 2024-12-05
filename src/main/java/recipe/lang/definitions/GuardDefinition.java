@@ -30,7 +30,7 @@ public class GuardDefinition extends Definition<Expression<Boolean>> {
         this.type = guardType;
     }
 
-    public static GuardDefinition deserialize(JSONObject jGuard) throws ParsingException,Exception {
+    public static GuardDefinition deserialize(JSONObject jGuard, TypingContext parentContext) throws ParsingException,Exception {
         Deserialization.checkType(jGuard, "Guard");
         String name = jGuard.getString("name");
         TypedVariable[] params;
@@ -48,6 +48,9 @@ public class GuardDefinition extends Definition<Expression<Boolean>> {
         }
         Guard guard = new Guard(name, params);
         TypingContext ctx = new TypingContext();
+        if (parentContext != null) {
+            ctx.setAll(parentContext);
+        }
         for (TypedVariable tv: params) {
             ctx.set(tv.getName(), tv.getType());
         }

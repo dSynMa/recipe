@@ -1,6 +1,7 @@
 package recipe.lang;
 
 import static recipe.Config.commVariableReferences;
+import static recipe.Config.locationLabel;
 import static recipe.lang.utils.Parsing.channelValues;
 import static recipe.lang.utils.Parsing.guardDefinitionList;
 import static recipe.lang.utils.Parsing.labelledParser;
@@ -95,6 +96,7 @@ public class System{
         Enum.clear();
         Guard.clear();
         Config.reset();
+        Enum locationEnum = new Enum(Config.locationLabel, new ArrayList<String>());
         Deserialization.checkType(obj, "Model");
         TypingContext ctx = new TypingContext();
 
@@ -159,7 +161,7 @@ public class System{
         if (obj.has("guards")) {
             JSONArray jGuards = obj.getJSONArray("guards");
             for (int i=0; i<jGuards.length(); i++) {
-                GuardDefinition gd = GuardDefinition.deserialize(jGuards.getJSONObject(i));
+                GuardDefinition gd = GuardDefinition.deserialize(jGuards.getJSONObject(i), ctx);
                 Guard.setDefinition(gd.getName(), gd);
                 guardDefinitions.put(gd.getName(), gd.getType());
                 ctx.set(gd.getName(), gd.getType());
@@ -188,7 +190,12 @@ public class System{
             Agent agent = agents.get(jInstance.getJSONObject("agent").getString("$refText"));
             String name = jInstance.getString("name");
             agentsToInstances.get(agent).add(name);
-            Expression init = Deserialization.deserializeExpr(jInstance.getJSONObject("init"), ctx);
+            TypingContext instanceCtx = new TypingContext();
+            instanceCtx.setAll(ctx);
+            for (TypedVariable tv : agent.getStore().getAttributes().values()) {
+                instanceCtx.set(tv.getName(), tv.getType());
+            }
+            Expression init = Deserialization.deserializeExpr(jInstance.getJSONObject("init"), instanceCtx);
             instances.add(new AgentInstance(name, init, agent));
             // instanceNames.add(name);
             ctx.set(name, Config.getAgentType());
@@ -202,7 +209,7 @@ public class System{
             ctx.set(agent.getName(), agentEnum);
             Config.addAgentTypeName(agent.getName(), agent);
         }
-        new Enum(Config.locationLabel, allInstanceNames);
+        locationEnum.setValues(allInstanceNames);
 
         // SPECS //////////////////////////////////////////////////////////////
         List<LTOL> specs = new ArrayList<>();

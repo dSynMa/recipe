@@ -73,6 +73,8 @@ public class Deserialization {
                     return recipe.lang.types.Boolean.getType();
                 case "channels":
                     return Enum.getEnum(Config.channelLabel);
+                case "location":
+                    return Enum.getEnum(Config.locationLabel);
                 default:
                     throw new Exception("Unexpected builtinType " + bt);
             }
@@ -136,6 +138,8 @@ public class Deserialization {
                 name = name.substring(1);
                 type = context.get(name);
                 return new TypedVariable<Type>(type, name);
+            case "AutomatonState":
+                return new TypedVariable<Integer>(Integer.getType(), "automaton-state");
             case "QualifiedRef":
                 String instance = jExpr.getJSONObject("instance").getString("$refText");
                 String variable = jExpr.getJSONObject("variable").getString("$refText");
