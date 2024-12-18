@@ -71,8 +71,6 @@ public class Deserialization {
                     return recipe.lang.types.Integer.getType();
                 case "bool":
                     return recipe.lang.types.Boolean.getType();
-                case "channels":
-                    return Enum.getEnum(Config.channelLabel);
                 case "location":
                     return Enum.getEnum(Config.locationLabel);
                 default:

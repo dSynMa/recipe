@@ -101,19 +101,6 @@ public class System{
         TypingContext ctx = new TypingContext();
 
         // CHANNELS ///////////////////////////////////////////////////////////
-        List<String> valuesWithBroadcast = new ArrayList<>();
-        valuesWithBroadcast.add(Config.broadcast);
-        if (obj.has("channels")) {
-            JSONArray jChannels = obj.getJSONArray("channels");    
-            for (int i=0; i<jChannels.length(); i++) {
-                JSONObject chan = jChannels.getJSONObject(i);
-                valuesWithBroadcast.add(chan.getString("name"));
-            }
-        }
-        Enum chanEnum = new Enum(Config.channelLabel, valuesWithBroadcast);
-        for (String chan : valuesWithBroadcast) {
-            ctx.set(chan, chanEnum);
-        }
         
         // ENUMS //////////////////////////////////////////////////////////////
         if (obj.has("enums")) {
@@ -126,7 +113,11 @@ public class System{
                     JSONObject c = jCases.getJSONObject(j);
                     cases.add(c.getString("name"));
                 }
-                Enum newEnum = new Enum(en.getString("name"), cases);
+                String enumName = en.getString("name");
+                if (enumName.equals(Config.channelLabel)) {
+                    cases.add(Config.broadcast);
+                }
+                Enum newEnum = new Enum(enumName, cases);
                 for (String c : cases) {
                     ctx.set(c, newEnum);
                 }
