@@ -28,7 +28,7 @@ import recipe.lang.utils.Pair;
 
 public class Interpreter {
     private TypedVariable channTypedVariable;
-    TypedVariable getChannelTV () {
+    TypedVariable<Type> getChannelTV () {
         if (channTypedVariable == null) {
             try {
                 Type chanEnum = recipe.lang.types.Enum.getEnum("channel");

@@ -1,16 +1,14 @@
 package recipe.lang.ltol;
 
-import org.junit.Test;
-import org.petitparser.context.Result;
-import org.petitparser.parser.Parser;
-import recipe.Config;
-import recipe.lang.System;
-
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
+import org.petitparser.context.Result;
+import org.petitparser.parser.Parser;
+
+import recipe.Config;
+import recipe.lang.System;
 
 public class LTOLTest {
 
