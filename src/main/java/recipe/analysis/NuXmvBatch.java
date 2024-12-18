@@ -9,7 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -174,6 +173,48 @@ public class NuXmvBatch {
         return path;
     }
 
+    public static Path newNuxmvScript (int bound, int propertyId, Cmd ... commands) throws IOException {
+        Path path = Files.createTempFile("rcheck", "_script.smv");
+        StringBuilder script = new StringBuilder();
+        for (Cmd command : commands) {
+            switch (command) {
+                case GO_MSAT:
+                    script.append("go_msat");
+                    break;
+                case BUILD_BOOLEAN:
+                    script.append("build_boolean_model");
+                    break;
+                case BMC:
+                    script.append("msat_check_ltlspec_bmc");
+                    script.append(String.format(" -n %d", propertyId));
+                    script.append(" -k " + bound);
+                    break;
+                case INC_BMC:
+                    script.append("msat_check_ltlspec_sbmc_inc");
+                    script.append(String.format(" -n %d", propertyId));
+                    break;
+                case IC3_INVAR:
+                    script.append("check_property_as_invar_ic3");
+                    script.append(String.format(" -n %d", propertyId));
+                    if (bound >= 0) { script.append(" -k " + bound); }
+                    break;
+                case IC3_LTL:
+                    script.append("check_ltlspec_ic3");
+                    script.append(String.format(" -n %d", propertyId));
+                    if (bound >= 0) { script.append(" -k " + bound); }
+                    break;
+                case QUIT:
+                    script.append("quit");
+                    break;
+                default:
+                    throw new IOException("Unsupported command.");
+            }
+            script.append("\n");
+        }
+        Files.write(path, script.toString().getBytes(StandardCharsets.UTF_8));
+        return path;
+    }
+
     private Process callNuXmv(Path scriptFile) throws IOException {
         String nuxmvPath = Config.getNuxmvPath();
         ProcessBuilder builder = new ProcessBuilder(nuxmvPath, "-source", scriptFile.toRealPath().toString(),
@@ -225,6 +266,7 @@ public class NuXmvBatch {
                 if (nextLine.contains("syntax error")) result.err = Error.SYNTAX;
                 else if (nextLine.contains("Type System Violation")) result.err = Error.TYPE;
                 else if (nextLine.contains("cannot be converted into INVARSPEC")) result.err = Error.NOT_INVAR;
+                else if (nextLine.contains("is not a safetyLTL property")) result.err = Error.NOT_INVAR;
                 else if (nextLine.contains("Parsing error")) result.err = Error.OTHER;
                 else if (nextLine.contains("aborting 'source")) result.err = Error.OTHER;
                 else if (nextLine.contains("Impossible to build a boolean FSM with infinite precision variables")) result.err = Error.INF_PRECISION;
@@ -237,24 +279,25 @@ public class NuXmvBatch {
         return result;
     }
 
-    public Pair<Boolean, String> modelCheckIc3(String property, boolean bounded, int steps) throws Exception {
+    public Pair<Boolean, String> modelCheckIc3(int id, boolean bounded, int steps) throws Exception {
         if (!bounded) steps = -1;
-        Path scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, Cmd.IC3_INVAR, Cmd.QUIT);
+        Path scriptFile = newNuxmvScript(steps, id, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, Cmd.IC3_INVAR, Cmd.QUIT);
         NuXmvResult result = callAndRead(scriptFile);
         if (result.success()) return result.toPair();
         // Previous call failed due to infinite-precision variables
         else if (result.err == Error.NOT_INVAR) {
             // Property was not an INVARSPEC
-            scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, Cmd.IC3_LTL, Cmd.QUIT);
+            scriptFile = newNuxmvScript(steps, id, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, Cmd.IC3_LTL, Cmd.QUIT);
             result = callAndRead(scriptFile);
             return result.toPair();
         }
         else if (result.err == Error.INF_PRECISION) {
             // try INVARSPEC checking without boolean model
-            scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.IC3_INVAR, Cmd.QUIT);
+            scriptFile = newNuxmvScript(steps, id, Cmd.GO_MSAT, Cmd.IC3_INVAR, Cmd.QUIT);
             result = callAndRead(scriptFile);
+            java.lang.System.out.println(result.output);
             if (result.success()) return result.toPair();
-            scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.IC3_LTL, Cmd.QUIT);
+            scriptFile = newNuxmvScript(steps, id, Cmd.GO_MSAT, Cmd.IC3_LTL, Cmd.QUIT);
             return callAndRead(scriptFile).toPair();
         }
         // If we end up here, there's something wrong
@@ -262,15 +305,15 @@ public class NuXmvBatch {
         return result.toPair();
     }
 
-    public Pair<Boolean, String> modelCheckBmc(String property, boolean bounded, int steps) throws Exception {
+    public Pair<Boolean, String> modelCheckBmc(int id, boolean bounded, int steps) throws Exception {
         if (!bounded) steps = -1;
         Cmd bmcCommand = bounded ? Cmd.BMC : Cmd.INC_BMC;
-        Path scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, bmcCommand, Cmd.QUIT);
+        Path scriptFile = newNuxmvScript(steps, id, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, bmcCommand, Cmd.QUIT);
         NuXmvResult result = callAndRead(scriptFile);
         if (result.success()) return result.toPair();
         
         else if (result.err == Error.INF_PRECISION) {
-            scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, bmcCommand, Cmd.QUIT);
+            scriptFile = newNuxmvScript(steps, id, Cmd.GO_MSAT, bmcCommand, Cmd.QUIT);
             return callAndRead(scriptFile).toPair();
         }
         // If we end up here, there's something wrong

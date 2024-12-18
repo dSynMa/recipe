@@ -1,38 +1,45 @@
 
-import flak.*;
-import flak.annotations.Route;
-import guru.nidi.graphviz.engine.Engine;
-import guru.nidi.graphviz.engine.Format;
-import guru.nidi.graphviz.engine.Graphviz;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.json.JSONTokener;
-import org.petitparser.context.ParseError;
-
-import recipe.analysis.NuXmvBatch;
-import recipe.analysis.NuXmvInteraction;
-import recipe.analysis.ToNuXmv;
-import recipe.interpreter.Interpreter;
-import recipe.lang.System;
-import recipe.lang.agents.Agent;
-import recipe.lang.agents.AgentInstance;
-import recipe.lang.ltol.LTOL;
-import recipe.lang.ltol.Observation;
-import recipe.lang.types.Enum;
-import recipe.lang.utils.Pair;
-
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.logging.Logger;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONTokener;
+import org.petitparser.context.ParseError;
+
+import flak.App;
+import flak.ErrorHandler;
+import flak.Flak;
+import flak.Request;
+import flak.SuccessHandler;
+import flak.annotations.Route;
+import guru.nidi.graphviz.engine.Engine;
+import guru.nidi.graphviz.engine.Format;
+import guru.nidi.graphviz.engine.Graphviz;
+import recipe.RCheckInterop;
+import recipe.analysis.NuXmvBatch;
+import recipe.analysis.NuXmvInteraction;
+import recipe.interpreter.Interpreter;
+import recipe.lang.System;
+import recipe.lang.agents.Agent;
+import recipe.lang.agents.AgentInstance;
+import recipe.lang.ltol.LTOL;
+import recipe.lang.types.Enum;
+import recipe.lang.utils.Pair;
 
 public class Server {
     NuXmvInteraction nuXmvInteraction;
@@ -43,7 +50,6 @@ public class Server {
     Map<String, String> latestDots = new HashMap<>();
     Map<String, String> latestDotsInterpreter = new ConcurrentHashMap<>();
 
-    List<LTOL> specsToVerify;
 
     MCConfig mcConfig;
 
@@ -145,7 +151,7 @@ public class Server {
 
         public MCWorker(int i, LTOL spec) {
             this.i = i;
-            this.spec = spec;
+            this.spec = system.getSpecs().get(i);
         }
         public JSONObject call() throws Exception {
             return doModelCheck(i, spec);
@@ -178,7 +184,8 @@ public class Server {
             e.printStackTrace();
         }
         try {
-            system = recipe.lang.System.parser().end().parse(script).get();
+            system = RCheckInterop.parseAndDeserialize(script);
+
             if(nuXmvInteraction != null){
                 nuXmvInteraction.stopNuXmvThread();
                 nuXmvInteraction = null;
@@ -209,7 +216,7 @@ public class Server {
         Boolean buildType = Boolean.valueOf(req.getQuery().get("symbolic").trim());
         JSONObject response = new JSONObject();
         try {
-            system = recipe.lang.System.parser().end().parse(script).get();
+            system = RCheckInterop.parseAndDeserialize(script);
             if(nuXmvInteraction != null){
                 nuXmvInteraction.stopNuXmvThread();
                 nuXmvInteraction = null;
@@ -323,7 +330,7 @@ public class Server {
         JSONObject resultJSON = new JSONObject();
         Pair<Boolean, String> result;
         try {
-            String unparsedSpec = system.getUnparsedSpecs().get(i).trim();
+            String unparsedSpec = system.getSpecs().get(i).toString();
             String info = String.format("[%d]  %s, %s", i, unparsedSpec, mcConfig.type);
             logger.info(info);
             switch (mcConfig.getType()) {
@@ -336,10 +343,10 @@ public class Server {
                     nuxmv.stopNuXmvThread();
                     break;
                 case BMC:
-                    result = nuXmvBatch.modelCheckBmc(spec.toString(), mcConfig.isBounded(), mcConfig.getBound());
+                    result = nuXmvBatch.modelCheckBmc(i, mcConfig.isBounded(), mcConfig.getBound());
                     break;
                 default:
-                    result = nuXmvBatch.modelCheckIc3(spec.toString(), mcConfig.isBounded(), mcConfig.getBound());
+                    result = nuXmvBatch.modelCheckIc3(i, mcConfig.isBounded(), mcConfig.getBound());
                     break;
             }
 
@@ -373,7 +380,7 @@ public class Server {
         String info = "";
         try {
             int id = Integer.valueOf(idString);
-            Future<JSONObject> future = this.service.submit(new MCWorker(id, specsToVerify.get(id)));
+            Future<JSONObject> future = this.service.submit(new MCWorker(id, null));
             result = future.get();
             info = String.format("[%s] -- DONE", idString);
         } catch (Exception e) {
@@ -405,19 +412,16 @@ public class Server {
                 JSONObject jsonObject = new JSONObject();
                 jsonObject.put("error", "No specifications to model check.");
                 return jsonObject.toString();
-            } else{
+            } else {
                 JSONObject jsonObject = new JSONObject();
                 JSONArray array = new JSONArray();
                 mcConfig = MCConfig.ofRequest(req);
 
-                specsToVerify = new ArrayList<>(system.getUnparsedSpecs().size());
-                Pair<List<LTOL>, Map<String, Observation>> specsAndObs = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
-                specsToVerify = specsAndObs.getLeft();
 
-                for(int i = 0; i < system.getUnparsedSpecs().size(); i++) {
+                for(int i = 0; i < system.getSpecs().size(); i++) {
                     JSONObject jo = new JSONObject();
                     jo.put("id", i);
-                    jo.put("spec", system.getUnparsedSpecs().get(i));
+                    jo.put("spec", system.getSpecs().get(i).toString());
                     jo.put("url", String.format("/modelCheck/%d", i));
                     array.put(jo);
                 }
