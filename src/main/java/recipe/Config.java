@@ -1,5 +1,14 @@
 package recipe;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import recipe.lang.System;
 import recipe.lang.agents.Agent;
 import recipe.lang.expressions.TypedValue;
@@ -8,13 +17,6 @@ import recipe.lang.types.UnionType;
 import recipe.lang.utils.TypingContext;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 public class Config {
     public static final String locationLabel = "location";
     public static final String channelLabel = "channel";
@@ -22,11 +24,30 @@ public class Config {
     public static final String p2pLabel = "p2p";
     public static final String myselfKeyword = "myself";
     public static final String noAgentString = "no-agent";
-    public static final String rcheckPath = "rcheck/bin/cli.js";
+    public static String rcheckPath = "rcheck/bin/cli.js";
+
     protected static TypedValue noAgent = null;
 
     public static void reset(){
         agentEnumTypeNames.clear();
+    }
+
+    public static String getRcheckPath() {
+            String path = Config.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+            try {
+                String decodedPath = URLDecoder.decode(path, "UTF-8");
+                Path file = Path.of(decodedPath, "cli.js");
+                if (Files.exists(file)) {
+                    return file.toString();
+                }
+                else {
+                    return rcheckPath;
+                }
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+                return null;
+            }
+
     }
 
     private static final List<String> agentEnumTypeNames = new ArrayList<>();
@@ -39,7 +60,7 @@ public class Config {
 
     public static TypedValue getNoAgent() throws MismatchingTypeException {
         if (noAgent == null) {
-            noAgent = new TypedValue(agentType,  noAgentString);
+            noAgent = new TypedValue(agentType, noAgentString);
         }
         return noAgent;
     }

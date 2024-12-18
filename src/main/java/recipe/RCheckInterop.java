@@ -16,7 +16,7 @@ import recipe.lang.utils.exceptions.ParsingException;
 
 public class RCheckInterop {
     public static JSONObject parse(Path inputFilePath) throws IOException, InterruptedException, ParsingException {
-        ProcessBuilder builder = new ProcessBuilder(Config.rcheckPath, "generate", inputFilePath.toRealPath().toString());
+        ProcessBuilder builder = new ProcessBuilder(Config.getRcheckPath(), "generate", inputFilePath.toRealPath().toString());
         Process process = builder.start();
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
         JSONTokener jt = new JSONTokener(reader);
