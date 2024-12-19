@@ -36,7 +36,8 @@ public class Config {
             String path = Config.class.getProtectionDomain().getCodeSource().getLocation().getPath();
             try {
                 String decodedPath = URLDecoder.decode(path, "UTF-8");
-                Path file = Path.of(decodedPath, "cli.js");
+                String parent = Path.of(decodedPath).getParent().toString();
+                Path file = Path.of(parent, "cli.js");
                 if (Files.exists(file)) {
                     return file.toString();
                 }
