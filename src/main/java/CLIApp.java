@@ -54,6 +54,7 @@ public class CLIApp {
         Option threads = new Option("t", "threads", true,
                 "info: how many threads to use in model-checking (gui only, default=num of hw threads)");
         Option port = new Option("p", "port", true, "info: port the GUI server will listen to (default 3000)");
+        Option tmp = new Option ("tmp", "info: generate files in $TMPDIR");
 
         options.addOption(input);
         options.addOption(nuxmv);
@@ -64,6 +65,7 @@ public class CLIApp {
         options.addOption(gui);
         options.addOption(threads);
         options.addOption(port);
+        options.addOption(tmp);
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -103,19 +105,38 @@ public class CLIApp {
         }
 
         if (cmd.hasOption("smv")) {
-            String name = inputFilePath.getFileName().toString().split("\\.")[0] + ".smv";
-            Files.write(Path.of(name), transform.getBytes(StandardCharsets.UTF_8));
+            String name = inputFilePath.getFileName().toString().split("\\.")[0];
+            Path smvPath;
+            if (cmd.hasOption("tmp")) {
+                File tmp = File.createTempFile(name, ".smv");
+                smvPath = Path.of(tmp.getAbsolutePath());
+                System.err.println(tmp.getAbsolutePath());
+            } else {
+                name = name + ".smv";
+                smvPath = Path.of(name);
+            }
+            Files.write(smvPath, transform.getBytes(StandardCharsets.UTF_8));
         }
         if (cmd.hasOption("dot")) {
             String filename = inputFilePath.getFileName().toString().split("\\.")[0];
-            if (!Files.exists(Path.of(filename))) {
-                Files.createDirectory(Path.of(filename));
+            String dir;
+            if (cmd.hasOption("tmp")) {
+                Path tmpdir = Files.createTempDirectory(filename);
+                dir = tmpdir.toString();
+            }
+            else if (!Files.exists(Path.of(filename))) {
+                Path dirPath = Files.createDirectory(Path.of(filename));
+                dir = dirPath.toString();
+            } else {
+                dir = Path.of(filename).toString();
             }
             JSONArray json = new JSONArray(system.toDOT());
             for (int i = 0; i < json.length(); i++) {
                 String agentName = new JSONObject(json.getString(i)).getString("name");
                 String agentDot = new JSONObject(json.getString(i)).getString("graph");
-                Files.write(Path.of(filename + "/" + agentName + ".dot"), agentDot.getBytes(StandardCharsets.UTF_8));
+                Path filePath = Path.of(dir, agentName + ".dot");
+                Files.write(filePath, agentDot.getBytes(StandardCharsets.UTF_8));
+                System.err.println(filePath.toString());
             }
         }
         NuXmvInteraction nuXmvInteraction = null;
