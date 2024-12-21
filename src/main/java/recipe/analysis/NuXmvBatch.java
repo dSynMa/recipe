@@ -295,7 +295,6 @@ public class NuXmvBatch {
             // try INVARSPEC checking without boolean model
             scriptFile = newNuxmvScript(steps, id, Cmd.GO_MSAT, Cmd.IC3_INVAR, Cmd.QUIT);
             result = callAndRead(scriptFile);
-            java.lang.System.out.println(result.output);
             if (result.success()) return result.toPair();
             scriptFile = newNuxmvScript(steps, id, Cmd.GO_MSAT, Cmd.IC3_LTL, Cmd.QUIT);
             return callAndRead(scriptFile).toPair();
