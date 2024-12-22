@@ -540,7 +540,10 @@ public class Agent {
         }
         Store store = new Store(localVars);
         Expression init = Deserialization.deserializeExpr(jAgent.getJSONObject("init"), context);
-        Expression recvGuard = Deserialization.deserializeExpr(jAgent.getJSONObject("recvguard"), context);
+        Expression recvGuard = Condition.getTrue();
+        if (jAgent.has("recvguard")) {    
+            recvGuard = Deserialization.deserializeExpr(jAgent.getJSONObject("recvguard"), context);
+        }
         Process repeat = Process.deserialize(jAgent.getJSONObject("repeat"), context);
 
         return Agent.ofRepeat(name, store, init, relabel, recvGuard, repeat);
