@@ -1186,8 +1186,19 @@ public class ToNuXmv {
         nuxmv = nuxmv.replaceAll("==", " = ");
         nuxmv = nuxmv.replaceAll("\\*", broadcastChannel);
 
+        int i = 0;
+        for (LTOL s : specs) {
+            LTOL originalSpec = system.getSpecs().get(i);
+            nuxmv += "--" + originalSpec.toString() + "\n";
+            nuxmv += "LTLSPEC " + s.toString() + "\n";
+            i++;
+        }
 
-        nuxmv += String.join("\n", specs.stream().map((s) -> "LTLSPEC " + s.toString()).toArray(String[]::new));
+        //nuxmv += String.join("\n", specs.stream().map((s) -> "LTLSPEC " + s.toString()).toArray(String[]::new));
+
+
+
+        // nuxmv += String.join("\n", specs.stream().map((s) -> "LTLSPEC " + s.toString()).toArray(String[]::new));
 
         GuardReference.resolve = false;
 
