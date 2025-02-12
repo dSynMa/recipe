@@ -99,8 +99,8 @@ public class CLIApp {
     private static void runCli(CommandLine cmd) throws Exception, IOException {
         recipe.lang.System system = null;
         String transform = "";
-        JSONObject jo;
-        String name;
+        JSONObject jo = new JSONObject();
+        String name = null;
         if (cmd.hasOption("i")) {
             Path inputFilePath = Path.of(cmd.getOptionValue("i"));
             jo = RCheckInterop.parse(inputFilePath);
@@ -109,6 +109,9 @@ public class CLIApp {
             Path jsonPath = Path.of(cmd.getOptionValue("j"));
             name = jsonPath.getFileName().toString().split("\\.")[0];
             jo = RCheckInterop.parseJson(jsonPath);
+        } else {
+            System.out.println("Either -i or -j is required");
+            System.exit(1);
         }
         try {
             system = recipe.lang.System.deserialize(jo);
@@ -119,30 +122,28 @@ public class CLIApp {
             System.exit(6);
         }
 
-        if (cmd.hasOption("smv")) {
+        if (name != null && cmd.hasOption("smv")) {
             Path smvPath;
             if (cmd.hasOption("tmp")) {
                 File tmp = File.createTempFile(name, ".smv");
                 smvPath = Path.of(tmp.getAbsolutePath());
                 System.err.println(tmp.getAbsolutePath());
             } else {
-                name = name + ".smv";
-                smvPath = Path.of(name);
+                smvPath = Path.of(name + ".smv");
             }
             Files.write(smvPath, transform.getBytes(StandardCharsets.UTF_8));
         }
         if (cmd.hasOption("dot") && system != null) {
-            String filename = inputFilePath.getFileName().toString().split("\\.")[0];
             String dir;
             if (cmd.hasOption("tmp")) {
-                Path tmpdir = Files.createTempDirectory(filename);
+                Path tmpdir = Files.createTempDirectory(name);
                 dir = tmpdir.toString();
             }
-            else if (!Files.exists(Path.of(filename))) {
-                Path dirPath = Files.createDirectory(Path.of(filename));
+            else if (!Files.exists(Path.of(name))) {
+                Path dirPath = Files.createDirectory(Path.of(name));
                 dir = dirPath.toString();
             } else {
-                dir = Path.of(filename).toString();
+                dir = Path.of(name).toString();
             }
             JSONArray json = new JSONArray(system.toDOT());
             for (int i = 0; i < json.length(); i++) {
