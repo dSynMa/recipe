@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Scanner;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
@@ -22,6 +23,7 @@ import org.petitparser.context.ParseError;
 import recipe.RCheckInterop;
 import recipe.analysis.NuXmvInteraction;
 import recipe.analysis.ToNuXmv;
+import recipe.interpreter.Interpreter;
 import recipe.lang.utils.Pair;
 
 public class CLIApp {
@@ -55,6 +57,7 @@ public class CLIApp {
                 "info: how many threads to use in model-checking (gui only, default=num of hw threads)");
         Option port = new Option("p", "port", true, "info: port the GUI server will listen to (default 3000)");
         Option tmp = new Option ("tmp", "info: generate files in $TMPDIR");
+        Option cex = new Option("cex", true, "nuxmv counterexample to be translated");
 
         options.addOption(input);
         options.addOption(nuxmv);
@@ -66,6 +69,7 @@ public class CLIApp {
         options.addOption(threads);
         options.addOption(port);
         options.addOption(tmp);
+        options.addOption(cex);
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -139,6 +143,28 @@ public class CLIApp {
                 System.err.println(filePath.toString());
             }
         }
+
+        if (cmd.hasOption("cex") && system != null) {
+            Path cexPath = Path.of(cmd.getOptionValue("cex"));
+            try {
+                String cex = Files.readString(cexPath);
+                Interpreter i = Interpreter.ofTrace(system, cex);
+                System.out.println("[");
+                List<String> objects = i.traceToJSON().stream().map(x -> x.toString()).toList();
+                String out = String.join(",\n", objects);
+                System.out.println(out);
+                System.out.println("]");
+
+            } catch (IOException e) {
+                System.err.println("Error opening file: " + cexPath.toString());
+                System.exit(1);
+            } catch (Exception e) {
+                System.err.println("Error translating " + cexPath.toString() + ":");
+                System.err.println(e.getMessage());
+                System.exit(1);
+            }
+        }
+
         NuXmvInteraction nuXmvInteraction = null;
         if (cmd.hasOption("mc") && system != null) {
             try {
