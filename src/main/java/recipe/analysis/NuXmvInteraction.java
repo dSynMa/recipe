@@ -11,6 +11,7 @@ import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -20,6 +21,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.json.JSONObject;
 
@@ -232,9 +234,13 @@ public class NuXmvInteraction {
 
     public static void runNuXmv(Path path, InputStream inr, OutputStream outw) throws Exception {
         String nuxmvPath = Config.getNuxmvPath();
-        File nuxmvFile = new File(nuxmvPath);
-        if (!nuxmvFile.exists() || !nuxmvFile.canExecute()) {
-            throw new Exception("Looked for nuxmv on PATH, in \"./nuxmv/bin/nuxmv\", and in \"./bin/nuxmv\" but could find any nuXmv executable.");
+        if (nuxmvPath.equals("nuxmv")) {
+            boolean existsInPath = Stream.of(java.lang.System.getenv("PATH").split(Pattern.quote(File.pathSeparator)))
+            .map(Paths::get)
+            .anyMatch(p -> Files.exists(p.resolve("nuxmv")));
+            if (!existsInPath) {
+                throw new Exception("Looked for nuxmv on PATH, in \"./nuxmv/bin/nuxmv\", and in \"./bin/nuxmv\" but could find any nuXmv executable.");          
+            }
         }
 
         ProcessBuilder builder = new ProcessBuilder(nuxmvPath, "-int", path.toString());
