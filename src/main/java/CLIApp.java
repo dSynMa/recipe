@@ -18,6 +18,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.petitparser.context.ParseError;
 
 import recipe.RCheckInterop;
@@ -46,6 +47,7 @@ public class CLIApp {
         Options options = new Options();
 
         Option input = new Option("i", "input", true, "info: input recipe script file\nargs: <recipe script>");
+        Option inputJson = new Option("j", "json", true, "info: input system as JSON file\nargs: <json file>");
         Option nuxmv = new Option("n", "smv", false, "info: output to smv file");
         Option dot = new Option("d", "dot", false, "info: output agents DOT files");
         Option mc = new Option("mc", "mc", false, "info: model checks input script file");
@@ -57,9 +59,10 @@ public class CLIApp {
                 "info: how many threads to use in model-checking (gui only, default=num of hw threads)");
         Option port = new Option("p", "port", true, "info: port the GUI server will listen to (default 3000)");
         Option tmp = new Option ("tmp", "info: generate files in $TMPDIR");
-        Option cex = new Option("cex", true, "nuxmv counterexample to be translated");
+        Option cex = new Option("cex", true, "nuxmv counterexample to be translated\nargs: <text file>");
 
         options.addOption(input);
+        options.addOption(inputJson);
         options.addOption(nuxmv);
         options.addOption(dot);
         options.addOption(mc);
@@ -94,12 +97,20 @@ public class CLIApp {
 
 
     private static void runCli(CommandLine cmd) throws Exception, IOException {
-        Path inputFilePath = Path.of(cmd.getOptionValue("i"));
-        String transform = "";
         recipe.lang.System system = null;
-        
+        String transform = "";
+        JSONObject jo;
+        String name;
+        if (cmd.hasOption("i")) {
+            Path inputFilePath = Path.of(cmd.getOptionValue("i"));
+            jo = RCheckInterop.parse(inputFilePath);
+            name = inputFilePath.getFileName().toString().split("\\.")[0];
+        } else if (cmd.hasOption("j")) {
+            Path jsonPath = Path.of(cmd.getOptionValue("j"));
+            name = jsonPath.getFileName().toString().split("\\.")[0];
+            jo = RCheckInterop.parseJson(jsonPath);
+        }
         try {
-            JSONObject jo = RCheckInterop.parse(inputFilePath);
             system = recipe.lang.System.deserialize(jo);
             transform = ToNuXmv.transform(system);
         } catch (Exception e) {
@@ -109,7 +120,6 @@ public class CLIApp {
         }
 
         if (cmd.hasOption("smv")) {
-            String name = inputFilePath.getFileName().toString().split("\\.")[0];
             Path smvPath;
             if (cmd.hasOption("tmp")) {
                 File tmp = File.createTempFile(name, ".smv");

@@ -2,8 +2,11 @@ package recipe;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 
@@ -15,24 +18,55 @@ import recipe.lang.System;
 import recipe.lang.utils.exceptions.ParsingException;
 
 public class RCheckInterop {
+
+    private static JSONObject parseStream(InputStream stream, InputStream errorStream) throws ParsingException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+        JSONTokener jt = new JSONTokener(reader);
+        JSONObject jo = null;
+        try {
+             jo = new JSONObject(jt);
+        } catch (JSONException ext) {
+            if (errorStream != null) {
+                BufferedReader errReader = new BufferedReader(new InputStreamReader(errorStream));
+                StringBuilder sb = new StringBuilder();
+                try {
+                    for (String line; (line = errReader.readLine())!= null; sb.append(line));
+                    errReader.close();
+                } catch (IOException e) {}
+                throw new ParsingException(sb.toString());
+            } else {
+                throw new ParsingException(ext.getMessage());
+            }
+        } finally {
+            try {
+                reader.close();
+            } catch(IOException e) {}
+        }
+        return jo;
+    }
+
+    public static JSONObject parseJson(Path jsonPath) throws ParsingException {
+        try {
+            InputStream in = new FileInputStream(jsonPath.toFile());
+            return parseStream(in, null);
+        } catch (FileNotFoundException ext) {
+            throw new ParsingException(ext.getMessage());
+        }
+    }
+
     public static JSONObject parse(Path inputFilePath) throws IOException, InterruptedException, ParsingException {
         ProcessBuilder builder = new ProcessBuilder(Config.getRcheckPath(), "generate", inputFilePath.toRealPath().toString());
         Process process = builder.start();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        JSONTokener jt = new JSONTokener(reader);
+        JSONObject jo = null;
         try {
-            JSONObject jo = new JSONObject(jt);
-            return jo;
-        } catch (JSONException ext) {
-            BufferedReader errReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-            StringBuilder sb = new StringBuilder();
-            for (String line; (line = errReader.readLine())!= null; sb.append(line));
-            throw new ParsingException(sb.toString());
+             jo = parseStream(process.getInputStream(), process.getErrorStream());
+        } catch (ParsingException ext) {
+            throw ext;
         } finally {
             process.waitFor();
             process.destroy();
-            reader.close();
         }
+        return jo;
     }
 
     public static System parseAndDeserialize(Path inputPath) throws Exception {
