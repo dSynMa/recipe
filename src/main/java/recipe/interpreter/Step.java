@@ -31,7 +31,6 @@ import recipe.lang.process.SupplyProcess;
 import recipe.lang.store.CompositeStore;
 import recipe.lang.store.ConcreteStore;
 import recipe.lang.store.Store;
-import recipe.lang.types.Boolean;
 import recipe.lang.types.Type;
 import recipe.lang.types.UnionType;
 import recipe.lang.utils.Pair;

@@ -117,7 +117,7 @@ public class CLIApp {
             }
             Files.write(smvPath, transform.getBytes(StandardCharsets.UTF_8));
         }
-        if (cmd.hasOption("dot")) {
+        if (cmd.hasOption("dot") && system != null) {
             String filename = inputFilePath.getFileName().toString().split("\\.")[0];
             String dir;
             if (cmd.hasOption("tmp")) {
@@ -140,7 +140,7 @@ public class CLIApp {
             }
         }
         NuXmvInteraction nuXmvInteraction = null;
-        if (cmd.hasOption("mc")) {
+        if (cmd.hasOption("mc") && system != null) {
             try {
                 if (system.getSpecs() == null || system.getSpecs().size() == 0) {
                     System.out.println("No specifications to model check.");
@@ -180,9 +180,9 @@ public class CLIApp {
                 System.out.println(e.getMessage());
             }
         }
-        if (cmd.hasOption("bmc")) {
+        if (cmd.hasOption("bmc") && system != null) {
             try {
-                if (system.getSpecs() == null || system.getSpecs().size() == 0) {
+                if (system != null && (system.getSpecs() == null || system.getSpecs().size() == 0)) {
                     System.out.println("No specifications to model check.");
                 } else {
                     String out = "";

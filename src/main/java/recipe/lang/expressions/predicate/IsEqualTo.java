@@ -66,7 +66,7 @@ public class IsEqualTo<T extends Type> extends Condition {
 			System.out.printf(">>> Evaluation of %s over %s yields a null RHS\n", this, store);
 		}
 
-		if(lhsValue.equals(rhsValue)){
+		if(lhsValue != null && lhsValue.equals(rhsValue)){
 			return Condition.TRUE;
 		} else{
 			return Condition.FALSE;

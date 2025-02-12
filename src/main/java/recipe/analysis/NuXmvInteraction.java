@@ -2,6 +2,7 @@ package recipe.analysis;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -231,74 +232,61 @@ public class NuXmvInteraction {
 
     public static void runNuXmv(Path path, InputStream inr, OutputStream outw) throws Exception {
         String nuxmvPath = Config.getNuxmvPath();
-
-        ProcessBuilder builder = null;
-        try{
-            builder = new ProcessBuilder(nuxmvPath, "-int", path.toString());
-        } catch (Exception e){
-            if(e.getMessage().contains("The system cannot find the file specified")){
-                throw new Exception("Looked for nuxmv on PATH, in \"./nuxmv/bin/nuxmv\", and in \"./bin/nuxmv\" but could find any nuXmv executable.");
-            }
-            throw e;
-        } finally {
-            builder.redirectErrorStream(true);
-            Process process = builder.start();
-            Runnable runnable = () -> process.destroy();
-            Runtime.getRuntime().addShutdownHook(new Thread(runnable));
-
-            // String ttt = Files.readString(path);
-            BufferedInputStream out = (BufferedInputStream) process.getInputStream();
-            OutputStream in = process.getOutputStream();
-
-            byte[] buffer = new byte[4000];
-            List<String> textt = new ArrayList<>();
-
-            while (isAlive(process)) {
-                String text = new String(buffer, 0, buffer.length);
-                int no = out.available();
-//            buffer = out.readNBytes(40);
-//            text = new String(out.readNBytes(160));
-
-                if (no > 0) {
-                    // int n = 
-                    out.read(buffer, 0, Math.min(no, buffer.length));
-                    text = new String(buffer, 0, Math.min(no, buffer.length));
-                    Thread.sleep(10);
-
-                    if(text.trim().replaceAll(" ", "").toLowerCase(Locale.ROOT).endsWith("nuxmv>")) {
-                        textt.add(text);
-                        outw.write(String.join("", textt).getBytes(StandardCharsets.UTF_8));
-                        outw.flush();
-                        outw.flush();
-                        textt.clear();
-                        buffer = new byte[4000];
-                        nuxmvTurn.set(false);
-                        while (!nuxmvTurn.get()) {
-                        }
-                    } else{
-                        textt.add(text);
-                    }
-                }
-
-                int ni = inr.available();
-                if (ni > 0) {
-                    int n = inr.read(buffer, 0, Math.min(ni, buffer.length));
-                    text = new String(buffer, 0, n);
-                    in.write(buffer, 0, n);
-                    in.flush();
-                    buffer = new byte[4000];
-                }
-
-                try {
-                    //TODO need to parse nuxmv output to see if it is ready, depends on command
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                }
-
-            }
-
-            System.out.println(process.exitValue());
+        File nuxmvFile = new File(nuxmvPath);
+        if (!nuxmvFile.exists() || !nuxmvFile.canExecute()) {
+            throw new Exception("Looked for nuxmv on PATH, in \"./nuxmv/bin/nuxmv\", and in \"./bin/nuxmv\" but could find any nuXmv executable.");
         }
+
+        ProcessBuilder builder = new ProcessBuilder(nuxmvPath, "-int", path.toString());
+        builder.redirectErrorStream(true);
+        Process process = builder.start();
+        Runnable runnable = () -> process.destroy();
+        Runtime.getRuntime().addShutdownHook(new Thread(runnable));
+        BufferedInputStream out = (BufferedInputStream) process.getInputStream();
+        OutputStream in = process.getOutputStream();
+
+        byte[] buffer = new byte[4000];
+        List<String> textt = new ArrayList<>();
+
+        while (isAlive(process)) {
+            String text = new String(buffer, 0, buffer.length);
+            int no = out.available();
+            if (no > 0) {
+                // int n = 
+                out.read(buffer, 0, Math.min(no, buffer.length));
+                text = new String(buffer, 0, Math.min(no, buffer.length));
+                Thread.sleep(10);
+
+                if(text.trim().replaceAll(" ", "").toLowerCase(Locale.ROOT).endsWith("nuxmv>")) {
+                    textt.add(text);
+                    outw.write(String.join("", textt).getBytes(StandardCharsets.UTF_8));
+                    outw.flush();
+                    outw.flush();
+                    textt.clear();
+                    buffer = new byte[4000];
+                    nuxmvTurn.set(false);
+                    while (!nuxmvTurn.get()) {
+                    }
+                } else{
+                    textt.add(text);
+                }
+            }
+
+            int ni = inr.available();
+            if (ni > 0) {
+                int n = inr.read(buffer, 0, Math.min(ni, buffer.length));
+                text = new String(buffer, 0, n);
+                in.write(buffer, 0, n);
+                in.flush();
+                buffer = new byte[4000];
+            }
+
+            try {
+                //TODO need to parse nuxmv output to see if it is ready, depends on command
+                Thread.sleep(10);
+            } catch (InterruptedException e) {}
+        }
+        System.out.println(process.exitValue());
     }
 
     public JSONObject outputToJSON(String nuxmvSimOutput){
