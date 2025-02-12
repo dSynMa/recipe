@@ -204,7 +204,7 @@ public class Step {
                     // System.out.printf(">> Found annotation %s : %s\n", agentInstanceName, constraint.get(agentInstanceName));
                     continue;
                 }
-                System.out.printf(">> Agent instance not found: %s\n", agentInstanceName);
+                System.err.printf(">> Agent instance not found: %s\n", agentInstanceName);
                 return false;
             }
             JSONObject instanceConstraint = constraint.getJSONObject(agentInstanceName);
@@ -218,11 +218,11 @@ public class Step {
                         TypedValue value = instanceStore.getValue(var);
                         TypedValue pastValue = pastInstanceStore.getValue(var);
                         if (!instanceConstraint.has(varName) && !pastValue.equals(value)) {
-                            System.out.printf(">> %s: expected %s (from past state), got %s\n", pastValue, value);
+                            System.err.printf(">> %s: expected %s (from past state), got %s\n", pastValue, value);
                         }
                     } catch (AttributeNotInStoreException e) {
                         // Should never match
-                        System.out.printf(">> Not found: %s\n", varName);
+                        System.err.printf(">> Not found: %s\n", varName);
                     }
                 }
             }
@@ -233,7 +233,7 @@ public class Step {
                         String stateConstraint = instanceConstraint.getString(varName);
                         String stateInst = instanceStore.getState().getLabel().toString();
                         if (!stateInst.equals(stateConstraint)) {
-                            System.out.printf(">> Expected %s, got %s\n", stateConstraint, stateInst);
+                            System.err.printf(">> Expected %s, got %s\n", stateConstraint, stateInst);
                             return false;
                         }
                         continue;
@@ -248,7 +248,7 @@ public class Step {
                                 Double y = Double.valueOf(value.getValue().toString());
                                 double delta = Math.abs(x - y);
                                 if (delta > Double.MIN_VALUE) {
-                                    System.out.printf(
+                                    System.err.printf(
                                         ">>%s-%s: Expected %s, got %s (%s)\n",
                                         inst.getLabel(), varName, x, y, delta);
                                     return false;
@@ -263,7 +263,7 @@ public class Step {
                             // Go for Boolean comparison
                             boolean isConstraintTrue = instanceConstraint.get(varName).equals("TRUE");
                             if (!value.getValue().equals(isConstraintTrue)) {
-                                System.out.printf(
+                                System.err.printf(
                                     ">>%s-%s: Expected %s, got %s\n",
                                     inst.getLabel(), varName, isConstraintTrue, value.getValue());
                                 return false;
@@ -271,7 +271,7 @@ public class Step {
                         }
 
                         else if (!value.getValue().toString().equals(instanceConstraint.get(varName).toString())) {
-                            System.out.printf(
+                            System.err.printf(
                                 ">>%s-%s: Expected %s, got %s\n",
                                 inst.getLabel(), varName, instanceConstraint.get(varName), value.getValue());
                             return false;

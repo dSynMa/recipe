@@ -183,9 +183,9 @@ public class ConcreteStore extends Store {
                         this.data.put(v, val);
                     }
                 } catch (AttributeNotInStoreException x) {
-                    System.out.println(var + " not found");
+                    System.err.println(var + " not found");
                 } catch (MismatchingTypeException x) {
-                    System.out.println(var + " throws MismatchingTypeException");
+                    System.err.println(var + " throws MismatchingTypeException");
                 }
             }
         });

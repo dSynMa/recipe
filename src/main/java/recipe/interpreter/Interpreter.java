@@ -230,7 +230,7 @@ public class Interpreter {
 
     public boolean findNext(Map<String,Observation> obsMap, JSONObject nextConstraint, JSONObject currConstraint) {
         Step candidate;
-        System.out.printf("(%d) constraint: %s, transitions: %s\n", currentStep.depth, nextConstraint, currentStep.transitions.size());
+        System.err.printf("(%d) constraint: %s, transitions: %s\n", currentStep.depth, nextConstraint, currentStep.transitions.size());
         for (int i = 0; i < currentStep.transitions.size(); i++) {
             if (!currentStep.transitions.get(i).satisfies(currConstraint)) continue;
             candidate = currentStep.next(i, this);
