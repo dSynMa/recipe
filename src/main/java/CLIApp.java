@@ -82,7 +82,7 @@ public class CLIApp {
             cmd = parser.parse(options, args);
             if (cmd.hasOption("gui")) {
                 runGui(cmd);
-            } else if (!cmd.hasOption("i")) {
+            } else if (!cmd.hasOption("i") && !cmd.hasOption("j")) {
                 formatter.printHelp("recipe", options);
                 System.exit(1);
             } else {
