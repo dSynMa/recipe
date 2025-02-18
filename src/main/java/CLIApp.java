@@ -55,6 +55,7 @@ public class CLIApp {
                 "info: bounded model checks input script file\nargs: bound (by default 10)");
         Option simulation = new Option("sim", "simulate", false, "info: opens file in simulation mode");
         Option gui = new Option("g", "gui", false, "info: opens gui");
+        Option api = new Option("a", "api", false, "info: runs api server without gui");
         Option threads = new Option("t", "threads", true,
                 "info: how many threads to use in model-checking (gui only, default=num of hw threads)");
         Option port = new Option("p", "port", true, "info: port the GUI server will listen to (default 3000)");
@@ -73,6 +74,7 @@ public class CLIApp {
         options.addOption(port);
         options.addOption(tmp);
         options.addOption(cex);
+        options.addOption(api);
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -82,6 +84,9 @@ public class CLIApp {
             cmd = parser.parse(options, args);
             if (cmd.hasOption("gui")) {
                 runGui(cmd);
+            } else if (cmd.hasOption("api")){
+                int numThreads = Runtime.getRuntime().availableProcessors();
+                Server.start(numThreads);
             } else if (!cmd.hasOption("i") && !cmd.hasOption("j")) {
                 formatter.printHelp("recipe", options);
                 System.exit(1);
@@ -168,6 +173,7 @@ public class CLIApp {
 
             } catch (IOException e) {
                 System.err.println("Error opening file: " + cexPath.toString());
+                System.err.println(e.getMessage());
                 System.exit(1);
             } catch (Exception e) {
                 System.err.println("Error translating " + cexPath.toString() + ":");
