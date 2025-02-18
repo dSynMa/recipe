@@ -2,6 +2,7 @@ package recipe.analysis;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -43,7 +44,8 @@ public class NuXmvBatch {
     public NuXmvBatch(System system) throws Exception {
         this.system = system;
         String nuxmvScript = ToNuXmv.transform(system);
-        Path smvPath = Path.of("./forInteraction.smv");
+        File tmp = File.createTempFile("forInteraction", ".smv");
+        Path smvPath = tmp.toPath();
         Files.deleteIfExists(smvPath);
         path = Files.createFile(smvPath).toRealPath();
         Files.write(path, nuxmvScript.getBytes(StandardCharsets.UTF_8));
@@ -277,6 +279,12 @@ public class NuXmvBatch {
         result.output = outputBuilder.toString();
         reader.close(); // Just to be sure
         return result;
+    }
+
+    public void close() {
+        try {
+            Files.delete(path);
+        } catch (IOException e) {}
     }
 
     public Pair<Boolean, String> modelCheckIc3(int id, boolean bounded, int steps) throws Exception {

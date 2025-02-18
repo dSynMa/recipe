@@ -194,12 +194,14 @@ public class Interpreter {
             if (!string.contains("<-")) continue;
 
             JSONObject state = nuxmv.outputToJSON(string);
+            nuxmv.close();
             if (loopingStates.contains(states.size())) {
                 state.put("___LOOP___", true);
             }
             if (states.isEmpty()) { states.add(state); }
             else { states.add(new CompositeJSON(states.get(states.size()-1) , state)); }
         }
+        nuxmv.close();
         return Interpreter.ofJSON(s, obsMap, states);
     }
 
@@ -208,7 +210,7 @@ public class Interpreter {
         NuXmvBatch nuxmv = new NuXmvBatch(sys);
         Pair<Boolean, String> s0 = nuxmv.pickInitialState(constraint);
         JSONObject initValues = nuxmv.outputToJSON(s0.getRight());
-
+        nuxmv.close();
 
         sys.getAgentInstances().forEach((x) -> {
             String name = x.getLabel();

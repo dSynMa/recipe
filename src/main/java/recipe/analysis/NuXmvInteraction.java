@@ -46,8 +46,8 @@ public class NuXmvInteraction {
     public NuXmvInteraction(recipe.lang.System system) throws Exception {
         this.system = system;
         String nuxmvScript = ToNuXmv.transform(system);
-        if(Files.exists(Path.of("./forInteraction.smv"))) Files.delete(Path.of("./forInteraction.smv"));
-        path = Files.createFile(Path.of("./forInteraction.smv"));
+        File tmp = File.createTempFile("forInteraction", ".smv");
+        path = tmp.toPath();
         Files.write(path, nuxmvScript.getBytes(StandardCharsets.UTF_8));
         process = startNuXmvThread();
     }
@@ -228,6 +228,7 @@ public class NuXmvInteraction {
 
     public void stopNuXmvThread() throws IOException {
         this.process.interrupt();
+        Files.delete(path);
     }
 
     static AtomicReference<Boolean> nuxmvTurn = new AtomicReference<>(true);
