@@ -1,6 +1,7 @@
 package recipe.interpreter;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -413,7 +414,7 @@ public class Step {
                             // b) be listening to channel "chan"
                             // c) satisfy send guard
                             Map<AgentInstance, Set<ProcessTransition>> receivesMap = new HashMap<AgentInstance, Set<ProcessTransition>>();
-                            for (AgentInstance inst : listeners.get(chan)) {
+                            for (AgentInstance inst : listeners.getOrDefault(chan, Collections.emptySet())) {
                                 if (inst != sender) {
                                     try {
                                         Store instStore = stores.get(inst).push(msgStore);
