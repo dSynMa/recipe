@@ -108,7 +108,7 @@ public abstract class Process {
             JSONObject jWhere = jProc.optJSONObject("where");
             Location location = null;
             if (jWhere != null) {
-                if (jWhere.has("self")) {
+                if (jWhere.has(Config.myselfKeyword)) {
                     location = new SelfLocation();
                 }
                 else if (jWhere.has("any")) {

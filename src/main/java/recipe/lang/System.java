@@ -96,11 +96,11 @@ public class System{
         Enum.clear();
         Guard.clear();
         Config.reset();
-        Enum locationEnum = new Enum(Config.locationLabel, new ArrayList<String>());
+        List<String> locations = new ArrayList<>();
+        locations.add(Config.myselfKeyword);
+        Enum locationEnum = new Enum(Config.locationLabel, locations);
         Deserialization.checkType(obj, "Model");
         TypingContext ctx = new TypingContext();
-
-        // CHANNELS ///////////////////////////////////////////////////////////
         
         // ENUMS //////////////////////////////////////////////////////////////
         if (obj.has("enums")) {
@@ -121,6 +121,12 @@ public class System{
                 for (String c : cases) {
                     ctx.set(c, newEnum);
                 }
+            }
+            if (!Enum.exists(Config.channelLabel)) {
+                List<String> channels = new ArrayList<>();
+                channels.add(Config.broadcast);
+                Enum chanEnum = new Enum(Config.channelLabel, channels);
+                ctx.set(Config.broadcast, chanEnum);
             }
         }
         // MESSAGE STRUCTURE //////////////////////////////////////////////////
