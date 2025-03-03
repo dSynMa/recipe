@@ -628,15 +628,19 @@ public class Server {
 
     public void close() {
         try {
-            this.nuXmvInteraction.stopNuXmvThread();
-            this.nuXmvBatch.close();
+            if (this.nuXmvInteraction != null) {
+                this.nuXmvInteraction.stopNuXmvThread();
+            }
+            if (this.nuXmvBatch != null) {
+                this.nuXmvBatch.close();
+            }
         } catch (IOException e) {}
     }
 
     public static String start(int threads) throws Exception {
         int port = 54044;
         app = Flak.createHttpApp(port);
-        Server s = new Server(threads)
+        Server s = new Server(threads);
         app.scan(s);
         cors();
         app.start();
