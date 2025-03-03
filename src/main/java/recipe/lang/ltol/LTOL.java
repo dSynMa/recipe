@@ -393,6 +393,7 @@ public abstract class LTOL {
     }
 
     private static boolean containsQualified(Set<TypedVariable> set, Set<Agent> possibleAgentTypes, TypedVariable x) {
+        if (!(x.getName().contains("-"))) return false;
         String unqualifiedName = x.getName().split("-")[1];
         // Find a matching local variable and set x's type to that
         for (Agent a : possibleAgentTypes) {

@@ -287,11 +287,11 @@ public class Deserialization {
             case "Diamond":
                 obs = deserializeExpr(jPhi.getJSONObject("obs"), ctx);
                 phi = deserializeLTOLorExpr(jPhi.getJSONObject("expr"), ctx);
-                return new Possibly(new Observation(obs), phi);
+                return new Necessary(new Observation(obs), phi);
             case "Box":
                 obs = deserializeExpr(jPhi.getJSONObject("obs"), ctx);
                 phi = deserializeLTOLorExpr(jPhi.getJSONObject("expr"), ctx);
-                return new Necessary(new Observation(obs), phi);
+                return new Possibly(new Observation(obs), phi);
             case "Expr":
                 try {
                     return deserializeLTOL(jPhi.getJSONObject("left"), ctx);
