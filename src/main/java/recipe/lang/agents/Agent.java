@@ -517,6 +517,12 @@ public class Agent {
         if (parentContext != null) {
             context.setAll(parentContext);
         }
+
+        // Add myself as an (immutable) local var
+        Type locationEnum = recipe.lang.types.Enum.getEnum(Config.locationLabel);
+        localVars.put(Config.myselfKeyword, new TypedVariable<Type>(locationEnum, Config.myselfKeyword));
+        context.set(Config.myselfKeyword, locationEnum);
+
         if (jAgent.has("locals")) {
             JSONArray jLocals = jAgent.getJSONArray("locals");
             for (int i = 0; i < jLocals.length(); i++) {

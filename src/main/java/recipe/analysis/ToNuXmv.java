@@ -482,6 +482,7 @@ public class ToNuXmv {
 
         List<String> progress = new ArrayList<>();
         List<String> getSupplyTrans = new ArrayList<>();
+        List<String> myselfInvars = new ArrayList<>();
 
         Map<Agent, Map<State, Set<ProcessTransition>>> agentStateSendTransitionMap = new HashMap<>();
         Map<Agent, Map<State, Set<ProcessTransition>>> agentStateReceiveTransitionMap = new HashMap<>();
@@ -523,6 +524,7 @@ public class ToNuXmv {
             init += "\t& " + sendingAgent.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
             init += "\t& " + sendingAgentInstance.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
 
+            myselfInvars.add(String.format("INVAR %s-myself = %s;", sendingAgentInstance.getLabel(), sendingAgentInstance.getLabel()));
 
             //For each state of the sending agents we are going to iterate over all of its possible send transitions
             // We shall create predicates for each send transition, and then disjunct them.
@@ -1179,7 +1181,8 @@ public class ToNuXmv {
         }
 
         nuxmv += init;
-        nuxmv += "TRANS\n";
+        nuxmv += String.join("\n", myselfInvars);
+        nuxmv += "\nTRANS\n";
         nuxmv += "\t(transition)\n \t\t| (!progress & keep-all & no-observations)\n";
         nuxmv = nuxmv.replaceAll("&( |\n)*TRUE(( )*&( )*)( |\n)*", "");
         nuxmv = nuxmv.replaceAll("TRUE(( )*&( )*)", "");

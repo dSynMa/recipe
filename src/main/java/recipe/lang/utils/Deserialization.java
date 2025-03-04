@@ -108,7 +108,7 @@ public class Deserialization {
                 int literal = jExpr.getInt("value");
                 return new TypedValue<Integer>(Integer.getType(), String.valueOf(literal));
             case "Myself":
-                return new TypedValue<Enum>(Enum.getEnum(Config.locationLabel), Config.myselfKeyword);
+                return new TypedVariable<Enum>(Enum.getEnum(Config.locationLabel), Config.myselfKeyword);
             case "BoolLiteral":
                 return new TypedValue<Boolean>(recipe.lang.types.Boolean.getType(), jExpr.optString("value"));
             case "Broadcast":

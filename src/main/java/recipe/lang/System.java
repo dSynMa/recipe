@@ -96,9 +96,7 @@ public class System{
         Enum.clear();
         Guard.clear();
         Config.reset();
-        List<String> locations = new ArrayList<>();
-        locations.add(Config.myselfKeyword);
-        Enum locationEnum = new Enum(Config.locationLabel, locations);
+        Enum locationEnum = new Enum(Config.locationLabel, new ArrayList<String>());
         Deserialization.checkType(obj, "Model");
         TypingContext ctx = new TypingContext();
         
