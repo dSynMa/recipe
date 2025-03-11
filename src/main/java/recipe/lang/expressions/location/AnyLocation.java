@@ -8,7 +8,7 @@ import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.types.Boolean;
 
 public class AnyLocation extends Location {
-    public static final String anyToken = "ANY";
+    public static final String anyToken = "any";
 
     @Override
     public Expression<Boolean> getPredicate(TypedValue supplier) { return Condition.getTrue(); }

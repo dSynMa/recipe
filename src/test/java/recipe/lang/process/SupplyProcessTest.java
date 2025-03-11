@@ -49,10 +49,10 @@ public class SupplyProcessTest {
         Result r = parser.parse("<v == 5> SUPPLY@TRUE(m := 1)[v := 6]");
         // This is not valid but currently we catch it at model-building time
         assert r.isSuccess();
-        Result r2 = parser.parse("<v == 5> SUPPLY@SELF(m := 1)[v := 6]");
+        Result r2 = parser.parse("<v == 5> SUPPLY@myself(m := 1)[v := 6]");
         assert r2.isSuccess();
         assert r2.get() instanceof SupplyProcess && ((SupplyProcess) r2.get()).getLocation() instanceof SelfLocation;
-        Result r3 = parser.parse("<v == 5> SUPPLY@ANY(m := 1)[v := 6]");
+        Result r3 = parser.parse("<v == 5> SUPPLY@any(m := 1)[v := 6]");
         assert r3.isSuccess();
         assert r3.get() instanceof SupplyProcess && ((SupplyProcess) r3.get()).getLocation() instanceof AnyLocation;
     }

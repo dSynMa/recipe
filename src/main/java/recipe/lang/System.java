@@ -431,7 +431,7 @@ public class System{
                                         Agent agent = entry.getValue().get(0).getAgent();
                                         Map<String, TypedVariable> name = new HashMap<>();
                                         TypedVariable nameVar = new TypedVariable(agentType, "name");
-                                        TypedVariable selfVar = new TypedVariable(agentType, Config.myselfKeyword);
+                                        TypedVariable selfVar = new TypedVariable(Enum.getEnum(Config.locationLabel), Config.myselfKeyword);
                                         name.put("name", nameVar);
                                         name.put(Config.myselfKeyword, selfVar);
                                         Store nameStore = new Store(name);

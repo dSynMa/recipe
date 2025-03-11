@@ -957,7 +957,7 @@ public class ToNuXmv {
                         if (!(supplyLoc instanceof SelfLocation || supplyLoc instanceof AnyLocation)) {
                             throw new Exception(
                                 "SUPPLY@" + supplyLoc.toString() + " not allowed " +
-                                "(use either SUPPLY@SELF or SUPPLY@ANY).");
+                                "(use either SUPPLY@myself or SUPPLY@any).");
                         }
 
                         //Now we will iterate over all other agents, and for every get transition,
