@@ -23,7 +23,7 @@ import recipe.lang.utils.TypingContext;
 
 import static recipe.Config.commVariableReferences;
 
-public class GetProcess extends BasicProcess {
+public class GetProcess extends BasicProcessWithMessage {
 
     private Location location;
 
@@ -36,6 +36,15 @@ public class GetProcess extends BasicProcess {
         this.psi = psi;
         this.location = location;
         this.update = update;
+        this.message = new HashMap<>();
+    }
+
+    public GetProcess(String label, Expression<Boolean> psi, Location location, Map<String, Expression> update, Map<String, Expression> message) {
+        this.label = label;
+        this.psi = psi;
+        this.location = location;
+        this.update = update;
+        this.message = message;
     }
 
     public String toString() {

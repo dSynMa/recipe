@@ -139,7 +139,7 @@ public abstract class Process {
                 return new ReceiveProcess(label, psi, chanExpr, update);
             }
             if (type.equals("Get")) {
-                return new GetProcess(label, psi, location, update);
+                return new GetProcess(label, psi, location, update, message);
             }
             if (type.equals("Supply")) {
                 return new SupplyProcess(label, psi, location, message, update);
