@@ -1,5 +1,7 @@
 package recipe.interpreter;
 
+import static recipe.Config.isCvRef;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,6 +39,7 @@ import recipe.lang.types.UnionType;
 import recipe.lang.utils.Pair;
 import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
+import recipe.lang.utils.exceptions.RelabellingTypeException;
 
 public class Step {
     /**
@@ -234,7 +237,7 @@ public class Step {
                         String stateConstraint = instanceConstraint.getString(varName);
                         String stateInst = instanceStore.getState().getLabel().toString();
                         if (!stateInst.equals(stateConstraint)) {
-                            System.err.printf(">> Expected %s, got %s\n", stateConstraint, stateInst);
+                            System.err.printf(">> Expected %s in state %s, got %s\n", inst.getLabel(), stateConstraint, stateInst);
                             return false;
                         }
                         continue;
@@ -419,13 +422,21 @@ public class Step {
                                     try {
                                         Store instStore = stores.get(inst).push(msgStore);
                                         // Local variables get evaluated over the sender,
-                                        // CVs get evaluated over the receiver (inst)
-                                        CompositeStore sendGuardStore = new CompositeStore(sys);
-                                        sendGuardStore.push(senderStore);
-                                        sendGuardStore.pushReceiverStore(instStore);
+                                        // CompositeStore sendGuardStore = new CompositeStore(sys);
+                                        // sendGuardStore.push(senderStore);
+                                        // sendGuardStore.pushReceiverStore(instStore);
 
-                                        TypedValue sendGuard = sendProcess.getMessageGuard().valueIn(sendGuardStore);
-                                        boolean sendGuardOk = Condition.getTrue().equals(sendGuard);
+                                        TypedValue sendGuardHere = sendProcess.getMessageGuard()
+                                            .relabel(v -> {
+                                                if (!isCvRef(sys, v.getName())) return v;
+                                                try {
+                                                    // CVs get evaluated over the receiver (inst)
+                                                    return inst.getAgent().getRelabel().get(v).valueIn(instStore);
+                                                } catch (Exception e) { System.err.println(e.getMessage()); return v; }
+                                            })
+                                            .valueIn(senderStore);
+
+                                        boolean sendGuardOk = Condition.getTrue().equals(sendGuardHere);
 
                                         TypedValue receiveGuard = inst.getAgent().getReceiveGuard().valueIn(instStore);
                                         boolean receiveGuardOk = Condition.getTrue().equals(receiveGuard);
@@ -453,9 +464,6 @@ public class Step {
                                             if (recChanExpr.valueIn(store).equals(chan)) {
                                                 Expression<recipe.lang.types.Boolean> recPsi = recLbl.getPsi();
                                                 boolean recPsiSat = Condition.getTrue().equals(recPsi.valueIn(store));
-                                                // System.err.printf("%s evaluates to %s\n", recPsi, recPsiSat);
-                                                // System.err.printf("receive: %s\n", recLbl);
-                                                // System.err.printf("store: %s\n", store);
 
                                                 if (recPsiSat) {
                                                     receivesMap.get(receiver).add(rec);

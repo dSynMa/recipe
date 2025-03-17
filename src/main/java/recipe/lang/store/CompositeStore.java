@@ -21,9 +21,6 @@ public class CompositeStore extends Store {
     }
 
     public CompositeStore() { this(null); }
-
-    public void pushReceiverStore(Store store) { push(store, true); }
-
     public void push(Store store) { push(store, false); }
 
     private void push(Store store, boolean isReceiver) {
@@ -54,11 +51,7 @@ public class CompositeStore extends Store {
 
         for (int i = stack.size()-1; i >= 0; i--) {
             TypedValue result = stack.get(i).getValue(attribute);
-            Boolean isCV = false;
-            if (system != null) {
-                isCV = Config.isCvRef(system, attribute.toString());
-            }
-            if (result != null && (!isCV || isReceiverStore.get(i))) {
+            if (result != null) {
                 return result;
             }
         }

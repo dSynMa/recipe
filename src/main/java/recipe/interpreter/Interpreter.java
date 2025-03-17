@@ -194,7 +194,6 @@ public class Interpreter {
             if (!string.contains("<-")) continue;
 
             JSONObject state = nuxmv.outputToJSON(string);
-            nuxmv.close();
             if (loopingStates.contains(states.size())) {
                 state.put("___LOOP___", true);
             }
@@ -202,6 +201,7 @@ public class Interpreter {
             else { states.add(new CompositeJSON(states.get(states.size()-1) , state)); }
         }
         nuxmv.close();
+        System.err.println(states);
         return Interpreter.ofJSON(s, obsMap, states);
     }
 
@@ -237,6 +237,7 @@ public class Interpreter {
             if (!currentStep.transitions.get(i).satisfies(currConstraint)) continue;
             candidate = currentStep.next(i, this);
             if (candidate.satisfies(obsMap, nextConstraint)) {
+                System.err.printf("chosen: %s\n", candidate.toJSON());
                 candidate.loadAnnotations(nextConstraint);
                 currentStep = candidate;
                 return true;
