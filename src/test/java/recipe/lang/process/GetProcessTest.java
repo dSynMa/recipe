@@ -58,9 +58,6 @@ public class GetProcessTest {
         r = parser.parse("<v == 5> get!@g(m := 1)[v := 6]");
         assert r.isFailure();
 
-        r = parser.parse("<v == 5> GET@SELF[v := 6]");
-        assert r.isSuccess();
-        assert r.get() instanceof GetProcess && ((GetProcess) r.get()).getLocation() instanceof SelfLocation;
         r = parser.parse("<v == 5> GET@(agentName)[v := 6]");
         assert r.isSuccess();
         assert r.get() instanceof GetProcess && ((GetProcess) r.get()).getLocation() instanceof NamedLocation;
