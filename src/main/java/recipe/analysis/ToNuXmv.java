@@ -444,7 +444,6 @@ public class ToNuXmv {
             String falsifyAllLabelsOfI = "falsify-" + namei + " := TRUE";
 
             Set<Transition> receiveAndSupplyTransitions = new HashSet<>(agenti.getReceiveTransitions());
-            // receiveAndSupplyTransitions.addAll(agenti.getSupplyTransitions());
 
             for(Transition t : receiveAndSupplyTransitions){
                 String label = ((BasicProcess) t.getLabel()).getLabel();
@@ -925,28 +924,11 @@ public class ToNuXmv {
                 if (supplyTransitions != null && supplyTransitions.size() > 0) {
                     for (ProcessTransition t : supplyTransitions) {
                         List<String> supplyTriggeredIf = new ArrayList<>();
-                        List<String> supplyEffects = new ArrayList<>();
                         SupplyProcess supplyProcess = (SupplyProcess) t.getLabel();
                         // add the guard of the supplyProcess to the guards required for the supply to trigger
                         supplyTriggeredIf.add(supplierStateIsCurrentState);
                         supplyTriggeredIf.add(supplyProcess.getPsi().relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify().toString());
-                        
-                        // supplyEffects.add("falsify-" + sendingAgentName);
-                        // add next state to supply effects
-                        supplyEffects.add("next(" + sendingAgentName + "-automaton-state" + ") = " + t.getDestination());
 
-                        // Add supply updates
-                        for (Map.Entry<String, Expression> entry : supplyProcess.getUpdate().entrySet()) {
-                            supplyEffects.add(
-                                    "next(" + sendingAgentName + "-" + entry.getKey() + ") " +
-                                    "= (" + entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)).simplify() + ")");
-                        }
-                        //keep variable values not mentioned in the update
-                        for (String var : sendingAgent.getStore().getAttributes().keySet()) {
-                            if (!supplyProcess.getUpdate().containsKey(var)) {
-                                supplyEffects.add("next(" + sendingAgentName + "-" + var + ") = " + sendingAgentName + "-" + var);
-                            }
-                        }
 
                         // relabelling message var names
                         Map<String, Expression> relabelledMessage = new HashMap<>();
@@ -981,6 +963,10 @@ public class ToNuXmv {
 
                                 getterTrLoop:
                                 for (ProcessTransition gt : getTransitions) {
+                                    List<String> supplyEffects = new ArrayList<>();
+                                    // add next state to supply effects
+                                    supplyEffects.add("next(" + sendingAgentName + "-automaton-state" + ") = " + t.getDestination());
+
                                     List<String> getTriggeredIf = new ArrayList<>();
                                     getTriggeredIf.add(getterStateIsCurrentState);
                                     List<String> getEffects = new ArrayList<>();
@@ -1055,8 +1041,38 @@ public class ToNuXmv {
                                             getEffects.add("next(" + var + ") = (" + observationCondition + ")");
                                         }
 
+                                        // Updates
+                                        // Relabel data from getter
+                                        Map<String, Expression> relabelledMsgGet = new HashMap<>();
+                                        for (Map.Entry<String, Expression> entry : getProcess.getMessage().entrySet()) {
+                                            relabelledMsgGet.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(getterName + "-" + ((TypedVariable) v).getName())).simplify());
+                                        }
                                         //for each variable update, if the updates uses a message variable that is
-                                        // not set by the send transition, then exit
+                                        // not set by the get transition, then exit
+                                        // else relabel variables appropriately
+                                        for (Map.Entry<String, Expression> entry : supplyProcess.getUpdate().entrySet()) {
+                                            supplyEffects.add(
+                                                    "next(" + sendingAgentName + "-" + entry.getKey() + ") " + "= ("
+                                                    + entry.getValue().relabel(v ->
+                                                        getProcess.getMessage().containsKey(((TypedVariable) v).getName())
+                                                        ? relabelledMsgGet.get(((TypedVariable) v).getName())
+                                                        : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
+                                                        ? stopHelper.apply((TypedVariable) v)
+                                                        : ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v))) + ")");
+                                        }
+                                        //keep variable values not mentioned in the update
+                                        for (String var : sendingAgent.getStore().getAttributes().keySet()) {
+                                            if (!supplyProcess.getUpdate().containsKey(var)) {
+                                                supplyEffects.add("next(" + sendingAgentName + "-" + var + ") = " + sendingAgentName + "-" + var);
+                                            }
+                                        }
+
+                                        // Stop considering this transition if update uses a message variable
+                                        // that is not set by the get transition
+                                        if (stop.get()) continue getterTrLoop;
+
+                                        //for each variable update, if the updates uses a message variable that is
+                                        // not set by the supply transition, then exit
                                         // else relabel variables appropriately
                                         for (Map.Entry<String, Expression> entry : getProcess.getUpdate().entrySet()) {
                                             getEffects.add("next(" + getterName + "-" + entry.getKey() + ") = ("
@@ -1069,7 +1085,7 @@ public class ToNuXmv {
                                         }
                                         
                                         // Stop considering this transition if update uses a message variable
-                                        // that is not set by the send transition
+                                        // that is not set by the supply transition
                                         if (stop.get()) continue getterTrLoop;
                                         ///////
                                         
