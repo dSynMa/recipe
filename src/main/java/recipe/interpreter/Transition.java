@@ -25,7 +25,11 @@ interface Transition {
     public void pushConsumer(AgentInstance instance, ProcessTransition transition) throws Exception;
     public JSONObject toJSON();
 
+    // Returns all agents requiring data not provided by the producer
+    public Set<AgentInstance> getUnhappyConsumers(Interpreter interpreter);
+
     public Boolean satisfies(JSONObject constraint);
+    public Step next(Interpreter interpreter);
 
     public Expression<recipe.lang.types.Boolean> getSpecializedObservation(Map<String, Type> cvs, Expression<recipe.lang.types.Boolean> obs) throws Exception;
 }

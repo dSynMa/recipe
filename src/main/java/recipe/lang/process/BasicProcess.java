@@ -3,8 +3,11 @@ package recipe.lang.process;
 import recipe.lang.expressions.Expression;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
+import recipe.lang.types.Type;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public abstract class BasicProcess extends Process {
     protected String label;
@@ -32,5 +35,17 @@ public abstract class BasicProcess extends Process {
 
     public Map<String, Expression> getUpdate() {
         return update;
+    }
+
+    public Set<String> wantedData(Map<String, Type> msgStruct) {
+        Set<String> result = new HashSet<>();
+        for (Expression expression : update.values()) {
+            for (Object sub : expression.subformulas()) {
+                if (msgStruct.containsKey(sub.toString())) {
+                    result.add(sub.toString());
+                }
+            }
+        }
+        return result;
     }
 }

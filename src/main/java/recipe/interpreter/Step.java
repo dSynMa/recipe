@@ -63,6 +63,10 @@ public class Step {
         e.printStackTrace();
     }
 
+    public Map<AgentInstance, ConcreteStore> getStores() {
+        return stores;
+    }
+    
     public Step getParent() {
         return parent;
     }

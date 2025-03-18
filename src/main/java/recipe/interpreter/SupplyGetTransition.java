@@ -1,6 +1,7 @@
 package recipe.interpreter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -16,9 +17,12 @@ import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.location.Location;
+import recipe.lang.process.BasicProcess;
 import recipe.lang.process.BasicProcessWithMessage;
 import recipe.lang.process.GetProcess;
 import recipe.lang.process.SupplyProcess;
+import recipe.lang.store.ConcreteStore;
+import recipe.lang.store.Store;
 import recipe.lang.types.Type;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.utils.exceptions.RelabellingTypeException;
@@ -68,7 +72,6 @@ class SupplyGetTransition implements Transition {
     }
 
 
-
     @Override
     public AgentInstance getProducer() {
         return supplier;
@@ -95,7 +98,6 @@ class SupplyGetTransition implements Transition {
 
     @Override
     public Boolean satisfies(JSONObject constraint) {
-
         String supplyLbl = supply.getLabel().getLabel();
         String getLbl = get.getLabel().getLabel();
         String supplierName = supplier.getLabel();
@@ -168,4 +170,53 @@ class SupplyGetTransition implements Transition {
         return ToNuXmv.specialiseObservationToSupplyTransition(
             cvs, obs, getterPredicate, supplyProcess.getMessage(), supplierTV, getterTV, Config.getNoAgent(), supplier.getAgent());
     }
+
+    @Override
+    public Step next(Interpreter interpreter) {
+        Step currentStep = interpreter.getCurrentStep();
+        Map<AgentInstance, ConcreteStore> stores = currentStep.getStores();
+        Map<AgentInstance,ConcreteStore> nextStores = new HashMap<AgentInstance,ConcreteStore>(stores);
+
+        ConcreteStore supplierStore = stores.get(supplier);
+        ConcreteStore getterStore = stores.get(getter);
+
+        BasicProcessWithMessage sp = (BasicProcessWithMessage) supply.getLabel();
+        BasicProcessWithMessage gp = (BasicProcessWithMessage) get.getLabel();
+        
+        Store splyMsgStore = currentStep.makeMessageStore(supplierStore, sp, interpreter.sys).getLeft();
+        Store getMsgStore = currentStep.makeMessageStore(getterStore, gp, interpreter.sys).getLeft();
+
+        try {
+            ConcreteStore nextSupplierStore = supplierStore.BuildNext(supply, getMsgStore);
+            ConcreteStore nextGetterStore = getterStore.BuildNext(get, splyMsgStore);
+            nextStores.put(supplier, nextSupplierStore);
+            nextStores.put(getter, nextGetterStore);
+        } catch (Exception e) {
+            currentStep.handleEvaluationException(e);
+        }
+        Step next = new Step(nextStores, currentStep, interpreter);
+        return next;
+    }
+
+    @Override
+    public Set<AgentInstance> getUnhappyConsumers(Interpreter interpreter) {
+        Set<AgentInstance> result = new HashSet<>();
+        Map<String, Type> struct =  interpreter.sys.getMessageStructure();
+
+        Set<String> supplierWants = get.getLabel().wantedData(struct);
+        System.err.printf("supplier wants %s\n", supplierWants.toString());
+        BasicProcessWithMessage gp = (GetProcess) get.getLabel();
+        if (!gp.getMessage().keySet().containsAll(supplierWants)){
+            result.add(getter);
+        }
+
+        BasicProcessWithMessage sp = (GetProcess) get.getLabel();
+        Set<String> getterWants = get.getLabel().wantedData(struct);
+        System.err.printf("getter wants %s\n", supplierWants.toString());
+        if (!sp.getMessage().keySet().containsAll(getterWants)){
+            result.add(supplier);
+        }
+        return result;
+    }
+
 }
