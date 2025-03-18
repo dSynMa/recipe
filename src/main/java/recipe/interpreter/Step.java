@@ -39,12 +39,8 @@ import recipe.lang.types.UnionType;
 import recipe.lang.utils.Pair;
 import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
-import recipe.lang.utils.exceptions.RelabellingTypeException;
 
 public class Step {
-    /**
-     *
-     */
     private final Interpreter interpreter;
     private Map<AgentInstance,ConcreteStore> stores;
     private Map<TypedValue, Set<AgentInstance>> listeners;
@@ -186,7 +182,7 @@ public class Step {
                     
                     boolean isObserved = Condition.getTrue().equals(observation.valueIn(store));
                     if (isObserved != ltol.get(obsVar).equals("TRUE")) {
-                        System.out.printf(">> %s (%s): expected %s, got %s\n", obsVar, observation, ltol.get(obsVar), isObserved);
+                        System.err.printf(">> %s (%s): expected %s, got %s\n", obsVar, observation, ltol.get(obsVar), isObserved);
                         return false;
                     }
                 } catch (Exception e) {
@@ -498,7 +494,6 @@ public class Step {
                                     newTransitions[i] = new SendReceiveTransition();
                                     newTransitions[i].setProducer(sender, tr);
                                 }
-                                // System.err.printf("Generated %d transition objects\n", transitionCount);
                                 // Populate transitions with the cartesian product of receives
                                 for (AgentInstance receiver : receivesMap.keySet()) {
                                     // System.err.printf("Adding %s\n", receiver);
