@@ -629,9 +629,7 @@ public class ToNuXmv {
                                 if (sendingOnThisChannelVarOrVal.toString().equals(Config.broadcast))
                                     //then sending channel is broadcast and we always want to listen to broadcasts
                                     receiveGuard = "TRUE";
-                                else if (receiveGuardExpr.toString().equals("FALSE")) {
-                                    receiveGuard = "FALSE";
-                                } else if(sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)){
+                                else if(sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)){
                                     receiveGuard = "(" + receiveGuardExpr + ")";
                                 } else {
                                     receiveGuard = "(" + receiveGuardExpr + ") | " + sendingOnThisChannelVarOrVal + " = " + broadcastChannel;

@@ -365,9 +365,12 @@ public class Step {
                 for (Object objChan : chanEnum.getAllValues()) {
                     TypedValue chan = (TypedValue) objChan;
                     Store s = store.push(interpreter.getChannelTV(), chan);
-                    TypedValue evalGuard = instance.getAgent().getReceiveGuard().valueIn(s);
-                    boolean isListening = Condition.getTrue().equals(evalGuard);
-                    // System.out.printf("eval %s on store %s ---> %s\n", instance.getAgent().getReceiveGuard(), s, isListening);
+                    // Everyone is always listening on broadcast
+                    boolean isListening = chan.toString().equals(Config.broadcast);
+                    if (!isListening) {
+                        TypedValue evalGuard = instance.getAgent().getReceiveGuard().valueIn(s);
+                        isListening = Condition.getTrue().equals(evalGuard);
+                    }
                     if (isListening) {
                         listeners.putIfAbsent(chan, new HashSet<>());
                         listeners.get(chan).add(instance);
@@ -423,9 +426,12 @@ public class Step {
                                             .valueIn(senderStore);
 
                                         boolean sendGuardOk = Condition.getTrue().equals(sendGuardHere);
-
-                                        TypedValue receiveGuard = inst.getAgent().getReceiveGuard().valueIn(instStore);
-                                        boolean receiveGuardOk = Condition.getTrue().equals(receiveGuard);
+                                        // Everyone always listens to broadcast
+                                        boolean receiveGuardOk = chan.toString().equals(Config.broadcast);
+                                        if (!receiveGuardOk) {
+                                            TypedValue receiveGuard = inst.getAgent().getReceiveGuard().valueIn(instStore);
+                                            receiveGuardOk = Condition.getTrue().equals(receiveGuard);
+                                        }
                                         // System.out.printf("sendguard: %s (%s)\n", sendGuard, sendGuardOk);
                                         // System.out.printf("receiveguard: %s (%s)\n", receiveGuard, receiveGuardOk);
 
