@@ -299,26 +299,8 @@ public class Step {
     public Step next(int index, Interpreter interpreter) {
         assert index < transitions.size();
         this.chosenTransition = transitions.get(index);
-
-        Map<AgentInstance,ConcreteStore> nextStores = new HashMap<AgentInstance,ConcreteStore>(stores);
-
-        try {
-            // Update sender
-            AgentInstance initiator = chosenTransition.getProducer();
-            ConcreteStore nextSenderStore = stores.get(initiator).BuildNext(chosenTransition.getProducerTransition());
-            nextStores.put(initiator, nextSenderStore);
-
-            Pair<Store, TypedValue> msgPair = makeMessageStore(stores.get(initiator), chosenTransition.getProducerProcess(), sys);
-            for (AgentInstance receiver : chosenTransition.getConsumers()) {
-                ProcessTransition receive = chosenTransition.findTransitionForAgent(receiver);
-                ConcreteStore nextReceiverStore = stores.get(receiver).BuildNext(receive, msgPair.getLeft());
-                nextStores.put(receiver, nextReceiverStore);
-            }
-        } catch (Exception e) {
-            handleEvaluationException(e);
-        }
-        Step next = new Step(nextStores, this, interpreter);
-        return next;
+        Step nextStep = this.chosenTransition.next(interpreter);
+        return nextStep;
     }
 
     public void loadAnnotations(JSONObject obj) {
