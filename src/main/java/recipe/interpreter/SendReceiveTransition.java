@@ -139,14 +139,14 @@ class SendReceiveTransition implements Transition {
             ConcreteStore nextSenderStore = senderStore.BuildNext(send);
             nextStores.put(sender, nextSenderStore);
 
-            Pair<Store, TypedValue> msgPair = currentStep.makeMessageStore(senderStore, sp, interpreter.sys);
+            Pair<Store, TypedValue> msgPair = interpreter.makeMessageStore(senderStore, sp, interpreter.sys);
             for (AgentInstance receiver : getConsumers()) {
                 ProcessTransition receive = findTransitionForAgent(receiver);
                 ConcreteStore nextReceiverStore = stores.get(receiver).BuildNext(receive, msgPair.getLeft());
                 nextStores.put(receiver, nextReceiverStore);
             }
         } catch (Exception e) {
-            currentStep.handleEvaluationException(e);
+            Step.handleEvaluationException(e);
         }
         Step next = new Step(nextStores, currentStep, interpreter);
         return next;

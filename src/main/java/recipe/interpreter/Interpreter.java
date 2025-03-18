@@ -20,11 +20,17 @@ import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
+import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.ltol.Observation;
+import recipe.lang.process.BasicProcessWithMessage;
+import recipe.lang.process.SendProcess;
 import recipe.lang.store.ConcreteStore;
+import recipe.lang.store.Store;
 import recipe.lang.types.Type;
 import recipe.lang.utils.Pair;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
 
 public class Interpreter {
     private TypedVariable channTypedVariable;
@@ -264,5 +270,39 @@ public class Interpreter {
 
     public Step getCurrentStep() {
         return currentStep;
+    }
+
+    public Pair<Store, TypedValue> makeMessageStore(Store senderStore, BasicProcessWithMessage procWithMsg, recipe.lang.System sys) {
+        // Add message and channel to a new map
+        Map<TypedVariable, TypedValue> msgMap = new HashMap<TypedVariable, TypedValue>();
+        TypedValue chan = null;
+        try {
+            procWithMsg.getMessage().forEach((msgVar, msgExpr) -> {
+                try {
+                    TypedValue msgVal = msgExpr.valueIn(senderStore);
+                    Type msgType = sys.getMessageStructure().get(msgVar);
+                    if (msgType != msgVal.getType()) {
+                        throw new MismatchingTypeException(
+                            String.format("Mismatch type for message variable %s (expected %s, got %s)",
+                            msgVar,
+                            msgType.toString(),
+                            msgVal.getType().toString()));
+                    }
+                    TypedVariable<Type> tv = new TypedVariable<>(msgType, msgVar);
+                    msgMap.put(tv, msgVal);
+                } catch (Exception e) {
+                    Step.handleEvaluationException(e);
+                }
+            });
+            if (procWithMsg instanceof SendProcess) {
+                Expression chanExpr = procWithMsg.getChannel();
+                chan = chanExpr.valueIn(senderStore);
+                msgMap.put(getChannelTV(), chan);
+            }
+            return new Pair<Store, TypedValue>(new ConcreteStore(msgMap), chan);
+        } catch (Exception e) {
+            Step.handleEvaluationException(e);
+        }
+        return null;
     }
 }

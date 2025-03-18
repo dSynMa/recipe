@@ -183,8 +183,8 @@ class SupplyGetTransition implements Transition {
         BasicProcessWithMessage sp = (BasicProcessWithMessage) supply.getLabel();
         BasicProcessWithMessage gp = (BasicProcessWithMessage) get.getLabel();
         
-        Store splyMsgStore = currentStep.makeMessageStore(supplierStore, sp, interpreter.sys).getLeft();
-        Store getMsgStore = currentStep.makeMessageStore(getterStore, gp, interpreter.sys).getLeft();
+        Store splyMsgStore = interpreter.makeMessageStore(supplierStore, sp, interpreter.sys).getLeft();
+        Store getMsgStore = interpreter.makeMessageStore(getterStore, gp, interpreter.sys).getLeft();
 
         try {
             ConcreteStore nextSupplierStore = supplierStore.BuildNext(supply, getMsgStore);
@@ -192,7 +192,7 @@ class SupplyGetTransition implements Transition {
             nextStores.put(supplier, nextSupplierStore);
             nextStores.put(getter, nextGetterStore);
         } catch (Exception e) {
-            currentStep.handleEvaluationException(e);
+            Step.handleEvaluationException(e);
         }
         Step next = new Step(nextStores, currentStep, interpreter);
         return next;

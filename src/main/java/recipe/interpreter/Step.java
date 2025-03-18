@@ -53,7 +53,7 @@ public class Step {
     Step parent;
     private JSONObject annotations;
 
-    protected void handleEvaluationException(Exception e) {
+    public static void handleEvaluationException(Exception e) {
         // TODO
         System.err.println(e);
         e.printStackTrace();
@@ -166,7 +166,7 @@ public class Step {
                         mp.put(new TypedVariable<Type>(agentType, "supplier"), producerTV);
                         
                     }
-                    Pair<Store, TypedValue> msgPair = makeMessageStore(producerStore, proc, this.sys);
+                    Pair<Store, TypedValue> msgPair = interpreter.makeMessageStore(producerStore, proc, this.sys);
                     CompositeStore store = new ConcreteStore(mp).push(msgPair.getLeft());
                     if (proc instanceof SupplyProcess) {
                         observation = observation.relabel(
@@ -306,40 +306,6 @@ public class Step {
                 annotations.put(key, obj.get(key));
     }
 
-    protected Pair<Store, TypedValue> makeMessageStore(Store senderStore, BasicProcessWithMessage procWithMsg, recipe.lang.System sys) {
-        // Add message and channel to a new map
-        Map<TypedVariable, TypedValue> msgMap = new HashMap<TypedVariable, TypedValue>();
-        TypedValue chan = null;
-        try {
-            procWithMsg.getMessage().forEach((msgVar, msgExpr) -> {
-                try {
-                    TypedValue msgVal = msgExpr.valueIn(senderStore);
-                    Type msgType = sys.getMessageStructure().get(msgVar);
-                    if (msgType != msgVal.getType()) {
-                        throw new MismatchingTypeException(
-                            String.format("Mismatch type for message variable %s (expected %s, got %s)",
-                            msgVar,
-                            msgType.toString(),
-                            msgVal.getType().toString()));
-                    }
-                    TypedVariable<Type> tv = new TypedVariable<>(msgType, msgVar);
-                    msgMap.put(tv, msgVal);
-                } catch (Exception e) {
-                    handleEvaluationException(e);
-                }
-            });
-            if (procWithMsg instanceof SendProcess) {
-                Expression chanExpr = procWithMsg.getChannel();
-                chan = chanExpr.valueIn(senderStore);
-                msgMap.put(interpreter.getChannelTV(), chan);
-            }
-            return new Pair<Store, TypedValue>(new ConcreteStore(msgMap), chan);
-        } catch (Exception e) {
-            handleEvaluationException(e);
-        }
-        return null;
-    }
-
     public Step(Map<AgentInstance,ConcreteStore> stores, Step parent, Interpreter interp) {
         this.interpreter = interp;
         this.sys = interpreter.sys;
@@ -392,7 +358,7 @@ public class Step {
 
                         if (psiSat) {
                             // Add message and channel to a new map
-                            Pair<Store, TypedValue> msgPair = makeMessageStore(senderStore, sendProcess, sys);
+                            Pair<Store, TypedValue> msgPair = interpreter.makeMessageStore(senderStore, sendProcess, sys);
                             Store msgStore = msgPair.getLeft();
                             TypedValue chan = msgPair.getRight();
 
@@ -535,7 +501,7 @@ public class Step {
                         Set<ProcessTransition> gets = interpreter.gets.get(getterStore.getState());
                         if (gets == null) continue;
                         for (ProcessTransition get : gets) {
-                            Pair<Store, TypedValue> msgPair = makeMessageStore(supplierStore, splyProc, sys);
+                            Pair<Store, TypedValue> msgPair = interpreter.makeMessageStore(supplierStore, splyProc, sys);
                             Store instStore = getterStore.push(msgPair.getLeft());
                             GetProcess getProc = (GetProcess) get.getLabel();
                             Expression getPsi = getProc.getPsi();
