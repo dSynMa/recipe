@@ -471,12 +471,32 @@ public class Step {
                                         }
                                     }
                                 }
+                                // Check that all required data is being provided
                                 for (SendReceiveTransition t : newTransitions) {
-                                    transitions.add(t);
+                                    Set<AgentInstance> unhappy = t.getUnhappyConsumers(interp);
+                                    if (unhappy.isEmpty()) {
+                                        transitions.add(t);
+                                    } else {
+                                        if (t instanceof SendReceiveTransition) {
+                                            if (chan.toString().equals(Config.broadcast)) {
+                                                 Transition t1 = new SendReceiveTransition();
+                                                 t1.setProducer(t.getProducer(), t.getProducerTransition());
+                                                 for (AgentInstance consumer : t.getConsumers()) {
+                                                    if (!unhappy.contains(consumer)) {
+                                                        t1.pushConsumer(consumer, t.findTransitionForAgent(consumer));
+                                                    }
+                                                 }
+                                                 transitions.add(t1);
+                                            }
+                                        }
+                                    }
+
+
                                 }
                             }
                         }
                     } catch (Exception e) {
+                        
                         handleEvaluationException(e);
                     }
                 });
