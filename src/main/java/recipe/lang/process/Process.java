@@ -22,6 +22,7 @@ import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.location.AnyLocation;
 import recipe.lang.expressions.location.Location;
 import recipe.lang.expressions.location.NamedLocation;
+import recipe.lang.expressions.location.PredicateLocation;
 import recipe.lang.expressions.location.SelfLocation;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
