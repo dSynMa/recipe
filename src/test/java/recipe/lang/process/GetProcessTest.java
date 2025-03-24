@@ -8,7 +8,6 @@ import recipe.Config;
 import recipe.lang.utils.exceptions.TypeCreationException;
 import recipe.lang.expressions.location.NamedLocation;
 import recipe.lang.expressions.location.PredicateLocation;
-import recipe.lang.expressions.location.SelfLocation;
 import recipe.lang.types.Boolean;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Real;

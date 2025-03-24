@@ -115,6 +115,10 @@ public abstract class Process {
                 else if (jWhere.has("any")) {
                     location = new AnyLocation();
                 }
+                else if (jWhere.has("predicate")) {
+                    Expression<Boolean> c = Deserialization.deserializeExpr(jWhere.getJSONObject("predicate"), ctx);
+                    location = new PredicateLocation(c);
+                }
                 else {
                     Type locationType = Enum.getEnum(Config.locationLabel);
                     location = new NamedLocation(new TypedVariable<Type>(locationType, jWhere.getJSONObject("location").getString("$refText")));
