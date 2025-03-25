@@ -180,11 +180,20 @@ public class System{
         JSONArray jInstances = obj.getJSONArray("system");
         List<AgentInstance> instances = new ArrayList<>(jInstances.length());
 
+        // First, get instance names
         for (int i = 0; i < jInstances.length(); i++) {
             JSONObject jInstance = jInstances.getJSONObject(i);
             Agent agent = agents.get(jInstance.getJSONObject("agent").getString("$refText"));
             String name = jInstance.getString("name");
             agentsToInstances.get(agent).add(name);
+            ctx.set(name, Config.getAgentType());
+        }
+
+        // Then handle init
+        for (int i = 0; i < jInstances.length(); i++) {
+            JSONObject jInstance = jInstances.getJSONObject(i);
+            Agent agent = agents.get(jInstance.getJSONObject("agent").getString("$refText"));
+            String name = jInstance.getString("name");
             TypingContext instanceCtx = new TypingContext();
             instanceCtx.setAll(ctx);
             for (TypedVariable tv : agent.getStore().getAttributes().values()) {
@@ -192,8 +201,6 @@ public class System{
             }
             Expression init = Deserialization.deserializeExpr(jInstance.getJSONObject("init"), instanceCtx);
             instances.add(new AgentInstance(name, init, agent));
-            // instanceNames.add(name);
-            ctx.set(name, Config.getAgentType());
         }
         Set<Agent> agentsSet = new HashSet<>(agents.values());
         List<String> allInstanceNames = new ArrayList<>();

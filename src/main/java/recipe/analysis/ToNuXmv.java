@@ -392,6 +392,11 @@ public class ToNuXmv {
         String init = "INIT\n    TRUE\n";
         String trans = "";
 
+        List<String> constants = new ArrayList<>();
+        for(String label : Enum.getEnumLabels()){
+            constants.addAll(Enum.getEnum(label).getValues());
+        }
+
         Pair<List<LTOL>, Map<String, Observation>> specsAndObs = ltolToLTLAndObservationVariables(system.getSpecs());
         List<LTOL> specs = specsAndObs.getLeft();
         Map<String, Observation> observations = specsAndObs.getRight();
@@ -520,8 +525,10 @@ public class ToNuXmv {
 
             init += sendingAgentName + "-automaton-state" + " = " + sendingAgent.getInitialState().toString() + "\n";
 
-            init += "\t& " + sendingAgent.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
-            init += "\t& " + sendingAgentInstance.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
+            init += "\t& " + sendingAgent.getInit().relabel(v -> 
+                constants.contains(v.getName()) ? v : ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
+            init += "\t& " + sendingAgentInstance.getInit().relabel(v -> 
+                constants.contains(v.getName()) ? v : ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
 
             myselfInvars.add(String.format("INVAR %s-myself = %s;", sendingAgentInstance.getLabel(), sendingAgentInstance.getLabel()));
 
@@ -1181,10 +1188,6 @@ public class ToNuXmv {
         else
             define += "\tprogress := FALSE;\n";
         nuxmv += define;
-        List<String> constants = new ArrayList<>();
-        for(String label : Enum.getEnumLabels()){
-            constants.addAll(Enum.getEnum(label).getValues());
-        }
         if(constants.size() > 0)
             nuxmv += "CONSTANTS\n\t";
             nuxmv +=  String.join(", ", constants);
