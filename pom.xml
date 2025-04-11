@@ -51,9 +51,9 @@
     <dependency>
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
-      <version>20210307</version>
+      <version>20231013</version>
     </dependency>
-    <dependency>
+    <dependency>  
       <groupId>guru.nidi</groupId>
       <artifactId>graphviz-java</artifactId>
       <version>0.18.1</version>
@@ -68,6 +68,10 @@
     <repository>
       <id>jcenter</id>
       <url>https://jcenter.bintray.com/</url>
+    </repository>
+    <repository>
+      <id>jitpack</id>
+      <url>https://jitpack.io</url>
     </repository>
   </repositories>
 
