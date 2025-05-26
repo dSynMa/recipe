@@ -942,8 +942,9 @@ public class ToNuXmv {
                         }
                         Location supplyLoc = supplyProcess.getLocation();
                         if (!(supplyLoc instanceof SelfLocation || supplyLoc instanceof AnyLocation)) {
+                            String loc = supplyLoc == null ? "(null)" : supplyLoc.toString();
                             throw new Exception(
-                                "SUPPLY@" + supplyLoc.toString() + " not allowed " +
+                                "SUPPLY@" + loc + " not allowed " +
                                 "(use either SUPPLY@myself or SUPPLY@any).");
                         }
 
