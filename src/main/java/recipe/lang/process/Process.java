@@ -59,7 +59,7 @@ public abstract class Process {
                 .primitive(sendProcess.or(receiveProcess).or(getProcess).or(supplyProcess).trim())
                 .wrapper(of('(').trim(), of(')').trim(),
                         (List<Process> values) -> values.get(1));
-        
+
         // repetition is a prefix operator
         builder.group()
                 .prefix(StringParser.of("rep").trim(), (List<Process> values) -> new Iterative(values.get(1)));
@@ -91,7 +91,7 @@ public abstract class Process {
                 Expression rhs = Deserialization.deserializeExpr(jAssign.getJSONObject("right"), ctx);
                 update.put(lhs, rhs);
             }
-            
+
             // Channel expression (send/receive)
             JSONObject jChanExpr = jProc.optJSONObject("chanExpr");
             Expression chanExpr = null;
@@ -109,19 +109,22 @@ public abstract class Process {
             JSONObject jWhere = jProc.optJSONObject("where");
             Location location = null;
             if (jWhere != null) {
+                Type locationType = Enum.getEnum(Config.locationLabel);
                 if (jWhere.has(Config.myselfKeyword)) {
                     location = new SelfLocation();
-                }
-                else if (jWhere.has("any")) {
+                } else if (jWhere.has("any")) {
                     location = new AnyLocation();
-                }
-                else if (jWhere.has("predicate")) {
+                } else if (jWhere.has("predicate")) {
                     Expression<Boolean> c = Deserialization.deserializeExpr(jWhere.getJSONObject("predicate"), ctx);
                     location = new PredicateLocation(c);
-                }
-                else {
-                    Type locationType = Enum.getEnum(Config.locationLabel);
-                    location = new NamedLocation(new TypedVariable<Type>(locationType, jWhere.getJSONObject("location").getString("$refText")));
+                    if (c instanceof TypedVariable) {
+                        TypedVariable tv = (TypedVariable) c;
+                        if (tv.getType().equals(locationType)) {
+                            location = new NamedLocation(tv);
+                        }
+                    }
+                } else {
+                    throw new ParsingException("Cannot deserialize '" + jProc + "'");
                 }
             }
             // Message (send/supply)
@@ -135,7 +138,7 @@ public abstract class Process {
                     message.put(lhs, rhs);
                 }
             }
-            
+
             if (type.equals("Send")) {
                 Expression sendGuard = Deserialization.deserializeExpr(jProc.getJSONObject("sendGuard"), ctx);
                 return new SendProcess(label, psi, chanExpr, message, update, sendGuard);

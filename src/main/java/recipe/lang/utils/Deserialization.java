@@ -113,6 +113,7 @@ public class Deserialization {
                 return new TypedValue<Boolean>(recipe.lang.types.Boolean.getType(), jExpr.optString("value"));
             case "Broadcast":
                 return new TypedValue<Enum>(Enum.getEnum(Config.channelLabel), Config.broadcast);
+            case "ChannelRef":
             case "Ref":
                 if (jExpr.has("variable")) {
                     String name = jExpr.getJSONObject("variable").getString("$refText");
@@ -198,12 +199,12 @@ public class Deserialization {
                 Expression chanExpr = deserializeRef(jExpr.getString("chan"), context);
                 return new IsEqualTo<>(new TypedVariable<Type>(chanEnum, channelLabel), chanExpr);
             case "ExistsObs":
-                    return new Predicate("exists", deserializeExpr(jExpr.getJSONObject("pred"), context));
+                    return new Predicate("exists", deserializeExpr(jExpr.getJSONObject("expr"), context));
             case "ForallObs":
-                return new Predicate("forall", deserializeExpr(jExpr.getJSONObject("pred"), context));
+                return new Predicate("forall", deserializeExpr(jExpr.getJSONObject("expr"), context));
             default:
                 throw new ParsingException(
-                        String.format("Cannot deserialize %s into Expression", jExpr.getString("$type")));
+                        String.format("Cannot deserialize %s into Expression\nFull node:%s", jExpr.getString("$type"), jExpr));
         }
     }
 
@@ -266,6 +267,7 @@ public class Deserialization {
             case "Neg":
                 return new recipe.lang.ltol.Not(deserializeLTOLorExpr(jPhi.getJSONObject("expr"), ctx));
             case "CompoundExpr":
+            case "BinExpr":
             case "Comparison":
                 LTOL lhs = deserializeLTOLorExpr(jPhi.getJSONObject("left"), ctx);
                 if (!jPhi.has(("operator"))) {

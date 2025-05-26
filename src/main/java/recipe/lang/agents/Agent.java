@@ -540,7 +540,7 @@ public class Agent {
                 JSONObject jRelabel = jRelabels.getJSONObject(i);
                 String varName = jRelabel.getJSONObject("var").getString("$refText");
                 Type t = context.get(varName);
-                Expression expr = Deserialization.deserializeExpr(jRelabel, context);
+                Expression expr = Deserialization.deserializeExpr(jRelabel.getJSONObject("expr"), context);
                 relabel.put(new TypedVariable<Type>(t, varName), expr);
             }
         }
