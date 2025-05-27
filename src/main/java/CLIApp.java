@@ -85,7 +85,17 @@ public class CLIApp {
                 runGui(cmd);
             } else if (cmd.hasOption("api")){
                 int numThreads = Runtime.getRuntime().availableProcessors();
-                Server.start(numThreads);
+                Path jsonPath = null;
+                if (cmd.hasOption("j")) {
+                    jsonPath = Path.of(cmd.getOptionValue("j"));
+                } 
+                if (cmd.hasOption("port")) {
+                    int p = Integer.parseInt(cmd.getOptionValue("port"));
+                    Server.start(numThreads, p, jsonPath);
+                } else {
+                    Server.start(numThreads, jsonPath);
+                }
+                
             } else if (!cmd.hasOption("i") && !cmd.hasOption("j")) {
                 formatter.printHelp("recipe", options);
                 System.exit(1);

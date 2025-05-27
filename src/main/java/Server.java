@@ -4,6 +4,7 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -476,7 +477,7 @@ public class Server {
             interpreter = new Interpreter(system);
             interpreter.init("TRUE");
         } else {
-            int index = Integer.parseInt(req.getQuery().get("index"));
+            int index = req.getQuery().getInt("index", 0);
             if (interpreter.isDeadlocked()) {
                 return "{ \"error\" : \"No successor state (system is deadlocked).\"}";
             }
@@ -490,10 +491,16 @@ public class Server {
 
     @Route("/interpretBack")
     public String interpretBack(Request req) throws Exception {
-        interpreter.backtrack();
-        JSONObject response = interpreter.getCurrentStep().toJSON();
-        response.put("svgs", renderSVGs(response));
-        return response.toString();
+        if (interpreter.getCurrentStep().getParent() != null) {
+            interpreter.backtrack();
+            JSONObject response = interpreter.getCurrentStep().toJSON();
+            response.put("svgs", renderSVGs(response));
+            return response.toString();
+        } else {
+            JSONObject response = new JSONObject();
+            response.put("error", "Already at initial state");
+            return response.toString();
+        }
     }
 
     @Route("/resetInterpreter")
@@ -637,15 +644,41 @@ public class Server {
         } catch (IOException e) {}
     }
 
-    public static String start(int threads) throws Exception {
-        int port = 54044;
-        app = Flak.createHttpApp(port);
+    public static String start(int threads, int port, Path jsonPath) throws Exception {
+        if (port == 0) {
+            while (true) {
+                try {
+                    port = (int) ((Math.random() * (65536 - 1024)) + 1024);
+                    app = Flak.createHttpApp(port);
+                    java.lang.System.err.println("PORT: " + String.valueOf(port));
+                    break;
+                } catch (Exception ex) {
+                    continue;
+                }
+            }
+        } else {
+            app = Flak.createHttpApp(port);
+        }
         Server s = new Server(threads);
+        if (jsonPath != null) {
+            JSONObject jo = RCheckInterop.parseJson(jsonPath);
+            System system = recipe.lang.System.deserialize(jo);
+            s.system = system;
+        }
         app.scan(s);
         cors();
         app.start();
         s.close();
         return app.getRootUrl();
+    }
+
+    public static String start(int threads, Path jsonPath) throws Exception {
+        return start(threads, 54044, null);
+        
+    }
+
+    public static String start(int threads) throws Exception {
+        return start(threads, null);
     }
 
     public static App app() {
