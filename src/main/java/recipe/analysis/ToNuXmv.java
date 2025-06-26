@@ -940,11 +940,7 @@ public class ToNuXmv {
                 String supplierStateIsCurrentState = sendingAgentName + "-automaton-state" + " = " + state;
                 if (supplyTransitions != null && supplyTransitions.size() > 0) {
                     for (ProcessTransition t : supplyTransitions) {
-                        List<String> supplyTriggeredIf = new ArrayList<>();
                         SupplyProcess supplyProcess = (SupplyProcess) t.getLabel();
-                        // add the guard of the supplyProcess to the guards required for the supply to trigger
-                        supplyTriggeredIf.add(supplierStateIsCurrentState);
-                        supplyTriggeredIf.add(supplyProcess.getPsi().relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify().toString());
 
 
                         // relabelling message var names
@@ -981,7 +977,11 @@ public class ToNuXmv {
 
                                 getterTrLoop:
                                 for (ProcessTransition gt : getTransitions) {
+                                    List<String> supplyTriggeredIf = new ArrayList<>();
                                     List<String> supplyEffects = new ArrayList<>();
+                                    
+                                    // Add state check to supply trigger
+                                    supplyTriggeredIf.add(supplierStateIsCurrentState);
                                     // add next state to supply effects
                                     supplyEffects.add("next(" + sendingAgentName + "-automaton-state" + ") = " + t.getDestination());
 
@@ -990,6 +990,27 @@ public class ToNuXmv {
                                     List<String> getEffects = new ArrayList<>();
                                     GetProcess getProcess = (GetProcess) gt.getLabel();
                                 
+                                    // Process transition guards
+
+                                    // Relabel data from getter
+                                    Map<String, Expression> relabelledMsgGet = new HashMap<>();
+                                    for (Map.Entry<String, Expression> entry : getProcess.getMessage().entrySet()) {
+                                        relabelledMsgGet.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(getterName + "-" + ((TypedVariable) v).getName())).simplify());
+                                    }
+
+                                    Expression<recipe.lang.types.Boolean> supplyTransitionGuard = supplyProcess.getPsi()
+                                        .relabel(v -> getProcess.getMessage().containsKey(((TypedVariable) v).getName())
+                                            ? relabelledMsgGet.get(((TypedVariable) v).getName())
+                                            : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
+                                            ? stopHelper.apply(v)
+                                            : ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)));
+                                            
+                                    //// stop considering this transition if the get message does not contain all message vars required by the supply psi
+                                    if (stop.get()) continue getterTrLoop;
+                                    // If guard evaluates to false, we can skip
+                                    if (supplyTransitionGuard.equals(Condition.getFalse())) continue getterTrLoop;
+                                    else supplyTriggeredIf.add(supplyTransitionGuard.toString());    
+
                                     Expression<recipe.lang.types.Boolean> getTransitionGuard = getProcess.getPsi()
                                         .relabel(v -> supplyProcess.getMessage().containsKey(((TypedVariable) v).getName())
                                             ? relabelledMessage.get(((TypedVariable) v).getName())
@@ -1026,7 +1047,7 @@ public class ToNuXmv {
                                             ? v.sameTypeWithName(getterName + "-" + v)
                                             : v;
                                     }).simplify();
-                                    //relabelling getterGuard
+                                    // relabelling getterGuard
                                     // remove @s
                                     getterPredicate = getterPredicate.relabel(v -> {
                                         return v.getName().startsWith("@") ? ((TypedVariable) v).sameTypeWithName(v.getName().substring(1)) : v;
@@ -1066,11 +1087,7 @@ public class ToNuXmv {
                                     }
 
                                     // Updates
-                                    // Relabel data from getter
-                                    Map<String, Expression> relabelledMsgGet = new HashMap<>();
-                                    for (Map.Entry<String, Expression> entry : getProcess.getMessage().entrySet()) {
-                                        relabelledMsgGet.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(getterName + "-" + ((TypedVariable) v).getName())).simplify());
-                                    }
+
                                     //for each variable update, if the updates uses a message variable that is
                                     // not set by the get transition, then exit
                                     // else relabel variables appropriately
