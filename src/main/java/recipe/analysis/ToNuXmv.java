@@ -205,51 +205,57 @@ public class ToNuXmv {
         } else if (obs instanceof Predicate) {
             Predicate obss = (Predicate) obs;
             Expression<Boolean> expr = obss.getInput();
-            return expr.relabel((v) -> cvs.containsKey("@"+v.getName()) ? v.sameTypeWithName("supplier-" + v.getName()) : v);
+            return expr.relabel(
+                    (v) -> cvs.containsKey("@" + v.getName()) ? v.sameTypeWithName("supplier-" + v.getName()) : v);
         }
 
         return obs;
     }
 
-
-
-    public static Expression<Boolean> handleCVsInObservation(Map<String, Type> cvs, Expression<Boolean> obs, Expression<Boolean> sendGuard) throws Exception {
-        if(obs.getClass().equals(And.class)){
+    public static Expression<Boolean> handleCVsInObservation(Map<String, Type> cvs, Expression<Boolean> obs,
+            Expression<Boolean> sendGuard) throws Exception {
+        if (obs.getClass().equals(And.class)) {
             And obss = (And) obs;
-            return new And(handleCVsInObservation(cvs, obss.getLhs(), sendGuard), handleCVsInObservation(cvs, obss.getRhs(), sendGuard));
-        } else if(obs.getClass().equals(Or.class)){
+            return new And(handleCVsInObservation(cvs, obss.getLhs(), sendGuard),
+                    handleCVsInObservation(cvs, obss.getRhs(), sendGuard));
+        } else if (obs.getClass().equals(Or.class)) {
             Or obss = (Or) obs;
-            return new Or(handleCVsInObservation(cvs, obss.getLhs(), sendGuard), handleCVsInObservation(cvs, obss.getRhs(), sendGuard));
-        } else if(obs.getClass().equals(Not.class)){
+            return new Or(handleCVsInObservation(cvs, obss.getLhs(), sendGuard),
+                    handleCVsInObservation(cvs, obss.getRhs(), sendGuard));
+        } else if (obs.getClass().equals(Not.class)) {
             Not obss = (Not) obs;
             return new Not(handleCVsInObservation(cvs, obss.getArgument(), sendGuard));
-        } else if(obs.getClass().equals(Implies.class)){
+        } else if (obs.getClass().equals(Implies.class)) {
             Implies obss = (Implies) obs;
-            return new Implies(handleCVsInObservation(cvs, obss.getLhs(), sendGuard), handleCVsInObservation(cvs, obss.getRhs(), sendGuard));
-        } else if(obs.getClass().equals(IsEqualTo.class)){
+            return new Implies(handleCVsInObservation(cvs, obss.getLhs(), sendGuard),
+                    handleCVsInObservation(cvs, obss.getRhs(), sendGuard));
+        } else if (obs.getClass().equals(IsEqualTo.class)) {
             IsEqualTo obss = (IsEqualTo) obs;
-            if(obss.getLhs().getType().equals(Boolean.getType())){
+            if (obss.getLhs().getType().equals(Boolean.getType())) {
                 return new And(
-                        new Implies(handleCVsInObservation(cvs, obss.getLhs(), sendGuard), handleCVsInObservation(cvs, obss.getRhs(), sendGuard)),
-                        new Implies(handleCVsInObservation(cvs, obss.getRhs(), sendGuard), handleCVsInObservation(cvs, obss.getLhs(), sendGuard)));
+                        new Implies(handleCVsInObservation(cvs, obss.getLhs(), sendGuard),
+                                handleCVsInObservation(cvs, obss.getRhs(), sendGuard)),
+                        new Implies(handleCVsInObservation(cvs, obss.getRhs(), sendGuard),
+                                handleCVsInObservation(cvs, obss.getLhs(), sendGuard)));
             } else {
                 return obs;
             }
-        } else if(obs.getClass().equals(Predicate.class)){
+        } else if (obs.getClass().equals(Predicate.class)) {
             Predicate obss = (Predicate) obs;
-            //t(forall(o)) = /\cv g_s -> o
+            // t(forall(o)) = /\cv g_s -> o
 
-            if(obss.getName().equals("forall")){
+            if (obss.getName().equals("forall")) {
                 Expression<Boolean> finalExpression = null;
 
                 Set<Expression<Boolean>> current = new HashSet<>();
                 current.add(new Implies(sendGuard, obss.getInput()));
 
-                for(Map.Entry<String, Type> entry : cvs.entrySet()){
+                for (Map.Entry<String, Type> entry : cvs.entrySet()) {
                     Set<Expression<Boolean>> next = new HashSet<>();
-                    for(Expression<Boolean> expr : current){
-                        Set<Expression<Boolean>> nextExpressions = specialiseOnAllPossibleValues(entry.getKey(), entry.getValue(), expr);
-                        if(nextExpressions.contains(Condition.getFalse())){
+                    for (Expression<Boolean> expr : current) {
+                        Set<Expression<Boolean>> nextExpressions = specialiseOnAllPossibleValues(entry.getKey(),
+                                entry.getValue(), expr);
+                        if (nextExpressions.contains(Condition.getFalse())) {
                             next.clear();
                             next.add(Condition.getFalse());
                             break;
@@ -258,32 +264,33 @@ public class ToNuXmv {
                         next.addAll(nextExpressions);
                     }
                     current = next;
-                    if(current.size() == 1 && current.contains(Condition.getFalse())){
+                    if (current.size() == 1 && current.contains(Condition.getFalse())) {
                         break;
                     }
                 }
 
-                for(Expression<Boolean> expr : current){
-                    if(finalExpression == null){
+                for (Expression<Boolean> expr : current) {
+                    if (finalExpression == null) {
                         finalExpression = expr.simplify();
-                    } else{
+                    } else {
                         finalExpression = new And(finalExpression, expr).simplify();
                     }
                 }
                 return finalExpression;
-            } else if(obss.getName().equals("exists")) {
-                //t(exists(o)) = \/cv g_s && o
+            } else if (obss.getName().equals("exists")) {
+                // t(exists(o)) = \/cv g_s && o
                 Expression<Boolean> t = null;
 
                 Set<Expression<Boolean>> current = new HashSet<>();
                 current.add(new And(sendGuard, obss.getInput()));
 
                 // TODO restrict to cvs that appear in obss
-                for(Map.Entry<String, Type> nameTypePair : cvs.entrySet()){
+                for (Map.Entry<String, Type> nameTypePair : cvs.entrySet()) {
                     Set<Expression<Boolean>> next = new HashSet<>();
-                    for(Expression<Boolean> expr : current){
-                        Set<Expression<Boolean>> nextExpressions = specialiseOnAllPossibleValues(nameTypePair.getKey(), nameTypePair.getValue(), expr);
-                        if(nextExpressions.contains(Condition.getTrue())){
+                    for (Expression<Boolean> expr : current) {
+                        Set<Expression<Boolean>> nextExpressions = specialiseOnAllPossibleValues(nameTypePair.getKey(),
+                                nameTypePair.getValue(), expr);
+                        if (nextExpressions.contains(Condition.getTrue())) {
                             next.clear();
                             next.add(Condition.getTrue());
                             break;
@@ -292,35 +299,37 @@ public class ToNuXmv {
                         next.addAll(nextExpressions);
                     }
                     current = next;
-                    if(current.size() == 1 && current.contains(Condition.getTrue())){
+                    if (current.size() == 1 && current.contains(Condition.getTrue())) {
                         break;
                     }
                 }
 
-                for(Expression<Boolean> expr : current){
-                    if(t == null){
+                for (Expression<Boolean> expr : current) {
+                    if (t == null) {
                         t = expr.simplify();
-                    } else{
+                    } else {
                         t = new Or(t, expr).simplify();
                     }
                 }
                 return t;
-            } else{
+            } else {
                 throw new Exception("Predicate " + obss.getName() + " unknown.");
             }
-        } else{
+        } else {
             return obs;
         }
     }
 
-    public static Pair<List<LTOL>, Map<String, Observation>> ltolToLTLAndObservationVariables(List<LTOL> specs) throws Exception {
+    public static Pair<List<LTOL>, Map<String, Observation>> ltolToLTLAndObservationVariables(List<LTOL> specs)
+            throws Exception {
         Integer counter = 0;
         List<LTOL> pureLTLSpecs = new ArrayList<>();
         Map<String, Observation> observations = new HashMap<>();
 
-        for(int i = 0; i < specs.size(); i++){
+        for (int i = 0; i < specs.size(); i++) {
             LTOL ltol = specs.get(i);
-            Triple<Integer, Map<String, Observation>, LTOL> integerMapLTOLTriple = ltol.abstractOutObservations(counter);
+            Triple<Integer, Map<String, Observation>, LTOL> integerMapLTOLTriple = ltol
+                    .abstractOutObservations(counter);
             counter = integerMapLTOLTriple.getLeft();
             observations.putAll(integerMapLTOLTriple.getMiddle());
             pureLTLSpecs.add(integerMapLTOLTriple.getRight());
@@ -335,7 +344,7 @@ public class ToNuXmv {
         writer.write(script);
         writer.close();
         Runtime rt = Runtime.getRuntime();
-        String[] cmd = new String[] {Config.getNuxmvPath(), " translation.smv"};
+        String[] cmd = new String[] { Config.getNuxmvPath(), " translation.smv" };
         // Process pr = rt.exec(Config.getNuxmvPath() + " translation.smv");
         Process pr = rt.exec(cmd);
 
@@ -347,7 +356,7 @@ public class ToNuXmv {
 
             try {
                 while ((line = input.readLine()) != null) {
-                    if(!line.startsWith("***") && !line.trim().equals(""))
+                    if (!line.startsWith("***") && !line.trim().equals(""))
                         out.set(out.get() + line + "\n");
                 }
             } catch (IOException e) {
@@ -360,16 +369,16 @@ public class ToNuXmv {
         return out.get();
     }
 
-    public static String nuxmvTypeOfTypedVar(TypedVariable typedVariable){
+    public static String nuxmvTypeOfTypedVar(TypedVariable typedVariable) {
         Type type = typedVariable.getType();
-        if(type.getClass().equals(Enum.class)){
+        if (type.getClass().equals(Enum.class)) {
             return "{" + String.join(",", ((Enum) type).getValues()) + "}";
-        } else{
+        } else {
             return type.name();
         }
     }
 
-    public static String indent(String text){
+    public static String indent(String text) {
         String s = text.replaceAll("(?<=(^|\n))", "    ");
         return s;
     }
@@ -378,7 +387,7 @@ public class ToNuXmv {
         return transform(system, false);
     }
 
-    //TODO use sendTagsAsVars
+    // TODO use sendTagsAsVars
     public static String transform(System system, boolean sendTagsAsVars) throws Exception {
         GuardReference.resolve = true;
 
@@ -393,7 +402,7 @@ public class ToNuXmv {
         String trans = "";
 
         List<String> constants = new ArrayList<>();
-        for(String label : Enum.getEnumLabels()){
+        for (String label : Enum.getEnumLabels()) {
             constants.addAll(Enum.getEnum(label).getValues());
         }
 
@@ -403,12 +412,12 @@ public class ToNuXmv {
 
         String noObservations = "no-observations := TRUE";
 
-        for(Map.Entry<String, Observation> entry : observations.entrySet()){
+        for (Map.Entry<String, Observation> entry : observations.entrySet()) {
             vars += "\t" + entry.getKey() + " : boolean;\n";
             noObservations += " & next(" + entry.getKey() + ") = FALSE";
         }
 
-        for(String obs : observations.keySet()){
+        for (String obs : observations.keySet()) {
             init += "\t& " + obs + " = FALSE\n";
         }
 
@@ -423,10 +432,10 @@ public class ToNuXmv {
 
         String keepAll = "keep-all := TRUE";
 
-        for(String sendName : sendProcessNames){
+        for (String sendName : sendProcessNames) {
             String keep = "keep-not-" + sendName + " := TRUE";
-            for(String sendName2 : sendProcessNames){
-                if(!sendName.equals(sendName2)){
+            for (String sendName2 : sendProcessNames) {
+                if (!sendName.equals(sendName2)) {
                     keep += " & next(" + sendName2 + ") = " + sendName2;
                 }
             }
@@ -434,13 +443,13 @@ public class ToNuXmv {
             keepFunctions.add(keep);
         }
 
-        for(int i = 0; i < agentInstances.size(); i++) {
+        for (int i = 0; i < agentInstances.size(); i++) {
             Agent agenti = agentInstances.get(i).getAgent();
             String namei = agentInstances.get(i).getLabel();
 
             String keepThis = "keep-all-" + namei + " := TRUE";
 
-            for(String var : agenti.getStore().getAttributes().keySet()){
+            for (String var : agenti.getStore().getAttributes().keySet()) {
                 keepThis += " & next(" + namei + "-" + var + ") = " + namei + "-" + var;
                 keepThis += " & next(" + namei + "-automaton-state) = " + namei + "-automaton-state";
             }
@@ -450,9 +459,9 @@ public class ToNuXmv {
 
             Set<Transition> receiveAndSupplyTransitions = new HashSet<>(agenti.getReceiveTransitions());
 
-            for(Transition t : receiveAndSupplyTransitions){
+            for (Transition t : receiveAndSupplyTransitions) {
                 String label = ((BasicProcess) t.getLabel()).getLabel();
-                if (label != null && !label.equals("")){
+                if (label != null && !label.equals("")) {
                     keepThis += " & next(" + namei + "-" + label + ") = FALSE";
                     falsifyAllLabelsNotOfI += " & next(" + namei + "-" + label + ") = FALSE";
                     keepAll += " & next(" + namei + "-" + label + ") = FALSE";
@@ -460,9 +469,9 @@ public class ToNuXmv {
                     receiveProcessNames.add(namei + "-" + label);
 
                     String falsifyAllLabelsExceptThis = "falsify-not-" + namei + "-" + label + " := TRUE";
-                    for(Transition tt : receiveAndSupplyTransitions){
+                    for (Transition tt : receiveAndSupplyTransitions) {
                         String receiveLabel = ((BasicProcess) tt.getLabel()).getLabel();
-                        if(receiveLabel != null && !receiveLabel.equals(label) &&!receiveLabel.equals("")){
+                        if (receiveLabel != null && !receiveLabel.equals(label) && !receiveLabel.equals("")) {
                             falsifyAllLabelsExceptThis += " & next(" + namei + "-" + receiveLabel + ") = FALSE";
                         }
                     }
@@ -478,11 +487,10 @@ public class ToNuXmv {
             keepFunctions.add(keepThis);
         }
 
-        if(keepFunctions.size() > 0)
+        if (keepFunctions.size() > 0)
             define += "\t" + String.join(";\n\t", keepFunctions) + ";\n";
         define += "\t" + keepAll + ";\n";
         define += "\t" + noObservations + ";\n";
-
 
         List<String> progress = new ArrayList<>();
         List<String> getSupplyTrans = new ArrayList<>();
@@ -493,15 +501,14 @@ public class ToNuXmv {
         Map<Agent, Map<State, Set<ProcessTransition>>> agentStateGetTransitionMap = new HashMap<>();
         Map<Agent, Map<State, Set<ProcessTransition>>> agentStateSupplyTransitionMap = new HashMap<>();
 
-        for(Agent agent : system.getAgents()){
+        for (Agent agent : system.getAgents()) {
             agentStateSendTransitionMap.put(agent, agent.getStateTransitionMap(agent.getSendTransitions()));
             agentStateReceiveTransitionMap.put(agent, agent.getStateTransitionMap(agent.getReceiveTransitions()));
             agentStateGetTransitionMap.put(agent, agent.getStateTransitionMap(agent.getGetTransitions()));
             agentStateSupplyTransitionMap.put(agent, agent.getStateTransitionMap(agent.getSupplyTransitions()));
         }
 
-
-        for(int i = 0; i < agentInstances.size(); i++) {
+        for (int i = 0; i < agentInstances.size(); i++) {
             AgentInstance sendingAgentInstance = agentInstances.get(i);
             Agent sendingAgent = sendingAgentInstance.getAgent();
             String sendingAgentName = sendingAgentInstance.getLabel();
@@ -519,7 +526,7 @@ public class ToNuXmv {
             ///////////////
 
             // Initialise sendingAgent's states and init condition
-            if(!init.equals("INIT\n")){
+            if (!init.equals("INIT\n")) {
                 init += "\t& ";
             }
 
@@ -532,7 +539,8 @@ public class ToNuXmv {
 
             myselfInvars.add(String.format("INVAR %s-myself = %s;", sendingAgentInstance.getLabel(), sendingAgentInstance.getLabel()));
 
-            //For each state of the sending agents we are going to iterate over all of its possible send transitions
+            // For each state of the sending agents we are going to iterate over all of its
+            // possible send transitions
             // We shall create predicates for each send transition, and then disjunct them.
             for (State state : sendingAgent.getStates()) {
                 Set<ProcessTransition> sendTransitions = agentStateSendTransitionMap.get(sendingAgent).get(state);
@@ -544,7 +552,7 @@ public class ToNuXmv {
                     List<String> transitionSendProgressCond = new ArrayList<>();
 
                     for (ProcessTransition t : sendTransitions) {
-                        //conditions for activation in now (is in source, and local guard holds),
+                        // conditions for activation in now (is in source, and local guard holds),
                         // and effects in next (update, next state, and other stuff for receipt)
                         List<String> sendTriggeredIf = new ArrayList<>();
                         List<String> sendEffects = new ArrayList<>();
@@ -582,22 +590,24 @@ public class ToNuXmv {
                             relabelledMessage.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + ((TypedVariable) v).getName())).simplify());
                         }
 
-                        //relabelling send agent variables in sendGuard
+                        // relabelling send agent variables in sendGuard
                         Expression<Boolean> sendGuardExpr = sendingProcess.getMessageGuard().relabel(v -> {
-                            //if v is just the special variable we use in our syntax to refer to the current
-                            // channel being sent on, then replace it with the sending transitions channel reference
+                            // if v is just the special variable we use in our syntax to refer to the
+                            // current
+                            // channel being sent on, then replace it with the sending transitions channel
+                            // reference
                             if (v.getName().equals(Config.channelLabel)) {
                                 return sendingOnThisChannelVarOrVal;
                             } else {
-                                //relabelling local variables to those of the sending agents
+                                // relabelling local variables to those of the sending agents
                                 return isCvRef(system, v.getName())
                                         ? v
                                         : v.sameTypeWithName(sendingAgentName + "-" + v);
                             }
                         }).simplify();
 
-                        //Dealing with LTOL observations
-                        for(Map.Entry<String, Observation> entry : observations.entrySet()){
+                        // Dealing with LTOL observations
+                        for (Map.Entry<String, Observation> entry : observations.entrySet()) {
                             Observation obs = entry.getValue();
                             String var = entry.getKey();
 
@@ -613,13 +623,13 @@ public class ToNuXmv {
                             sendEffects.add("next(" + var + ") = (" + observationCondition + ")");
                         }
 
-                        //Now we will iterate over all other agents, and for every receive transition,
-                        // we create predicates for when the above send transition can trigger the receive transition.
+                        // Now we will iterate over all other agents, and for every receive transition,
+                        // we create predicates for when the above send transition can trigger the
+                        // receive transition.
                         List<String> agentReceivePreds = new ArrayList<>();
                         List<String> agentReceiveProgressConds = new ArrayList<>();
 
-                        agentInstanceReceiveLoop:
-                        for (int j = 0; j < agentInstances.size(); j++) {
+                        agentInstanceReceiveLoop: for (int j = 0; j < agentInstances.size(); j++) {
                             if (i != j) {
                                 AgentInstance receivingAgentInstance = agentInstances.get(j);
                                 Agent receiveAgent = receivingAgentInstance.getAgent();
@@ -634,26 +644,30 @@ public class ToNuXmv {
                                 String receiveGuard;
 
                                 if (sendingOnThisChannelVarOrVal.toString().equals(Config.broadcast))
-                                    //then sending channel is broadcast and we always want to listen to broadcasts
+                                    // then sending channel is broadcast and we always want to listen to broadcasts
                                     receiveGuard = "TRUE";
-                                else if(sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)){
+                                else if (sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)) {
                                     receiveGuard = "(" + receiveGuardExpr + ")";
                                 } else {
                                     receiveGuard = "(" + receiveGuardExpr + ") | " + sendingOnThisChannelVarOrVal + " = " + broadcastChannel;
                                 }
 
-                                //relabelling sendGuard
+                                // relabelling sendGuard
                                 // remove @s
                                 Expression<Boolean> sendGuardExprHere = sendGuardExpr.relabel(v -> {
-                                    return v.getName().startsWith("@") ? ((TypedVariable) v).sameTypeWithName(v.getName().substring(1)) : v;
+                                    return v.getName().startsWith("@")
+                                            ? ((TypedVariable) v).sameTypeWithName(v.getName().substring(1))
+                                            : v;
                                 });
 
                                 // rename references to cvs to receiving agents cv
                                 sendGuardExprHere = sendGuardExprHere.relabel(v -> {
-                                    //if v is just the special variable we use in our syntax to refer to the current
-                                    // channel being sent on, then replace it with the sending transitions channel reference
+                                    // if v is just the special variable we use in our syntax to refer to the
+                                    // current
+                                    // channel being sent on, then replace it with the sending transitions channel
+                                    // reference
                                     try {
-                                        //relabelling cvs to those of the receiving agents
+                                        // relabelling cvs to those of the receiving agents
 
                                         return isCvRef(system, v.getName())
                                                 ? receiveAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(receiveName + "-" + vv))
@@ -664,10 +678,8 @@ public class ToNuXmv {
                                     return null;
                                 }).simplify();
 
-
                                 Map<String, List<String>> receiveAgentReceivePreds = new HashMap<>();
                                 Map<String, List<String>> receiveAgentReceiveProgressConds = new HashMap<>();
-
 
                                 if (!sendGuardExprHere.toString().equals("FALSE")) {
                                     for (State receiveAgentState : receiveAgent.getStates()) {
@@ -688,7 +700,7 @@ public class ToNuXmv {
                                             List<String> receiveTransTriggeredIf = new ArrayList<>();
                                             List<String> receiveTransEffects = new ArrayList<>();
 
-                                            //This is a hack to allow us to stop considering this transition
+                                            // This is a hack to allow us to stop considering this transition
                                             // when the incoming message does not contain all message vars required
                                             // for this transition
                                             AtomicReference<java.lang.Boolean> stop = new AtomicReference<java.lang.Boolean>(false);
@@ -733,7 +745,7 @@ public class ToNuXmv {
                                                 receiveTransTriggeredIf.add(sendingOnThisChannelVarOrVal + " = " + receivingOnThisChannelVarOrVal);
                                             //                                            agentReceiveNows.add(receiveNow);
 
-                                            //for each variable update, if the updates uses a message variable that is
+                                            // for each variable update, if the updates uses a message variable that is
                                             // not set by the send transition, then exit
                                             // else relabel variables appropriately
                                             for (Map.Entry<String, Expression> entry : receiveProcess.getUpdate().entrySet()) {
@@ -985,157 +997,157 @@ public class ToNuXmv {
                                             ? stopHelper.apply(v)
                                             : ((TypedVariable) v).sameTypeWithName(getterName + "-" + v)));
                                             
-                                        ////stop considering this transition if the supplied message does not contain all message vars required
-                                        if (stop.get()) continue getterTrLoop;
-                                        // If guard evaluates to false, we can skip
-                                        if (getTransitionGuard.equals(Condition.getFalse())) continue getterTrLoop;
-                                        else getTriggeredIf.add(getTransitionGuard.toString());    
+                                    //// stop considering this transition if the supplied message does not contain all message vars required
+                                    if (stop.get()) continue getterTrLoop;
+                                    // If guard evaluates to false, we can skip
+                                    if (getTransitionGuard.equals(Condition.getFalse())) continue getterTrLoop;
+                                    else getTriggeredIf.add(getTransitionGuard.toString());    
 
-                                        // Stop considering this transition if its message overlaps with supply's
-                                        Set<String> splyMsgVars = supplyProcess.getMessage().keySet();
-                                        Set<String> getMsgVars = getProcess.getMessage().keySet();
-                                        getMsgVars.retainAll(splyMsgVars);
-                                        if (!getMsgVars.isEmpty()) { continue getterTrLoop; }
+                                    // Stop considering this transition if its message overlaps with supply's
+                                    Set<String> splyMsgVars = supplyProcess.getMessage().keySet();
+                                    Set<String> getMsgVars = getProcess.getMessage().keySet();
+                                    getMsgVars.retainAll(splyMsgVars);
+                                    if (!getMsgVars.isEmpty()) { continue getterTrLoop; }
 
 
-                                        // Handle message guard
-                                        Location getterLoc = getProcess.getLocation();
+                                    // Handle message guard
+                                    Location getterLoc = getProcess.getLocation();
 
-                                        // Static checks
-                                        if (supplyLoc instanceof SelfLocation && !(getterLoc instanceof NamedLocation)) continue getterTrLoop;
+                                    // Static checks
+                                    if (supplyLoc instanceof SelfLocation && !(getterLoc instanceof NamedLocation)) continue getterTrLoop;
 
-                                        Expression<Boolean> getterPredicate = getterLoc.getPredicate(sendingAgentNameValue);
-                                        
-                                        getterPredicate = getterPredicate.relabel(v -> {
-                                            //relabelling local variables to those of the sending agents
+                                    Expression<Boolean> getterPredicate = getterLoc.getPredicate(sendingAgentNameValue);
+                                    
+                                    getterPredicate = getterPredicate.relabel(v -> {
+                                        //relabelling local variables to those of the sending agents
+                                        return isCvRef(system, v.getName())
+                                            ? v
+                                            : getterAgent.getStore().getAttributes().containsKey(v.getName()) 
+                                            ? v.sameTypeWithName(getterName + "-" + v)
+                                            : v;
+                                    }).simplify();
+                                    //relabelling getterGuard
+                                    // remove @s
+                                    getterPredicate = getterPredicate.relabel(v -> {
+                                        return v.getName().startsWith("@") ? ((TypedVariable) v).sameTypeWithName(v.getName().substring(1)) : v;
+                                    });
+
+                                    // rename references to cvs to receiving agents cv
+                                    getterPredicate = getterPredicate.relabel(v -> {
+                                        //if v is just the special variable we use in our syntax to refer to the current
+                                        // channel being sent on, then replace it with the sending transitions channel reference
+                                        try {
+                                            //relabelling cvs to those of the supplier
                                             return isCvRef(system, v.getName())
-                                                ? v
-                                                : getterAgent.getStore().getAttributes().containsKey(v.getName()) 
-                                                ? v.sameTypeWithName(getterName + "-" + v)
-                                                : v;
-                                        }).simplify();
-                                        //relabelling getterGuard
-                                        // remove @s
-                                        getterPredicate = getterPredicate.relabel(v -> {
-                                            return v.getName().startsWith("@") ? ((TypedVariable) v).sameTypeWithName(v.getName().substring(1)) : v;
-                                        });
-
-                                        // rename references to cvs to receiving agents cv
-                                        getterPredicate = getterPredicate.relabel(v -> {
-                                            //if v is just the special variable we use in our syntax to refer to the current
-                                            // channel being sent on, then replace it with the sending transitions channel reference
-                                            try {
-                                                //relabelling cvs to those of the supplier
-                                                return isCvRef(system, v.getName())
-                                                        ? sendingAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(sendingAgentName + "-" + vv))
-                                                        : v;
-                                            } catch (RelabellingTypeException | MismatchingTypeException e) {
-                                                e.printStackTrace();
-                                            }
-                                            return null;
-                                        }).simplify();
-
-                                        //Dealing with LTOL observations
-                                        for(Map.Entry<String, Observation> entry : observations.entrySet()){
-                                            Observation obs = entry.getValue();
-                                            String var = entry.getKey();
-
-                                            Expression<Boolean> observationCondition = specialiseObservationToSupplyTransition(
-                                                    commVariableReferences(system.getCommunicationVariables()),
-                                                    obs.getObservation(),
-                                                    getterPredicate,
-                                                    relabelledMessage,  
-                                                    sendingAgentNameValue,
-                                                    getterNameValue,
-                                                    noAgent,
-                                                    sendingAgent);
-
-                                            getEffects.add("next(" + var + ") = (" + observationCondition + ")");
+                                                    ? sendingAgent.getRelabel().get(v).relabel(vv -> ((TypedVariable) vv).sameTypeWithName(sendingAgentName + "-" + vv))
+                                                    : v;
+                                        } catch (RelabellingTypeException | MismatchingTypeException e) {
+                                            e.printStackTrace();
                                         }
+                                        return null;
+                                    }).simplify();
 
-                                        // Updates
-                                        // Relabel data from getter
-                                        Map<String, Expression> relabelledMsgGet = new HashMap<>();
-                                        for (Map.Entry<String, Expression> entry : getProcess.getMessage().entrySet()) {
-                                            relabelledMsgGet.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(getterName + "-" + ((TypedVariable) v).getName())).simplify());
-                                        }
-                                        //for each variable update, if the updates uses a message variable that is
-                                        // not set by the get transition, then exit
-                                        // else relabel variables appropriately
-                                        for (Map.Entry<String, Expression> entry : supplyProcess.getUpdate().entrySet()) {
-                                            supplyEffects.add(
-                                                    "next(" + sendingAgentName + "-" + entry.getKey() + ") " + "= ("
-                                                    + entry.getValue().relabel(v ->
-                                                        getProcess.getMessage().containsKey(((TypedVariable) v).getName())
-                                                        ? relabelledMsgGet.get(((TypedVariable) v).getName())
-                                                        : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
-                                                        ? stopHelper.apply((TypedVariable) v)
-                                                        : ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v))) + ")");
-                                        }
-                                        //keep variable values not mentioned in the update
-                                        for (String var : sendingAgent.getStore().getAttributes().keySet()) {
-                                            if (!supplyProcess.getUpdate().containsKey(var)) {
-                                                supplyEffects.add("next(" + sendingAgentName + "-" + var + ") = " + sendingAgentName + "-" + var);
-                                            }
-                                        }
+                                    //Dealing with LTOL observations
+                                    for(Map.Entry<String, Observation> entry : observations.entrySet()){
+                                        Observation obs = entry.getValue();
+                                        String var = entry.getKey();
 
-                                        // Stop considering this transition if update uses a message variable
-                                        // that is not set by the get transition
-                                        if (stop.get()) continue getterTrLoop;
+                                        Expression<Boolean> observationCondition = specialiseObservationToSupplyTransition(
+                                                commVariableReferences(system.getCommunicationVariables()),
+                                                obs.getObservation(),
+                                                getterPredicate,
+                                                relabelledMessage,  
+                                                sendingAgentNameValue,
+                                                getterNameValue,
+                                                noAgent,
+                                                sendingAgent);
 
-                                        //for each variable update, if the updates uses a message variable that is
-                                        // not set by the supply transition, then exit
-                                        // else relabel variables appropriately
-                                        for (Map.Entry<String, Expression> entry : getProcess.getUpdate().entrySet()) {
-                                            getEffects.add("next(" + getterName + "-" + entry.getKey() + ") = ("
-                                            + entry.getValue().relabel(v ->
-                                            supplyProcess.getMessage().containsKey(((TypedVariable) v).getName())
-                                            ? relabelledMessage.get(((TypedVariable) v).getName())
-                                            : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
-                                            ? stopHelper.apply((TypedVariable) v)
-                                            : ((TypedVariable) v).sameTypeWithName(getterName + "-" + v))) + ")");
-                                        }
-                                        
-                                        // Stop considering this transition if update uses a message variable
-                                        // that is not set by the supply transition
-                                        if (stop.get()) continue getterTrLoop;
-                                        ///////
-                                        
-                                        // keep the same variables for variables not mentioned in the update
-                                        for (String var : getterAgent.getStore().getAttributes().keySet()) {
-                                            if (!getProcess.getUpdate().containsKey(var)) {
-                                                getEffects.add("next(" + getterName + "-" + var + ") = " + getterName + "-" + var);
-                                            }
-                                        }
-                                        
-                                        // Add the destination state to getter effects
-                                        getEffects.add("next(" + getterName + "-automaton-state" + ") = " + gt.getDestination());
-                                        
-                                        // Keep all other agents as they are
-                                        for (AgentInstance other : agentInstances) {
-                                            String otherName = other.getLabel();
-                                            if (otherName != sendingAgentName && otherName != getterName)
-                                                getEffects.add(String.format("keep-all-%s", otherName));
-                                        }
-                                        // TODO add "falsify-" defines to allow mentioning labelled get/supply actions in specs
- 
-                                        String splyLbl = sendingAgentName + "-";
-                                        String getLbl = getterName + "-";
-                                        if (supplyProcess.getLabel() != null && !supplyProcess.getLabel().equals("")) {
-                                            splyLbl += supplyProcess.getLabel();
-                                        } else {
-                                            splyLbl += String.format("unlabelled_supply_%d", unlabelledCounter++);
-                                        }
-                                        if (getProcess.getLabel() != null && !getProcess.getLabel().equals("")) {
-                                            getLbl += getProcess.getLabel();
-                                        } else {
-                                            getLbl += String.format("unlabelled_get_%d", unlabelledCounter++);
-                                        }
-                                        String lbl = splyLbl + "-" + getLbl;
+                                        getEffects.add("next(" + var + ") = (" + observationCondition + ")");
+                                    }
 
-                                        String getterGuardStr = getterPredicate.toString();
+                                    // Updates
+                                    // Relabel data from getter
+                                    Map<String, Expression> relabelledMsgGet = new HashMap<>();
+                                    for (Map.Entry<String, Expression> entry : getProcess.getMessage().entrySet()) {
+                                        relabelledMsgGet.put(entry.getKey(), entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(getterName + "-" + ((TypedVariable) v).getName())).simplify());
+                                    }
+                                    //for each variable update, if the updates uses a message variable that is
+                                    // not set by the get transition, then exit
+                                    // else relabel variables appropriately
+                                    for (Map.Entry<String, Expression> entry : supplyProcess.getUpdate().entrySet()) {
+                                        supplyEffects.add(
+                                                "next(" + sendingAgentName + "-" + entry.getKey() + ") " + "= ("
+                                                + entry.getValue().relabel(v ->
+                                                    getProcess.getMessage().containsKey(((TypedVariable) v).getName())
+                                                    ? relabelledMsgGet.get(((TypedVariable) v).getName())
+                                                    : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
+                                                    ? stopHelper.apply((TypedVariable) v)
+                                                    : ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v))) + ")");
+                                    }
+                                    //keep variable values not mentioned in the update
+                                    for (String var : sendingAgent.getStore().getAttributes().keySet()) {
+                                        if (!supplyProcess.getUpdate().containsKey(var)) {
+                                            supplyEffects.add("next(" + sendingAgentName + "-" + var + ") = " + sendingAgentName + "-" + var);
+                                        }
+                                    }
 
-                                        define += String.format(
+                                    // Stop considering this transition if update uses a message variable
+                                    // that is not set by the get transition
+                                    if (stop.get()) continue getterTrLoop;
+
+                                    //for each variable update, if the updates uses a message variable that is
+                                    // not set by the supply transition, then exit
+                                    // else relabel variables appropriately
+                                    for (Map.Entry<String, Expression> entry : getProcess.getUpdate().entrySet()) {
+                                        getEffects.add("next(" + getterName + "-" + entry.getKey() + ") = ("
+                                        + entry.getValue().relabel(v ->
+                                        supplyProcess.getMessage().containsKey(((TypedVariable) v).getName())
+                                        ? relabelledMessage.get(((TypedVariable) v).getName())
+                                        : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
+                                        ? stopHelper.apply((TypedVariable) v)
+                                        : ((TypedVariable) v).sameTypeWithName(getterName + "-" + v))) + ")");
+                                    }
+                                    
+                                    // Stop considering this transition if update uses a message variable
+                                    // that is not set by the supply transition
+                                    if (stop.get()) continue getterTrLoop;
+                                    ///////
+                                    
+                                    // keep the same variables for variables not mentioned in the update
+                                    for (String var : getterAgent.getStore().getAttributes().keySet()) {
+                                        if (!getProcess.getUpdate().containsKey(var)) {
+                                            getEffects.add("next(" + getterName + "-" + var + ") = " + getterName + "-" + var);
+                                        }
+                                    }
+                                    
+                                    // Add the destination state to getter effects
+                                    getEffects.add("next(" + getterName + "-automaton-state" + ") = " + gt.getDestination());
+                                    
+                                    // Keep all other agents as they are
+                                    for (AgentInstance other : agentInstances) {
+                                        String otherName = other.getLabel();
+                                        if (otherName != sendingAgentName && otherName != getterName)
+                                            getEffects.add(String.format("keep-all-%s", otherName));
+                                    }
+                                    // TODO add "falsify-" defines to allow mentioning labelled get/supply actions in specs
+
+                                    String splyLbl = sendingAgentName + "-";
+                                    String getLbl = getterName + "-";
+                                    if (supplyProcess.getLabel() != null && !supplyProcess.getLabel().equals("")) {
+                                        splyLbl += supplyProcess.getLabel();
+                                    } else {
+                                        splyLbl += String.format("unlabelled_supply_%d", unlabelledCounter++);
+                                    }
+                                    if (getProcess.getLabel() != null && !getProcess.getLabel().equals("")) {
+                                        getLbl += getProcess.getLabel();
+                                    } else {
+                                        getLbl += String.format("unlabelled_get_%d", unlabelledCounter++);
+                                    }
+                                    String lbl = splyLbl + "-" + getLbl;
+
+                                    String getterGuardStr = getterPredicate.toString();
+
+                                    define += String.format(
                                             "\t%s := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s) \n\t\t& (%s);\n",
                                             lbl,
                                             String.join(" & ", supplyTriggeredIf),
@@ -1143,64 +1155,67 @@ public class ToNuXmv {
                                             String.join(" & ", getTriggeredIf),
                                             getterGuardStr,
                                             String.join(" & ", getEffects));
-                                        getSupplyTrans.add(lbl);
-                                        
-                                        define += String.format(
+                                    getSupplyTrans.add(lbl);
+
+                                    define += String.format(
                                             "\t%s-progress := (%s)\n\t\t& (%s)\n\t\t& (%s);\n",
                                             lbl,
                                             String.join(" & ", supplyTriggeredIf),
                                             String.join(" & ", getTriggeredIf),
                                             getterGuardStr,
-                                        progress.add(String.format("%s-progress", lbl)));
-                                        
-                                    } // getter transition loop
-                            } //getter state loop
+                                            progress.add(String.format("%s-progress", lbl)));
+
+                                } // getter transition loop
+                            } // getter state loop
                         } // getter agent loop
                     } // supplier transition loop
-                } //Supplier/sender state loop
+                } // Supplier/sender state loop
             } // Supplier/sender agent loop
         }
 
-        if(agentSendPreds.size() > 0) {
+        if (agentSendPreds.size() > 0) {
             List<String> stateTransitionPreds = new ArrayList<>();
             List<String> stateTransitionProgressConds = new ArrayList<>();
             for (Map.Entry<String, List<String>> entry : agentSendPreds.entrySet()) {
-                stateTransitionPreds.add(entry.getKey() + "\n\n \t\t& ((" + String.join(")\n\n \t\t| (", entry.getValue()) + "))");
+                stateTransitionPreds
+                        .add(entry.getKey() + "\n\n \t\t& ((" + String.join(")\n\n \t\t| (", entry.getValue()) + "))");
             }
             for (Map.Entry<String, List<String>> entry : agentSendProgressConds.entrySet()) {
-                stateTransitionProgressConds.add(entry.getKey() + "\n\n \t\t& ((" + String.join(")\n\n \t\t| (", entry.getValue()) + "))");
+                stateTransitionProgressConds
+                        .add(entry.getKey() + "\n\n \t\t& ((" + String.join(")\n\n \t\t| (", entry.getValue()) + "))");
             }
 
             trans += "(" + String.join(")\n\n \t\t| (", stateTransitionPreds) + ")";
-            if (getSupplyTrans.size() > 0) trans += "\n\n\t\t| ";
+            if (getSupplyTrans.size() > 0)
+                trans += "\n\n\t\t| ";
 
             progress.addAll(stateTransitionProgressConds);
         }
-        
+
         if (getSupplyTrans.size() > 0) {
             trans += "(" + String.join(")\n\n \t\t| (", getSupplyTrans) + ")";
         }
 
-        
-        if (trans.strip() == "") trans = "FALSE";
+        if (trans.strip() == "")
+            trans = "FALSE";
         trans += ";\n";
 
-        for(String name : receiveProcessNames){
+        for (String name : receiveProcessNames) {
             vars += "\t" + name + " : " + "boolean;\n";
         }
         nuxmv += vars;
         define += "\ttransition := " + trans;
-        if(progress.size() > 0)
+        if (progress.size() > 0)
             define += "\tprogress := (" + String.join(")\n \t\t| (", progress) + ");\n";
         else
             define += "\tprogress := FALSE;\n";
         nuxmv += define;
-        if(constants.size() > 0)
+        if (constants.size() > 0)
             nuxmv += "CONSTANTS\n\t";
-            nuxmv +=  String.join(", ", constants);
-            nuxmv += ";\n";
+        nuxmv += String.join(", ", constants);
+        nuxmv += ";\n";
 
-        for(String name : receiveProcessNames){
+        for (String name : receiveProcessNames) {
             init += "\t& " + name + " = " + "FALSE\n";
         }
 
@@ -1221,11 +1236,11 @@ public class ToNuXmv {
             i++;
         }
 
-        //nuxmv += String.join("\n", specs.stream().map((s) -> "LTLSPEC " + s.toString()).toArray(String[]::new));
+        // nuxmv += String.join("\n", specs.stream().map((s) -> "LTLSPEC " +
+        // s.toString()).toArray(String[]::new));
 
-
-
-        // nuxmv += String.join("\n", specs.stream().map((s) -> "LTLSPEC " + s.toString()).toArray(String[]::new));
+        // nuxmv += String.join("\n", specs.stream().map((s) -> "LTLSPEC " +
+        // s.toString()).toArray(String[]::new));
 
         GuardReference.resolve = false;
 
