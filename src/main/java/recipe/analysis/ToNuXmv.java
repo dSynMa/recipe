@@ -991,6 +991,12 @@ public class ToNuXmv {
                                         if (getTransitionGuard.equals(Condition.getFalse())) continue getterTrLoop;
                                         else getTriggeredIf.add(getTransitionGuard.toString());    
 
+                                        // Stop considering this transition if its message overlaps with supply's
+                                        Set<String> splyMsgVars = supplyProcess.getMessage().keySet();
+                                        Set<String> getMsgVars = getProcess.getMessage().keySet();
+                                        getMsgVars.retainAll(splyMsgVars);
+                                        if (!getMsgVars.isEmpty()) { continue getterTrLoop; }
+
 
                                         // Handle message guard
                                         Location getterLoc = getProcess.getLocation();
