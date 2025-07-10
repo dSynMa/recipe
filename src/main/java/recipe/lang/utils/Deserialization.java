@@ -194,6 +194,9 @@ public class Deserialization {
             case "SenderObs":
                 Expression senderExpr = deserializeRef(jExpr.getString("sender"), context);
                 return new IsEqualTo<>(new TypedVariable<Type>(Config.getAgentType(), "sender"), senderExpr);
+            case "GetterObs":
+                Expression getterExpr = deserializeRef(jExpr.getString("getter"), context);
+                return new IsEqualTo<>(new TypedVariable<Type>(Config.getAgentType(), "getter"), getterExpr);
             case "ChannelObs":
                 Enum chanEnum = Enum.getEnum(Config.channelLabel);
                 Expression chanExpr = deserializeRef(jExpr.getString("chan"), context);
