@@ -206,10 +206,12 @@ public class Deserialization {
                             String.format("Cannot deserialize %s into Expression\nFull node:%s", jExpr.getString("$type"), jExpr));
                 }
             case "SenderObs":
-                Expression senderExpr = deserializeRef(jExpr.getString("sender"), context);
+                String sender = jExpr.getJSONObject("sender").getString("$refText");
+                Expression senderExpr = deserializeRef(sender, context);
                 return new IsEqualTo<>(new TypedVariable<Type>(Config.getAgentType(), "sender"), senderExpr);
             case "GetterObs":
-                Expression getterExpr = deserializeRef(jExpr.getString("getter"), context);
+                String getter = jExpr.getJSONObject("getter").getString("$refText");
+                Expression getterExpr = deserializeRef(getter, context);
                 return new IsEqualTo<>(new TypedVariable<Type>(Config.getAgentType(), "getter"), getterExpr);
             case "ChannelObs":
                 Enum chanEnum = Enum.getEnum(Config.channelLabel);
