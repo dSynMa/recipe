@@ -203,7 +203,7 @@ public class Deserialization {
                         return new TypedVariable<Type>(boolType, Config.p2pLabel);
                     default:
                         throw new ParsingException(
-                            String.format("Cannot deserialize %s into Expression\nFull node:%s", jExpr.getString("$type"), jExpr));;
+                            String.format("Cannot deserialize %s into Expression\nFull node:%s", jExpr.getString("$type"), jExpr));
                 }
             case "SenderObs":
                 Expression senderExpr = deserializeRef(jExpr.getString("sender"), context);
