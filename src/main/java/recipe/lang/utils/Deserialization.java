@@ -191,6 +191,20 @@ public class Deserialization {
                     default:
                         throw new ParsingException("unexpected operator in Expr: " + op);
                 }
+            case "LiteralObs":
+                String value = jExpr.getString("value");
+                recipe.lang.types.Boolean boolType = recipe.lang.types.Boolean.getType();
+                switch (value) {
+                    case "true":
+                        return new TypedValue<recipe.lang.types.Boolean>(boolType, "true");
+                    case "false":
+                        return new TypedValue<Boolean>(boolType, "false");
+                    case "p2p":
+                        return new TypedVariable<Type>(boolType, Config.p2pLabel);
+                    default:
+                        throw new ParsingException(
+                            String.format("Cannot deserialize %s into Expression\nFull node:%s", jExpr.getString("$type"), jExpr));;
+                }
             case "SenderObs":
                 Expression senderExpr = deserializeRef(jExpr.getString("sender"), context);
                 return new IsEqualTo<>(new TypedVariable<Type>(Config.getAgentType(), "sender"), senderExpr);
