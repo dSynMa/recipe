@@ -215,7 +215,11 @@ public class Deserialization {
                 return new IsEqualTo<>(new TypedVariable<Type>(Config.getAgentType(), "getter"), getterExpr);
             case "ChannelObs":
                 Enum chanEnum = Enum.getEnum(Config.channelLabel);
-                Expression chanExpr = deserializeRef(jExpr.getString("chan"), context);
+                if (jExpr.has("bcast")) {
+                    TypedValue<Type> bcast = new TypedValue<Type>(Enum.getEnum(Config.channelLabel), Config.broadcast);
+                    return new IsEqualTo<>(new TypedVariable<Type>(chanEnum, channelLabel), bcast);
+                }
+                Expression chanExpr = deserializeRef(jExpr.getString("channel"), context);
                 return new IsEqualTo<>(new TypedVariable<Type>(chanEnum, channelLabel), chanExpr);
             case "ExistsObs":
                     return new Predicate("exists", deserializeExpr(jExpr.getJSONObject("expr"), context));
