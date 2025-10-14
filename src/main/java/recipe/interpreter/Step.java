@@ -407,28 +407,31 @@ public class Step {
                             }
                             // Map every receiver to its receive actions
                             // (channel must match and psi must hold)
-                            receivesMap.keySet().forEach(receiver -> {
+                            for (AgentInstance receiver : receivesMap.keySet()) {
                                 try {
                                     Store store = stores.get(receiver).push(msgStore);
                                     Set<ProcessTransition> receives = interpreter.receives.get(stores.get(receiver).getState());
                                     if (receives != null) {
                                         for (ProcessTransition rec : receives) {
                                             ReceiveProcess recLbl = (ReceiveProcess) rec.getLabel();
-                                            Expression recChanExpr = recLbl.getChannel();
-                                            if (recChanExpr.valueIn(store).equals(chan)) {
-                                                Expression<recipe.lang.types.Boolean> recPsi = recLbl.getPsi();
-                                                boolean recPsiSat = Condition.getTrue().equals(recPsi.valueIn(store));
-
-                                                if (recPsiSat) {
-                                                    receivesMap.get(receiver).add(rec);
+                                            try {
+                                                Expression recChanExpr = recLbl.getChannel();
+                                                if (recChanExpr.valueIn(store).equals(chan)) {
+                                                    Expression<recipe.lang.types.Boolean> recPsi = recLbl.getPsi();
+                                                    boolean recPsiSat = Condition.getTrue().equals(recPsi.valueIn(store));
+                                                    if (recPsiSat) {
+                                                        receivesMap.get(receiver).add(rec);
+                                                    }
                                                 }
+                                            } catch (Exception e) {
+                                                continue;
                                             }
                                         }
                                     }
                                 } catch (Exception e) {
                                     handleEvaluationException(e);
                                 }
-                            });
+                            }
 
                             // Compute total number of transitions.
                             int transitionCount = 1;
@@ -524,9 +527,14 @@ public class Step {
                             Pair<Store, TypedValue> msgPair = interpreter.makeMessageStore(supplierStore, splyProc, sys);
                             Store instStore = getterStore.push(msgPair.getLeft());
                             GetProcess getProc = (GetProcess) get.getLabel();
-                            Expression getPsi = getProc.getPsi();
-                            boolean getPsiSat = Condition.getTrue().equals(getPsi.valueIn(instStore));
-                            if (!getPsiSat) continue;
+                            try {
+                                Expression getPsi = getProc.getPsi();
+                                boolean getPsiSat = Condition.getTrue().equals(getPsi.valueIn(instStore));
+                                if (!getPsiSat) continue;
+                            } catch (Exception e) {
+                                // If supply was underspecified, skip
+                                continue;
+                            }
                             // Check if predicates match
                             Location splyLoc = splyProc.getLocation();
                             Location getLoc = getProc.getLocation();
