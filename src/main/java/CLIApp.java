@@ -27,10 +27,6 @@ import recipe.interpreter.Interpreter;
 import recipe.lang.utils.Pair;
 
 public class CLIApp {
-    static boolean isWindows() {
-        return System.getProperty("os.name").toLowerCase().contains("win");
-    }
-
     static {
         try {
             InputStream properties = CLIApp.class.getResourceAsStream("/logging.properties");
@@ -39,8 +35,6 @@ public class CLIApp {
             Logger.getGlobal().severe(e.toString());
         }
     }
-
-    static String npm = isWindows() ? "npm.cmd" : "npm";
 
     public static void main(String[] args) throws Exception {
         Options options = new Options();
@@ -53,11 +47,10 @@ public class CLIApp {
         Option bmc = new Option("bmc", "bmc", true,
                 "info: bounded model checks input script file\nargs: bound (by default 10)");
         Option simulation = new Option("sim", "simulate", false, "info: opens file in simulation mode");
-        Option gui = new Option("g", "gui", false, "info: opens gui");
-        Option api = new Option("a", "api", false, "info: runs api server without gui");
+        Option api = new Option("a", "api", false, "info: runs api server");
         Option threads = new Option("t", "threads", true,
-                "info: how many threads to use in model-checking (gui only, default=num of hw threads)");
-        Option port = new Option("p", "port", true, "info: port the GUI server will listen to (default 3000)");
+                "info: how many threads to use in model-checking (default=num of hw threads)");
+        Option port = new Option("p", "port", true, "info: port the server will listen to (default 54044)");
         Option tmp = new Option ("tmp", "info: generate files in $TMPDIR");
         Option cex = new Option("cex", true, "nuxmv counterexample to be translated\nargs: <text file>");
 
@@ -68,7 +61,6 @@ public class CLIApp {
         options.addOption(mc);
         options.addOption(bmc);
         options.addOption(simulation);
-        options.addOption(gui);
         options.addOption(threads);
         options.addOption(port);
         options.addOption(tmp);
@@ -81,9 +73,7 @@ public class CLIApp {
 
         try {
             cmd = parser.parse(options, args);
-            if (cmd.hasOption("gui")) {
-                runGui(cmd);
-            } else if (cmd.hasOption("api")){
+            if (cmd.hasOption("api")){
                 int numThreads = Runtime.getRuntime().availableProcessors();
                 Path jsonPath = null;
                 if (cmd.hasOption("j")) {
@@ -302,41 +292,4 @@ public class CLIApp {
     }
 
 
-    private static void runGui(CommandLine cmd) throws Exception, IOException {
-        int numThreads = Runtime.getRuntime().availableProcessors();
-        int serverPort = 3000;
-        if (cmd.hasOption("threads")) {
-            String cliThreads = cmd.getOptionValue("threads");
-            try {
-                numThreads = Integer.parseInt(cliThreads);
-            } catch (NumberFormatException e) {
-                e.printStackTrace();
-                numThreads = Runtime.getRuntime().availableProcessors();
-                System.err.printf("[WARNING] failed to parse --threads %s, will use %d%n", cliThreads, numThreads);
-            }
-        }
-        if (cmd.hasOption("port")) {
-            String cliPort = cmd.getOptionValue("port");
-            try {
-                serverPort = Integer.parseInt(cliPort);
-            } catch (NumberFormatException e) {
-                e.printStackTrace();
-                serverPort = 3000;
-                System.err.printf("[WARNING] failed to parse --port %s, will use %d%n", cliPort, serverPort);
-            }
-        }
-
-        Server.start(numThreads);
-        ProcessBuilder processBuilder = new ProcessBuilder();
-        File dir = new File(System.getProperty("user.dir") + File.separator + "frontend-react");
-
-        processBuilder.directory(dir);
-        if (serverPort != 3000) {
-            processBuilder.environment().put("PORT", String.valueOf(serverPort));
-        }
-        processBuilder.command(npm, "start");
-        Process exec = processBuilder.start();
-
-        exec.getInputStream().transferTo(System.out);
-    }
 }

@@ -30,7 +30,6 @@ This project was compiled and tested successfully with:
 1. Java 18
 2. [nuXmv 2.0.0](https://nuxmv.fbk.eu/)
 3. Maven 4
-4. NPM (to use frontend)
 
 We suggest using the same or similar versions for compilation and running. Check `pom.xml` for the right versions.
 
@@ -39,9 +38,8 @@ For compilation to a single jar file simple run `mvn clean package`, and the jar
 
 ### Execution
 
-We assume that the following commands are available from the environment PATH variable:
+We assume that the following command is available from the environment PATH variable:
 1. `nuxmv` (for analysis and simulation)
-2. `npm` (for frontend)
 
 Or for the case of nuxmv:
 
@@ -49,7 +47,7 @@ The folder you downloaded from nuXmv developer site should be renamed `nuxmv` be
 
 Note also that the executable `/bin/nuXmv` should be renamed in small letters `/bin/nuxmv` to avoid any interruption due to case sensitivity.
 
-For windows users: make sure that you can access the localhost and that your firewall does not block that. This is important if you want to use the GUI app, but in any case, the command line should work normally. 
+For windows users: make sure that you can access the localhost and that your firewall does not block that, in case the API server or nuXmv need to be reached over the network. 
 
 After compilation, run the jar, e.g.`java -jar ./target/rcheck-0.1.jar` with the below arguments for the CLI functionality:
 
@@ -57,44 +55,18 @@ After compilation, run the jar, e.g.`java -jar ./target/rcheck-0.1.jar` with the
  -bmc,--bmc <arg>     info: bounded model checks input script file
                       args: bound (by default 10)
  -d,--dot             info: output agents DOT files
- -g,--gui             info: opens gui
  -i,--input <arg>     info: input recipe script file
                       args: <recipe script>
  -mc,--mc             info: model checks input script file
  -n,--smv             info: output to smv file
- -p,--port <arg>      info: port the GUI server will listen to (default
-                      3000)
+ -p,--port <arg>      info: port the server will listen to (default 54044)
  -sim,--simulate      info: opens file in simulation mode
- -t,--threads <arg>   info: how many threads to use in model-checking (gui
-                      only, default=num of hw threads) ```
+ -t,--threads <arg>   info: how many threads to use in model-checking
+                      (default=num of hw threads) ```
 
-and with the following to run the GUI app:
+To run the API server (used by the R-CHECK tooling, without a GUI) use:
 ```
- -g,--gui           info: opens gui, (make sure 'npm install' is called in ./frontend-react before, and that ports 54044 and 3000 are free)
- ```
- 
- For example, when you are in the main folder "rcheck" of the artefact submission, you can do the following:
- 
- Go to https://nuxmv.fbk.eu and download nuXmv for command line of your operating system.
- You will get a folder and you should name it nuXmv and place it in the main folder ./rcheck
- 
- Now you can execute the following commands to work with the GUI web interface for the first time, which will be served on http://localhost:3000:
-
-```
- cd ./frontend-react
- npm install
- cd ..
-```
-
-Only execute the above commands once to build the web interface, and then you execute the following command to build the R-CHECK excutable:
- ```
- mvn clean
- mvn install
-  ```
-
-Then you can run the following to access R-CHECK's functionality through the web interface:
-```
-java -jar ./target/rcheck-0.1.jar -g
+java -jar ./target/rcheck-0.1.jar -a
 ```
 
  If you want to work directly with the command line tool, you have to supply the file input file with `-i' and specify what you want to do with it.
