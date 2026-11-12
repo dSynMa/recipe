@@ -836,7 +836,7 @@ public class ToNuXmv {
                         supplyTriggeredIf.add(supplierStateIsCurrentState);
                         supplyTriggeredIf.add((supplyProcess.getPsi().relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify()).toNuXmv());
                         
-                        // supplyEffects.add("falsify-" + sendingAgentName);
+                        supplyEffects.add("falsify-" + sendingAgentName);
                         // add next state to supply effects
                         supplyEffects.add("next(" + sendingAgentName + "-automaton-state" + ") = " + t.getDestination());
 
@@ -914,6 +914,7 @@ public class ToNuXmv {
                                     List<String> getTriggeredIf = new ArrayList<>();
                                     getTriggeredIf.add(getterStateIsCurrentState);
                                     List<String> getEffects = new ArrayList<>();
+                                    getEffects.add("falsify-" + getterName);
                                     GetProcess getProcess = (GetProcess) gt.getLabel();
                                 
                                     Expression<recipe.lang.types.Boolean> getTransitionGuard = getProcess.getPsi()
