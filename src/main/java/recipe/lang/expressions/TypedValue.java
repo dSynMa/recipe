@@ -14,6 +14,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import java.math.BigDecimal;
 
 public class TypedValue<T extends Type> implements Expression<T> {
     private T type;
@@ -68,12 +69,21 @@ public class TypedValue<T extends Type> implements Expression<T> {
             return that.value.equals(this);
         }
 
-        return value.equals(that.value);
+        return equalityValue().equals(that.equalityValue());
+    }
+
+    private Object equalityValue() {
+        if (value instanceof java.lang.Number && Double.isFinite(((java.lang.Number) value).doubleValue())) {
+            return new BigDecimal(value.toString()).stripTrailingZeros();
+        }
+        return value;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(value);
+        // Union values delegate equality to their enclosed TypedValue.
+        if (value instanceof TypedValue) return value.hashCode();
+        return Objects.hash(equalityValue());
     }
 
     @Override
