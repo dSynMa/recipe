@@ -837,6 +837,8 @@ public class ToNuXmv {
                         supplyTriggeredIf.add((supplyProcess.getPsi().relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify()).toNuXmv());
                         
                         supplyEffects.add("falsify-" + sendingAgentName);
+                        // A supply/get interaction does not execute a channel send.
+                        supplyEffects.add("no-observations");
                         // add next state to supply effects
                         supplyEffects.add("next(" + sendingAgentName + "-automaton-state" + ") = " + t.getDestination());
 
