@@ -901,6 +901,7 @@ public class ToNuXmv {
 
                                 getterTrLoop:
                                 for (ProcessTransition gt : getTransitions) {
+                                    stop.set(false);
                                     List<String> getTriggeredIf = new ArrayList<>();
                                     getTriggeredIf.add(getterStateIsCurrentState);
                                     List<String> getEffects = new ArrayList<>();
