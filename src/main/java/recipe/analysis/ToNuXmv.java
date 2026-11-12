@@ -172,7 +172,7 @@ public class ToNuXmv {
                         finalExpression = new And(finalExpression, expr).simplify();
                     }
                 }
-                return finalExpression;
+                return finalExpression == null ? Condition.getTrue() : finalExpression;
             } else if(obss.getName().equals("exists")) {
                 //t(exists(o)) = \/cv g_s && o
                 Expression<Boolean> t = null;
@@ -206,7 +206,7 @@ public class ToNuXmv {
                         t = new Or(t, expr).simplify();
                     }
                 }
-                return t;
+                return t == null ? Condition.getFalse() : t;
             } else{
                 throw new Exception("Predicate " + obss.getName() + " unknown.");
             }
