@@ -1105,8 +1105,6 @@ public class ToNuXmv {
         nuxmv += init;
         nuxmv += "TRANS\n";
         nuxmv += "\t(transition)\n \t\t| (!progress & keep-all & no-observations)\n";
-        nuxmv = nuxmv.replaceAll("&( |\n)*TRUE(( )*&( )*)( |\n)*", "");
-        nuxmv = nuxmv.replaceAll("TRUE(( )*&( )*)", "");
         nuxmv = nuxmv.replaceAll("==", " = ");
 
         nuxmv += String.join("\n", specs.stream().map((s) -> "LTLSPEC " + (s).toNuXmv()).toArray(String[]::new));
