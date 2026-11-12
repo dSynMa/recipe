@@ -9,6 +9,7 @@ import recipe.lang.types.Real;
 import recipe.lang.utils.exceptions.*;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.util.function.Function;
 
 public class Division extends ArithmeticExpression{
@@ -26,8 +27,10 @@ public class Division extends ArithmeticExpression{
         TypedValue<Number> rhsValue = rhs.valueIn(store);
 
         BigDecimal lhsNo = new BigDecimal(lhsValue.getValue().toString());
-        BigDecimal rhsNo = new BigDecimal(rhsValue.getType().toString());
-        return new TypedValue<Number>((Number) Real.getType(), lhsNo.divide(rhsNo).toString());
+        BigDecimal rhsNo = new BigDecimal(rhsValue.getValue().toString());
+        // Concrete real values are doubles; retain extra precision before that conversion.
+        // Symbolic simplification below keeps nonterminating quotients exact.
+        return new TypedValue<Number>((Number) Real.getType(), lhsNo.divide(rhsNo, MathContext.DECIMAL128).toString());
     }
 
     @Override
