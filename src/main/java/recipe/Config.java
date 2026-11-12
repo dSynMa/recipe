@@ -47,6 +47,7 @@ public class Config {
     }
 
     public static final String broadcast = "*";
+    public static final String nuxmvBroadcast = "broadcast";
 
     public static String getNuxmvPath() {
         String nuxmvPath = "";

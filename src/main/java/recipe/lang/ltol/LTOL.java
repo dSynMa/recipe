@@ -405,4 +405,10 @@ public abstract class LTOL {
         }
         return false;
     }
+
+    /** Render pure LTL after observation abstraction and quantifier expansion. */
+    public String toNuXmv() {
+        throw new IllegalStateException("Lower observations and expand quantifiers before rendering nuXmv");
+    }
+
 }

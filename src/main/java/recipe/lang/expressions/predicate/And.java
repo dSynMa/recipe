@@ -104,4 +104,10 @@ public class And extends Condition {
 	public Condition removePreds(){
 		return new And(this.lhs.removePreds(), this.rhs.removePreds());
 	}
+
+    @Override
+    public String toNuXmv() {
+        return "(" + lhs.toNuXmv() + ") & (" + rhs.toNuXmv() + ")";
+    }
+
 }

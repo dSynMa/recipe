@@ -17,6 +17,9 @@ public class Iff extends LTOL{
         this.right = right;
     }
 
+    public LTOL getLeft() { return left; }
+    public LTOL getRight() { return right; }
+
     public String toString(){
         return "(" + left.toString() + " <-> " + right.toString() + ")";
     }
@@ -41,4 +44,10 @@ public class Iff extends LTOL{
     public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return new Iff(left.toLTOLwithoutQuantifiers(), right.toLTOLwithoutQuantifiers());
     }
+
+    @Override
+    public String toNuXmv() {
+        return "(" + left.toNuXmv() + " <-> " + right.toNuXmv() + ")";
+    }
+
 }

@@ -116,4 +116,10 @@ public class IsLessThan extends Condition {
 	public Condition removePreds(){
 		return this;
 	}
+
+    @Override
+    public String toNuXmv() {
+        return lhs.toNuXmv() + " < " + rhs.toNuXmv();
+    }
+
 }

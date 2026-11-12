@@ -35,4 +35,10 @@ public class Next extends LTOL{
     public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return new Next(ltol.toLTOLwithoutQuantifiers());
     }
+
+    @Override
+    public String toNuXmv() {
+        return "X(" + ltol.toNuXmv() + ")";
+    }
+
 }

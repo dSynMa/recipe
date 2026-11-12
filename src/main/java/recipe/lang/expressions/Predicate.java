@@ -108,4 +108,10 @@ public class Predicate implements Expression<recipe.lang.types.Boolean> {
     public Expression<recipe.lang.types.Boolean> removePreds(){
         return this.input;
     }
+
+    @Override
+    public String toNuXmv() {
+        return name + "(" + input.toNuXmv() + ")";
+    }
+
 }

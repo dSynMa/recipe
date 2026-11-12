@@ -55,4 +55,11 @@ public class Division extends ArithmeticExpression{
     public String toString(){
         return "(" + lhs.toString() + " / " + rhs.toString() + ")";
     }
+
+    @Override
+    public String toNuXmv() {
+        // Force real division, including when both operands have integer domains.
+        return "((1.0 * " + lhs.toNuXmv() + ") / " + rhs.toNuXmv() + ")";
+    }
+
 }

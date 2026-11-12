@@ -87,4 +87,10 @@ public class NamedLocation extends Condition {
         return this;
     }
     
+
+    @Override
+    public String toNuXmv() {
+        return toString();
+    }
+
 }

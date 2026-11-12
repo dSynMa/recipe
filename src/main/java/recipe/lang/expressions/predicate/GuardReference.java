@@ -177,4 +177,14 @@ public class GuardReference extends Condition {
     public Condition removePreds(){
         return this;
     }
+
+    @Override
+    public String toNuXmv() {
+        try {
+            return unpack().toNuXmv();
+        } catch (RelabellingTypeException | MismatchingTypeException error) {
+            throw new IllegalArgumentException("Cannot render guard reference", error);
+        }
+    }
+
 }

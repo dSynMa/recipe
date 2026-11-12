@@ -116,4 +116,10 @@ public class TypedVariable<T extends Type> implements Expression<T> {
     public Expression<T> removePreds(){
         return this;
     }
+
+    @Override
+    public String toNuXmv() {
+        return name;
+    }
+
 }

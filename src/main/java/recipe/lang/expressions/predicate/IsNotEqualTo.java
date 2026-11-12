@@ -17,6 +17,9 @@ public class IsNotEqualTo extends Condition {
 	private Expression lhs;
 	private Expression rhs;
 
+	public Expression getLhs() { return lhs; }
+	public Expression getRhs() { return rhs; }
+
 	public IsNotEqualTo(Expression lhs, Expression rhs) {
 		this.lhs = lhs;
 		this.rhs = rhs;
@@ -100,6 +103,12 @@ public class IsNotEqualTo extends Condition {
 	public Condition removePreds(){
 		return new IsNotEqualTo(this.lhs.removePreds(), this.rhs.removePreds());
 	}
+
+
+    @Override
+    public String toNuXmv() {
+        return IsEqualTo.renderNuXmvOperand(lhs) + " != " + IsEqualTo.renderNuXmvOperand(rhs);
+    }
 
 }
 

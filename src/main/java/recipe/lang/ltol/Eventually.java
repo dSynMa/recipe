@@ -35,4 +35,10 @@ public class Eventually extends LTOL{
     public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return new Eventually(ltol.toLTOLwithoutQuantifiers());
     }
+
+    @Override
+    public String toNuXmv() {
+        return "F(" + ltol.toNuXmv() + ")";
+    }
+
 }

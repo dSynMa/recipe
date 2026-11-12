@@ -119,4 +119,10 @@ public class Implies extends Condition {
 	public Condition removePreds(){
 		return new Implies(this.lhs.removePreds(), this.rhs.removePreds());
 	}
+
+    @Override
+    public String toNuXmv() {
+        return "((" + lhs.toNuXmv() + ") -> (" + rhs.toNuXmv() + "))";
+    }
+
 }

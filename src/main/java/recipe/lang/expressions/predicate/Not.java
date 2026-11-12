@@ -91,4 +91,10 @@ public class Not extends Condition {
 	public Condition removePreds(){
 		return new Not(this.arg.removePreds());
 	}
+
+    @Override
+    public String toNuXmv() {
+        return "!(" + arg.toNuXmv() + ")";
+    }
+
 }

@@ -49,4 +49,10 @@ public class Atom extends LTOL{
     public LTOL toLTOLwithoutQuantifiers() throws RelabellingTypeException, InfiniteValueTypeException, MismatchingTypeException {
         return this;
     }
+
+    @Override
+    public String toNuXmv() {
+        return condition.toNuXmv();
+    }
+
 }

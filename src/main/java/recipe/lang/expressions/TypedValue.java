@@ -48,7 +48,7 @@ public class TypedValue<T extends Type> implements Expression<T> {
         return var.getType().isValidValue(this.getValue());
     }
 
-    public Type getType() {
+    public T getType() {
         return type;
     }
 
@@ -101,4 +101,10 @@ public class TypedValue<T extends Type> implements Expression<T> {
     public Expression<T> removePreds(){
         return this;
     }
+
+    @Override
+    public String toNuXmv() {
+        return recipe.Config.broadcast.equals(value.toString()) ? recipe.Config.nuxmvBroadcast : toString();
+    }
+
 }

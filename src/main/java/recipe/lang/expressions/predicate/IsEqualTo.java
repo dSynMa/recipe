@@ -130,5 +130,16 @@ public class IsEqualTo<T extends Type> extends Condition {
 	public Condition removePreds(){
 		return new IsNotEqualTo(this.lhs.removePreds(), this.rhs.removePreds());
 	}
+
+    @Override
+    public String toNuXmv() {
+        return renderNuXmvOperand(lhs) + " = " + renderNuXmvOperand(rhs);
+    }
+
+    static String renderNuXmvOperand(Expression<?> operand) {
+        String value = operand.toNuXmv();
+        return operand instanceof Condition ? "(" + value + ")" : value;
+    }
+
 }
 

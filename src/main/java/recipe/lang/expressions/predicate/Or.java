@@ -107,4 +107,10 @@ public class Or extends Condition {
 	public Condition removePreds(){
 		return new Or(this.lhs.removePreds(), this.rhs.removePreds());
 	}
+
+    @Override
+    public String toNuXmv() {
+        return "(" + lhs.toNuXmv() + ") | (" + rhs.toNuXmv() + ")";
+    }
+
 }
