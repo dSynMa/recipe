@@ -932,6 +932,13 @@ public class ToNuXmv {
 
                                         // Handle message guard
                                         Expression<Boolean> getterGuardExpr = getProcess.getMessageGuard();
+                                        if (supplyGuardExprHere instanceof NamedLocation) {
+                                            NamedLocation supplierLocation = (NamedLocation) supplyGuardExprHere;
+                                            // SELF serves only getters that explicitly name this supplier.
+                                            if (supplierLocation.isSelf()) {
+                                                if (!getterGuardExpr.toString().equals(sendingAgentName)) continue getterTrLoop;
+                                            } else if (!supplierLocation.toString().equals(getterName)) continue getterTrLoop;
+                                        }
                                         if (getterGuardExpr instanceof NamedLocation) {
                                             NamedLocation getterLocation = (NamedLocation) getterGuardExpr;
                                             if (getterLocation.isSelf()) throw new Exception("GET@SELF is not allowed.");
