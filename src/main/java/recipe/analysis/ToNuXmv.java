@@ -735,9 +735,9 @@ public class ToNuXmv {
                                         currentAgentReceivePreds.add("(" + receiveGuard + ")\n \t\t& (" + transitionPred + ")\n \t\t& (" + sendGuardExprHere + ")");
                                         currentAgentProgressConds.add("(" + receiveGuard + ")\n \t\t& (" + transitionProgressCond + ")\n \t\t& (" + sendGuardExprHere + ")");
                                     }
-                                } else if(receiveAgentReceivePreds.size() > 0){
-                                    throw new Exception("receiveAgentReceivePreds is empty");
                                 }
+                                // Disabled reception is handled by the idle/broadcast cases below.
+                                // On multicast, a connected receiver without a matching action blocks.
 
                                 //if receiveguard is false then the whole predicate is true
                                 if (receiveGuard.equals("FALSE")){
