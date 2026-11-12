@@ -893,7 +893,7 @@ public class ToNuXmv {
                             for (State getterState : getterAgent.getStates()) {
                                 Set<ProcessTransition> getTransitions = agentStateGetTransitionMap.get(getterAgent).get(getterState);
                                 if (getTransitions == null || getTransitions.size() == 0) continue; // no get's in this state, nothing to do
-                                String getterStateIsCurrentState = getterName + "-automaton-state" + " = " + state;
+                                String getterStateIsCurrentState = getterName + "-automaton-state" + " = " + getterState;
                                 
                                 // We'll set this to true if we need to skip a transition
                                 AtomicReference<java.lang.Boolean> stop = new AtomicReference<java.lang.Boolean>(false);
