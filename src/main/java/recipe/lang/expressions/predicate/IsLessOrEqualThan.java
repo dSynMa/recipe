@@ -71,7 +71,9 @@ public class IsLessOrEqualThan extends Condition {
 				!rhsObject.getClass().equals(TypedValue.class)) {
 			return new IsLessOrEqualThan(lhsObject, rhsObject);
 		} else {
-			return Condition.FALSE;
+			int comparison = new BigDecimal(((TypedValue<?>) lhsObject).getValue().toString())
+				.compareTo(new BigDecimal(((TypedValue<?>) rhsObject).getValue().toString()));
+			return comparison <= 0 ? Condition.TRUE : Condition.FALSE;
 		}
 
 	}

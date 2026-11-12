@@ -53,13 +53,10 @@ public class IsLessThan extends Condition {
 	public TypedValue<Boolean> valueIn(Store store) throws AttributeTypeException, AttributeNotInStoreException, MismatchingTypeException, NotImplementedYetException {
 		TypedValue<Number> lhsValue = lhs.valueIn(store);
 		TypedValue<Number> rhsValue = rhs.valueIn(store);
-		System.out.printf("evaluating %s as (%s) < (%s)", this, lhsValue, rhsValue);
 
 		if(0 > new BigDecimal(lhsValue.getValue().toString()).compareTo(new BigDecimal(rhsValue.getValue().toString()))) {
-			System.out.println(" yields TRUE");
 			return Condition.TRUE;
 		} else {
-			System.out.println(" yields FALSE");
 			return Condition.FALSE;
 		}
 	}
@@ -69,12 +66,14 @@ public class IsLessThan extends Condition {
 		Expression<Number> lhsObject = lhs.simplify();
 		Expression<Number> rhsObject = rhs.simplify();
 		if (lhsObject.equals(rhsObject)) {
-			return Condition.TRUE;
+			return Condition.FALSE;
 		} else if(!lhsObject.getClass().equals(TypedValue.class) ||
 				!rhsObject.getClass().equals(TypedValue.class)){
 			return new IsLessThan(lhsObject, rhsObject);
 		} else {
-			return Condition.FALSE;
+			int comparison = new BigDecimal(((TypedValue<?>) lhsObject).getValue().toString())
+				.compareTo(new BigDecimal(((TypedValue<?>) rhsObject).getValue().toString()));
+			return comparison < 0 ? Condition.TRUE : Condition.FALSE;
 		}
 	}
 
