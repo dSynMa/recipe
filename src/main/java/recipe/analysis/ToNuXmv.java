@@ -306,7 +306,8 @@ public class ToNuXmv {
         }
 
         for(String obs : observations.keySet()){
-            init += "\t& " + obs + " = FALSE\n";
+            if (!init.equals("INIT\n")) init += "\t& ";
+            init += obs + " = FALSE\n";
         }
 
         List<AgentInstance> agentInstances = system.getAgentInstances();

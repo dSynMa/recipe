@@ -33,6 +33,29 @@ final class TranslationTestModels {
     }
 
     static void assertCtl(String output, String formula, boolean expected) throws Exception {
+        String result = runNuXmv(output, "go\ncheck_ctlspec -p \"" + formula + "\"\nquit\n");
+        assertTrue(result, result.lines().anyMatch(line ->
+            line.startsWith("-- specification ") && line.endsWith(" is " + expected)));
+    }
+
+    static void assertLtl(String output, String formula, boolean expected) throws Exception {
+        String result = runNuXmv(output, "go\ncheck_ltlspec -p \"" + formula + "\"\nquit\n");
+        assertTrue(result, result.lines().anyMatch(line ->
+            line.startsWith("-- specification ") && line.endsWith(" is " + expected)));
+    }
+
+    static void assertValid(String output) throws Exception {
+        String result = runNuXmv(output, "read_model\nflatten_hierarchy\nwrite_flat_model\nquit\n");
+        assertTrue(result, result.contains("MODULE main"));
+    }
+
+    static void assertSmtInvariant(String output, String formula) throws Exception {
+        String result = runNuXmv(output, "go_msat\ncheck_invar_ic3 -p \"" + formula + "\"\nquit\n");
+        assertTrue(result, result.lines().anyMatch(line ->
+            line.startsWith("-- invariant ") && line.endsWith(" is true")));
+    }
+
+    private static String runNuXmv(String output, String script) throws Exception {
         Path executable = Path.of("nuxmv/bin/nuxmv").toAbsolutePath();
         assumeTrue("nuXmv executable is required for semantic checks", Files.isExecutable(executable));
         Path directory = Files.createTempDirectory("recipe-ctl-");
@@ -42,14 +65,15 @@ final class TranslationTestModels {
         Process process = null;
         try {
             Files.writeString(model, output);
-            Files.writeString(commands, "go\ncheck_ctlspec -p \"" + formula + "\"\nquit\n");
+            Files.writeString(commands, script);
             process = new ProcessBuilder(executable.toString(), "-source", commands.toString(), model.toString())
                 .redirectErrorStream(true).redirectOutput(log.toFile()).start();
+            process.getOutputStream().close();
             assertTrue("nuXmv timed out", process.waitFor(20, TimeUnit.SECONDS));
             String result = Files.readString(log);
             assertEquals(result, 0, process.exitValue());
-            assertTrue(result, result.lines().anyMatch(line ->
-                line.startsWith("-- specification ") && line.endsWith(" is " + expected)));
+            assertFalse(result, result.contains("syntax error") || result.contains("aborting"));
+            return result;
         } finally {
             if (process != null && process.isAlive()) {
                 process.destroyForcibly();
