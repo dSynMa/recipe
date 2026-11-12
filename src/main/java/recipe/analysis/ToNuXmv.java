@@ -124,7 +124,7 @@ public class ToNuXmv {
             return new Or(handleCVsInObservation(cvs, obss.getLhs(), sendGuard), handleCVsInObservation(cvs, obss.getRhs(), sendGuard));
         } else if(obs.getClass().equals(Not.class)){
             Not obss = (Not) obs;
-            return new Not(handleCVsInObservation(cvs, obss, sendGuard));
+            return new Not(handleCVsInObservation(cvs, obss.getArgument(), sendGuard));
         } else if(obs.getClass().equals(Implies.class)){
             Implies obss = (Implies) obs;
             return new Implies(handleCVsInObservation(cvs, obss.getLhs(), sendGuard), handleCVsInObservation(cvs, obss.getRhs(), sendGuard));
