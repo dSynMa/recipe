@@ -22,6 +22,44 @@ import static org.petitparser.parser.primitive.CharacterParser.*;
 
 public class Parsing {
 
+    // Identifier keywords from the nuXmv 2.2 manual, including timed-system keywords.
+    // Retain process for compatibility with the bundled nuXmv 2.0 parser.
+    // https://nuxmv.fbk.eu/downloads/nuxmv-user-manual.pdf (Identifiers)
+    private static final java.util.Set<String> RESERVED_CONSTANTS = java.util.Set.of(
+        "A", "ABF", "ABG", "abs", "acos", "AF", "AG", "array", "asin", "atan", "at_next", "at_last", "ASSIGN", "AX", "bool",
+        "boolean", "BU", "case", "Clock", "clock", "COMPASSION", "COMPID", "COMPUTE", "COMPWFF", "CONSTANTS", "CONSTARRAY", "CONSTRAINT",
+        "cos", "count", "CTLSPEC", "CTLWFF", "DEFINE", "E", "EBF", "EBG", "EF", "EG",
+        "esac", "EX", "exp", "extend", "F", "FAIRNESS", "FALSE", "floor", "FROZENVAR", "FUN",
+        "G", "H", "IN", "in", "INIT", "init", "Integer", "integer", "INVAR", "INVARSPEC",
+        "ISA", "ITYPE", "IVAR", "JUSTICE", "ln", "LTLSPEC", "LTLWFF", "MAX", "max", "MDEFINE",
+        "MIN", "min", "MIRROR", "mod", "MODULE", "NAME", "next", "NEXTWFF", "noncontinuous", "O",
+        "of", "PRED", "PREDICATES", "pi", "pow", "PSLSPEC", "PARSYNTH", "READ", "Real", "real",
+        "resize", "S", "SAT", "self", "signed", "SIMPWFF", "sin", "sizeof", "SPEC", "sqrt", "swconst",
+        "T", "tan", "time", "time_since", "time_until", "toint", "TRANS", "TRUE", "typeof", "U", "union",
+        "unsigned", "URGENT", "uwconst", "V", "VALID", "VAR", "Word", "word", "word1", "WRITE",
+        "X", "xnor", "xor", "Y", "Z", "process");
+
+    /** Check names emitted as unqualified nuXmv constants, not prefixed local variables. */
+    public static String constantName(String name) {
+        if (name.contains("-")) {
+            throw new IllegalArgumentException("Invalid constant '" + name
+                + "': hyphens are reserved for qualified references.");
+        }
+        if (Config.nuxmvBroadcast.equals(name)) {
+            throw new IllegalArgumentException("'broadcast' is reserved for the broadcast channel; use '*' to broadcast.");
+        }
+        if (RESERVED_CONSTANTS.contains(name) || name.equals("progress") || name.equals("transition")
+                || name.matches("obs[0-9]+")) {
+            throw new IllegalArgumentException("Invalid constant '" + name
+                + "': this name is reserved by nuXmv or the translation.");
+        }
+        if (!name.matches("[A-Za-z_][A-Za-z0-9_$#-]*")) {
+            throw new IllegalArgumentException("Invalid constant '" + name + "': expected a nuXmv symbolic identifier.");
+        }
+        return name;
+    }
+
+
     public static org.petitparser.parser.Parser disjunctiveStringParser(List<String> allowed) {
         if(allowed == null || allowed.size() == 0){
             return FailureParser.withMessage("No variables of expected type.");
@@ -257,7 +295,7 @@ public class Parsing {
                                 List<String> enumValues = new ArrayList<>();
                                 for(Object v : (List<Object>) values.get(3)){
                                     if(v.getClass().equals(String.class)){
-                                        enumValues.add(((String) v).trim());
+                                        enumValues.add(constantName(((String) v).trim()));
                                     }
                                 }
                                 Enum enumm = null;
@@ -305,7 +343,7 @@ public class Parsing {
 
                     for(Object v : (List) values.get(0)){
                         if(!v.getClass().equals(Character.class)){
-                            vals.add((String) v);
+                            vals.add(constantName((String) v));
                         }
                     }
                     return vals;
