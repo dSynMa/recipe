@@ -114,13 +114,18 @@ public class NuXmvBatch {
     }
 
     private NuXmvResult callAndRead(Path scriptFile) throws IOException {
-        Process proc = callNuXmv(scriptFile);
-        processes.add(proc);
-        NuXmvResult result = readFrom(proc);
-        processes.remove(proc);
-        proc.destroy();
-        Files.deleteIfExists(scriptFile);
-        return result;
+        Process proc = null;
+        try {
+            proc = callNuXmv(scriptFile);
+            processes.add(proc);
+            return readFrom(proc);
+        } finally {
+            if (proc != null) {
+                processes.remove(proc);
+                proc.destroy();
+            }
+            Files.deleteIfExists(scriptFile);
+        }
     }
 
     enum Cmd {
@@ -180,9 +185,7 @@ public class NuXmvBatch {
         ProcessBuilder builder = new ProcessBuilder(nuxmvPath, "-source", scriptFile.toRealPath().toString(),
                 path.toString());
         builder.redirectErrorStream(true);
-        Process process = builder.start();
-        processes.add(process);
-        return process;
+        return builder.start();
     }
 
     enum Error {
