@@ -74,7 +74,15 @@ public class ToNuXmv {
                                                                             Expression<Boolean> sendGuard,
                                                                             Map<String, Expression> message,
                                                                             TypedValue sender,
-                                                                            Expression channel) throws Exception {
+                                                                            Expression channel,
+                                                                            Set<String> messageFields) throws Exception {
+        AtomicReference<java.lang.Boolean> missingField = new AtomicReference<>(false);
+        obs.relabel(v -> {
+            if (messageFields.contains(v.getName()) && !message.containsKey(v.getName())) missingField.set(true);
+            return v;
+        });
+        // Match interpreter evaluation: an observation requiring absent data is not satisfied.
+        if (missingField.get()) return Condition.getFalse();
         //handle message and sender variables
         Expression<Boolean> observation = obs.relabel((v) -> message.containsKey(v.getName()) ? message.get(v.getName()) : v)
                                                 .relabel((v) -> v.getName().equals("sender") ? sender : v)
@@ -510,7 +518,8 @@ public class ToNuXmv {
                                     sendGuardExpr,
                                     relabelledMessage,
                                     sendingAgentNameValue,
-                                    sendingOnThisChannelVarOrVal);
+                                    sendingOnThisChannelVarOrVal,
+                                    system.getMessageStructure().keySet());
 
                             sendEffects.add("next(" + var + ") = (" + (observationCondition).toNuXmv() + ")");
                         }
