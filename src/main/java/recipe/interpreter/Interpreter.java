@@ -91,7 +91,9 @@ public class Interpreter {
         
         List<JSONObject> list = new ArrayList<>(json.length());
         for (int i = 0; i < json.length(); i++) {
-            list.add(json.getJSONObject(i));
+            JSONObject state = json.getJSONObject(i);
+            // Like nuXmv text traces, omitted values retain their preceding state.
+            list.add(list.isEmpty() ? state : new CompositeJSON(list.get(i - 1), state));
         }
         return Interpreter.ofJSON(s, obsMap, list);
     }
