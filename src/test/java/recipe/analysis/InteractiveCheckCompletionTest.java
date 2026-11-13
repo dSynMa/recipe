@@ -56,6 +56,36 @@ public class InteractiveCheckCompletionTest {
         } finally { Files.deleteIfExists(checker.path); }
     }
     @Test(timeout = 30000)
+    public void malformedBddPropertyReturnsAnError() throws Exception {
+        for (String property : new String[] {"(", "(sender-sent &"}) {
+            NuXmvInteraction checker = checker();
+            try { assertFalse(checker.modelCheck(property, false, -1).getLeft()); }
+            finally { Files.deleteIfExists(checker.path); }
+        }
+    }
+
+    @Test(timeout = 30000)
+    public void boundedIc3UnknownCompletesWithoutATrueOrFalseVerdict() throws Exception {
+        NuXmvInteraction checker = checker();
+        try {
+            var result = checker.modelCheckic3("G (sender-sent -> first-received)", true, 1);
+            assertTrue(result.getRight(), result.getLeft());
+            assertTrue(result.getRight(), result.getRight().contains("no proof or counterexample"));
+            assertFalse(result.getRight(), result.getRight().contains(" is true"));
+            assertFalse(result.getRight(), result.getRight().contains(" is false"));
+        } finally { Files.deleteIfExists(checker.path); }
+    }
+
+    @Test(timeout = 30000)
+    public void validBddPropertyStillReturnsItsVerdict() throws Exception {
+        NuXmvInteraction checker = checker();
+        try {
+            var result = checker.modelCheck("sender-sent", false, -1);
+            assertTrue(result.getRight(), result.getLeft());
+            assertTrue(result.getRight(), result.getRight().contains("is false"));
+        } finally { Files.deleteIfExists(checker.path); }
+    }
+    @Test(timeout = 30000)
     public void unboundedSymbolicCheckingDoesNotPassANegativeBmcBound() throws Exception {
         for (String property : new String[] {"sender-sent", "G (sender-count >= 2)"}) {
             NuXmvInteraction checker = checker(source("arithmetic-multiplication"));

@@ -111,24 +111,10 @@ public class NuXmvInteraction {
             }
         }
 
+        // Completion is signalled by the prompt, including errors and bounded unknowns.
         if (booleanModelUnavailable && !bmc && steps < 0)
             return modelCheckic3(property, false, steps);
-        Predicate<String> finished = (x) ->{
-            if(bmc){
-                if(x.contains("no counterexample found with bound " + steps)
-                        || x.replaceAll(" |\n|\r|\t|\\(|\\)", "").contains(property.trim().replaceAll(" |\n|\r|\t|\\(|\\)", "") + "is")) {
-                    return true;
-                } else{
-                    return false;
-                }
-            } else{
-                if(x.replaceAll(" |\n|\r|\t|\\(|\\)", "").contains(property.trim().replaceAll(" |\n|\r|\t|\\(|\\)", "") + "is")) {
-                    return true;
-                } else{
-                    return false;
-                }
-            }
-        };
+        Predicate<String> finished = x -> x.trim().endsWith("nuXmv >");
 
         String out = "";
         out = execute(finished, (((system.isSymbolic() || booleanModelUnavailable) || bmc ? "msat_" : "") + "check_ltlspec" + ((system.isSymbolic() || booleanModelUnavailable) || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ ((system.isSymbolic() || booleanModelUnavailable) || bmc ? "-k " + steps : "")));
@@ -140,7 +126,7 @@ public class NuXmvInteraction {
         }
         out = out.replaceAll("nuXmv > ", "").trim();
         out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
-        return new Pair<>(true, out);
+        return new Pair<>(hasCheckResult(out), out);
     }
 
     public Pair<Boolean, String> modelCheckic3(String property, boolean bounded, int steps) throws IOException {
@@ -163,16 +149,7 @@ public class NuXmvInteraction {
             }
         }
 
-        Predicate<String> finished = (x) -> {
-            String s = x.replaceAll(" |\n|\r|\t|\\(|\\)", "");
-            if(s.contains(property.trim().replaceAll(" |\n|\r|\t|\\(|\\)", "") + "is")) {
-                return true;
-            } else if(s.contains("syntaxerror")){
-                return true;
-            } else{
-                return false;
-            }
-        };
+        Predicate<String> finished = x -> x.trim().endsWith("nuXmv >");
 
         String out = "";
         out = execute(finished, ("check_ltlspec_ic3" + (useBooleanModel ? "" : " -i") + (bounded ? " -k " + steps : "") + " -p \"" + property + "\" "));
@@ -180,11 +157,14 @@ public class NuXmvInteraction {
             out = execute(finished, "check_ltlspec_ic3 -i -p \"" + property + "\"");
         out = out.replaceAll("nuXmv > ", "").trim();
         out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
-        if(out.contains("syntax error")){
-            return new Pair<>(false, out);
-        } else{
-            return new Pair<>(true, out);
-        }
+        return new Pair<>(hasCheckResult(out), out);
+    }
+
+    private static boolean hasCheckResult(String output) {
+        return output.lines().anyMatch(line -> line.startsWith("-- ") &&
+                (line.endsWith(" is true") || line.endsWith(" is false")
+                || line.startsWith("-- no counterexample found with bound ")
+                || line.startsWith("-- no proof or counterexample found with bound ")));
     }
 
     public Pair<Boolean, String> initialise(boolean simulateOrBMC) throws IOException {
