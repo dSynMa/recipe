@@ -217,6 +217,9 @@ public class Interpreter {
         HashMap<AgentInstance, ConcreteStore> rootStores = new HashMap<AgentInstance, ConcreteStore>();
         NuXmvBatch nuxmv = new NuXmvBatch(sys);
         Pair<Boolean, String> s0 = nuxmv.pickInitialState(constraint);
+        if (!s0.getLeft()) {
+            throw new IOException("Cannot select an initial state: " + s0.getRight());
+        }
         JSONObject initValues = nuxmv.outputToJSON(s0.getRight());
 
         sys.getAgentInstances().forEach((x) -> {
