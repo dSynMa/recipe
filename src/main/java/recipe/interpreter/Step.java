@@ -29,7 +29,6 @@ import recipe.lang.store.CompositeStore;
 import recipe.lang.store.ConcreteStore;
 import recipe.lang.store.Store;
 import recipe.lang.types.Type;
-import recipe.lang.utils.Pair;
 import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 
@@ -282,10 +281,10 @@ public class Step {
             ConcreteStore nextSenderStore = stores.get(initiator).BuildNext(chosenTransition.getProducerTransition());
             nextStores.put(initiator, nextSenderStore);
 
-            Pair<Store, TypedValue> msgPair = makeMessageStore(stores.get(initiator), chosenTransition.getProducerProcess(), sys);
+            Store msgStore = makeMessageStore(stores.get(initiator), chosenTransition.getProducerProcess(), sys);
             for (AgentInstance receiver : chosenTransition.getConsumers()) {
                 ProcessTransition receive = chosenTransition.findTransitionForAgent(receiver);
-                ConcreteStore nextReceiverStore = stores.get(receiver).BuildNext(receive, msgPair.getLeft());
+                ConcreteStore nextReceiverStore = stores.get(receiver).BuildNext(receive, msgStore);
                 nextStores.put(receiver, nextReceiverStore);
             }
         } catch (Exception e) {
@@ -302,10 +301,9 @@ public class Step {
                 annotations.put(key, obj.get(key));
     }
 
-    protected Pair<Store, TypedValue> makeMessageStore(Store senderStore, BasicProcessWithMessage procWithMsg, recipe.lang.System sys) {
+    protected Store makeMessageStore(Store senderStore, BasicProcessWithMessage procWithMsg, recipe.lang.System sys) {
         // Add message and channel to a new map
         Map<TypedVariable, TypedValue> msgMap = new HashMap<TypedVariable, TypedValue>();
-        TypedValue chan = null;
         try {
             procWithMsg.getMessage().forEach((msgVar, msgExpr) -> {
                 try {
@@ -326,14 +324,35 @@ public class Step {
             });
             if (procWithMsg instanceof SendProcess) {
                 Expression chanExpr = procWithMsg.getChannel();
-                chan = chanExpr.valueIn(senderStore);
+                TypedValue chan = chanExpr.valueIn(senderStore);
                 msgMap.put(interpreter.getChannelTV(), chan);
             }
-            return new Pair<Store, TypedValue>(new ConcreteStore(msgMap), chan);
+            return new ConcreteStore(msgMap);
         } catch (Exception e) {
             handleEvaluationException(e);
         }
         return null;
+    }
+
+    private static boolean actionEnabled(BasicProcess action, Store store) {
+        try {
+            if (!Condition.getTrue().equals(action.getPsi().valueIn(store))) return false;
+            for (Expression update : action.getUpdate().values()) {
+                if (update.valueIn(store) == null) return false;
+            }
+            return true;
+        } catch (Exception unavailableValue) {
+            // Reject only this candidate, not the other receive/get alternatives.
+            return false;
+        }
+    }
+
+    private static boolean selectionHolds(Expression selection, Store store) {
+        try {
+            return Condition.getTrue().equals(selection.valueIn(store));
+        } catch (Exception unavailableValue) {
+            return false;
+        }
     }
 
     public Step(Map<AgentInstance,ConcreteStore> stores, Step parent, Interpreter interp) {
@@ -378,16 +397,13 @@ public class Step {
             if (instSends != null) {
                 instSends.forEach(tr -> {
                     SendProcess sendProcess = (SendProcess) tr.getLabel();
-                    Expression<recipe.lang.types.Boolean> psi = sendProcess.getPsi();
                     try {
-                        TypedValue psiEval = psi.valueIn(senderStore);
-                        boolean psiSat = Condition.getTrue().equals(psiEval);
+                        boolean psiSat = actionEnabled(sendProcess, senderStore);
 
                         if (psiSat) {
                             // Add message and channel to a new map
-                            Pair<Store, TypedValue> msgPair = makeMessageStore(senderStore, sendProcess, sys);
-                            Store msgStore = msgPair.getLeft();
-                            TypedValue chan = msgPair.getRight();
+                            Store msgStore = makeMessageStore(senderStore, sendProcess, sys);
+                            TypedValue chan = msgStore.getValue(interpreter.getChannelTV());
 
                             // Set up map of receivers
                             // A receiver must
@@ -436,8 +452,7 @@ public class Step {
                                             ReceiveProcess recLbl = (ReceiveProcess) rec.getLabel();
                                             Expression recChanExpr = recLbl.getChannel();
                                             if (recChanExpr.valueIn(store).equals(chan)) {
-                                                Expression<recipe.lang.types.Boolean> recPsi = recLbl.getPsi();
-                                                boolean recPsiSat = Condition.getTrue().equals(recPsi.valueIn(store));
+                                                boolean recPsiSat = actionEnabled(recLbl, store);
                                                 // System.err.printf("%s evaluates to %s\n", recPsi, recPsiSat);
                                                 // System.err.printf("receive: %s\n", recLbl);
                                                 // System.err.printf("store: %s\n", store);
@@ -496,10 +511,8 @@ public class Step {
             if (splys == null) return;
             for (ProcessTransition sply : splys) {
                 SupplyProcess splyProc = (SupplyProcess) sply.getLabel();
-                Expression<recipe.lang.types.Boolean> psi = splyProc.getPsi();
                 try {
-                    TypedValue psiEval = psi.valueIn(supplierStore);
-                    boolean psiSat = Condition.getTrue().equals(psiEval);
+                    boolean psiSat = actionEnabled(splyProc, supplierStore);
                     if (!psiSat) continue;
                     for (AgentInstance getter : interpreter.sys.getAgentInstances()) {
                         if (getter == supplier) continue;
@@ -507,11 +520,10 @@ public class Step {
                         Set<ProcessTransition> gets = interpreter.gets.get(getterStore.getState());
                         if (gets == null) continue;
                         for (ProcessTransition get : gets) {
-                            Pair<Store, TypedValue> msgPair = makeMessageStore(supplierStore, splyProc, sys);
-                            Store instStore = getterStore.push(msgPair.getLeft());
+                            Store msgStore = makeMessageStore(supplierStore, splyProc, sys);
+                            Store instStore = getterStore.push(msgStore);
                             GetProcess getProc = (GetProcess) get.getLabel();
-                            Expression getPsi = getProc.getPsi();
-                            boolean getPsiSat = Condition.getTrue().equals(getPsi.valueIn(instStore));
+                            boolean getPsiSat = actionEnabled(getProc, instStore);
                             if (!getPsiSat) continue;
                             // Check if predicates match
                             Expression<recipe.lang.types.Boolean> splyGuard = splyProc.getMessageGuard();
@@ -537,8 +549,8 @@ public class Step {
                             CompositeStore getSelection = new CompositeStore(sys);
                             getSelection.push(instStore);
                             getSelection.pushReceiverStore(supplierStore);
-                            if (!(splyGuard instanceof NamedLocation) && !Condition.getTrue().equals(splyGuard.valueIn(supplySelection))) continue;
-                            if (!(getGuard instanceof NamedLocation) && !Condition.getTrue().equals(getGuard.valueIn(getSelection))) continue;
+                            if (!(splyGuard instanceof NamedLocation) && !selectionHolds(splyGuard, supplySelection)) continue;
+                            if (!(getGuard instanceof NamedLocation) && !selectionHolds(getGuard, getSelection)) continue;
 
                             Transition tr = new SupplyGetTransition();
                             tr.setProducer(supplier, sply);
