@@ -283,11 +283,11 @@ public abstract class LTOL {
 
         builder.group()
                 .prefix(of('!').trim(), (List<LTOL> values) -> new Not(values.get(1)))
-                .prefix(of('G').trim(), (List<LTOL> values) -> new Globally(values.get(1)))
-                .prefix(of('F').trim(), (List<LTOL> values) -> {
+                .prefix(of('G').seq(CharacterParser.word().or(of('-')).not()).trim(), (List<LTOL> values) -> new Globally(values.get(1)))
+                .prefix(of('F').seq(CharacterParser.word().or(of('-')).not()).trim(), (List<LTOL> values) -> {
                     return new Eventually(values.get(1));
                 })
-                .prefix(of('X').trim(), (List<LTOL> values) -> new Next(values.get(1)))
+                .prefix(of('X').seq(CharacterParser.word().or(of('-')).not()).trim(), (List<LTOL> values) -> new Next(values.get(1)))
                 .prefix(sufficientObs.trim(), (List<Object> values) -> new Possibly((Observation) values.get(0), (LTOL) values.get(1)))
                 .prefix(necessaryObs.trim(), (List<Object> values) -> {
                     return new Necessary((Observation) values.get(0), (LTOL) values.get(1));
