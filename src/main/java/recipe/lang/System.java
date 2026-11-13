@@ -269,6 +269,10 @@ public class System{
 
                                     if(entry.getValue().size() > 0) {
                                         Agent agent = entry.getValue().get(0).getAgent();
+                                        if (agent.getStore().getAttributes().containsKey("name")) {
+                                            throw new IllegalArgumentException("Agent " + agent.getName()
+                                                    + " declares local 'name', which is reserved for its instance identity.");
+                                        }
                                         Map<String, TypedVariable> name = new HashMap<>();
                                         TypedVariable nameVar = new TypedVariable(agentType, "name");
                                         name.put("name", nameVar);
