@@ -25,7 +25,7 @@ public class CliFormulaPreservationTest {
             else command.add("-mc");
             process = new ProcessBuilder(command)
                 .redirectErrorStream(true).redirectOutput(log.toFile()).start();
-            if (!bounded) process.getOutputStream().write("2\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            if (!bounded) process.getOutputStream().write("2\n2\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
             process.getOutputStream().close();
             assertTrue("CLI timed out", process.waitFor(20, TimeUnit.SECONDS));
             String output = Files.readString(log);
@@ -51,5 +51,10 @@ public class CliFormulaPreservationTest {
     public void symbolicCliCheckingReachesItsSmtFallback() throws Exception {
         assertCli(source("arithmetic-multiplication"), "G (sender-count >= 2)",
             "no counterexample found with bound 2", false);
+    }
+    @Test(timeout = 30000)
+    public void symbolicCliChecksMultipleSpecificationsWithSeparateBounds() throws Exception {
+        assertCli(source("arithmetic-multiplication"),
+            "G (sender-count >= 2);\nSPEC G (sender-count >= 0)", ">= 0", false);
     }
 }

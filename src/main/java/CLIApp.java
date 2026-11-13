@@ -126,6 +126,7 @@ public class CLIApp
                     Files.write(Path.of(filename + "/" + agentName + ".dot"), agentDot.getBytes(StandardCharsets.UTF_8));
                 }
             }
+            Scanner scanner = new Scanner(System.in);
             NuXmvInteraction nuXmvInteraction = null;
             if (cmd.hasOption("mc")) {
                 try {
@@ -145,9 +146,7 @@ public class CLIApp
                                 int bound = 0;
                                 if (system.isSymbolic()) {
                                     System.out.println("There is a symbolic specification, and thus bounded model checking will be used. Please specify an integer bound: ");
-                                    Scanner scanner = new Scanner(System.in);
                                     bound = scanner.nextInt();
-                                    scanner.close();
                                 }
                                 Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, false, bound);
                                 if (result.getLeft()) {
@@ -208,7 +207,6 @@ public class CLIApp
                 }
 
                 boolean exit = false;
-                Scanner scanner = new Scanner(System.in);
                 System.out.println("You have started simulation interactive mode, exit by pressing <ctrl+c>.");
                 System.out.println("Write any constraint you wish of the initial state and press <enter> to continue.");
                 String constraint = scanner.next();
