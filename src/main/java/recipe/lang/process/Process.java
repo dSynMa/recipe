@@ -6,6 +6,12 @@ import org.petitparser.tools.ExpressionBuilder;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.predicate.And;
+import recipe.lang.expressions.predicate.IsLessOrEqualThan;
+import recipe.lang.types.BoundedInteger;
+import recipe.lang.types.Number;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.types.Boolean;
 import recipe.lang.utils.TypingContext;
 
@@ -29,6 +35,16 @@ public abstract class Process {
 
     public abstract void addEntryCondition(Expression<Boolean> condition);
 
+    /** Require the assigned value to stay within its target's declared bounds. */
+    private static Expression<Boolean> boundedAssignmentCondition(
+            BoundedInteger type, Expression<Number> value) throws MismatchingTypeException {
+        TypedValue<Number> min = new TypedValue<>(recipe.lang.types.Integer.getType(), String.valueOf(type.getMin()));
+        TypedValue<Number> max = new TypedValue<>(recipe.lang.types.Integer.getType(), String.valueOf(type.getMax()));
+        Expression<Boolean> aboveMinimum = new IsLessOrEqualThan(min, value);
+        Expression<Boolean> belowMaximum = new IsLessOrEqualThan(value, max);
+        return new And(aboveMinimum, belowMaximum);
+    }
+
     public static Parser parser(TypingContext messageContext,
                                 TypingContext localContext,
                                 TypingContext communicationContext) throws Exception {
@@ -39,7 +55,23 @@ public abstract class Process {
 
         ExpressionBuilder builder = new ExpressionBuilder();
         builder.group()
-                .primitive(sendProcess.or(receiveProcess).or(getProcess).or(supplyProcess).trim())
+                .primitive(sendProcess.or(receiveProcess).or(getProcess).or(supplyProcess).trim()
+                        .map((BasicProcess action) -> {
+                            // An update outside a bounded local's domain has no successor.
+                            // Include feasibility in psi so progress and receive participation
+                            // use the same enabling condition as the transition relation.
+                            action.getUpdate().forEach((name, value) -> {
+                                if (localContext.get(name) instanceof BoundedInteger) {
+                                    BoundedInteger type = (BoundedInteger) localContext.get(name);
+                                    try {
+                                        action.addEntryCondition(boundedAssignmentCondition(type, value));
+                                    } catch (MismatchingTypeException e) {
+                                        throw new IllegalArgumentException("Invalid bounds for " + name, e);
+                                    }
+                                }
+                            });
+                            return action;
+                        }))
                 .wrapper(of('(').trim(), of(')').trim(),
                         (List<Process> values) -> values.get(1));
         
