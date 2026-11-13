@@ -181,11 +181,10 @@ public class TypingContext {
             if (entry.getValue() instanceof Guard) labels.add(entry.getKey());
         }
         for(String v : labels){
-            if(parser == null){
-                parser = StringParser.of(v);
-            } else{
-                parser = parser.or(StringParser.of(v));
-            }
+            // Match a complete call name, not a successful prefix of another guard.
+            Parser name = StringParser.of(v).seq(StringParser.of("(").trim().and())
+                    .map((List<Object> values) -> values.get(0));
+            parser = parser == null ? name : parser.or(name);
         }
 
         if(parser == null){
