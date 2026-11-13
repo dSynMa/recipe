@@ -81,8 +81,6 @@ public class NuXmvInteraction {
             outText = outText.replaceAll("(^|\\r|\\n)+\\*\\*\\*[^\\n|$]*($|\\r|\\n)+", "");
             byteArrayOutputStream.flush();
             byteArrayOutputStream.reset();
-            out.write(("\n").getBytes());
-            out.flush();
             if(outText.contains("not built")){
                 return outText;
             }
