@@ -162,6 +162,10 @@ public abstract class LTOL {
                             newAgentNames.setAll(agentNames);
 
                             TypingContext params = context.resolve();
+                            // Observations see enclosing binders, with the innermost binding winning.
+                            Map<String, Type> visibleAgentTypes = new HashMap<>(agentVariables.getVarType());
+                            visibleAgentTypes.putAll(params.getVarType());
+                            TypingContext visibleAgents = new TypingContext(visibleAgentTypes);
 
                             Pair<TypingContext, TypingContext> agentVarLabelsPair = agentTyping(params);
 
@@ -172,7 +176,7 @@ public abstract class LTOL {
 
                             try {
                                 Parser ltolParser = LTOL.parser(commonVars, messageVars, newAgentNames, newAgentVariables,
-                                        newTransitionLabels, params).trim();
+                                        newTransitionLabels, visibleAgents).trim();
                                 return ltolParser;
                             } catch (Exception e) {
                                 e.printStackTrace();
