@@ -33,6 +33,15 @@ public class ActionLabelEventTest {
         assertCtl(output, "sender-send & !sender-later & EX (!sender-send & sender-later)", true);
     }
 
+    @Test
+    public void quantifiedSupplyAndGetLabelReferencesAreStateFormulas() throws Exception {
+        String model = source("supplier-locality")
+            + "\nSPEC /\\ s: Sender . (G (s-send -> (\\/ r: Receiver . (r-receive))));\n";
+        String output = ToNuXmv.transform(parse(model));
+        assertValid(output);
+        String translated = output.substring(output.indexOf("LTLSPEC ") + 8).trim();
+        assertLtl(output, translated, true);
+    }
 
     @Test
     public void repeatedSendLabelDenotesEitherAlternative() throws Exception {

@@ -345,47 +345,23 @@ public abstract class LTOL {
         Set<LTOL> possibleValues = new HashSet<>();
         possibleValues.add(ltol);
         for (TypedVariable var : vars) {
-            Set<TypedVariable> possibleReferences = new HashSet<>();
-            Set<TypedValue> possibleAgentInstances = var.getType().getAllValues();
-            Set<String> possibleAgentInstancesNames = new HashSet<>();
-            Set<Agent> possibleAgentTypes = new HashSet<>();
-            Map<String, Type> agentInstanceNameToType = new HashMap<>();
-
-            for (Object concreteVar : possibleAgentInstances) {
-                TypedValue value = (TypedValue) concreteVar;
-                possibleAgentInstancesNames.add((String) value.getValue());
-                possibleAgentTypes.add(Config.getAgent(value.getType().name()));
-                agentInstanceNameToType.put((String) value.getValue(), value.getType());
-            }
-
-            boolean start = true;
-            for (Agent agent : possibleAgentTypes) {
-                if (start) {
-                    possibleReferences.addAll(agent.getStore().getAttributes().values());
-                    possibleReferences.addAll(agent.getAllTransitionLabels());
-                } else {
-                    possibleReferences.retainAll(agent.getStore().getAttributes().values());
-                    possibleReferences.retainAll(agent.getAllTransitionLabels());
-                }
-            }
-
-            Set<TypedVariable> labelledPossibleReferences = new HashSet<>();
-
-            for(TypedVariable ref : possibleReferences){
-                labelledPossibleReferences.add(new TypedVariable(ref.getType(), var.getName() + "-" + ref.getName()));
-            }
-
+            Set<TypedValue> instances = var.getType().getAllValues();
             Set<LTOL> newPossibleValues = new HashSet<>();
-
-            for(LTOL ltol1 : possibleValues){
-                for(String agentName : possibleAgentInstancesNames){
-                    LTOL ltol2 = ltol1.rename((x) -> labelledPossibleReferences.contains(x) ? new TypedVariable(x.getType(), x.toString().replaceAll("^" + var.toString(), agentName)) : x);
-                    Type agentType = agentInstanceNameToType.get(agentName);
-                    for(TypedVariable agentVar : vars) {
-                        ltol2 = ltol2.rename((x) -> x.getName().equals(agentVar.getName()) ? new TypedVariable(agentType, agentName) : x);
-                        java.lang.System.out.println(ltol2.toString());
-                        newPossibleValues.add(ltol2);
-                    }
+            for (LTOL formula : possibleValues) {
+                for (TypedValue instance : instances) {
+                    String name = (String) instance.getValue();
+                    // The parsed formula already carries the types of valid local references.
+                    // rename also respects variables shadowed by nested quantifiers.
+                    newPossibleValues.add(formula.rename(reference -> {
+                        if (reference.getName().startsWith(var.getName() + "-")) {
+                            return new TypedVariable(reference.getType(),
+                                    name + reference.getName().substring(var.getName().length()));
+                        }
+                        if (reference.getName().equals(var.getName())) {
+                            return new TypedVariable(instance.getType(), name);
+                        }
+                        return reference;
+                    }));
                 }
             }
 
