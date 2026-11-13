@@ -18,6 +18,8 @@ public class Config {
 
     public static void reset(){
         agentEnumTypeNames.clear();
+        agentEnumTypeNamesToAgent.clear();
+        agentType = new UnionType();
     }
 
     private static final List<String> agentEnumTypeNames = new ArrayList<>();

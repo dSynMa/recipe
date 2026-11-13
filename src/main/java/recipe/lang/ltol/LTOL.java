@@ -128,6 +128,7 @@ public abstract class LTOL {
                 .map((List<Object> types) -> {
                     UnionType type;
                     try {
+                        if (types.contains("Agent")) return Config.getAgentType();
                         Type firstType = Enum.getEnum((String) types.get(0));
 
                         if(types.size() == 1) return firstType;
@@ -138,11 +139,7 @@ public abstract class LTOL {
                         for(int i = 1; i < types.size(); i++){
                             if(((String) types.get(i)).contains("|")) continue;
                             String agentType = (String) types.get(i);
-                            if(agentType == "Agent") {
-                                return Config.getAgentType();
-                            } else{
-                                type.addType(Enum.getEnum(agentType));
-                            }
+                            type.addType(Enum.getEnum(agentType));
                         }
 
                         return type;
