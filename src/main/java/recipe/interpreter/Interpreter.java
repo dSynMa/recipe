@@ -142,7 +142,7 @@ public class Interpreter {
             JSONObject currConstraint = states.get(i-1);
             // We got to a state where progress = false, all the rest is irrelevant
             
-            if (currConstraint.has("___STUCK___")) break;
+            if (currConstraint.optBoolean("___STUCK___", false)) break;
             // If we are deadlocked, but no variable is changing in trace, then it's all right
             if (interpreter.isDeadlocked()) {
                 JSONObject stateValues = new JSONObject();

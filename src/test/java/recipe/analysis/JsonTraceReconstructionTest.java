@@ -37,4 +37,19 @@ public class JsonTraceReconstructionTest {
         var replay = Interpreter.ofJSON(parse(source("supplier-locality")), new JSONArray().put(initial()).put(next));
         assertEquals(2, replay.traceToJSON().size());
     }
+    @Test(timeout = 20000)
+    public void falseDeadlockAnnotationDoesNotTruncateReplay() throws Exception {
+        JSONArray states = new JSONArray().put(initial().put("___STUCK___", false))
+            .put(new JSONObject("{sender:{sent:'TRUE'},first:{received:'TRUE'}}"));
+        var replay = Interpreter.ofJSON(parse(source("supplier-locality")), states);
+        assertEquals(2, replay.traceToJSON().size());
+    }
+    @Test(timeout = 20000)
+    public void trueDeadlockAnnotationStillEndsReplay() throws Exception {
+        var model = parse(source("supplier-locality").replace("<TRUE> SUPPLY", "<FALSE> SUPPLY"));
+        JSONArray states = new JSONArray().put(initial().put("___STUCK___", true)).put(new JSONObject());
+        var replay = Interpreter.ofJSON(model, states);
+        assertEquals(1, replay.traceToJSON().size());
+        assertTrue(replay.isDeadlocked());
+    }
 }
