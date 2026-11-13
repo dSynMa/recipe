@@ -27,7 +27,7 @@ public class Until extends LTOL{
     }
 
     public String toString() {
-        return "(" + left + " U " + right + ")";
+        return "((" + left + ") U (" + right + "))";
     }
 
     public boolean isPureLTL() {
@@ -53,7 +53,7 @@ public class Until extends LTOL{
 
     @Override
     public String toNuXmv() {
-        return "(" + left.toNuXmv() + " U " + right.toNuXmv() + ")";
+        return "((" + left.toNuXmv() + ") U (" + right.toNuXmv() + "))";
     }
 
 }

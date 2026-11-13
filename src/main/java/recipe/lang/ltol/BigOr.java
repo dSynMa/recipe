@@ -28,7 +28,7 @@ public class BigOr extends LTOL{
         for (TypedVariable variable : vars) {
             fmt.add(variable.toTypedString());
         }
-        return "\\/" + String.join(" , ", fmt) + "." + "(" + ltol.toString() + ")";
+        return "\\/" + String.join(" , ", fmt) + ".(" + ltol + ")";
     }
 
     public boolean isPureLTL() {

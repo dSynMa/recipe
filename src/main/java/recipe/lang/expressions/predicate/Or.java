@@ -40,7 +40,7 @@ public class Or extends Condition {
 
 	@Override
 	public String toString() {
-		return "(" + lhs.toString() + ") | (" + rhs.toString() + ")";
+		return renderOperand(lhs) + " | " + renderOperand(rhs);
 	}
 
 	public Expression getLhs() {
@@ -110,7 +110,7 @@ public class Or extends Condition {
 
     @Override
     public String toNuXmv() {
-        return "(" + lhs.toNuXmv() + ") | (" + rhs.toNuXmv() + ")";
+        return renderNuXmvOperand(lhs) + " | " + renderNuXmvOperand(rhs);
     }
 
 }

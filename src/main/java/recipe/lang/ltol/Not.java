@@ -17,7 +17,7 @@ public class Not extends LTOL{
     public LTOL getLTOL() { return ltol; }
 
     public String toString(){
-        return "!(" + ltol.toString() + ")";
+        return "!(" + ltol + ")";
     }
 
     public boolean isPureLTL() {

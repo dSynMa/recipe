@@ -38,7 +38,7 @@ public class Not extends Condition {
 
 	@Override
 	public String toString() {
-		return "!(" + arg.toString() + ")";
+		return "!" + renderOperand(arg);
 	}
 
 	public Expression getArgument() {
@@ -94,7 +94,7 @@ public class Not extends Condition {
 
     @Override
     public String toNuXmv() {
-        return "!(" + arg.toNuXmv() + ")";
+        return "!" + renderNuXmvOperand(arg);
     }
 
 }

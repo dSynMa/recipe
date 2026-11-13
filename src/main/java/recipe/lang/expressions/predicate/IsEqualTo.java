@@ -51,7 +51,7 @@ public class IsEqualTo<T extends Type> extends Condition {
 
 	@Override
 	public String toString() {
-		return lhs + " = " + rhs;
+		return renderOperand(lhs) + " = " + renderOperand(rhs);
 	}
 
 	@Override
@@ -136,10 +136,6 @@ public class IsEqualTo<T extends Type> extends Condition {
         return renderNuXmvOperand(lhs) + " = " + renderNuXmvOperand(rhs);
     }
 
-    static String renderNuXmvOperand(Expression<?> operand) {
-        String value = operand.toNuXmv();
-        return operand instanceof Condition ? "(" + value + ")" : value;
-    }
 
 }
 

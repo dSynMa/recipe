@@ -21,7 +21,7 @@ public class And extends LTOL{
     public LTOL getRight() { return right; }
 
     public String toString(){
-        return "(" + left.toString() + " & " + right.toString() + ")";
+        return "((" + left + ") & (" + right + "))";
     }
 
     public boolean isPureLTL() {

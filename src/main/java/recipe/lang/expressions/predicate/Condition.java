@@ -26,6 +26,16 @@ import java.util.function.Function;
 import static org.petitparser.parser.primitive.CharacterParser.of;
 
 public abstract class Condition implements Expression<Boolean> {
+    protected static String renderOperand(Expression<?> operand) {
+        // Preserve grouping when a compound Boolean expression is used as an operand.
+        return operand instanceof Condition ? "(" + operand + ")" : operand.toString();
+    }
+
+    protected static String renderNuXmvOperand(Expression<?> operand) {
+        String rendered = operand.toNuXmv();
+        return operand instanceof Condition ? "(" + rendered + ")" : rendered;
+    }
+
 	static TypedValue<Boolean> TRUE;
 	static TypedValue<Boolean> FALSE;
 

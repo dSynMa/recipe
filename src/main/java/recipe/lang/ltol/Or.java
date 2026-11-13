@@ -21,7 +21,7 @@ public class Or extends LTOL{
     public LTOL getRight() { return right; }
 
     public String toString(){
-        return "(" + left.toString() + " | " + right.toString() + ")";
+        return "((" + left + ") | (" + right + "))";
     }
 
     public boolean isPureLTL() {
@@ -45,7 +45,7 @@ public class Or extends LTOL{
 
     @Override
     public String toNuXmv() {
-        return "(" + left.toNuXmv() + " | " + right.toNuXmv() + ")";
+        return "((" + left.toNuXmv() + ") | (" + right.toNuXmv() + "))";
     }
 
 }

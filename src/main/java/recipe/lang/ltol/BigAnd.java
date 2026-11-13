@@ -28,8 +28,7 @@ public class BigAnd extends LTOL {
         for (TypedVariable variable : vars) {
             fmt.add(variable.toTypedString());
         }
-        return "/\\" + String.join(" , ", fmt) + "." + "(" + ltol.toString() + ")";
-        // return "/\\" + vars.stream().map(Object::toString).collect(Collectors.joining(" , ")) + "." + "(" + ltol.toString() + ")";
+        return "/\\" + String.join(" , ", fmt) + ".(" + ltol + ")";
     }
 
     public boolean isPureLTL() {

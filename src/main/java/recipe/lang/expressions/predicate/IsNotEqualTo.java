@@ -39,7 +39,7 @@ public class IsNotEqualTo extends Condition {
 
 	@Override
 	public String toString() {
-		return lhs + " != " + rhs;
+		return renderOperand(lhs) + " != " + renderOperand(rhs);
 	}
 
 	@Override
@@ -107,7 +107,7 @@ public class IsNotEqualTo extends Condition {
 
     @Override
     public String toNuXmv() {
-        return IsEqualTo.renderNuXmvOperand(lhs) + " != " + IsEqualTo.renderNuXmvOperand(rhs);
+        return renderNuXmvOperand(lhs) + " != " + renderNuXmvOperand(rhs);
     }
 
 }
