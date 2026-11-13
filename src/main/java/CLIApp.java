@@ -132,7 +132,8 @@ public class CLIApp
                     if (system.getSpecs() == null || system.getSpecs().size() == 0) {
                         System.out.println("No specifications to model check.");
                     } else {
-                        String out = ToNuXmv.nuxmvModelChecking(system);
+                        // Skip the default nuXmv invocation: symbolic models require explicit SMT setup.
+                        String out = system.isSymbolic() ? "" : ToNuXmv.nuxmvModelChecking(system);
                         if (out.equals("") || system.isSymbolic()) {
                             nuXmvInteraction = new NuXmvInteraction(system);
                             for (int i = 0; i < system.getSpecs().size(); i++) {
