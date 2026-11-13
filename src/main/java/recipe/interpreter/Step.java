@@ -108,48 +108,54 @@ public class Step {
      * @param constraint a JSON object
      * @return true iff the state satisfies the constraint
      */
+    private static java.lang.Boolean traceBoolean(Object value) {
+        if (value instanceof java.lang.Boolean) return (java.lang.Boolean) value;
+        if (value instanceof String) {
+            if ("TRUE".equalsIgnoreCase((String) value)) return true;
+            if ("FALSE".equalsIgnoreCase((String) value)) return false;
+        }
+        return null;
+    }
+
     public boolean satisfies(Map<String,Observation> obsMap, JSONObject constraint) {
         // LTOL
         JSONObject ltol = constraint.optJSONObject("___LTOL___");
         if (ltol != null) {
             for (String obsVar : ltol.keySet()) {
                 if (obsVar.equals("no-observations")) continue;
-                Expression<recipe.lang.types.Boolean> observation = obsMap.get(obsVar).getObservation();
-                AgentInstance sender = this.inboundTransition.getProducer();
-                System.out.println(observation.toString());
-                System.out.println(sender.getLabel());
-                Store senderStore = this.parent.stores.get(sender);
+                java.lang.Boolean expectedObservation = traceBoolean(ltol.get(obsVar));
+                if (expectedObservation == null) return false;
+                Observation descriptor = obsMap.get(obsVar);
+                if (descriptor == null) return false;
+                if (inboundTransition == null || !(inboundTransition.getProducerProcess() instanceof SendProcess)) {
+                    if (expectedObservation) return false;
+                    continue;
+                }
+                AgentInstance sender = inboundTransition.getProducer();
+                Store senderStore = parent.stores.get(sender);
                 try {
-                    SendProcess sendProcess = (SendProcess) this.inboundTransition.getProducerTransition().getLabel();
-                    Expression chanExpr = sendProcess.getChannel();
-                    TypedValue chan = chanExpr.valueIn(senderStore);
-                    Map<TypedVariable, TypedValue> mp = new HashMap<>();
-                    mp.put(new TypedVariable<Type>(chan.getType(), "channel"), chan);
-                    recipe.lang.types.Enum senderEnum = recipe.lang.types.Enum.getEnum(sender.getAgent().getName());
-                    TypedValue senderName = null;
-                    for (TypedValue tv : senderEnum.getAllValues()) {
-                        // In some cases the agent instance name gets
-                        // treated like a variable. So we just add variables
-                        mp.put(new TypedVariable<Type>(tv.getType(), tv.toString()), tv);
-                        if (tv.toString().equals(sender.getLabel())) {
-                            senderName = tv;
-                            break;
-                        }
+                    SendProcess send = (SendProcess) inboundTransition.getProducerProcess();
+                    TypedValue channel = send.getChannel().valueIn(senderStore);
+                    Map<String, Expression> message = new HashMap<>();
+                    for (Map.Entry<String, Expression> entry : send.getMessage().entrySet()) {
+                        message.put(entry.getKey(), entry.getValue().valueIn(senderStore));
                     }
-                    mp.put(new TypedVariable<Type>(Config.getAgentType(), "sender"), senderName);
-                    Pair<Store, TypedValue> msgPair = makeMessageStore(senderStore, sendProcess, this.sys);
-                    Store store = new ConcreteStore(mp).push(msgPair.getLeft());
-                    boolean isObserved = Condition.getTrue().equals(observation.valueIn(store));
-                    if (isObserved != ltol.get(obsVar).equals("TRUE")) {
-                        System.out.printf(">> %s (%s): expected %s, got %s\n", obsVar, observation, ltol.get(obsVar), isObserved);
-                        return false;
-                    }
+                    Expression<recipe.lang.types.Boolean> selection = send.getMessageGuard().relabel(variable -> {
+                        if (variable.getName().equals("channel")) return channel;
+                        if (Config.isCvRef(sys, variable.getName())) return variable;
+                        return senderStore.getValue(variable);
+                    });
+                    // Use the same finite-domain observation semantics as translation:
+                    // quantify over assignments satisfying the sender's selection predicate.
+                    Expression<recipe.lang.types.Boolean> observed = recipe.analysis.ToNuXmv.specialiseObservationToSendTransition(
+                        Config.commVariableReferences(sys.getCommunicationVariables()), descriptor.getObservation(),
+                        selection, message, new TypedValue(Config.getAgentType(), sender.getLabel()), channel,
+                        sys.getMessageStructure().keySet());
+                    boolean actual = Condition.getTrue().equals(observed.valueIn(senderStore));
+                    if (actual != expectedObservation) return false;
                 } catch (Exception e) {
                     handleEvaluationException(e);
-                    // If the observation was supposed to be satisfied
-                    // then something's wrong
-                    if (ltol.get(obsVar).equals("TRUE"))
-                        return false;
+                    return false;
                 }
             }
         }
