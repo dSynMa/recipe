@@ -29,20 +29,13 @@ public class ToNuXmvTest {
     }
 
     @Test
-    public void nuxmvLTL() throws Exception {
-        String script = String.join("\n", Files.readAllLines(Paths.get("./bigger-example.txt")));
-        Parser system = System.parser().end();
-        Result r = system.parse(script);
-        System s = r.get();
-        try {
-            ToNuXmv.nuxmvModelChecking(s);
-//            java.lang.System.out.println(transform);
-        } catch (Exception e) {
-            e.printStackTrace();
-            assert r.isFailure();
-        }
-        assert r.isSuccess();
-
+    public void directBatchCheckingRejectsInfiniteDomainModels() throws Exception {
+        String script = Files.readString(Paths.get("./bigger-example.txt"));
+        System system = System.parser().end().parse(script).get();
+        java.io.IOException error = org.junit.Assert.assertThrows(java.io.IOException.class,
+                () -> ToNuXmv.nuxmvModelChecking(system));
+        org.junit.Assert.assertTrue(error.getMessage(),
+                error.getMessage().contains("infinite domain variables"));
     }
 
     @Test

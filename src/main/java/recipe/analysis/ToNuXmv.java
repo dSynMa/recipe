@@ -3,11 +3,11 @@ package recipe.analysis;
 import static recipe.Config.commVariableReferences;
 import static recipe.Config.isCvRef;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -299,34 +299,26 @@ public class ToNuXmv {
     }
 
     public static String nuxmvModelChecking(System system) throws Exception {
-        BufferedWriter writer = new BufferedWriter(new FileWriter("translation.smv"));
-        String script = transform(system);
-        writer.write(script);
-        writer.close();
-        Runtime rt = Runtime.getRuntime();
-        String[] cmd = new String[] {Config.getNuxmvPath(), " translation.smv"};
-        // Process pr = rt.exec(Config.getNuxmvPath() + " translation.smv");
-        Process pr = rt.exec(cmd);
-
-        AtomicReference<String> out = new AtomicReference<>("");
-
-        new Thread(() -> {
-            BufferedReader input = new BufferedReader(new InputStreamReader(pr.getInputStream()));
-            String line = null;
-
-            try {
-                while ((line = input.readLine()) != null) {
-                    if(!line.startsWith("***") && !line.trim().equals(""))
-                        out.set(out.get() + line + "\n");
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }).start();
-
-        pr.waitFor();
-
-        return out.get();
+        Path model = Files.createTempFile("rcheck-direct-", ".smv");
+        Process process = null;
+        try {
+            Files.writeString(model, transform(system));
+            process = new ProcessBuilder(Config.getNuxmvPath(), model.toString())
+                    .redirectErrorStream(true).start();
+            process.getOutputStream().close();
+            String output = new String(process.getInputStream().readAllBytes(),
+                    StandardCharsets.UTF_8);
+            int exitCode = process.waitFor();
+            if (exitCode != 0) throw new IOException("nuXmv exited with status " + exitCode + ":\n" + output);
+            return output.lines().filter(line -> !line.startsWith("***") && !line.isBlank())
+                    .collect(Collectors.joining("\n"));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
+        } finally {
+            if (process != null) process.destroy();
+            Files.deleteIfExists(model);
+        }
     }
 
     public static String nuxmvTypeOfTypedVar(TypedVariable typedVariable){
