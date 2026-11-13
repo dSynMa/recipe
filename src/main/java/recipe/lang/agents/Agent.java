@@ -219,6 +219,7 @@ public class Agent {
         parser.set((StringParser.of("agent").trim().or(FailureParser.withMessage("Could not parse agent definition.")))
                     .seq(name.or(FailureParser.withMessage("Could not parse agent name.")))
                     .seq(Parsing.labelledParser("local", Parsing.typedVariableList().optional(new ArrayList<>()))
+                            .optional(new ArrayList<>())
                             .mapWithSideEffects((List<TypedVariable> values) -> {
                                 localContext.get().clear();
                                 localContext.get().setAll(new TypingContext(values));
@@ -227,7 +228,7 @@ public class Agent {
                                     vars.put(var.getName(), new TypedVariable(var.getType(), var.getName()));
                                 }
                                 return vars;
-                            }).optional(new HashMap<>())) //.or(LazyParser.failingParser(nameString, "Could not parse agent's local definition."))))
+                            }))
                     .seq(Parsing.labelledParser("init", new LazyParser<TypingContext>((TypingContext context) -> {
                         try {
                             return Condition.parser(context).map((Object v) -> {
