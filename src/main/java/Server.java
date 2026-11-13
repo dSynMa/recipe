@@ -299,11 +299,9 @@ public class Server {
         try {
             // Convert i-th formula
             String unparsedSpec = system.getUnparsedSpecs().get(i).trim();
-            List<LTOL> singleton = system.getSpecs().subList(i, i+1);
-
-            Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(singleton);
-            List<LTOL> specs = toLtl.getLeft();
-            String spec = specs.get(0).toString();
+            // Number observations across the complete list, exactly as model generation does.
+            Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
+            String spec = toLtl.getLeft().get(i).toString();
 
             String info = String.format("[%d]  %s, %s", i, unparsedSpec, mcConfig.type);
             logger.info(info);
