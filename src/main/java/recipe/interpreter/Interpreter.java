@@ -147,22 +147,9 @@ public class Interpreter {
             if (interpreter.isDeadlocked()) {
                 JSONObject stateValues = new JSONObject();
                 for (String key : nextConstraint.keySet()) {
-                    if (key.startsWith("___")) continue;
-                    JSONObject values = new JSONObject(nextConstraint.getJSONObject(key).toString());
-                    // Event flags reset on deadlock stuttering; only persistent
-                    // state values must agree with the terminal interpreter state.
-                    for (AgentInstance instance : s.getAgentInstances()) {
-                        if (!instance.getLabel().equals(key)) continue;
-                        for (recipe.lang.process.Process action : instance.getAgent().getActions()) {
-                            if (action instanceof recipe.lang.process.BasicProcess) {
-                                String label = ((recipe.lang.process.BasicProcess) action).getLabel();
-                                if (label != null) values.remove(label);
-                            }
-                        }
-                    }
-                    stateValues.put(key, values);
+                    if (!key.startsWith("___")) stateValues.put(key, nextConstraint.get(key));
                 }
-                if (constraints.isEmpty()) break;
+                if (interpreter.currentStep.satisfies(Map.of(), stateValues)) break;
             }
             if (!interpreter.findNext(obsMap, nextConstraint, currConstraint)) {
                 throw new Exception(String.format("[ofTrace] something wrong at step %d", i));
