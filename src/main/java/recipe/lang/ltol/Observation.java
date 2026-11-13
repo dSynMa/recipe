@@ -39,7 +39,14 @@ public class Observation {
         cvAndMsg.addPredicate("exists");
         cvAndMsg.addPredicate("forall");
 
-        Parser primitive = Condition.parser(cvAndMsg).map(Observation::new);
+        Parser primitive = Condition.parser(cvAndMsg).map((Expression<Boolean> condition) -> {
+            try {
+                // Expanding guard calls exposes nested predicates before LTOL normalizes them.
+                return new Observation(condition.relabel(variable -> variable));
+            } catch (RelabellingTypeException | MismatchingTypeException e) {
+                throw new IllegalArgumentException("Cannot expand guards in observation", e);
+            }
+        });
 
         return primitive;
     }

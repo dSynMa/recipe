@@ -122,14 +122,25 @@ public class IsEqualTo<T extends Type> extends Condition {
 									   Function<Expression<Boolean>, Expression<Boolean>> act) {
 		if (cond.test(this)) {
 			return act.apply(this);
-		} else {
-			return this;
-		}
-	}
+        } else if (lhs.getType().equals(Boolean.getType()) && rhs.getType().equals(Boolean.getType())) {
+            try {
+                return new IsEqualTo(((Expression<Boolean>) lhs).replace(cond, act),
+                        ((Expression<Boolean>) rhs).replace(cond, act));
+            } catch (MismatchingTypeException e) {
+                throw new IllegalArgumentException(e);
+            }
+        } else {
+            return this;
+        }
+    }
 
-	public Condition removePreds(){
-		return new IsNotEqualTo(this.lhs.removePreds(), this.rhs.removePreds());
-	}
+    public Condition removePreds(){
+        try {
+            return new IsEqualTo(this.lhs.removePreds(), this.rhs.removePreds());
+        } catch (MismatchingTypeException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
 
     @Override
     public String toNuXmv() {
