@@ -153,9 +153,8 @@ public abstract class LTOL {
         Parser agentParametrizedStatement =
                 (Parsing.typedVariableList(agentTypeParser)
                         .map((List<TypedVariable> values) -> {
-                            for(TypedVariable value : values) {
-                                newAgentVars.get().set(value.getName(), value.getType());
-                            }
+                            // Each binder starts a fresh scope, including when this parser is reused.
+                            newAgentVars.set(new TypingContext(values));
                             return values;
                         })).seq(CharacterParser.of('.').trim())
                         .seq(new LazyParser<LazyTypingContext>((LazyTypingContext context) -> {
