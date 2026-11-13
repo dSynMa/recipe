@@ -175,7 +175,8 @@ public class NuXmvInteraction {
         // SMT simulation supports real arithmetic directly; Boolean conversion can
         // reject valid real expressions even when every state variable is finite.
 
-        if(out.contains(" file ")) {
+        // nuXmv diagnostics start with "file", without a preceding space.
+        if (Pattern.compile("(?m)^\\s*file .+: line [0-9]+:").matcher(out).find()) {
             return new Pair<>(false, out);
         }
 
