@@ -134,6 +134,14 @@ public class ToNuXmv {
     }
 
     public static Expression<Boolean> handleCVsInObservation(Map<String, Type> cvs, Expression<Boolean> obs, Expression<Boolean> sendGuard) throws Exception {
+        // A bare Boolean common variable denotes universal agreement over the send predicate.
+        // Negation is handled below, giving the dual existential meaning for !cv.
+        if (obs instanceof TypedVariable && obs.getType().equals(Boolean.getType())) {
+            String name = ((TypedVariable) obs).getName().replaceFirst("^@", "");
+            if (cvs.containsKey(name) || cvs.containsKey("@" + name)) {
+                return handleCVsInObservation(cvs, new Predicate("forall", obs), sendGuard);
+            }
+        }
         if(obs.getClass().equals(And.class)){
             And obss = (And) obs;
             return new And(handleCVsInObservation(cvs, obss.getLhs(), sendGuard), handleCVsInObservation(cvs, obss.getRhs(), sendGuard));
