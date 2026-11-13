@@ -52,17 +52,15 @@ public class CompositeStore extends Store {
     @Override
     public TypedValue getValue(Object attribute) {
 
+        boolean isCV = system != null && Config.isCvRef(system, attribute.toString());
         for (int i = stack.size()-1; i >= 0; i--) {
+            // Selection predicates read local variables from their owner and
+            // common-variable references from the prospective partner only.
+            if (system != null && isCV != isReceiverStore.get(i)) continue;
             TypedValue result = stack.get(i).getValue(attribute);
-            Boolean isCV = false;
-            if (system != null) {
-                isCV = Config.isCvRef(system, attribute.toString());
-            }
-            if (result != null && (!isCV || isReceiverStore.get(i))) {
-                return result;
-            }
+            if (result != null) return result;
         }
-        
+
         return null;
     }
 }

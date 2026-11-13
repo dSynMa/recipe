@@ -402,7 +402,7 @@ public class Step {
                                         // Local variables get evaluated over the sender,
                                         // CVs get evaluated over the receiver (inst)
                                         CompositeStore sendGuardStore = new CompositeStore(sys);
-                                        sendGuardStore.push(senderStore);
+                                        sendGuardStore.push(senderStore.push(interpreter.getChannelTV(), chan));
                                         sendGuardStore.pushReceiverStore(instStore);
 
                                         TypedValue sendGuard = sendProcess.getMessageGuard().valueIn(sendGuardStore);
@@ -531,8 +531,14 @@ public class Step {
                                 // GET@foo = Only supplier with name foo will be chosen
                                 if (!isSelf && !getGuard.toString().equals(supplier.getLabel())) continue;
                             }
-                            if (!(splyGuard instanceof NamedLocation) && !Condition.getTrue().equals(splyGuard.valueIn(getterStore))) continue;
-                            if (!(getGuard instanceof NamedLocation) && !Condition.getTrue().equals(getGuard.valueIn(supplierStore))) continue;
+                            CompositeStore supplySelection = new CompositeStore(sys);
+                            supplySelection.push(supplierStore);
+                            supplySelection.pushReceiverStore(getterStore);
+                            CompositeStore getSelection = new CompositeStore(sys);
+                            getSelection.push(instStore);
+                            getSelection.pushReceiverStore(supplierStore);
+                            if (!(splyGuard instanceof NamedLocation) && !Condition.getTrue().equals(splyGuard.valueIn(supplySelection))) continue;
+                            if (!(getGuard instanceof NamedLocation) && !Condition.getTrue().equals(getGuard.valueIn(getSelection))) continue;
 
                             Transition tr = new SupplyGetTransition();
                             tr.setProducer(supplier, sply);
