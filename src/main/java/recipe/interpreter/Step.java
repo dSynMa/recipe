@@ -219,6 +219,16 @@ public class Step {
                         if (enabled != expected) return false;
                         continue;
                     }
+                    boolean eventLabel = inst.getAgent().getActions().stream().anyMatch(action ->
+                        action instanceof BasicProcess && varName.equals(((BasicProcess) action).getLabel()));
+                    if (eventLabel) {
+                        java.lang.Boolean expected = traceBoolean(instanceConstraint.get(varName));
+                        if (expected == null) return false;
+                        ProcessTransition taken = inboundTransition == null ? null : inboundTransition.findTransitionForAgent(inst);
+                        boolean actual = taken != null && varName.equals(taken.getLabel().getLabel());
+                        if (actual != expected) return false;
+                        continue;
+                    }
                     TypedVariable var = inst.getAgent().getStore().getAttribute(varName);
                     TypedValue value = this.stores.get(inst).getValue(var);
                     if (value != null) {
