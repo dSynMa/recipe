@@ -133,6 +133,7 @@ public class Interpreter {
         }
         String initConstraint = String.join(" & ", constraints);
         interpreter.init(initConstraint);
+        interpreter.currentStep.loadAnnotations(initState);
         // Walk the rest of the trace
         for (int i = 1; i < states.size(); i++) {
             JSONObject nextConstraint = states.get(i);

@@ -47,6 +47,8 @@ public class CompositeJSON extends JSONObject {
 
     @Override
     public Object opt(String key) {
+        // Loop starts annotate one trace position, not persistent model state.
+        if (key.equals("___LOOP___")) return diff.opt(key);
         Object oldObject = base.opt(key);
         Object newObject = diff.opt(key);
         if (newObject == null) return oldObject;
@@ -65,6 +67,7 @@ public class CompositeJSON extends JSONObject {
         if (this.keys == null) {
             keys = new HashSet<>(diff.keySet());
             keys.addAll(base.keySet());
+            if (!diff.has("___LOOP___")) keys.remove("___LOOP___");
         }
         return this.keys;
     }
