@@ -63,6 +63,7 @@ public class AgentInstance {
                     for(TypedVariable tv : agentLocalVars.get(val).values()){
                         contextt.set(tv.getName(), tv.getType());
                     }
+                    context.get().clear();
                     context.get().setAll(contextt);
                     return val;
                 });
