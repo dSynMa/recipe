@@ -4,6 +4,7 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
+import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.tools.ExpressionBuilder;
 import recipe.Config;
 import recipe.lang.expressions.Expression;
@@ -87,7 +88,7 @@ public abstract class Condition implements Expression<Boolean> {
 
 		for(String pred : context.getPredicates()){
 			builder.group()
-					.prefix(StringParser.of(pred).trim(), (List<Condition> values) -> new Predicate(pred, values.get(1)));
+					.prefix(StringParser.of(pred).seq(CharacterParser.word().not()).trim(), (List<Condition> values) -> new Predicate(pred, values.get(1)));
 		}
 
 		// Equality binds before conjunction; equivalence and implication bind after disjunction.
