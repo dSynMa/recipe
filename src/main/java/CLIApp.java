@@ -136,7 +136,7 @@ public class CLIApp
                         if (out.equals("") || system.isSymbolic()) {
                             nuXmvInteraction = new NuXmvInteraction(system);
                             for (int i = 0; i < system.getSpecs().size(); i++) {
-                                String spec = system.getSpecs().get(i).toString().replaceAll("^ *[^ ]+ +", "");
+                                String spec = system.getSpecs().get(i).toString();
                                 if(!system.getSpecs().get(i).isPureLTL()){
                                     System.out.println("LTOL model checking not supported yet, skipping model checking of:\n" + spec);
                                     continue;
@@ -173,7 +173,7 @@ public class CLIApp
                         String out = "";
                         nuXmvInteraction = new NuXmvInteraction(system);
                         for (int i = 0; i < system.getSpecs().size(); i++) {
-                            String spec = system.getSpecs().get(i).toString().replaceAll("^ *[^ ]+ +", "");
+                            String spec = system.getSpecs().get(i).toString();
                             if(!system.getSpecs().get(i).isPureLTL()){
                                 System.out.println("LTOL model checking not supported yet, skipping model checking of:\n" + spec);
                                 continue;
