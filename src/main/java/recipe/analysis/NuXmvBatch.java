@@ -161,7 +161,6 @@ public class NuXmvBatch {
                 case IC3_INVAR:
                     script.append("check_property_as_invar_ic3");
                     script.append(String.format(" -L \"%s\"", property));
-                    if (bound >= 0) { script.append(" -k " + bound); }
                     break;
                 case IC3_LTL:
                     script.append("check_ltlspec_ic3");
@@ -243,7 +242,9 @@ public class NuXmvBatch {
 
     public Pair<Boolean, String> modelCheckIc3(String property, boolean bounded, int steps) throws Exception {
         if (!bounded) steps = -1;
-        Path scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, Cmd.IC3_INVAR, Cmd.QUIT);
+        // The invariant-conversion command has no -k option; bounded checks use LTL IC3.
+        Cmd initialCommand = bounded ? Cmd.IC3_LTL : Cmd.IC3_INVAR;
+        Path scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, initialCommand, Cmd.QUIT);
         NuXmvResult result = callAndRead(scriptFile);
         if (result.success()) return result.toPair();
         // Previous call failed due to infinite-precision variables
@@ -255,7 +256,7 @@ public class NuXmvBatch {
         }
         else if (result.err == Error.INF_PRECISION) {
             // try INVARSPEC checking without boolean model
-            scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.IC3_INVAR, Cmd.QUIT);
+            scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, initialCommand, Cmd.QUIT);
             result = callAndRead(scriptFile);
             if (result.success()) return result.toPair();
             scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.IC3_LTL, Cmd.QUIT);
