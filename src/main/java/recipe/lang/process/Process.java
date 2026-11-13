@@ -2,6 +2,7 @@ package recipe.lang.process;
 
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.primitive.StringParser;
+import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.tools.ExpressionBuilder;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
@@ -94,7 +95,7 @@ public abstract class Process {
         
         // repetition is a prefix operator
         builder.group()
-                .prefix(StringParser.of("rep").trim(), (List<Process> values) -> new Iterative(values.get(1)));
+                .prefix(StringParser.of("rep").seq(CharacterParser.word().not()).trim(), (List<Process> values) -> new Iterative(values.get(1)));
 
         // sequence is right- and left-associative
         builder.group()
