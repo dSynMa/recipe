@@ -37,6 +37,8 @@ public class NuXmvInteraction {
     Thread process;
     boolean go = false;
     boolean go_msat = false;
+    private boolean booleanModelBuilt;
+    private boolean booleanModelUnavailable;
     boolean simulationStarted = false;
     Path path;
     recipe.lang.System system;
@@ -87,19 +89,30 @@ public class NuXmvInteraction {
         return outText;
     }
 
+    private static boolean booleanEncodingFailed(String output) {
+        return output.contains("Impossible to build a boolean FSM with infinite precision variables")
+                || output.contains("not suitable constants for operator")
+                // nuXmv 2.0 reports unsupported FLOOR nodes as a Boolean encoder error.
+                || output.contains("bdd_enc_eval_recur:");
+    }
+
     public Pair<Boolean, String> modelCheck(String property, Boolean bmc, int steps) throws IOException {
+        if ((system.isSymbolic() || booleanModelUnavailable) && !bmc && steps < 0)
+            return modelCheckic3(property, false, steps);
         if(bmc && !go_msat){
-            Pair<Boolean, String> initialise = initialise(bmc);
+            Pair<Boolean, String> initialise = initialise(bmc || (system.isSymbolic() || booleanModelUnavailable));
             if(!initialise.getLeft()){
                 return initialise;
             }
         } else if(!bmc && !go){
-            Pair<Boolean, String> initialise = initialise(bmc);
+            Pair<Boolean, String> initialise = initialise(bmc || (system.isSymbolic() || booleanModelUnavailable));
             if(!initialise.getLeft()){
                 return initialise;
             }
         }
 
+        if (booleanModelUnavailable && !bmc && steps < 0)
+            return modelCheckic3(property, false, steps);
         Predicate<String> finished = (x) ->{
             if(bmc){
                 if(x.contains("no counterexample found with bound " + steps)
@@ -118,7 +131,13 @@ public class NuXmvInteraction {
         };
 
         String out = "";
-        out = execute(finished, ((system.isSymbolic() || bmc ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() || bmc ? "-k " + steps : "")));
+        out = execute(finished, (((system.isSymbolic() || booleanModelUnavailable) || bmc ? "msat_" : "") + "check_ltlspec" + ((system.isSymbolic() || booleanModelUnavailable) || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ ((system.isSymbolic() || booleanModelUnavailable) || bmc ? "-k " + steps : "")));
+        if (!bmc && booleanEncodingFailed(out)) {
+            Pair<Boolean, String> smt = initialise(true);
+            if (!smt.getLeft()) return smt;
+            String command = steps < 0 ? "check_ltlspec_ic3 -i" : "msat_check_ltlspec_bmc -k " + steps;
+            out = execute(finished, command + " -p \"" + property + "\"");
+        }
         out = out.replaceAll("nuXmv > ", "").trim();
         out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
         return new Pair<>(true, out);
@@ -128,6 +147,20 @@ public class NuXmvInteraction {
         Pair<Boolean, String> initialise = initialise(true);
         if(!initialise.getLeft()){
             return initialise;
+        }
+
+        // nuXmv 2.0's finite IC3 engine does not enforce -k; use SMT for frame limits.
+        boolean useBooleanModel = !bounded && !system.isSymbolic() && !booleanModelUnavailable;
+        if (useBooleanModel && !booleanModelBuilt) {
+            String output = execute(text -> text.trim().endsWith("nuXmv >"), "build_boolean_model");
+            if (booleanEncodingFailed(output)) {
+                booleanModelUnavailable = true;
+                useBooleanModel = false;
+            } else {
+                if (Pattern.compile("(?m)^\\s*file .+: line [0-9]+:").matcher(output).find())
+                    return new Pair<>(false, output);
+                booleanModelBuilt = true;
+            }
         }
 
         Predicate<String> finished = (x) -> {
@@ -142,7 +175,9 @@ public class NuXmvInteraction {
         };
 
         String out = "";
-        out = execute(finished, ("check_ltlspec_ic3" + (bounded ? " -k " + steps : "") + " -p \"" + property + "\" "));
+        out = execute(finished, ("check_ltlspec_ic3" + (useBooleanModel ? "" : " -i") + (bounded ? " -k " + steps : "") + " -p \"" + property + "\" "));
+        if (useBooleanModel && booleanEncodingFailed(out))
+            out = execute(finished, "check_ltlspec_ic3 -i -p \"" + property + "\"");
         out = out.replaceAll("nuXmv > ", "").trim();
         out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
         if(out.contains("syntax error")){
@@ -153,10 +188,13 @@ public class NuXmvInteraction {
     }
 
     public Pair<Boolean, String> initialise(boolean simulateOrBMC) throws IOException {
-        String out = execute((x) -> x.trim().endsWith("nuXmv >"),"go" + ((system.isSymbolic() || simulateOrBMC) ? "_msat" : ""));
-        if(system.isSymbolic() || simulateOrBMC){
-            out += execute((x) -> x.trim().endsWith("nuXmv >"),"build_boolean_model");
+        String out = execute((x) -> x.trim().endsWith("nuXmv >"),"go" + (((system.isSymbolic() || booleanModelUnavailable) || simulateOrBMC) ? "_msat" : ""));
+        if (!simulateOrBMC && !system.isSymbolic() && !booleanModelUnavailable && booleanEncodingFailed(out)) {
+            booleanModelUnavailable = true;
+            return initialise(true);
         }
+        // SMT simulation supports real arithmetic directly; Boolean conversion can
+        // reject valid real expressions even when every state variable is finite.
 
         if(out.contains(" file ")) {
             return new Pair<>(false, out);

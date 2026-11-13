@@ -134,6 +134,7 @@ public class NuXmvBatch {
         BMC,
         INC_BMC,
         IC3_LTL,
+        IC3_BOOLEAN,
         IC3_INVAR,
         QUIT
     }
@@ -155,15 +156,21 @@ public class NuXmvBatch {
                     script.append(" -k " + bound);
                     break;
                 case INC_BMC:
-                    script.append("msat_check_ltlspec_sbmc_inc");
+                    // No -k silently stops at bmc_length (10 by default). Completeness
+                    // checking permits a proof instead of only searching for counterexamples.
+                    script.append("msat_check_ltlspec_sbmc_inc -c -k " + Integer.MAX_VALUE);
                     script.append(String.format(" -p \"%s\"", property));
                     break;
                 case IC3_INVAR:
-                    script.append("check_property_as_invar_ic3");
+                    script.append("check_property_as_invar_ic3 -i");
                     script.append(String.format(" -L \"%s\"", property));
                     break;
-                case IC3_LTL:
+                case IC3_BOOLEAN:
                     script.append("check_ltlspec_ic3");
+                    script.append(String.format(" -p \"%s\"", property));
+                    break;
+                case IC3_LTL:
+                    script.append("check_ltlspec_ic3 -i");
                     script.append(String.format(" -p \"%s\"", property));
                     if (bound >= 0) { script.append(" -k " + bound); }
                     break;
@@ -240,46 +247,34 @@ public class NuXmvBatch {
         return result;
     }
 
+    private static boolean booleanEncodingFailed(String output) {
+        return output.contains("Impossible to build a boolean FSM with infinite precision variables")
+                || output.contains("not suitable constants for operator")
+                // nuXmv 2.0 reports unsupported FLOOR nodes as a Boolean encoder error.
+                || output.contains("bdd_enc_eval_recur:");
+    }
+
     public Pair<Boolean, String> modelCheckIc3(String property, boolean bounded, int steps) throws Exception {
         if (!bounded) steps = -1;
-        // The invariant-conversion command has no -k option; bounded checks use LTL IC3.
-        Cmd initialCommand = bounded ? Cmd.IC3_LTL : Cmd.IC3_INVAR;
-        Path scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, initialCommand, Cmd.QUIT);
+        // Select the Boolean backend only for compatible, unbounded checks.
+        boolean useBooleanModel = !bounded && !system.isSymbolic();
+        Path scriptFile = useBooleanModel
+                ? newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, Cmd.IC3_BOOLEAN, Cmd.QUIT)
+                : newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.IC3_LTL, Cmd.QUIT);
         NuXmvResult result = callAndRead(scriptFile);
-        if (result.success()) return result.toPair();
-        // Previous call failed due to infinite-precision variables
-        else if (result.err == Error.NOT_INVAR) {
-            // Property was not an INVARSPEC
-            scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, Cmd.IC3_LTL, Cmd.QUIT);
-            result = callAndRead(scriptFile);
-            return result.toPair();
-        }
-        else if (result.err == Error.INF_PRECISION) {
-            // try INVARSPEC checking without boolean model
-            scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, initialCommand, Cmd.QUIT);
-            result = callAndRead(scriptFile);
-            if (result.success()) return result.toPair();
+        if (useBooleanModel && booleanEncodingFailed(result.output)) {
             scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.IC3_LTL, Cmd.QUIT);
-            return callAndRead(scriptFile).toPair();
+            result = callAndRead(scriptFile);
         }
-        // If we end up here, there's something wrong
-        result.err = Error.OTHER;
         return result.toPair();
     }
 
     public Pair<Boolean, String> modelCheckBmc(String property, boolean bounded, int steps) throws Exception {
         if (!bounded) steps = -1;
         Cmd bmcCommand = bounded ? Cmd.BMC : Cmd.INC_BMC;
-        Path scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, Cmd.BUILD_BOOLEAN, bmcCommand, Cmd.QUIT);
-        NuXmvResult result = callAndRead(scriptFile);
-        if (result.success()) return result.toPair();
-        
-        else if (result.err == Error.INF_PRECISION) {
-            scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, bmcCommand, Cmd.QUIT);
-            return callAndRead(scriptFile).toPair();
-        }
-        // If we end up here, there's something wrong
-        result.err = Error.OTHER;
-        return result.toPair();
+        // go_msat prepares the SMT model. Building a Boolean model additionally would
+        // reject real expressions even when all declared state variables are finite.
+        Path scriptFile = newNuxmvScript(steps, property, Cmd.GO_MSAT, bmcCommand, Cmd.QUIT);
+        return callAndRead(scriptFile).toPair();
     }
 }

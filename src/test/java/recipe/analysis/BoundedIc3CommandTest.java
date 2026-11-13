@@ -13,7 +13,7 @@ public class BoundedIc3CommandTest {
             var falseResult = checker.modelCheckIc3("sender-sent", true, 4);
             assertTrue(falseResult.getRight(), falseResult.getLeft());
             assertTrue(falseResult.getRight(), falseResult.getRight().contains("is false"));
-            var trueResult = checker.modelCheckIc3("G (sender-sent -> first-received)", true, 4);
+            var trueResult = checker.modelCheckIc3("G (sender-sent -> first-received)", true, 20);
             assertTrue(trueResult.getRight(), trueResult.getLeft());
             assertTrue(trueResult.getRight(), trueResult.getRight().contains("is true"));
         } finally {
