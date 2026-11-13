@@ -332,6 +332,15 @@ public abstract class LTOL {
 
     public abstract LTOL toLTOLwithoutQuantifiers() throws Exception;
 
+    /** Bound agent references include local variables, labels, and automaton state. */
+    protected static boolean isBoundAgentReference(TypedVariable reference, List<TypedVariable> boundVariables) {
+        for (TypedVariable bound : boundVariables) {
+            if (reference.getName().equals(bound.getName())
+                    || reference.getName().startsWith(bound.getName() + "-")) return true;
+        }
+        return false;
+    }
+
     protected static Set<LTOL> rewriteOutBigAndOr(List<TypedVariable> vars, LTOL ltol) throws Exception {
         Set<LTOL> possibleValues = new HashSet<>();
         possibleValues.add(ltol);
