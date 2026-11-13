@@ -64,12 +64,15 @@ public class TypedVariable<T extends Type> implements Expression<T> {
             return getType().equals(var.getType());
         } else if(getType().getClass().equals(Guard.class) && var.getType().getClass().equals(Guard.class)){
             return getType().equals(var.getType());
-        } else if(getType().getClass().equals(BoundedInteger.class) && var.getType().getClass().equals(Integer.class)) {
-            return Boolean.TRUE;
+        } else if (var.getType() instanceof BoundedInteger) {
+            if (!(getType() instanceof BoundedInteger)) return Boolean.FALSE;
+            BoundedInteger source = (BoundedInteger) getType();
+            BoundedInteger target = (BoundedInteger) var.getType();
+            return source.getMin() >= target.getMin() && source.getMax() <= target.getMax();
         } else if(getType().getClass().equals(Process.class) && var.getType().getClass().equals(Process.class)) {
             return getType().equals(var.getType());
         } else{
-            return this.getType().getClass().isAssignableFrom(var.getType().getClass());
+            return var.getType().getClass().isAssignableFrom(this.getType().getClass());
         }
     }
 
