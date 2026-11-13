@@ -182,7 +182,7 @@ public class Interpreter {
         
         // Find states that are loop-starts
         Matcher m = Pattern.compile(
-            "-- Loop starts here[\s\n]*-> State: 1.([0-9]+)",
+            "-- Loop starts here\\s*-> State: [0-9]+\\.([0-9]+)",
             Pattern.DOTALL
         ).matcher(trace);
         Set<Integer> loopingStates = new HashSet<>();
