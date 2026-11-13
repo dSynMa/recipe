@@ -17,19 +17,17 @@ public class Boolean extends Type {
 
     @Override
     public Object interpret(String value) throws MismatchingTypeException {
-        try {
-            return java.lang.Boolean.parseBoolean(value);
-        } catch (Exception e){
-            throw new MismatchingTypeException(value + " is not of type " + name());
-        }
+        if (value.equalsIgnoreCase("true")) return true;
+        if (value.equalsIgnoreCase("false")) return false;
+        throw new MismatchingTypeException(value + " is not of type " + name());
     }
 
     public org.petitparser.parser.Parser valueParser(){
-        return (StringParser.ofIgnoringCase("true")
+        return (StringParser.ofIgnoringCase("true").seq(org.petitparser.parser.primitive.CharacterParser.word().not()).flatten()
                 .map((String value) -> {
                     return Condition.getTrue();
                 }))
-                .or(StringParser.ofIgnoringCase("false")
+                .or(StringParser.ofIgnoringCase("false").seq(org.petitparser.parser.primitive.CharacterParser.word().not()).flatten()
                         .map((String value) -> {
                             return Condition.getFalse();
                         }));
