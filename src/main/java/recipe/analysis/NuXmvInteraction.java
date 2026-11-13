@@ -196,8 +196,10 @@ public class NuXmvInteraction {
             return new Pair<>(false, out);
         }
 
+        String state = parseLastState(out);
+        if (!state.startsWith("State:")) return new Pair<>(false, out);
         simulationStarted = true;
-        return new Pair<>(true, parseLastState(out));
+        return new Pair<>(true, state);
     }
 
     private String parseLastState(String text){
@@ -222,7 +224,8 @@ public class NuXmvInteraction {
         if (out.contains("UNSAT")) {
             return new Pair<>(false, "No reachable states.");
         } else {
-            return new Pair<>(true, parseLastState(out)); //To parse next state
+            String state = parseLastState(out);
+            return state.startsWith("State:") ? new Pair<>(true, state) : new Pair<>(false, out);
         }
     }
 
