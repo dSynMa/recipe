@@ -447,51 +447,33 @@ public class Step {
                                 }
                             });
 
-                            // Compute total number of transitions.
-                            int transitionCount = 1;
-                            Set<AgentInstance> instancesToRemove = new HashSet<AgentInstance>();
-                            for (AgentInstance ins : receivesMap.keySet()) {
-                                int receivesCount = receivesMap.get(ins).size();
-                                // System.err.printf("%s has %d receives over %s\n", ins, receivesCount, chan);
-                                if (!chan.toString().equals(Config.broadcast)) {
-                                    transitionCount *= receivesCount;
-                                } else {
-                                    // If this receiver has no receives
-                                    // but the communication is broadcast,
-                                    // just remove him from receivesMap
-                                    transitionCount *= Math.max(transitionCount, 1);
-                                    if (receivesCount == 0) {
-                                        // System.err.printf("removing %s from bcast\n", ins);
-                                        instancesToRemove.add(ins);
+                            // Each receiver chooses independently. Empty broadcast choices
+                            // idle; an empty multicast choice blocks the whole send.
+                            List<Map<AgentInstance, ProcessTransition>> combinations = new ArrayList<>();
+                            combinations.add(new HashMap<>());
+                            for (Map.Entry<AgentInstance, Set<ProcessTransition>> entry : receivesMap.entrySet()) {
+                                if (entry.getValue().isEmpty()) {
+                                    if (chan.toString().equals(Config.broadcast)) continue;
+                                    combinations.clear();
+                                    break;
+                                }
+                                List<Map<AgentInstance, ProcessTransition>> expanded = new ArrayList<>();
+                                for (Map<AgentInstance, ProcessTransition> combination : combinations) {
+                                    for (ProcessTransition receive : entry.getValue()) {
+                                        Map<AgentInstance, ProcessTransition> choice = new HashMap<>(combination);
+                                        choice.put(entry.getKey(), receive);
+                                        expanded.add(choice);
                                     }
                                 }
+                                combinations = expanded;
                             }
-                            for (AgentInstance instance : instancesToRemove) {
-                                receivesMap.remove(instance);
-                            }
-
-                            // If nobody is blocking we can create transitions
-                            if (transitionCount > 0) {
-                                SendReceiveTransition[] newTransitions = new SendReceiveTransition[transitionCount];
-                                for (int i = 0; i < transitionCount; i++) {
-                                    newTransitions[i] = new SendReceiveTransition();
-                                    newTransitions[i].setProducer(sender, tr);
+                            for (Map<AgentInstance, ProcessTransition> combination : combinations) {
+                                SendReceiveTransition transition = new SendReceiveTransition();
+                                transition.setProducer(sender, tr);
+                                for (Map.Entry<AgentInstance, ProcessTransition> entry : combination.entrySet()) {
+                                    transition.pushConsumer(entry.getKey(), entry.getValue());
                                 }
-                                // System.err.printf("Generated %d transition objects\n", transitionCount);
-                                // Populate transitions with the cartesian product of receives
-                                for (AgentInstance receiver : receivesMap.keySet()) {
-                                    // System.err.printf("Adding %s\n", receiver);
-                                    int i = 0;
-                                    while (i < transitionCount) {
-                                        for (ProcessTransition transition : receivesMap.get(receiver)) {
-                                            newTransitions[i].pushConsumer(receiver, transition);
-                                            i++;
-                                        }
-                                    }
-                                }
-                                for (SendReceiveTransition t : newTransitions) {
-                                    transitions.add(t);
-                                }
+                                transitions.add(transition);
                             }
                         }
                     } catch (Exception e) {
