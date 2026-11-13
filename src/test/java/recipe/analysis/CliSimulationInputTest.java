@@ -29,8 +29,9 @@ public class CliSimulationInputTest {
                 .redirectErrorStream(true).redirectOutput(log.toFile()).start();
             process.getOutputStream().write(input.getBytes(StandardCharsets.UTF_8));
             process.getOutputStream().close();
-            assertTrue("CLI timed out", process.waitFor(20, TimeUnit.SECONDS));
+            boolean completed = process.waitFor(20, TimeUnit.SECONDS);
             String output = Files.readString(log);
+            assertTrue("CLI timed out:\n" + output, completed);
             assertEquals(output, 0, process.exitValue());
             assertFalse(output, output.contains("syntax error"));
             return output;

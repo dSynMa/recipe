@@ -155,7 +155,7 @@ public class CLIApp
                                     out += spec + " (error) :\n" + result.getRight() + "\n";
                                 }
                             }
-                            nuXmvInteraction.stopNuXmvThread();
+                            if (!cmd.hasOption("sim")) nuXmvInteraction.stopNuXmvThread();
                         }
                         System.out.println(out);
                     }
@@ -192,7 +192,7 @@ public class CLIApp
                                 out += spec + " (error) :\n" + result.getRight() + "\n";
                             }
                         }
-                        nuXmvInteraction.stopNuXmvThread();
+                        if (!cmd.hasOption("sim")) nuXmvInteraction.stopNuXmvThread();
                         System.out.println(out);
                     }
                 } catch (ParseError parseError) {
