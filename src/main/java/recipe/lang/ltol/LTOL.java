@@ -281,7 +281,7 @@ public abstract class LTOL {
         builder.group()
                 .left(StringParser.of("U").trim(), (List<LTOL> values) -> new Until(values.get(0), values.get(2)))
                 .left(StringParser.of("W").trim(), (List<LTOL> values) -> new Or(new Globally(values.get(0)), new Until(values.get(0), values.get(2))))
-                .left(StringParser.of("R").trim(), (List<LTOL> values) -> new Until(new Not(values.get(0)), new Not(values.get(2))));
+                .left(StringParser.of("R").trim(), (List<LTOL> values) -> new Not(new Until(new Not(values.get(0)), new Not(values.get(2)))));
 
 
         builder.group()
