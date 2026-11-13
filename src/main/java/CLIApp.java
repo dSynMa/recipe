@@ -146,7 +146,7 @@ public class CLIApp
                                 int bound = 0;
                                 if (system.isSymbolic()) {
                                     System.out.println("There is a symbolic specification, and thus bounded model checking will be used. Please specify an integer bound: ");
-                                    bound = scanner.nextInt();
+                                    bound = Integer.parseInt(scanner.nextLine().trim());
                                 }
                                 Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, false, bound);
                                 if (result.getLeft()) {
@@ -206,10 +206,13 @@ public class CLIApp
                     nuXmvInteraction = new NuXmvInteraction(system);
                 }
 
-                boolean exit = false;
                 System.out.println("You have started simulation interactive mode, exit by pressing <ctrl+c>.");
                 System.out.println("Write any constraint you wish of the initial state and press <enter> to continue.");
-                String constraint = scanner.next();
+                if (!scanner.hasNextLine()) {
+                    scanner.close();
+                    return;
+                }
+                String constraint = scanner.nextLine();
                 Pair<Boolean, String> result = nuXmvInteraction.simulation_pick_init_state(constraint);
                 if (!result.getLeft()) {
                     System.out.println(result.getRight());
@@ -217,9 +220,10 @@ public class CLIApp
                     return;
                 }
 
-                while (!exit) {
+                while (true) {
                     System.out.println("Write any constraint you wish of the next state and press <enter> to continue.");
-                    constraint = scanner.next();
+                    if (!scanner.hasNextLine()) break;
+                    constraint = scanner.nextLine();
                     result = nuXmvInteraction.simulation_next(constraint);
                     System.out.println(result.getRight());
                     if (!result.getLeft()) {
