@@ -242,8 +242,22 @@ public class NuXmvBatch {
                     break;
             }
         }
+        reader.close();
+        // At EOF, a crash or external termination must not become a successful
+        // invocation merely because its output lacks a recognised diagnostic.
+        if (result.success()) {
+            try {
+                int exitCode = process.waitFor();
+                if (exitCode != 0) {
+                    result.err = Error.OTHER;
+                    outputBuilder.append("nuXmv exited with status ").append(exitCode).append('\n');
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted while waiting for nuXmv", e);
+            }
+        }
         result.output = outputBuilder.toString();
-        reader.close(); // Just to be sure
         return result;
     }
 
