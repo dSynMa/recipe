@@ -61,6 +61,10 @@ public class System{
         return messageStructure;
     }
 
+    public Map<String, Type> getGuardDefinitions() {
+        return Collections.unmodifiableMap(guardDefinitions);
+    }
+
     public Map<String, Type> getCommunicationVariables() {
         return communicationVariables;
     }

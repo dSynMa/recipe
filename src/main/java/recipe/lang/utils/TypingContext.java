@@ -176,7 +176,10 @@ public class TypingContext {
     public org.petitparser.parser.Parser guardNameParser(){
         Parser parser = null;
 
-        Set<String> labels = Guard.definitionLabels();
+        Set<String> labels = new HashSet<>();
+        for (Map.Entry<String, Type> entry : varType.entrySet()) {
+            if (entry.getValue() instanceof Guard) labels.add(entry.getKey());
+        }
         for(String v : labels){
             if(parser == null){
                 parser = StringParser.of(v);

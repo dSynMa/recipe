@@ -100,7 +100,8 @@ public abstract class LTOL {
     }
 
     public static org.petitparser.parser.Parser parser(System system) throws Exception {
-        TypingContext commonVars = new TypingContext(system.getCommunicationVariables());
+        TypingContext commonVars = new TypingContext(new HashMap<>(system.getCommunicationVariables()));
+        commonVars.setAll(new TypingContext(system.getGuardDefinitions()));
         TypingContext messageVars = new TypingContext(system.getMessageStructure());
 
         TypingContext agents = new TypingContext();
@@ -115,6 +116,7 @@ public abstract class LTOL {
         Pair<TypingContext, TypingContext> agentVarLabelsPair = agentTyping(agents);
 
         TypingContext agentVariables = agentVarLabelsPair.getLeft();
+        agentVariables.setAll(new TypingContext(system.getGuardDefinitions()));
         TypingContext transitionLabels = agentVarLabelsPair.getRight();
 
         return parser(commonVars, messageVars, agents, agentVariables, transitionLabels, new TypingContext());
