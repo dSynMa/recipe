@@ -298,34 +298,18 @@ public abstract class LTOL {
                 .left(StringParser.of("R").trim(), (List<LTOL> values) -> new Not(new Until(new Not(values.get(0)), new Not(values.get(2)))));
 
 
+        // Higher precedence groups are registered first.
         builder.group()
-                .right(StringParser.of("->").trim(), (List<LTOL> values) -> new Or(new Not(values.get(0)), values.get(2)))
-                .right(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<LTOL> values) -> {
-                    try {
-                        return new Iff(values.get(0), values.get(2));
-                    } catch (Exception e) {
-                        return e;
-                    }
-                })
-                .left(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<LTOL> values) -> {
-                    try {
-                        return new Iff(values.get(0), values.get(2));
-                    } catch (Exception e) {
-                        return e;
-                    }
-                })
-                .right(StringParser.of("!=").trim(), (List<LTOL> values) -> {
-                    return new Not(new Iff(values.get(0), values.get(2)));
-                })
-                .left(StringParser.of("!=").trim(), (List<LTOL> values) -> {
-                    return new Not(new Iff(values.get(0), values.get(2)));
-                });
-
+                .left(StringParser.of("=").plus().trim(), (List<LTOL> values) -> new Iff(values.get(0), values.get(2)))
+                .left(StringParser.of("!=").trim(), (List<LTOL> values) -> new Not(new Iff(values.get(0), values.get(2))));
         builder.group()
-                .right(of('&').plus().trim(), (List<LTOL> values) -> new And(values.get(0), values.get(2)))
-                .left(of('&').plus().trim(), (List<LTOL> values) -> new And(values.get(0), values.get(2)))
-                .right(of('|').plus().trim(), (List<LTOL> values) -> new Or(values.get(0), values.get(2)))
+                .left(of('&').plus().trim(), (List<LTOL> values) -> new And(values.get(0), values.get(2)));
+        builder.group()
                 .left(of('|').plus().trim(), (List<LTOL> values) -> new Or(values.get(0), values.get(2)));
+        builder.group()
+                .left(StringParser.of("<->").trim(), (List<LTOL> values) -> new Iff(values.get(0), values.get(2)));
+        builder.group()
+                .right(StringParser.of("->").trim(), (List<LTOL> values) -> new Or(new Not(values.get(0)), values.get(2)));
 
         return builder.build();
     }

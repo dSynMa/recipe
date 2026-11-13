@@ -145,45 +145,30 @@ public abstract class Condition implements Expression<Boolean> {
 					.prefix(StringParser.of(pred).trim(), (List<Condition> values) -> new Predicate(pred, values.get(1)));
 		}
 
-		// implication is right-associative
-		builder.group()
-				.right(StringParser.of("->").plus().trim(), (List<Condition> values) -> new Implies(values.get(0), values.get(2)));
-
-		// iff is left and right-associative
-		builder.group()
-				.right(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<Condition> values) -> {
-					try {
-						return new IsEqualTo(values.get(0), values.get(2));
-					} catch (Exception e) {
-						return e;
-					}
-				})
-				.left(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<Condition> values) -> {
-					try {
-						return new IsEqualTo(values.get(0), values.get(2));
-					} catch (Exception e) {
-						return e;
-					}
-				});
-
-		// is not equal to is left and right-associative
-		builder.group()
-				.right(StringParser.of("!=").trim(), (List<Condition> values) -> {
-					return new IsNotEqualTo(values.get(0), values.get(2));
-				})
-				.left(StringParser.of("!=").trim(), (List<Condition> values) -> {
-					return new IsNotEqualTo(values.get(0), values.get(2));
-				});
-
-		// conjunction is right- and left-associative
-		builder.group()
-				.right(of('&').plus().trim(), (List<Condition> values) -> new And(values.get(0), values.get(2)))
-				.left(of('&').plus().trim(), (List<Condition> values) -> new And(values.get(0), values.get(2)));
-
-		// disjunction is right- and left-associative
-		builder.group()
-				.right(of('|').plus().trim(), (List<Condition> values) -> new Or(values.get(0), values.get(2)))
-				.left(of('|').plus().trim(), (List<Condition> values) -> new Or(values.get(0), values.get(2)));
+		// Equality binds before conjunction; equivalence and implication bind after disjunction.
+        builder.group()
+                .left(StringParser.of("=").plus().trim(), (List<Condition> values) -> {
+                    try {
+                        return new IsEqualTo(values.get(0), values.get(2));
+                    } catch (MismatchingTypeException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+                })
+                .left(StringParser.of("!=").trim(), (List<Condition> values) -> new IsNotEqualTo(values.get(0), values.get(2)));
+        builder.group()
+                .left(of('&').plus().trim(), (List<Condition> values) -> new And(values.get(0), values.get(2)));
+        builder.group()
+                .left(of('|').plus().trim(), (List<Condition> values) -> new Or(values.get(0), values.get(2)));
+        builder.group()
+                .left(StringParser.of("<->").trim(), (List<Condition> values) -> {
+                    try {
+                        return new IsEqualTo(values.get(0), values.get(2));
+                    } catch (MismatchingTypeException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+                });
+        builder.group()
+                .right(StringParser.of("->").trim(), (List<Condition> values) -> new Implies(values.get(0), values.get(2)));
 
 		condition.set(builder.build());
 
