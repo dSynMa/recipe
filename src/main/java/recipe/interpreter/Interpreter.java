@@ -115,9 +115,19 @@ public class Interpreter {
         for (String agentInstance : initState.keySet()) {
             if (agentInstance.startsWith("___")) continue;
             JSONObject agentState = initState.getJSONObject(agentInstance);
+            AgentInstance instance = s.getAgentInstances().stream()
+                .filter(candidate -> candidate.getLabel().equals(agentInstance)).findFirst().orElse(null);
             for (String var : agentState.keySet()) {
                 if (varNames.contains(var)) {
                     constraints.add(String.format("%s-%s = %s", agentInstance, var, agentState.get(var)));
+                } else if (instance != null && instance.getAgent().getSendTransitions().stream()
+                        .anyMatch(action -> var.equals(action.getLabel().getLabel()))) {
+                    String value = agentState.get(var).toString();
+                    if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                        throw new IllegalArgumentException("[ofTrace] invalid send label value at step 0: " + var);
+                    }
+                    constraints.add(String.format("%s-%s = %s", agentInstance, var,
+                        java.lang.Boolean.parseBoolean(value) ? "TRUE" : "FALSE"));
                 }
             }
         }

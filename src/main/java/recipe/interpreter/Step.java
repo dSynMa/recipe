@@ -202,6 +202,18 @@ public class Step {
                         }
                         continue;
                     }
+                    boolean sendLabel = inst.getAgent().getSendTransitions().stream()
+                        .anyMatch(action -> varName.equals(action.getLabel().getLabel()));
+                    if (sendLabel) {
+                        String value = instanceConstraint.get(varName).toString();
+                        if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) return false;
+                        boolean expected = java.lang.Boolean.parseBoolean(value);
+                        boolean enabled = transitions.stream().anyMatch(action ->
+                            action.getProducer().getLabel().equals(agentInstanceName) && action.getProducerProcess() instanceof SendProcess
+                                && varName.equals(action.getProducerProcess().getLabel()));
+                        if (enabled != expected) return false;
+                        continue;
+                    }
                     TypedVariable var = inst.getAgent().getStore().getAttribute(varName);
                     TypedValue value = this.stores.get(inst).getValue(var);
                     if (value != null) {

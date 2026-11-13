@@ -10,7 +10,7 @@ public class ReceiverParticipationTest {
     public void disconnectedReceiverDoesNotBlockEitherSenderSelection() throws Exception {
         for (String selection : new String[] {"TRUE", "FALSE"}) {
             String output = translate("c", false, selection, true);
-            String send = definition(output, "sender-send");
+            String send = definition(output, "transition");
             assertTrue(send.contains("keep-all-receiver"));
             assertFalse(send.contains("next(receiver-receive) = TRUE"));
             assertCtl(output, "EX (sender-sent & !receiver-received)", true);

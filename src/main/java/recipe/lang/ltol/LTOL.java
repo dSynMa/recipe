@@ -57,13 +57,12 @@ public abstract class LTOL {
                 }
 
                 Set<String> agentspecificTransitionLabels = new HashSet<>();
-                for(ProcessTransition t : possibleAgent.getSendTransitions()){
-                    if(t.getLabel() != null && t.getLabel().getLabel() != null && !t.getLabel().getLabel().equals("")) {
-                        agentspecificTransitionLabels.add(t.getLabel().getLabel());
-                    }
-                }
-                for(ProcessTransition t : possibleAgent.getReceiveTransitions()){
-                    if(t.getLabel() != null && t.getLabel().getLabel() != null && !t.getLabel().getLabel().equals("")) {
+                Set<ProcessTransition> labelledTransitions = new HashSet<>(possibleAgent.getSendTransitions());
+                labelledTransitions.addAll(possibleAgent.getReceiveTransitions());
+                labelledTransitions.addAll(possibleAgent.getSupplyTransitions());
+                labelledTransitions.addAll(possibleAgent.getGetTransitions());
+                for (ProcessTransition t : labelledTransitions) {
+                    if (t.getLabel() != null && t.getLabel().getLabel() != null && !t.getLabel().getLabel().isEmpty()) {
                         agentspecificTransitionLabels.add(t.getLabel().getLabel());
                     }
                 }

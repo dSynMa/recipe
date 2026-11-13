@@ -60,6 +60,28 @@ import recipe.lang.utils.exceptions.TypeCreationException;
 
 public class ToNuXmv {
 
+    /** Receive, supply, and get labels record the action leading into the next state. */
+    private static String labelEffects(String agent, recipe.lang.process.BasicProcess action) {
+        String label = action.getLabel();
+        if (label == null || label.isEmpty()) return "falsify-" + agent;
+        return "next(" + agent + "-" + label + ") = TRUE & falsify-not-" + agent + "-" + label;
+    }
+
+    private static void validateActionLabels(recipe.lang.System system) throws Exception {
+        for (recipe.lang.agents.Agent agent : system.getAgents()) {
+            for (recipe.lang.process.Process process : agent.getActions()) {
+                if (process instanceof recipe.lang.process.BasicProcess) {
+                    String label = ((recipe.lang.process.BasicProcess) process).getLabel();
+                    if (label != null && agent.getStore().getAttributes().containsKey(label)) {
+                        throw new IllegalArgumentException("Action label '" + label + "' in agent "
+                                + agent.getName() + " conflicts with a local variable. Rename the label or variable.");
+                    }
+                }
+            }
+        }
+    }
+
+
     private static String nuxmvType(Type type) {
         if (type instanceof Enum enumeration) {
             return "{" + String.join(",", enumeration.getValues().stream()
@@ -338,9 +360,10 @@ public class ToNuXmv {
         List<AgentInstance> agentInstances = system.getAgentInstances();
         Map<String, List<String>> agentSendPreds = new HashMap<>();
         Map<String, List<String>> agentSendProgressConds = new HashMap<>();
+        Map<String, List<String>> sendLabels = new java.util.LinkedHashMap<>();
 
         Set<String> sendProcessNames = new HashSet<>();
-        Set<String> receiveProcessNames = new HashSet<>();
+        Set<String> actionLabelNames = new HashSet<>();
         List<String> keepFunctions = new ArrayList<>();
 
         String keepAll = "keep-all := TRUE";
@@ -370,20 +393,22 @@ public class ToNuXmv {
             String falsifyAllLabelsNotOfI = "falsify-not-" + namei + " := TRUE";
             String falsifyAllLabelsOfI = "falsify-" + namei + " := TRUE";
 
-            Set<Transition> receiveAndSupplyTransitions = new HashSet<>(agenti.getReceiveTransitions());
-            // receiveAndSupplyTransitions.addAll(agenti.getSupplyTransitions());
+            Set<Transition> labelledTransitions = new HashSet<>(agenti.getReceiveTransitions());
+            labelledTransitions.addAll(agenti.getSupplyTransitions());
+            labelledTransitions.addAll(agenti.getGetTransitions());
+            Set<String> seenLabels = new HashSet<>();
 
-            for(Transition t : receiveAndSupplyTransitions){
+            for(Transition t : labelledTransitions){
                 String label = ((BasicProcess) t.getLabel()).getLabel();
-                if (label != null && !label.equals("")){
+                if (label != null && !label.equals("") && seenLabels.add(label)){
                     keepThis += " & next(" + namei + "-" + label + ") = FALSE";
                     falsifyAllLabelsNotOfI += " & next(" + namei + "-" + label + ") = FALSE";
                     keepAll += " & next(" + namei + "-" + label + ") = FALSE";
                     falsifyAllLabelsOfI += " & next(" + namei + "-" + label + ") = FALSE";
-                    receiveProcessNames.add(namei + "-" + label);
+                    actionLabelNames.add(namei + "-" + label);
 
                     String falsifyAllLabelsExceptThis = "falsify-not-" + namei + "-" + label + " := TRUE";
-                    for(Transition tt : receiveAndSupplyTransitions){
+                    for(Transition tt : labelledTransitions){
                         String receiveLabel = ((BasicProcess) tt.getLabel()).getLabel();
                         if(receiveLabel != null && !receiveLabel.equals(label) &&!receiveLabel.equals("")){
                             falsifyAllLabelsExceptThis += " & next(" + namei + "-" + receiveLabel + ") = FALSE";
@@ -829,11 +854,11 @@ public class ToNuXmv {
                             agentSendProgressCond += "\n \t\t& (" + String.join(")\n\n \t\t& (", agentReceiveProgressConds) + ")";
                         }
 
-                        if(sendingProcess.getLabel() != null && !sendingProcess.getLabel().equals("")) {
-                            define +=  "\t" + sendingAgentName + "-" + sendingProcess.getLabel() + " := " + agentSendPred + ";\n";
-                            transitionSendPreds.add(sendingAgentName + "-" + sendingProcess.getLabel());
-                        } else {
-                            transitionSendPreds.add(agentSendPred);
+                        transitionSendPreds.add(agentSendPred);
+                        String label = sendingProcess.getLabel();
+                        if (label != null && !label.isEmpty()) {
+                            sendLabels.computeIfAbsent(sendingAgentName + "-" + label, key -> new ArrayList<>())
+                                .add("(" + sendStateIsCurrentState + ") & (" + agentSendProgressCond + ")");
                         }
 
                         transitionSendProgressCond.add(agentSendProgressCond);
@@ -853,7 +878,7 @@ public class ToNuXmv {
                         supplyTriggeredIf.add(supplierStateIsCurrentState);
                         supplyTriggeredIf.add((supplyProcess.getPsi().relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify()).toNuXmv());
                         
-                        supplyEffects.add("falsify-" + sendingAgentName);
+                        supplyEffects.add(labelEffects(sendingAgentName, supplyProcess));
                         // A supply/get interaction does not execute a channel send.
                         supplyEffects.add("no-observations");
                         // add next state to supply effects
@@ -933,7 +958,7 @@ public class ToNuXmv {
                                     List<String> getTriggeredIf = new ArrayList<>();
                                     getTriggeredIf.add(getterStateIsCurrentState);
                                     List<String> getEffects = new ArrayList<>();
-                                    getEffects.add("falsify-" + getterName);
+                                    getEffects.add(labelEffects(getterName, gt.getLabel()));
                                     GetProcess getProcess = (GetProcess) gt.getLabel();
                                 
                                     Expression<recipe.lang.types.Boolean> getTransitionGuard = getProcess.getPsi()
@@ -1027,7 +1052,7 @@ public class ToNuXmv {
                                             if (otherName != sendingAgentName && otherName != getterName)
                                                 getEffects.add(String.format("keep-all-%s", otherName));
                                         }
-                                        // TODO add "falsify-" defines to allow mentioning labelled get/supply actions in specs
+
                                         // TODO deal with LTOL observations
 
                                         String splyLbl = sendingAgentName + "-";
@@ -1043,6 +1068,7 @@ public class ToNuXmv {
                                             getLbl += String.format("unlabelled_get_%d", unlabelledCounter++);
                                         }
                                         String lbl = splyLbl + "-" + getLbl;
+                                        while (getSupplyTrans.contains(lbl)) lbl += "-" + unlabelledCounter++;
 
                                         define += String.format(
                                             "\t%s := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s) \n\t\t& (%s);\n",
@@ -1096,10 +1122,15 @@ public class ToNuXmv {
         if (trans.strip() == "") trans = "FALSE";
         trans += ";\n";
 
-        for(String name : receiveProcessNames){
+        for(String name : actionLabelNames){
             vars += "\t" + name + " : " + "boolean;\n";
         }
         nuxmv += vars;
+        for (Map.Entry<String, List<String>> label : sendLabels.entrySet()) {
+            if (actionLabelNames.contains(label.getKey()))
+                throw new IllegalArgumentException("Send and event actions cannot share label " + label.getKey());
+            define += "\t" + label.getKey() + " := (" + String.join(") | (", label.getValue()) + ");\n";
+        }
         define += "\ttransition := " + trans;
         if(progress.size() > 0)
             define += "\tprogress := (" + String.join(")\n \t\t| (", progress) + ");\n";
@@ -1115,7 +1146,7 @@ public class ToNuXmv {
             nuxmv +=  String.join(", ", constants);
             nuxmv += ";\n";
 
-        for(String name : receiveProcessNames){
+        for(String name : actionLabelNames){
             init += "\t& " + name + " = " + "FALSE\n";
         }
 
