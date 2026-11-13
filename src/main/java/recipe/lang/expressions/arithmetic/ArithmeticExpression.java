@@ -77,6 +77,16 @@ public abstract class ArithmeticExpression implements Expression<Number> {
         return n.signum() == 0 || n.scale() <= 0 || n.stripTrailingZeros().scale() <= 0;
     }
 
+    /** Use an integer only when the exact result fits its concrete representation. */
+    protected static TypedValue<Number> numericResult(BigDecimal result) throws MismatchingTypeException {
+        try {
+            int integer = result.intValueExact();
+            return new TypedValue<>(recipe.lang.types.Integer.getType(), java.lang.Integer.toString(integer));
+        } catch (ArithmeticException fractionalOrOutOfRange) {
+            return new TypedValue<>(Real.getType(), result.toPlainString());
+        }
+    }
+
     public Set<Expression<Boolean>> subformulas(){
         Set<Expression<recipe.lang.types.Boolean>> subformulas = new HashSet<>();
         return subformulas;

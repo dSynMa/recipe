@@ -8,6 +8,8 @@ import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.predicate.And;
+import recipe.lang.expressions.predicate.IsEqualTo;
+import recipe.lang.expressions.arithmetic.Floor;
 import recipe.lang.expressions.predicate.IsLessOrEqualThan;
 import recipe.lang.types.BoundedInteger;
 import recipe.lang.types.Number;
@@ -57,10 +59,17 @@ public abstract class Process {
         builder.group()
                 .primitive(sendProcess.or(receiveProcess).or(getProcess).or(supplyProcess).trim()
                         .map((BasicProcess action) -> {
-                            // An update outside a bounded local's domain has no successor.
+                            // An update outside its integer target domain has no successor.
                             // Include feasibility in psi so progress and receive participation
                             // use the same enabling condition as the transition relation.
                             action.getUpdate().forEach((name, value) -> {
+                                if (localContext.get(name) instanceof recipe.lang.types.Integer) {
+                                    try {
+                                        action.addEntryCondition(new IsEqualTo(value, new Floor(value)));
+                                    } catch (MismatchingTypeException e) {
+                                        throw new IllegalArgumentException("Non-numeric update for " + name, e);
+                                    }
+                                }
                                 if (localContext.get(name) instanceof BoundedInteger) {
                                     BoundedInteger type = (BoundedInteger) localContext.get(name);
                                     try {
