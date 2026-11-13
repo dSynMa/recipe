@@ -339,10 +339,44 @@ public abstract class LTOL {
         return false;
     }
 
-    protected static Set<LTOL> rewriteOutBigAndOr(List<TypedVariable> vars, LTOL ltol) throws Exception {
-        Set<LTOL> possibleValues = new HashSet<>();
-        possibleValues.add(ltol);
+    private static final java.util.concurrent.atomic.AtomicLong nextBinderId =
+            new java.util.concurrent.atomic.AtomicLong();
+
+    /** Give binders internal names before substitution, so instance names cannot be captured. */
+    protected static Pair<List<TypedVariable>, LTOL> renameAgentBindings(
+            List<TypedVariable> vars, LTOL body, Function<TypedVariable, TypedVariable> relabelling)
+            throws RelabellingTypeException, MismatchingTypeException {
+        List<TypedVariable> freshVars = new ArrayList<>();
+        Map<String, String> names = new HashMap<>();
         for (TypedVariable var : vars) {
+            // ':' cannot occur in a parsed variable or instance name. Keep already-fresh binders.
+            String fresh = var.getName().startsWith(":agent:") ? var.getName()
+                    : ":agent:" + nextBinderId.getAndIncrement();
+            freshVars.add(new TypedVariable(var.getType(), fresh));
+            if (!fresh.equals(var.getName())) names.put(var.getName(), fresh);
+        }
+        if (!names.isEmpty()) {
+            body = body.rename(reference -> {
+                for (Map.Entry<String, String> entry : names.entrySet()) {
+                    String name = reference.getName();
+                    if (name.equals(entry.getKey()) || name.startsWith(entry.getKey() + "-")) {
+                        return new TypedVariable(reference.getType(),
+                                entry.getValue() + name.substring(entry.getKey().length()));
+                    }
+                }
+                return reference;
+            });
+        }
+        LTOL renamed = body.rename(reference -> isBoundAgentReference(reference, freshVars)
+                ? reference : relabelling.apply(reference));
+        return new Pair<>(freshVars, renamed);
+    }
+
+    protected static Set<LTOL> rewriteOutBigAndOr(List<TypedVariable> vars, LTOL ltol) throws Exception {
+        Pair<List<TypedVariable>, LTOL> hygienic = renameAgentBindings(vars, ltol, reference -> reference);
+        Set<LTOL> possibleValues = new HashSet<>();
+        possibleValues.add(hygienic.getRight());
+        for (TypedVariable var : hygienic.getLeft()) {
             Set<TypedValue> instances = var.getType().getAllValues();
             Set<LTOL> newPossibleValues = new HashSet<>();
             for (LTOL formula : possibleValues) {

@@ -47,7 +47,8 @@ public class BigOr extends LTOL{
     }
     @Override
     public LTOL rename(Function<TypedVariable, TypedVariable> relabelling) throws RelabellingTypeException, MismatchingTypeException {
-        return new BigOr(vars, ltol.rename(x -> isBoundAgentReference(x, vars) ? x : relabelling.apply(x)));
+        recipe.lang.utils.Pair<List<TypedVariable>, LTOL> renamed = renameAgentBindings(vars, ltol, relabelling);
+        return new BigOr(renamed.getLeft(), renamed.getRight());
     }
 
     public LTOL toLTOLwithoutQuantifiers() throws Exception {
