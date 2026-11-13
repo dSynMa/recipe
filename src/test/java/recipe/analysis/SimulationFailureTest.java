@@ -75,6 +75,9 @@ public class SimulationFailureTest {
             var next = checker.simulation_next("TRUE");
             assertTrue(next.getRight(), next.getLeft());
             assertTrue(next.getRight(), next.getRight().contains("sender-sent = TRUE"));
+            var unchangedValues = checker.simulation_next("TRUE");
+            assertTrue(unchangedValues.getRight(), unchangedValues.getLeft());
+            assertTrue(unchangedValues.getRight(), unchangedValues.getRight().startsWith("State: 1.3"));
         } finally { Files.deleteIfExists(checker.path); }
     }
     @Test(timeout = 30000)
@@ -87,4 +90,17 @@ public class SimulationFailureTest {
         } finally { Files.deleteIfExists(checker.path); }
     }
 
+    @Test(timeout = 30000)
+    public void impossibleStepStillReportsNoReachableState() throws Exception {
+        NuXmvInteraction checker = checker();
+        try {
+            assertTrue(checker.simulation_pick_init_state("TRUE").getLeft());
+            var result = checker.simulation_next("FALSE");
+            assertFalse(result.getRight(), result.getLeft());
+            assertFalse(result.getRight().isBlank());
+            var recovery = checker.simulation_next("TRUE");
+            assertTrue(recovery.getRight(), recovery.getLeft());
+            assertTrue(recovery.getRight(), recovery.getRight().contains("sender-sent = TRUE"));
+        } finally { Files.deleteIfExists(checker.path); }
+    }
 }

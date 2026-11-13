@@ -40,6 +40,7 @@ public class NuXmvInteraction {
     private boolean booleanModelBuilt;
     private boolean booleanModelUnavailable;
     boolean simulationStarted = false;
+    private String simulationStateHeader;
     Path path;
     recipe.lang.System system;
 
@@ -198,6 +199,7 @@ public class NuXmvInteraction {
 
         String state = parseLastState(out);
         if (!state.startsWith("State:")) return new Pair<>(false, out);
+        simulationStateHeader = state.lines().findFirst().orElse("");
         simulationStarted = true;
         return new Pair<>(true, state);
     }
@@ -225,7 +227,13 @@ public class NuXmvInteraction {
             return new Pair<>(false, "No reachable states.");
         } else {
             String state = parseLastState(out);
-            return state.startsWith("State:") ? new Pair<>(true, state) : new Pair<>(false, out);
+            if (!state.startsWith("State:")) return new Pair<>(false, out);
+            String header = state.lines().findFirst().orElse("");
+            // nuXmv can print the existing trace without an UNSAT diagnostic when
+            // the constraint admits no successor. A state must actually advance.
+            if (header.equals(simulationStateHeader)) return new Pair<>(false, "No reachable states.");
+            simulationStateHeader = header;
+            return new Pair<>(true, state);
         }
     }
 
