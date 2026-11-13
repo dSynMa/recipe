@@ -121,7 +121,9 @@ public class Interpreter {
                 .filter(candidate -> candidate.getLabel().equals(agentInstance)).findFirst().orElse(null);
             for (String var : agentState.keySet()) {
                 if (varNames.contains(var)) {
-                    constraints.add(String.format("%s-%s = %s", agentInstance, var, agentState.get(var)));
+                    Object value = agentState.get(var);
+                    if (value instanceof java.lang.Boolean) value = (java.lang.Boolean) value ? "TRUE" : "FALSE";
+                    constraints.add(String.format("%s-%s = %s", agentInstance, var, value));
                 } else if (instance != null && instance.getAgent().getSendTransitions().stream()
                         .anyMatch(action -> var.equals(action.getLabel().getLabel()))) {
                     String value = agentState.get(var).toString();

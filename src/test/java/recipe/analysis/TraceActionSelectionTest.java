@@ -33,4 +33,14 @@ public class TraceActionSelectionTest {
 
     @Test(timeout = 20000)
     public void getEventFlagsSelectTheMatchingAction() throws Exception { check(true); }
+    @Test(timeout = 20000)
+    public void deadlockStutterCanClearThePreviousActionFlags() throws Exception {
+        var model = parse(source("observation-forall-constant").replace("SPEC G (<forall(TRUE)>true);", ""));
+        JSONObject initial = new JSONObject("{sender:{sent:'FALSE',send:'TRUE'},receiver:{received:'FALSE',receive:'FALSE'}}");
+        JSONObject next = new JSONObject("{sender:{sent:'TRUE',send:'FALSE'},receiver:{received:'TRUE',receive:'TRUE'}}");
+        JSONObject stutter = new JSONObject("{sender:{send:'FALSE'},receiver:{receive:'FALSE'}}");
+        var replay = Interpreter.ofJSON(model, new JSONArray().put(initial).put(next).put(stutter));
+        assertTrue(replay.isDeadlocked());
+        assertEquals(2, replay.traceToJSON().size());
+    }
 }

@@ -102,11 +102,6 @@ public class Step {
         return result;
     }
 
-    /**
-     * Check satisfaction of a state constraint
-     * @param constraint a JSON object
-     * @return true iff the state satisfies the constraint
-     */
     private static java.lang.Boolean traceBoolean(Object value) {
         if (value instanceof java.lang.Boolean) return (java.lang.Boolean) value;
         if (value instanceof String) {
@@ -116,6 +111,11 @@ public class Step {
         return null;
     }
 
+    /**
+     * Check satisfaction of a state constraint
+     * @param constraint a JSON object
+     * @return true iff the state satisfies the constraint
+     */
     public boolean satisfies(Map<String,Observation> obsMap, JSONObject constraint) {
         // LTOL
         JSONObject ltol = constraint.optJSONObject("___LTOL___");
@@ -211,9 +211,8 @@ public class Step {
                     boolean sendLabel = inst.getAgent().getSendTransitions().stream()
                         .anyMatch(action -> varName.equals(action.getLabel().getLabel()));
                     if (sendLabel) {
-                        String value = instanceConstraint.get(varName).toString();
-                        if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) return false;
-                        boolean expected = java.lang.Boolean.parseBoolean(value);
+                        java.lang.Boolean expected = traceBoolean(instanceConstraint.get(varName));
+                        if (expected == null) return false;
                         boolean enabled = transitions.stream().anyMatch(action ->
                             action.getProducer().getLabel().equals(agentInstanceName) && action.getProducerProcess() instanceof SendProcess
                                 && varName.equals(action.getProducerProcess().getLabel()));
@@ -252,7 +251,8 @@ public class Step {
                         }
                         else if (value.getType() instanceof recipe.lang.types.Boolean) {
                             // Go for Boolean comparison
-                            boolean isConstraintTrue = instanceConstraint.get(varName).equals("TRUE");
+                            java.lang.Boolean isConstraintTrue = traceBoolean(instanceConstraint.get(varName));
+                            if (isConstraintTrue == null) return false;
                             if (!value.getValue().equals(isConstraintTrue)) {
                                 System.out.printf(
                                     ">>%s-%s: Expected %s, got %s\n",
