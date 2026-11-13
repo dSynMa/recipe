@@ -352,7 +352,7 @@ public class Step {
                     TypedValue chan = (TypedValue) objChan;
                     Store s = store.push(interpreter.getChannelTV(), chan);
                     TypedValue evalGuard = instance.getAgent().getReceiveGuard().valueIn(s);
-                    boolean isListening = Condition.getTrue().equals(evalGuard);
+                    boolean isListening = chan.toString().equals(Config.broadcast) || Condition.getTrue().equals(evalGuard);
                     // System.out.printf("eval %s on store %s ---> %s\n", instance.getAgent().getReceiveGuard(), s, isListening);
                     if (isListening) {
                         listeners.putIfAbsent(chan, new HashSet<>());
@@ -389,7 +389,7 @@ public class Step {
                             // b) be listening to channel "chan"
                             // c) satisfy send guard
                             Map<AgentInstance, Set<ProcessTransition>> receivesMap = new HashMap<AgentInstance, Set<ProcessTransition>>();
-                            for (AgentInstance inst : listeners.get(chan)) {
+                            for (AgentInstance inst : listeners.getOrDefault(chan, Set.of())) {
                                 if (inst != sender) {
                                     try {
                                         Store instStore = stores.get(inst).push(msgStore);
@@ -403,15 +403,19 @@ public class Step {
                                         boolean sendGuardOk = Condition.getTrue().equals(sendGuard);
 
                                         TypedValue receiveGuard = inst.getAgent().getReceiveGuard().valueIn(instStore);
-                                        boolean receiveGuardOk = Condition.getTrue().equals(receiveGuard);
+                                        boolean receiveGuardOk = chan.toString().equals(Config.broadcast) || Condition.getTrue().equals(receiveGuard);
                                         // System.out.printf("sendguard: %s (%s)\n", sendGuard, sendGuardOk);
                                         // System.out.printf("receiveguard: %s (%s)\n", receiveGuard, receiveGuardOk);
 
                                         if (sendGuardOk && receiveGuardOk) {
                                             receivesMap.put(inst, new HashSet<ProcessTransition>());
+                                        } else if (!chan.toString().equals(Config.broadcast)) {
+                                            // Every listening multicast receiver must be selected.
+                                            return;
                                         }
                                     } catch (Exception e) {
                                         handleEvaluationException(e);
+                                        if (!chan.toString().equals(Config.broadcast)) return;
                                     }
                                 }
                             }
