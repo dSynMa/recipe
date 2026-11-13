@@ -185,6 +185,13 @@ public class ToNuXmv {
             } else {
                 return obs;
             }
+        } else if (obs instanceof IsNotEqualTo) {
+            IsNotEqualTo inequality = (IsNotEqualTo) obs;
+            if (inequality.getLhs().getType().equals(Boolean.getType())) {
+                return new Not(handleCVsInObservation(cvs,
+                    new IsEqualTo(inequality.getLhs(), inequality.getRhs()), sendGuard));
+            }
+            return obs;
         } else if(obs.getClass().equals(Predicate.class)){
             Predicate obss = (Predicate) obs;
             //t(forall(o)) = /\cv g_s -> o
