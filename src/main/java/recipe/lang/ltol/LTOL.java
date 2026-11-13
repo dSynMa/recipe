@@ -88,6 +88,17 @@ public abstract class LTOL {
         return new Pair<>(agentVariables, transitionLabels);
     }
 
+    private static TypingContext shadowAgentReferences(TypingContext enclosing,
+                                                       TypingContext inner, TypingContext binders) {
+        Map<String, Type> references = new HashMap<>(enclosing.getVarType());
+        // A shadowed agent loses all old fields and labels, including ones absent from its new type.
+        for (String name : binders.getVarType().keySet()) {
+            references.keySet().removeIf(reference -> reference.startsWith(name + "-"));
+        }
+        references.putAll(inner.getVarType());
+        return new TypingContext(references);
+    }
+
     public static org.petitparser.parser.Parser parser(System system) throws Exception {
         TypingContext commonVars = new TypingContext(system.getCommunicationVariables());
         TypingContext messageVars = new TypingContext(system.getMessageStructure());
@@ -169,10 +180,10 @@ public abstract class LTOL {
 
                             Pair<TypingContext, TypingContext> agentVarLabelsPair = agentTyping(params);
 
-                            TypingContext newAgentVariables = agentVarLabelsPair.getLeft();
-                            newAgentVariables.setAll(agentLocalVariables);
-                            TypingContext newTransitionLabels = agentVarLabelsPair.getRight();
-                            newTransitionLabels.setAll(transitionLabels);
+                            TypingContext newAgentVariables = shadowAgentReferences(
+                                    agentLocalVariables, agentVarLabelsPair.getLeft(), params);
+                            TypingContext newTransitionLabels = shadowAgentReferences(
+                                    transitionLabels, agentVarLabelsPair.getRight(), params);
 
                             try {
                                 Parser ltolParser = LTOL.parser(commonVars, messageVars, newAgentNames, newAgentVariables,
