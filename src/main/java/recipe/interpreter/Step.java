@@ -236,13 +236,12 @@ public class Step {
                         if (value.getType() instanceof recipe.lang.types.Number) {
                             // Go for numerical comparison
                             try {
-                                Double x = Double.valueOf(instanceConstraint.get(varName).toString());
-                                Double y = Double.valueOf(value.getValue().toString());
-                                double delta = Math.abs(x - y);
-                                if (delta > Double.MIN_VALUE) {
+                                java.math.BigDecimal x = new java.math.BigDecimal(instanceConstraint.get(varName).toString());
+                                java.math.BigDecimal y = new java.math.BigDecimal(value.getValue().toString());
+                                if (x.compareTo(y) != 0) {
                                     System.out.printf(
-                                        ">>%s-%s: Expected %s, got %s (%s)\n",
-                                        inst.getLabel(), varName, x, y, delta);
+                                        ">>%s-%s: Expected %s, got %s\n",
+                                        inst.getLabel(), varName, x, y);
                                     return false;
                                 }
                             } catch (NumberFormatException e) {
