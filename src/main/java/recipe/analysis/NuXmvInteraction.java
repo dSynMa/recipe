@@ -44,8 +44,8 @@ public class NuXmvInteraction {
     public NuXmvInteraction(recipe.lang.System system) throws Exception {
         this.system = system;
         String nuxmvScript = ToNuXmv.transform(system);
-        if(Files.exists(Path.of("./forInteraction.smv"))) Files.delete(Path.of("./forInteraction.smv"));
-        path = Files.createFile(Path.of("./forInteraction.smv"));
+        path = Files.createTempFile("rcheck-interactive-", ".smv");
+        path.toFile().deleteOnExit();
         Files.write(path, nuxmvScript.getBytes(StandardCharsets.UTF_8));
         process = startNuXmvThread();
     }

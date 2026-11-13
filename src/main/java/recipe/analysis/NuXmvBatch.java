@@ -43,9 +43,8 @@ public class NuXmvBatch {
     public NuXmvBatch(System system) throws Exception {
         this.system = system;
         String nuxmvScript = ToNuXmv.transform(system);
-        Path smvPath = Path.of("./forInteraction.smv");
-        Files.deleteIfExists(smvPath);
-        path = Files.createFile(smvPath).toRealPath();
+        path = Files.createTempFile("rcheck-model-", ".smv");
+        path.toFile().deleteOnExit();
         Files.write(path, nuxmvScript.getBytes(StandardCharsets.UTF_8));
     }
 
