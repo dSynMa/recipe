@@ -118,7 +118,7 @@ public class NuXmvInteraction {
         String out = "";
         out = execute(finished, ((system.isSymbolic() || bmc ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() || bmc ? "-k " + steps : "")));
         out = out.replaceAll("nuXmv > ", "").trim();
-        out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
+        out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
         return new Pair<>(true, out);
     }
 
@@ -142,7 +142,7 @@ public class NuXmvInteraction {
         String out = "";
         out = execute(finished, ("check_ltlspec_ic3" + (bounded ? " -k " + steps : "") + " -p \"" + property + "\" "));
         out = out.replaceAll("nuXmv > ", "").trim();
-        out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
+        out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
         if(out.contains("syntax error")){
             return new Pair<>(false, out);
         } else{
@@ -303,8 +303,8 @@ public class NuXmvInteraction {
     public JSONObject outputToJSON(String nuxmvSimOutput){
         JSONObject jsonObject = new JSONObject();
 
-        if(nuxmvSimOutput.toLowerCase(Locale.ROOT).contains("keep-all = true")){
-            // We're stuttering
+        if(Pattern.compile("(?mi)^[ \t]*progress[ \t]*=[ \t]*FALSE[ \t]*$").matcher(nuxmvSimOutput).find()){
+            // No interaction is enabled; an unchanged transition alone is not a deadlock.
             jsonObject.put("___STUCK___", true);
         }
 

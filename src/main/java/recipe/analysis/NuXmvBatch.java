@@ -52,8 +52,8 @@ public class NuXmvBatch {
     public JSONObject outputToJSON(String nuxmvSimOutput) {
         JSONObject jsonObject = new JSONObject();
 
-        if (nuxmvSimOutput.toLowerCase(Locale.ROOT).contains("keep-all = true")) {
-            // We're stuttering
+        if (Pattern.compile("(?mi)^[ \t]*progress[ \t]*=[ \t]*FALSE[ \t]*$").matcher(nuxmvSimOutput).find()) {
+            // No interaction is enabled; an unchanged transition alone is not a deadlock.
             jsonObject.put("___STUCK___", true);
         }
 
@@ -217,7 +217,7 @@ public class NuXmvBatch {
             }
             if (nextLine.startsWith("*** "))
                 continue;
-            nextLine = nextLine.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)",
+            nextLine = nextLine.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)",
                     "");
 
             if (!nextLine.isBlank()) {
