@@ -309,6 +309,10 @@ public class Interpreter {
     private static String initialValue(recipe.lang.expressions.TypedVariable variable, Object value) throws Exception {
         if (variable.getType().name().equals("channel") && recipe.Config.broadcast.equals(value.toString()))
             return recipe.Config.nuxmvBroadcast;
+        // Render numbers as plain decimal real literals, avoiding scientific notation
+        // and nuXmv's integer-literal range limit.
+        if (variable.getType() instanceof recipe.lang.types.Number)
+            return new recipe.lang.expressions.TypedValue<>(recipe.lang.types.Real.getType(), value.toString()).toString();
         return value.toString();
     }
 
