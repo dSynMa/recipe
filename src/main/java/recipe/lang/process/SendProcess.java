@@ -82,6 +82,9 @@ public class SendProcess extends BasicProcessWithMessage {
         TypingContext localAndChannelAndCommunicationContext =
                 TypingContext.union(localContext, commVariableReferences(communicationContext));
 
+        if (localContext.get(Config.channelLabel) == null) {
+            localAndChannelAndCommunicationContext.set(Config.channelLabel, Enum.getEnum(Config.channelLabel));
+        }
         Parser messageGuard = Condition.typeParser(localAndChannelAndCommunicationContext);
 
         Parser messageAssignment = Parsing.assignmentListParser(messageContext, localContext);

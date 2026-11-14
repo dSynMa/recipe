@@ -140,7 +140,8 @@ public class Step {
                         message.put(entry.getKey(), entry.getValue().valueIn(senderStore));
                     }
                     Expression<recipe.lang.types.Boolean> selection = send.getMessageGuard().relabel(variable -> {
-                        if (variable.getName().equals("channel")) return channel;
+                        if (variable.getName().equals("channel")
+                                && !sender.getAgent().getStore().getAttributes().containsKey("channel")) return channel;
                         if (Config.isCvRef(sys, variable.getName())) return variable;
                         return senderStore.getValue(variable);
                     });
@@ -435,7 +436,8 @@ public class Step {
                                         // Local variables get evaluated over the sender,
                                         // CVs get evaluated over the receiver (inst)
                                         CompositeStore sendGuardStore = new CompositeStore(sys);
-                                        sendGuardStore.push(senderStore.push(interpreter.getChannelTV(), chan));
+                                        sendGuardStore.push(sender.getAgent().getStore().getAttributes().containsKey("channel")
+                                            ? senderStore : senderStore.push(interpreter.getChannelTV(), chan));
                                         sendGuardStore.pushReceiverStore(instStore);
 
                                         TypedValue sendGuard = sendProcess.getMessageGuard().valueIn(sendGuardStore);
