@@ -325,7 +325,7 @@ public class NuXmvInteraction {
                     if (count < 0) break;
                     String text = new String(buffer, 0, count, StandardCharsets.UTF_8);
                     textt.add(text);
-                    if (text.trim().replace(" ", "").toLowerCase(Locale.ROOT).endsWith("nuxmv>")) {
+                    if (String.join("", textt).trim().replace(" ", "").toLowerCase(Locale.ROOT).endsWith("nuxmv>")) {
                         outw.write(String.join("", textt).getBytes(StandardCharsets.UTF_8));
                         outw.flush();
                         textt.clear();
