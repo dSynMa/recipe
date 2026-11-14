@@ -104,11 +104,10 @@ public class Parsing {
                 .or(Enum.generalValueParser());
     }
 
-    public static org.petitparser.parser.Parser assignmentListParser(TypingContext variableContext,
-                                                                     TypingContext expressionContext) throws Exception {
-        AtomicReference<Type> assignmentType = new AtomicReference<>();
+    private static Parser assignmentValueParser(TypingContext expressionContext,
+                                                AtomicReference<Type> assignmentType) throws Exception {
         Parser generalExpression = expressionParser(expressionContext);
-        Parser assignmentValue = new LazyParser<Type>(ignored -> {
+        return new LazyParser<Type>(ignored -> {
             Type type = assignmentType.get();
             if (type instanceof Enum) {
                 // Enum literals may also spell Boolean literals or values of another enum.
@@ -118,6 +117,12 @@ public class Parsing {
             }
             return generalExpression;
         }, null);
+    }
+
+    public static org.petitparser.parser.Parser assignmentListParser(TypingContext variableContext,
+                                                                     TypingContext expressionContext) throws Exception {
+        AtomicReference<Type> assignmentType = new AtomicReference<>();
+        Parser assignmentValue = assignmentValueParser(expressionContext, assignmentType);
         Parser assignment =
                 variableContext.variableParser().mapWithSideEffects((TypedVariable target) -> {
                             assignmentType.set(target.getType());
@@ -431,15 +436,29 @@ public class Parsing {
 
     public static Parser relabellingParser(TypingContext localContext, TypingContext communicationContext) throws Exception {
         if(communicationContext.getVarType().size() > 0) {
+            AtomicReference<Type> targetType = new AtomicReference<>();
             return labelledParser("relabel", (communicationContext.variableParser().trim()
+                    .mapWithSideEffects((TypedVariable target) -> {
+                        targetType.set(target.getType());
+                        return target;
+                    })
                     .seq(StringParser.of("<-").trim())
-                    .seq(Parsing.expressionParser(localContext)).trim()).plus()
+                    .seq(assignmentValueParser(localContext, targetType)).trim()).plus()
             ).trim().map((List<Object> values) -> {
                 values.removeIf(v -> isWhitespace(v));
                 Map<TypedVariable, Expression> relabellingMap = new HashMap<>();
                 for (Object relabelObj : values) {
                     List relabel = (List) relabelObj;
-                    relabellingMap.put((TypedVariable) relabel.get(0), (Expression) relabel.get(2));
+                    TypedVariable target = (TypedVariable) relabel.get(0);
+                    Expression value = (Expression) relabel.get(2);
+                    boolean numeric = target.getType() instanceof recipe.lang.types.Number
+                        && value.getType() instanceof recipe.lang.types.Number;
+                    if (!numeric && !(target.getType().getClass().isAssignableFrom(value.getType().getClass())
+                            && value.isValidAssignmentFor(target))) {
+                        throw new IllegalArgumentException("Invalid relabelling for " + target.getName()
+                            + ": expected " + target.getType().name() + ", got " + value.getType().name());
+                    }
+                    relabellingMap.put(target, value);
                 }
                 return relabellingMap;
             });
