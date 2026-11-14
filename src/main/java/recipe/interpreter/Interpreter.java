@@ -142,6 +142,7 @@ public class Interpreter {
         if (!interpreter.currentStep.satisfies(obsMap, initState)) {
             throw new Exception("[ofTrace] something wrong at step 0");
         }
+        interpreter.validateDeadlockAnnotation(initState, 0);
         interpreter.currentStep.loadAnnotations(initState);
         // Walk the rest of the trace
         for (int i = 1; i < states.size(); i++) {
@@ -158,8 +159,15 @@ public class Interpreter {
             if (!interpreter.findNext(obsMap, nextConstraint, currConstraint)) {
                 throw new Exception(String.format("[ofTrace] something wrong at step %d", i));
             }
+            interpreter.validateDeadlockAnnotation(nextConstraint, i);
         }
         return interpreter;
+    }
+
+    private void validateDeadlockAnnotation(JSONObject state, int index) throws Exception {
+        if (state.optBoolean("___STUCK___", false) && !isDeadlocked()) {
+            throw new Exception("[ofTrace] false deadlock annotation at step " + index);
+        }
     }
 
     /**
