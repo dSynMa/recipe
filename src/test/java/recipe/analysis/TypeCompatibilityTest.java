@@ -68,6 +68,18 @@ public class TypeCompatibilityTest {
                 .isValidAssignmentFor(new TypedVariable<>(first, "target")));
     }
 
+    @Test
+    public void literalNarrowingRemainsValueBased() throws Exception {
+        TypedVariable<BoundedInteger> target = new TypedVariable<>(new BoundedInteger(0, 2), "target");
+        assertFalse(target.getType().accepts(Real.getType()));
+        assertTrue(new TypedValue<>(Real.getType(), "2.0").isValidAssignmentFor(target));
+        assertFalse(new TypedValue<>(Real.getType(), "2.5").isValidAssignmentFor(target));
+        assertFalse(new TypedValue<>(Real.getType(), "3.0").isValidAssignmentFor(target));
+        TypedVariable<UnionType> unionTarget = new TypedVariable<>(new UnionType(
+                List.of(target.getType(), recipe.lang.types.Boolean.getType())), "choice");
+        assertTrue(new TypedValue<>(Real.getType(), "2.0").isValidAssignmentFor(unionTarget));
+        assertFalse(new TypedValue<>(Real.getType(), "3.0").isValidAssignmentFor(unionTarget));
+    }
 
     @Test
     public void booleanPredicatesUseTheSameTypeRule() {

@@ -42,6 +42,13 @@ public class GuardReference extends Condition {
             Expression value = parametersValues[i];
 
             if (value.isValidAssignmentFor(typedVariable)) {
+                if (value instanceof TypedValue && value.getType() instanceof recipe.lang.types.Number
+                        && typedVariable.getType() instanceof recipe.lang.types.Integer) {
+                    // Integer parameters must not introduce real tokens into finite-domain equality.
+                    String integer = new java.math.BigDecimal(((TypedValue) value).getValue().toString())
+                        .toBigIntegerExact().toString();
+                    value = new TypedValue(typedVariable.getType(), integer);
+                }
                 this.parametersValues[i] = value;
             } else {
                 throw new MismatchingTypeException(value.toString() + " is not a valid value for " + typedVariable.toString() + " in guard definition " + guardType.name() + ".");
