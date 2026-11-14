@@ -156,7 +156,8 @@ public class Interpreter {
                 for (String key : nextConstraint.keySet()) {
                     if (!key.startsWith("___")) stateValues.put(key, nextConstraint.get(key));
                 }
-                if (interpreter.currentStep.satisfies(Map.of(), stateValues)) break;
+                // Compress this stutter, but still validate any later snapshots.
+                if (interpreter.currentStep.satisfies(Map.of(), stateValues)) continue;
             }
             if (!interpreter.findNext(obsMap, nextConstraint, currConstraint)) {
                 throw new Exception(String.format("[ofTrace] something wrong at step %d", i));
