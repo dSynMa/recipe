@@ -196,6 +196,7 @@ public class Agent {
     public static org.petitparser.parser.Parser parser(TypingContext messageContext,
                                                        TypingContext communicationContext,
                                                        TypingContext guardDefinitionContext) throws Exception {
+        java.util.List<String> channelNames = recipe.lang.types.Enum.getEnum(recipe.Config.channelLabel).getValues();
         SettableParser parser = SettableParser.undefined();
         Function<TypingContext, Parser> process = (TypingContext localContext) -> {
             try {
@@ -221,6 +222,12 @@ public class Agent {
                     .seq(Parsing.labelledParser("local", Parsing.typedVariableList().optional(new ArrayList<>()))
                             .optional(new ArrayList<>())
                             .mapWithSideEffects((List<TypedVariable> values) -> {
+                                for (TypedVariable variable : values) {
+                                    if (channelNames.contains(variable.getName())) {
+                                        throw new IllegalArgumentException("Local variable '" + variable.getName()
+                                            + "' conflicts with a declared channel constant.");
+                                    }
+                                }
                                 localContext.get().clear();
                                 localContext.get().setAll(new TypingContext(values));
                                 Map<String, TypedVariable> vars = new HashMap();

@@ -23,9 +23,9 @@ public class TranslationEnumGuardArgumentTest {
  }
  @Test public void enumVariablesTakePrecedenceOverLiteralSpellings() throws Exception {
   String text=source("observation-forall-constant")
-   .replace("channels: c", "channels: c, falseValue, d")
-   .replace("agent Sender", "guard isD(link: channel) := link == d;\nagent Sender")
-   .replace("local: sent: boolean", "local: sent: boolean, falseValue: channel")
+   .replace("channels: c", "channels: c\nenum shade {falseValue, d}")
+   .replace("agent Sender", "guard isD(link: shade) := link == d;\nagent Sender")
+   .replace("local: sent: boolean", "local: sent: boolean, falseValue: shade")
    .replace("init: !sent", "init: !sent & falseValue == d")
    .replace("send: <TRUE>", "send: <isD(falseValue)>");
   assertCtl(ToNuXmv.transform(parse(text)),"EX receiver-received",true);

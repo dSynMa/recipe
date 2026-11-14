@@ -2,17 +2,17 @@ package recipe.analysis;
 import org.junit.Test;
 import static recipe.analysis.TranslationTestModels.*;
 public class TranslationEnumComparisonShadowTest {
- @Test public void numericVariablesShadowChannelLiteralsInComparisons() throws Exception {
+ @Test public void numericVariablesShadowEnumLiteralsInComparisons() throws Exception {
   String text=source("observation-forall-constant")
-   .replace("channels: c", "channels: c, left, right")
+   .replace("channels: c", "channels: c\nenum direction {left, right}")
    .replace("local: sent: boolean", "local: sent: boolean, left: 0..1, right: 0..1")
    .replace("init: !sent", "init: !sent & left == 0 & right == 0")
    .replace("send: <TRUE>", "send: <left == right>");
   assertCtl(ToNuXmv.transform(parse(text)),"EX receiver-received",true);
  }
- @Test public void booleanVariablesShadowChannelLiteralsInComparisons() throws Exception {
+ @Test public void booleanVariablesShadowEnumLiteralsInComparisons() throws Exception {
   String text=source("observation-forall-constant")
-   .replace("channels: c", "channels: c, left, right")
+   .replace("channels: c", "channels: c\nenum direction {left, right}")
    .replace("local: sent: boolean", "local: sent: boolean, left: boolean, right: boolean")
    .replace("init: !sent", "init: !sent & !left & !right")
    .replace("send: <TRUE>", "send: <left == right>");

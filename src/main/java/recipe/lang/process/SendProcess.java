@@ -93,7 +93,8 @@ public class SendProcess extends BasicProcessWithMessage {
         Parser parser = ((CharacterParser.word().plus().trim()).flatten()
                         .seq(CharacterParser.of(':').trim()).flatten()).optional().flatten()
                         .seq(delimetedCondition.trim())
-                        .seq((((Enum.getEnum(Config.channelLabel).valueParser()).seq(StringParser.of("!").trim())).or(localChannelVars.variableParser().seq(StringParser.of("!").trim()))))
+                        .seq(Enum.getEnum(Config.channelLabel).valueParser().or(localChannelVars.variableParser())
+                            .seq(StringParser.of("!").trim()))
                         .seq(messageGuard.trim().map((Object obj) -> {
                             return obj;
                         }))

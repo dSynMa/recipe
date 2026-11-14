@@ -72,14 +72,14 @@ public class TranslationEnumAssignmentTest {
     }
 
     @Test public void inScopeVariablesTakePrecedenceOverEnumLiterals() throws Exception {
-        String text = model("channel", "c").replace("channels: c", "channels: c, falseValue")
-            .replace("local: sent: boolean", "local: sent: boolean, chosen: channel, falseValue: channel")
+        String text = model("channel", "c").replace("channels: c", "channels: c\nenum shade {c, falseValue}")
+            .replace("local: sent: boolean", "local: sent: boolean, chosen: shade, falseValue: shade")
             .replace("init: !sent", "init: !sent & chosen == falseValue & falseValue == c")
             .replace("sent := TRUE", "sent := TRUE, chosen := falseValue");
         // The variable named falseValue contains c, so copying it must not assign the literal falseValue.
         assertCtl(ToNuXmv.transform(parse(text)), "EX (sender-chosen = c)", true);
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> parse(text
-            .replace("falseValue: channel", "falseValue: boolean")
+            .replace("falseValue: shade", "falseValue: boolean")
             .replace("chosen == falseValue", "chosen == c")
             .replace(" & falseValue == c", "")));
         assertTrue(error.getMessage(), error.getMessage().contains("Invalid assignment"));
