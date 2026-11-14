@@ -319,6 +319,13 @@ public class Step {
                 try {
                     TypedValue msgVal = msgExpr.valueIn(senderStore);
                     Type msgType = sys.getMessageStructure().get(msgVar);
+                    // Numeric expressions may evaluate to a wider numeric type.
+                    // Validate and represent the value in the declared message domain.
+                    if (msgType instanceof recipe.lang.types.Number
+                            && msgVal.getType() instanceof recipe.lang.types.Number) {
+                        msgVal = new TypedValue(msgType, new java.math.BigDecimal(
+                            msgVal.getValue().toString()).stripTrailingZeros().toPlainString());
+                    }
                     if (msgType != msgVal.getType()) {
                         throw new MismatchingTypeException(
                             String.format("Mismatch type for message variable %s (expected %s, got %s)",
