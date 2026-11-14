@@ -94,7 +94,7 @@ public class NuXmvBatch {
             String var = left[1].trim();
 
             String val = group[1].trim().replaceAll(agent + "\\-", "");
-            val = NuXmvInteraction.normalise(val);
+            val = NuXmvInteraction.normalise(system, group[0].trim(), val);
 
 
             if (!jsonObject.has(agent)) {

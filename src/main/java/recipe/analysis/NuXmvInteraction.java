@@ -347,7 +347,7 @@ public class NuXmvInteraction {
             String var = left[1].trim();
 
             String val = group[1].trim().replaceAll(agent + "\\-", "");
-            val = NuXmvInteraction.normalise(val);
+            val = NuXmvInteraction.normalise(system, group[0].trim(), val);
 
 
             if (!jsonObject.has(agent)){
@@ -361,8 +361,21 @@ public class NuXmvInteraction {
     }
     private static final Pattern FRACTION = Pattern.compile("(-?)f'([0-9]+)/([0-9]+)");
 
+    static String normalise(recipe.lang.System system, String field, String value) {
+        if (value.equals(recipe.Config.nuxmvBroadcast)) {
+            for (var instance : system.getAgentInstances()) {
+                for (var variable : instance.getAgent().getStore().getAttributes().values()) {
+                    if (variable.getType().name().equals("channel")
+                            && field.equals(instance.getLabel() + "-" + variable.getName()))
+                        return recipe.Config.broadcast;
+                }
+            }
+        }
+        return normaliseNumber(value);
+    }
+
     public static String interpreterNumber(String field, String value) {
-        String decimal = normalise(value);
+        String decimal = normaliseNumber(value);
         try {
             new BigDecimal(decimal);
             return decimal;
@@ -372,7 +385,7 @@ public class NuXmvInteraction {
         }
     }
 
-    static String normalise(String value) {
+    private static String normaliseNumber(String value) {
         Matcher fraction = FRACTION.matcher(value);
         if (!fraction.matches()) return value;
         try {

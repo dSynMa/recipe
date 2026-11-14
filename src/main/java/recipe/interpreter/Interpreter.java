@@ -142,6 +142,7 @@ public class Interpreter {
                         if ("true".equalsIgnoreCase((String) value)) value = "TRUE";
                         else if ("false".equalsIgnoreCase((String) value)) value = "FALSE";
                     }
+                    value = initialValue(declaration, value);
                     constraints.add(String.format("%s-%s = %s", agentInstance, var, value));
                 } else if (instance != null && instance.getAgent().getSendTransitions().stream()
                         .anyMatch(action -> var.equals(action.getLabel().getLabel()))) {
@@ -304,4 +305,11 @@ public class Interpreter {
     public Step getCurrentStep() {
         return currentStep;
     }
+
+    private static String initialValue(recipe.lang.expressions.TypedVariable variable, Object value) throws Exception {
+        if (variable.getType().name().equals("channel") && recipe.Config.broadcast.equals(value.toString()))
+            return recipe.Config.nuxmvBroadcast;
+        return value.toString();
+    }
+
 }
