@@ -80,9 +80,10 @@ public class System{
                   Map<String, Type> guardDefinitions, Set<Agent> agents,
                   List<AgentInstance> agentsInstances, List<LTOL> specs) throws Exception {
         for (String reserved : new String[]{"sender", Config.channelLabel}) {
-            if (messageStructure.containsKey(reserved) || communicationVariables.containsKey(reserved)) {
+            if (messageStructure.containsKey(reserved) || communicationVariables.containsKey(reserved)
+                    || guardDefinitions.containsKey(reserved)) {
                 throw new IllegalArgumentException("Variable '" + reserved
-                    + "' is reserved for observation metadata; rename the message or communication variable.");
+                    + "' is reserved for observation metadata; rename the message variable, communication variable, or guard.");
             }
         }
         if(!validate(messageStructure, communicationVariables, guardDefinitions, agents)){

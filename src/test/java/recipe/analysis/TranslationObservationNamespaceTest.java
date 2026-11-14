@@ -22,6 +22,25 @@ public class TranslationObservationNamespaceTest {
             reject(source("observation-forall-constant").replace("ready", name), name);
     }
 
+    @Test public void guardNamesCannotShadowObservationMetadata() throws Exception {
+        for (String name : new String[]{"channel", "sender"}) {
+            String text = source("observation-forall-constant")
+                .replace("agent Sender", "guard " + name + "() := TRUE;\nagent Sender")
+                .replace("send: <TRUE>", "send: <" + name + "()>");
+            reject(text, name);
+        }
+    }
+
+    @Test public void metadataPrefixGuardNamesRemainUsableInObservations() throws Exception {
+        for (String name : new String[]{"channelCheck", "senderCheck"}) {
+            String text = source("observation-forall-constant")
+                .replace("agent Sender", "guard " + name + "(flag: boolean) := flag;\nagent Sender")
+                .replace("send: <TRUE>", "send: <" + name + "(TRUE)>")
+                .replace("forall(TRUE)", name + "(value)");
+            assertCtl(ToNuXmv.transform(parse(text)), "EX (receiver-received & obs0)", true);
+        }
+    }
+
     @Test public void prefixedNamesPreservePayloadAndChannelObservations() throws Exception {
         for (String name : new String[]{"channelData", "senderData"}) {
             String text = source("observation-forall-constant").replace("value", name)
