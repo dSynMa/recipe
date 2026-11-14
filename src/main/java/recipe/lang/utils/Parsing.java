@@ -187,10 +187,12 @@ public class Parsing {
     public static Parser numberType(){
         return (StringParser.ofIgnoringCase("integer")
                 .or(StringParser.ofIgnoringCase("int"))
+                .seq(CharacterParser.word().not())
                 .map((Object value) -> {
                     return recipe.lang.types.Integer.getType();
                 }))
                 .or(StringParser.ofIgnoringCase("real")
+                        .seq(CharacterParser.word().not())
                         .map((Object value) -> {
                             return recipe.lang.types.Real.getType();
                         }))
