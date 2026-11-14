@@ -91,7 +91,17 @@ public class TypingContext {
     }
 
     public void set(String name, Type type){
-        varType.put(name, type);
+        Type previous = varType.put(name, type);
+        if (previous != null && !previous.equals(type)) {
+            Set<String> previousNames = typeVars.get(previous);
+            if (previousNames != null) {
+                previousNames.remove(name);
+                if (previousNames.isEmpty()) {
+                    typeVars.remove(previous);
+                    types.remove(previous);
+                }
+            }
+        }
         if(type == null){
             System.out.println("");
         }
