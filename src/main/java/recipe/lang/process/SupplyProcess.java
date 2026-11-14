@@ -96,7 +96,7 @@ public class SupplyProcess extends BasicProcessWithMessage {
                             Map<String, Expression> message = (Map<String, Expression>) values.get(5);
                             Map<String, Expression> update = (Map<String, Expression>) values.get(8);                    
                             
-                            if(label != null) label = label.replace(":", "").trim();
+                            if(label != null) label = recipe.lang.utils.Parsing.declarationName(label.replace(":", "").trim());
                             SupplyProcess action = new SupplyProcess(label, psi, channel, message, update);
                             return action;
                         });

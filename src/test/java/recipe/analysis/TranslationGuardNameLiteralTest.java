@@ -17,4 +17,12 @@ public class TranslationGuardNameLiteralTest {
   String text=model().replace("send: <TRUE>", "send: <matches(idle)>");
   assertCtl(ToNuXmv.transform(parse(text)),"EX receiver-received",true);
  }
+ @Test public void booleanKeywordsCannotNameGuards() throws Exception {
+  for (String name : new String[]{"true", "false", "TRUE", "FALSE", "TrUe", "FaLsE"}) {
+   String text = source("observation-forall-constant")
+    .replace("agent Sender", "guard " + name + "(flag: boolean) := flag;\nagent Sender");
+   RuntimeException error = org.junit.Assert.assertThrows(RuntimeException.class, () -> parse(text));
+   org.junit.Assert.assertTrue(error.toString(), error.toString().contains("reserved"));
+  }
+ }
 }

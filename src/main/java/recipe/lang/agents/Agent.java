@@ -259,7 +259,7 @@ public class Agent {
                         return process.apply(TypingContext.union(guardAndLocalContext.getLeft(), guardAndLocalContext.getRight()));
                     }, new Pair(guardDefinitionContext, localContext.get())).trim().or(LazyParser.failingParser(nameString, "Could not parse agent's process definition.")))
                 .map((List<Object> values) -> {
-                    String agentName = ((String) values.get(1)).trim();
+                    String agentName = Parsing.declarationName(((String) values.get(1)).trim());
                     Map<String, TypedVariable> localVars = (Map<String, TypedVariable>) values.get(2);
                     Store store = null;
                     try {

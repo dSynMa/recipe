@@ -73,7 +73,7 @@ public class ReceiveProcess extends BasicProcess {
                         .seq((CharacterParser.of(']').trim()))
                         .map((List<Object> values) -> {
                             String label = ((String) values.get(0));
-                            if(label != null) label = label.replace(":", "").trim();
+                            if(label != null) label = recipe.lang.utils.Parsing.declarationName(label.replace(":", "").trim());
                             int i = 1;
                             Expression<Boolean> psi = (Expression<Boolean>) values.get(i);
                             Expression channel = (Expression) ((List) values.get(i+1)).get(0);

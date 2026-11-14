@@ -14,9 +14,9 @@ public class TranslationRelabelCategoryTest {
     }
 
     private String enumModel(String mapping) throws Exception {
-        return source("observation-forall-constant").replace("channels: c", "channels: c, false")
+        return source("observation-forall-constant").replace("channels: c", "channels: c, falseValue")
             .replace("ready: boolean", "ready: channel").replace("ready <- TRUE", "ready <- c")
-            .replace("ready <- !received", "ready <- " + mapping).replace("(@ready)", "(@ready == false)");
+            .replace("ready <- !received", "ready <- " + mapping).replace("(@ready)", "(@ready == falseValue)");
     }
 
     @Test public void enumCommonVariableRejectsBooleanAndNumericMappings() throws Exception {
@@ -33,7 +33,7 @@ public class TranslationRelabelCategoryTest {
     }
 
     @Test(timeout=30000) public void enumRelabellingUsesItsDeclaredDomain() throws Exception {
-        assertCtl(ToNuXmv.transform(parse(enumModel("false"))), "EX receiver-received", true);
+        assertCtl(ToNuXmv.transform(parse(enumModel("falseValue"))), "EX receiver-received", true);
         assertCtl(ToNuXmv.transform(parse(enumModel("c"))), "EX receiver-received", false);
     }
 }
