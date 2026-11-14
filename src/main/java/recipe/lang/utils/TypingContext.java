@@ -31,6 +31,7 @@ public class TypingContext {
     }
 
     public TypingContext(Map<String, Type> varType){
+        predicates = new HashSet<>();
         types = new HashSet<>();
         this.varType = varType;
         typeVars = new HashMap<>();
@@ -46,6 +47,7 @@ public class TypingContext {
     }
 
     public TypingContext(List<TypedVariable> varss){
+        predicates = new HashSet<>();
         types = new HashSet<>();
         this.varType = new HashMap<>();
         typeVars = new HashMap<>();
@@ -63,6 +65,7 @@ public class TypingContext {
     }
 
     public TypingContext(Set<Type> types, Map<String, Type> varType, Map<Type, Set<String>> typeVars){
+        predicates = new HashSet<>();
         this.types = types;
         this.varType = varType;
         this.typeVars = typeVars;
