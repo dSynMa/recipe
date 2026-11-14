@@ -123,6 +123,13 @@ public class Interpreter {
                 if (varNames.contains(var)) {
                     Object value = agentState.get(var);
                     if (value instanceof java.lang.Boolean) value = (java.lang.Boolean) value ? "TRUE" : "FALSE";
+                    TypedVariable declaration = instance == null ? null
+                        : instance.getAgent().getStore().getAttributes().get(var);
+                    if (declaration != null && declaration.getType() instanceof recipe.lang.types.Boolean
+                            && value instanceof String) {
+                        if ("true".equalsIgnoreCase((String) value)) value = "TRUE";
+                        else if ("false".equalsIgnoreCase((String) value)) value = "FALSE";
+                    }
                     constraints.add(String.format("%s-%s = %s", agentInstance, var, value));
                 } else if (instance != null && instance.getAgent().getSendTransitions().stream()
                         .anyMatch(action -> var.equals(action.getLabel().getLabel()))) {
