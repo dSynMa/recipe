@@ -1,5 +1,7 @@
 package recipe.analysis;
 
+import java.math.BigDecimal;
+
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -345,6 +347,7 @@ public class NuXmvInteraction {
             String var = left[1].trim();
 
             String val = group[1].trim().replaceAll(agent + "\\-", "");
+            val = NuXmvInteraction.normalise(val);
 
 
             if (!jsonObject.has(agent)){
@@ -355,5 +358,30 @@ public class NuXmvInteraction {
         }
 
         return jsonObject;
+    }
+    private static final Pattern FRACTION = Pattern.compile("(-?)f'([0-9]+)/([0-9]+)");
+
+    public static String interpreterNumber(String field, String value) {
+        String decimal = normalise(value);
+        try {
+            new BigDecimal(decimal);
+            return decimal;
+        } catch (NumberFormatException invalid) {
+            throw new IllegalArgumentException("Cannot load " + field + " = " + value
+                    + ": the interpreter requires an exact finite decimal; this numeric value is unsupported.", invalid);
+        }
+    }
+
+    static String normalise(String value) {
+        Matcher fraction = FRACTION.matcher(value);
+        if (!fraction.matches()) return value;
+        try {
+            BigDecimal numerator = new BigDecimal(fraction.group(2));
+            if (!fraction.group(1).isEmpty()) numerator = numerator.negate();
+            return numerator.divide(new BigDecimal(fraction.group(3))).toPlainString();
+        } catch (ArithmeticException nonDecimalValue) {
+            // Do not silently round exact checker values that lack a finite decimal.
+            return value;
+        }
     }
 }

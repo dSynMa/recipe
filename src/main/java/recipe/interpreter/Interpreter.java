@@ -101,6 +101,25 @@ public class Interpreter {
         if (states.size() == 0) {
             throw new Exception("Empty JSON");
         }
+        // Reject unsupported values before selecting an initial state or walking a partial trace.
+        // Materialise copies because delta states are immutable and callers own JSON input.
+        List<JSONObject> decodedStates = new ArrayList<>();
+        for (int index = 0; index < states.size(); index++) {
+            JSONObject state = new JSONObject(states.get(index).toString());
+            for (AgentInstance instance : s.getAgentInstances()) {
+                JSONObject locals = state.optJSONObject(instance.getLabel());
+                if (locals == null) continue;
+                for (TypedVariable variable : instance.getAgent().getStore().getAttributes().values()) {
+                    if (variable.getType() instanceof recipe.lang.types.Number && locals.has(variable.getName())) {
+                        String value = locals.get(variable.getName()).toString();
+                        locals.put(variable.getName(), recipe.analysis.NuXmvInteraction.interpreterNumber(
+                                instance.getLabel() + "-" + variable.getName() + " at trace step " + index, value));
+                    }
+                }
+            }
+            decodedStates.add(state);
+        }
+        states = decodedStates;
         Interpreter interpreter = new Interpreter(s);
         JSONObject initState = states.get(0);
 
