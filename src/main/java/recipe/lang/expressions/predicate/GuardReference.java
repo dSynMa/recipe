@@ -25,11 +25,18 @@ import java.util.function.Function;
 
 public class GuardReference extends Condition {
     private Guard guardType;
+    private final GuardDefinition definition;
     private Expression[] parametersValues;
     public static boolean resolve = false;
 
     public GuardReference(Guard guardType, Expression[] parametersValues) throws MismatchingTypeException {
+        this(guardType, parametersValues, Guard.getDefinition(guardType.name()));
+    }
+
+    private GuardReference(Guard guardType, Expression[] parametersValues, GuardDefinition definition)
+            throws MismatchingTypeException {
         this.guardType = guardType;
+        this.definition = definition;
         TypedVariable[] params = guardType.getParameters();
         if (parametersValues.length != params.length) {
             throw new MismatchingTypeException("Guard " + guardType.name() + " expects " + params.length
@@ -59,7 +66,7 @@ public class GuardReference extends Condition {
     @Override
     public TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException {
 
-        GuardDefinition guardDef = Guard.getDefinition(guardType.name());
+        GuardDefinition guardDef = definition;
         Map<TypedVariable, TypedValue> paramsMap = new HashMap<TypedVariable, TypedValue>();
 
         // Evaluate parameters and bind values to their identifiers
@@ -173,7 +180,14 @@ public class GuardReference extends Condition {
                             }
                             return variable;
                         });
-                        return reference;
+                        // Store keys include types: compatible free variables must use the caller's
+                        // declared type, while formal parameters retain their argument bindings.
+                        List<TypedVariable> formalParameters = Arrays.asList(params);
+                        Expression<Boolean> boundTemplate = reference.definition.getTemplate().relabel(variable ->
+                            formalParameters.contains(variable) ? variable
+                                : new TypedVariable(context.get(variable.getName()), variable.getName()));
+                        return new GuardReference(guardType, reference.parametersValues,
+                            new GuardDefinition(guardType, boundTemplate));
                     } catch (Exception e){
                         throw new IllegalArgumentException("Invalid call to guard " + label + ": " + e.getMessage(), e);
                     }
@@ -185,7 +199,7 @@ public class GuardReference extends Condition {
     }
 
     public Expression<Boolean> unpack() throws RelabellingTypeException, MismatchingTypeException {
-        GuardDefinition guardDefinition = Guard.getDefinition(this.guardType.name());
+        GuardDefinition guardDefinition = definition;
         Expression<Boolean> template = guardDefinition.getTemplate();
         List params = List.of(guardDefinition.getType().getParameters());
         return template.relabel((x) -> {
