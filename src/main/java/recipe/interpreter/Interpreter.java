@@ -161,7 +161,12 @@ public class Interpreter {
             // If we are deadlocked, but no variable is changing in trace, then it's all right
             if (interpreter.isDeadlocked()) {
                 // Validate the reset events and observations as well as persistent state.
-                if (interpreter.currentStep.satisfies(obsMap, nextConstraint, true)) continue;
+                if (interpreter.currentStep.satisfies(obsMap, nextConstraint, true)) {
+                    if (nextConstraint.optBoolean("___LOOP___", false)) {
+                        interpreter.currentStep.loadAnnotations(new JSONObject().put("___LOOP___", true));
+                    }
+                    continue;
+                }
             }
             if (!interpreter.findNext(obsMap, nextConstraint, currConstraint)) {
                 throw new Exception(String.format("[ofTrace] something wrong at step %d", i));
