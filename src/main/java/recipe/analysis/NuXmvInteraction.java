@@ -259,7 +259,7 @@ public class NuXmvInteraction {
     public Thread startNuXmvThread() throws IOException {
         Thread t = new Thread(() -> {
             try {
-                runNuXmv(path, in, byteArrayOutputStream);
+                runNuXmv(path, in, byteArrayOutputStream, nuxmvTurn);
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
@@ -302,9 +302,15 @@ public class NuXmvInteraction {
         }
     }
 
-    static AtomicReference<Boolean> nuxmvTurn = new AtomicReference<>(true);
+    final AtomicReference<Boolean> nuxmvTurn = new AtomicReference<>(true);
 
+    // Direct callers own the supplied streams; only checker instances use the turn handshake.
     public static void runNuXmv(Path path, InputStream inr, OutputStream outw) throws Exception {
+        runNuXmv(path, inr, outw, null);
+    }
+
+    private static void runNuXmv(Path path, InputStream inr, OutputStream outw,
+            AtomicReference<Boolean> turn) throws Exception {
         Process process = new ProcessBuilder(Config.getNuxmvPath(), "-int", path.toString())
             .redirectErrorStream(true).start();
         Thread shutdown = new Thread(process::destroy);
@@ -323,8 +329,10 @@ public class NuXmvInteraction {
                         outw.write(String.join("", textt).getBytes(StandardCharsets.UTF_8));
                         outw.flush();
                         textt.clear();
-                        nuxmvTurn.set(false);
-                        while (!nuxmvTurn.get()) Thread.sleep(1);
+                        if (turn != null) {
+                            turn.set(false);
+                            while (!turn.get()) Thread.sleep(1);
+                        }
                     }
                 }
                 int availableInput = inr.available();

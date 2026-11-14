@@ -12,14 +12,14 @@ public class InteractiveCommandBoundaryTest {
         NuXmvInteraction checker = new NuXmvInteraction(parse(source("supplier-locality"))) {
             @Override public Thread startNuXmvThread() { return new Thread(); }
         };
-        NuXmvInteraction.nuxmvTurn.set(false);
+        checker.nuxmvTurn.set(false);
         var finished = new java.util.concurrent.CountDownLatch(1);
         Thread response = new Thread(() -> {
             try {
                 while (checker.in.read() != '\n') { }
-                while (!NuXmvInteraction.nuxmvTurn.get()) Thread.onSpinWait();
+                while (!checker.nuxmvTurn.get()) Thread.onSpinWait();
                 checker.byteArrayOutputStream.write("completed\nnuXmv >".getBytes(StandardCharsets.UTF_8));
-                NuXmvInteraction.nuxmvTurn.set(false);
+                checker.nuxmvTurn.set(false);
                 finished.await();
             } catch (Exception e) { throw new RuntimeException(e); }
         });
@@ -33,7 +33,7 @@ public class InteractiveCommandBoundaryTest {
             finished.countDown();
             response.join(1000);
             response.interrupt();
-            NuXmvInteraction.nuxmvTurn.set(false);
+            checker.nuxmvTurn.set(false);
             Files.deleteIfExists(checker.path);
         }
     }
