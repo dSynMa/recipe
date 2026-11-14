@@ -188,7 +188,11 @@ public class TypingContext {
     }
 
     public org.petitparser.parser.Parser variableParser(){
-        return Parsing.disjunctiveWordParser(varType.keySet(), (String parsed) -> {
+        Set<String> variables = new HashSet<>();
+        for (Map.Entry<String, Type> entry : varType.entrySet()) {
+            if (!(entry.getValue() instanceof Guard)) variables.add(entry.getKey());
+        }
+        return Parsing.disjunctiveWordParser(variables, (String parsed) -> {
             return new TypedVariable(varType.get(parsed), parsed);
         });
     }
