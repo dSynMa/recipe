@@ -84,7 +84,7 @@ public class SendProcess extends BasicProcessWithMessage {
 
         Parser messageGuard = Condition.typeParser(localAndChannelAndCommunicationContext);
 
-        Parser messageAssignment = Parsing.assignmentListParser(messageContext, localAndChannelAndCommunicationContext);
+        Parser messageAssignment = Parsing.assignmentListParser(messageContext, localContext);
         Parser localAssignment = Parsing.assignmentListParser(localContext, localContext);
 
         Parser parser = ((CharacterParser.word().plus().trim()).flatten()

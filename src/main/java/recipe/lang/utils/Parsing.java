@@ -122,6 +122,20 @@ public class Parsing {
                                 throw new IllegalArgumentException("Invalid assignment to " + target.getName()
                                     + ": expected " + target.getType().name() + ", got " + value.getType().name());
                             }
+                            try {
+                                // Guard macros may contain free variables beyond their arguments.
+                                value.relabel(reference -> {
+                                    TypedVariable variable = (TypedVariable) reference;
+                                    if (expressionContext.get(variable.getName()) == null) {
+                                        throw new IllegalArgumentException("Variable " + variable.getName()
+                                            + " is not available in assignment to " + target.getName());
+                                    }
+                                    return variable;
+                                });
+                            } catch (recipe.lang.utils.exceptions.RelabellingTypeException
+                                    | recipe.lang.utils.exceptions.MismatchingTypeException e) {
+                                throw new IllegalArgumentException("Cannot resolve assignment to " + target.getName(), e);
+                            }
                             return new Pair(target.toString(), value);
                         });
 
