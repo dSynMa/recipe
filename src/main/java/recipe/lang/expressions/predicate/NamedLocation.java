@@ -37,7 +37,7 @@ public class NamedLocation extends Condition {
 
     public static org.petitparser.parser.Parser parser() throws Exception {
         Parser baseParser =
-            CharacterParser.noneOf("()[],;").plus().trim().flatten().map(
+            CharacterParser.word().plus().flatten().trim().map(
                 (String word) -> {
                     word = word.trim();
                     if (word.equals(selfToken)) return new NamedLocation();
