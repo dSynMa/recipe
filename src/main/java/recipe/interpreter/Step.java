@@ -200,7 +200,7 @@ public class Step {
             for (String varName : instanceConstraint.keySet()) {
                 try {
                     if (varName.equals("automaton-state")) {
-                        String stateConstraint = instanceConstraint.getString(varName);
+                        String stateConstraint = instanceConstraint.get(varName).toString();
                         String stateInst = instanceStore.getState().getLabel().toString();
                         if (!stateInst.equals(stateConstraint)) {
                             System.out.printf(">> Expected %s, got %s\n", stateConstraint, stateInst);
