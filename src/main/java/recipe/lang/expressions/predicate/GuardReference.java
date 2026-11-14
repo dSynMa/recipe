@@ -165,6 +165,12 @@ public class GuardReference extends Condition {
                                 throw new IllegalArgumentException("Variable " + variable.getName()
                                     + " is not available in guard call " + label);
                             }
+                            TypedVariable available = new TypedVariable(context.get(variable.getName()), variable.getName());
+                            if (!available.isValidAssignmentFor(variable)) {
+                                throw new IllegalArgumentException("Variable " + variable.getName()
+                                    + " has incompatible type in guard call " + label + ": expected "
+                                    + variable.getType().name() + ", got " + available.getType().name());
+                            }
                             return variable;
                         });
                         return reference;
