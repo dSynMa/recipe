@@ -498,14 +498,13 @@ public class Server {
     @Route("/interpretLoadJSON")
     public String loadInterpreterJSON(Request req) {
         String trace = req.getQuery().get("trace");
-        JSONTokener toks = new JSONTokener(trace);
-        JSONArray json = new JSONArray(toks);
-
         try {
+            JSONTokener toks = new JSONTokener(trace);
+            JSONArray json = new JSONArray(toks);
             interpreter = Interpreter.ofJSON(system, json);
             return "{}";
         } catch (Exception e) {
-            return String.format("{ \"error\" : \"%s\"}", e.getMessage());
+            return new JSONObject().put("error", e.getMessage()).toString();
         }
     }
 
