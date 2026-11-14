@@ -111,7 +111,18 @@ public class Parsing {
                         .seq(StringParser.of(":=").trim())
                         .seq(expressionParser(expressionContext))
                         .map((List<Object> values) -> {
-                            return new Pair(values.get(0).toString(), values.get(2));
+                            TypedVariable target = (TypedVariable) values.get(0);
+                            Expression value = (Expression) values.get(2);
+                            boolean numeric = target.getType() instanceof recipe.lang.types.Number
+                                && value.getType() instanceof recipe.lang.types.Number;
+                            // Numeric range/integrality is checked by process feasibility guards.
+                            // Categorical mismatches cannot denote a well-typed assignment.
+                            if (!numeric && !(target.getType().getClass().isAssignableFrom(value.getType().getClass())
+                                    && value.isValidAssignmentFor(target))) {
+                                throw new IllegalArgumentException("Invalid assignment to " + target.getName()
+                                    + ": expected " + target.getType().name() + ", got " + value.getType().name());
+                            }
+                            return new Pair(target.toString(), value);
                         });
 
         Parser assignmentList =
