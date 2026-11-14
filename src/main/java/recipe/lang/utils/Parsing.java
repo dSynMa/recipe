@@ -106,10 +106,25 @@ public class Parsing {
 
     public static org.petitparser.parser.Parser assignmentListParser(TypingContext variableContext,
                                                                      TypingContext expressionContext) throws Exception {
+        AtomicReference<Type> assignmentType = new AtomicReference<>();
+        Parser generalExpression = expressionParser(expressionContext);
+        Parser assignmentValue = new LazyParser<Type>(ignored -> {
+            Type type = assignmentType.get();
+            if (type instanceof Enum) {
+                // Enum literals may also spell Boolean literals or values of another enum.
+                // In-scope variables retain precedence over literal names.
+                return expressionContext.variableParser().or(((Enum) type).valueParser())
+                    .or(generalExpression).trim();
+            }
+            return generalExpression;
+        }, null);
         Parser assignment =
-                variableContext.variableParser()
+                variableContext.variableParser().mapWithSideEffects((TypedVariable target) -> {
+                            assignmentType.set(target.getType());
+                            return target;
+                        })
                         .seq(StringParser.of(":=").trim())
-                        .seq(expressionParser(expressionContext))
+                        .seq(assignmentValue)
                         .map((List<Object> values) -> {
                             TypedVariable target = (TypedVariable) values.get(0);
                             Expression value = (Expression) values.get(2);
