@@ -30,9 +30,7 @@ public class Addition extends ArithmeticExpression{
         BigDecimal lhsNo = new BigDecimal(lhsValue.getValue().toString());
         BigDecimal rhsNo = new BigDecimal(rhsValue.getValue().toString());
         BigDecimal result = lhsNo.add(rhsNo);
-        Number resultType = isInteger(result) ? Integer.getType() : Real.getType();
-
-        return new TypedValue<Number>(resultType, result.toString());
+        return numericResult(result);
     }
 
     @Override
@@ -44,7 +42,7 @@ public class Addition extends ArithmeticExpression{
                 && rhsValue.getClass().equals(TypedValue.class)){
             BigDecimal lhsNo = new BigDecimal(((TypedValue) lhsValue).getValue().toString());
             BigDecimal rhsNo = new BigDecimal(((TypedValue) rhsValue).getValue().toString());
-            return new TypedValue<Number>((Number) Real.getType(), lhsNo.add(rhsNo).toString());
+            return numericResult(lhsNo.add(rhsNo));
         }
         else {
             return new Addition(lhs.simplify(), rhs.simplify());
