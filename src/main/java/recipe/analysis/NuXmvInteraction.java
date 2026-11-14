@@ -51,7 +51,17 @@ public class NuXmvInteraction {
         path = Files.createTempFile("rcheck-interactive-", ".smv");
         path.toFile().deleteOnExit();
         Files.write(path, nuxmvScript.getBytes(StandardCharsets.UTF_8));
-        process = startNuXmvThread();
+        try {
+            process = startNuXmvThread();
+        } catch (IOException startupFailure) {
+            try {
+                if (process != null) stopNuXmvThread();
+                else Files.deleteIfExists(path);
+            } catch (IOException cleanupFailure) {
+                startupFailure.addSuppressed(cleanupFailure);
+            }
+            throw startupFailure;
+        }
     }
 
     public static boolean isAlive(Process p) {
@@ -267,6 +277,7 @@ public class NuXmvInteraction {
             }
         });
         t.setDaemon(true);
+        process = t;
         t.start();
 
         while (nuxmvTurn.get()) {

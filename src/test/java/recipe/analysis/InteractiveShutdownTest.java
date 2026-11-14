@@ -67,6 +67,30 @@ public class InteractiveShutdownTest {
         }
     }
 
+    @Test(timeout = 15000)
+    public void cancelledStartupClosesTheUnreturnedSession() throws Exception {
+        var model = parse(source("supplier-locality"));
+        Set<Long> before = ProcessHandle.current().children().map(ProcessHandle::pid).collect(Collectors.toSet());
+        var createdPath = new java.util.concurrent.atomic.AtomicReference<java.nio.file.Path>();
+        try {
+            Thread.currentThread().interrupt();
+            assertThrows(IOException.class, () -> new NuXmvInteraction(model) {
+                @Override public Thread startNuXmvThread() throws IOException {
+                    createdPath.set(this.path);
+                    return super.startNuXmvThread();
+                }
+            });
+            assertTrue(Thread.currentThread().isInterrupted());
+            assertNotNull(createdPath.get());
+            assertFalse("Cancelled construction retained its temporary model", Files.exists(createdPath.get()));
+            assertTrue(ProcessHandle.current().children().noneMatch(p -> !before.contains(p.pid()) && p.isAlive()));
+        } finally {
+            Thread.interrupted();
+            ProcessHandle.current().children().filter(p -> !before.contains(p.pid())).forEach(ProcessHandle::destroyForcibly);
+            if (createdPath.get() != null) Files.deleteIfExists(createdPath.get());
+        }
+    }
+
     @Test(timeout = 20000)
     public void replacementCheckerStillReadsItsOwnInitialPrompt() throws Exception {
         for (int i = 0; i < 3; i++) {
