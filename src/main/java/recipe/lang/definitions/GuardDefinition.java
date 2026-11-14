@@ -41,7 +41,7 @@ public class GuardDefinition extends Definition<Expression<Boolean>> {
                     try {
                         guardType = new Guard(Parsing.declarationName(((String) values.get(1)).trim()), (TypedVariable[]) values.get(3));
                     } catch (TypeCreationException e) {
-                        e.printStackTrace();
+                        throw new IllegalArgumentException(e.getMessage(), e);
                     }
                     guarddef.set(guardType);
 

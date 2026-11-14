@@ -36,6 +36,13 @@ public class Guard extends Type {
         if(parameters == null){
             throw new TypeCreationException("Guard type initialised with null.");
         }
+        Set<String> parameterNames = new java.util.HashSet<>();
+        for (TypedVariable parameter : parameters) {
+            if (!parameterNames.add(parameter.getName())) {
+                throw new TypeCreationException("Duplicate parameter '" + parameter.getName()
+                    + "' in guard " + label);
+            }
+        }
         // If same, last one wins
 //        if(definitions.containsKey(label)){
 //            throw new TypeCreationException("Guard with name " + label + " already exists.");
