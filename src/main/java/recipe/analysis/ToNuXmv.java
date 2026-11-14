@@ -183,15 +183,12 @@ public class ToNuXmv {
                         new Implies(handleCVsInObservation(cvs, obss.getLhs(), sendGuard), handleCVsInObservation(cvs, obss.getRhs(), sendGuard)),
                         new Implies(handleCVsInObservation(cvs, obss.getRhs(), sendGuard), handleCVsInObservation(cvs, obss.getLhs(), sendGuard)));
             } else {
-                return obs;
+                return specialiseAtomicObservation(cvs, obs, sendGuard);
             }
         } else if (obs instanceof IsNotEqualTo) {
             IsNotEqualTo inequality = (IsNotEqualTo) obs;
-            if (inequality.getLhs().getType().equals(Boolean.getType())) {
-                return new Not(handleCVsInObservation(cvs,
-                    new IsEqualTo(inequality.getLhs(), inequality.getRhs()), sendGuard));
-            }
-            return obs;
+            return new Not(handleCVsInObservation(cvs,
+                new IsEqualTo(inequality.getLhs(), inequality.getRhs()), sendGuard));
         } else if(obs.getClass().equals(Predicate.class)){
             Predicate obss = (Predicate) obs;
             //t(forall(o)) = /\cv g_s -> o
@@ -266,8 +263,21 @@ public class ToNuXmv {
                 throw new Exception("Predicate " + obss.getName() + " unknown.");
             }
         } else{
-            return obs;
+            return specialiseAtomicObservation(cvs, obs, sendGuard);
         }
+    }
+
+    private static Expression<Boolean> specialiseAtomicObservation(Map<String, Type> cvs,
+            Expression<Boolean> atom, Expression<Boolean> sendGuard) throws Exception {
+        AtomicReference<java.lang.Boolean> hasCommonVariable = new AtomicReference<>(false);
+        atom.relabel(variable -> {
+            String name = variable.getName().replaceFirst("^@", "");
+            if (cvs.containsKey(name) || cvs.containsKey("@" + name)) hasCommonVariable.set(true);
+            return variable;
+        });
+        // Finite comparison atoms use the same implicit universal scope as bare CVs.
+        return hasCommonVariable.get()
+            ? handleCVsInObservation(cvs, new Predicate("forall", atom), sendGuard) : atom;
     }
 
     public static Pair<List<LTOL>, Map<String, Observation>> ltolToLTLAndObservationVariables(List<LTOL> specs) throws Exception {
