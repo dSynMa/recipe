@@ -168,9 +168,6 @@ public class Interpreter {
         for (int i = 1; i < states.size(); i++) {
             JSONObject nextConstraint = states.get(i);
             JSONObject currConstraint = states.get(i-1);
-            // We got to a state where progress = false, all the rest is irrelevant
-            
-            if (currConstraint.optBoolean("___STUCK___", false)) break;
             // If we are deadlocked, but no variable is changing in trace, then it's all right
             if (interpreter.isDeadlocked()) {
                 // Validate the reset events and observations as well as persistent state.

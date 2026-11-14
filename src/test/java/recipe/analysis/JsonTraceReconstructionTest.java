@@ -45,7 +45,7 @@ public class JsonTraceReconstructionTest {
         assertEquals(2, replay.traceToJSON().size());
     }
     @Test(timeout = 20000)
-    public void trueDeadlockAnnotationStillEndsReplay() throws Exception {
+    public void genuineDeadlockAnnotationAllowsUnchangedSuffix() throws Exception {
         var model = parse(source("supplier-locality").replace("<TRUE> SUPPLY", "<FALSE> SUPPLY"));
         JSONArray states = new JSONArray().put(initial().put("___STUCK___", true)).put(new JSONObject());
         var replay = Interpreter.ofJSON(model, states);
