@@ -79,6 +79,12 @@ public class System{
     public System(Map<String, Type> messageStructure, Map<String, Type> communicationVariables,
                   Map<String, Type> guardDefinitions, Set<Agent> agents,
                   List<AgentInstance> agentsInstances, List<LTOL> specs) throws Exception {
+        for (String reserved : new String[]{"sender", Config.channelLabel}) {
+            if (messageStructure.containsKey(reserved) || communicationVariables.containsKey(reserved)) {
+                throw new IllegalArgumentException("Variable '" + reserved
+                    + "' is reserved for observation metadata; rename the message or communication variable.");
+            }
+        }
         if(!validate(messageStructure, communicationVariables, guardDefinitions, agents)){
             throw new Exception("Message and communication variables, and guard definition names need to be disjoint, " +
                     "and they also need to be disjoin with each agent's local variables.");
