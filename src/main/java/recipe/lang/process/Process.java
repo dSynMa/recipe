@@ -37,6 +37,27 @@ public abstract class Process {
 
     public abstract void addEntryCondition(Expression<Boolean> condition);
 
+    private static void constrainNumericAssignments(BasicProcess action,
+            java.util.Map<String, Expression> assignments, TypingContext context) {
+        assignments.forEach((name, value) -> {
+            if (context.get(name) instanceof recipe.lang.types.Integer) {
+                try {
+                    action.addEntryCondition(new IsEqualTo(value, new Floor(value)));
+                } catch (MismatchingTypeException e) {
+                    throw new IllegalArgumentException("Non-numeric assignment for " + name, e);
+                }
+            }
+            if (context.get(name) instanceof BoundedInteger) {
+                BoundedInteger type = (BoundedInteger) context.get(name);
+                try {
+                    action.addEntryCondition(boundedAssignmentCondition(type, value));
+                } catch (MismatchingTypeException e) {
+                    throw new IllegalArgumentException("Invalid bounds for " + name, e);
+                }
+            }
+        });
+    }
+
     /** Require the assigned value to stay within its target's declared bounds. */
     private static Expression<Boolean> boundedAssignmentCondition(
             BoundedInteger type, Expression<Number> value) throws MismatchingTypeException {
@@ -59,26 +80,13 @@ public abstract class Process {
         builder.group()
                 .primitive(sendProcess.or(receiveProcess).or(getProcess).or(supplyProcess).trim()
                         .map((BasicProcess action) -> {
-                            // An update outside its integer target domain has no successor.
-                            // Include feasibility in psi so progress and receive participation
-                            // use the same enabling condition as the transition relation.
-                            action.getUpdate().forEach((name, value) -> {
-                                if (localContext.get(name) instanceof recipe.lang.types.Integer) {
-                                    try {
-                                        action.addEntryCondition(new IsEqualTo(value, new Floor(value)));
-                                    } catch (MismatchingTypeException e) {
-                                        throw new IllegalArgumentException("Non-numeric update for " + name, e);
-                                    }
-                                }
-                                if (localContext.get(name) instanceof BoundedInteger) {
-                                    BoundedInteger type = (BoundedInteger) localContext.get(name);
-                                    try {
-                                        action.addEntryCondition(boundedAssignmentCondition(type, value));
-                                    } catch (MismatchingTypeException e) {
-                                        throw new IllegalArgumentException("Invalid bounds for " + name, e);
-                                    }
-                                }
-                            });
+                            // Both updates and outgoing data must fit their declared domains.
+                            // Keep feasibility in psi so progress agrees with legal transitions.
+                            constrainNumericAssignments(action, action.getUpdate(), localContext);
+                            if (action instanceof BasicProcessWithMessage) {
+                                constrainNumericAssignments(action,
+                                    ((BasicProcessWithMessage) action).getMessage(), messageContext);
+                            }
                             return action;
                         }))
                 .wrapper(of('(').trim(), of(')').trim(),
