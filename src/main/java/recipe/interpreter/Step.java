@@ -117,6 +117,11 @@ public class Step {
      * @return true iff the state satisfies the constraint
      */
     public boolean satisfies(Map<String,Observation> obsMap, JSONObject constraint) {
+        return satisfies(obsMap, constraint, false);
+    }
+
+    boolean satisfies(Map<String,Observation> obsMap, JSONObject constraint, boolean stutter) {
+        // A deadlock stutter has no new action or observed send.
         // LTOL
         JSONObject ltol = constraint.optJSONObject("___LTOL___");
         if (ltol != null) {
@@ -126,7 +131,7 @@ public class Step {
                 if (expectedObservation == null) return false;
                 Observation descriptor = obsMap.get(obsVar);
                 if (descriptor == null) return false;
-                if (inboundTransition == null || !(inboundTransition.getProducerProcess() instanceof SendProcess)) {
+                if (stutter || inboundTransition == null || !(inboundTransition.getProducerProcess() instanceof SendProcess)) {
                     if (expectedObservation) return false;
                     continue;
                 }
@@ -225,7 +230,7 @@ public class Step {
                         java.lang.Boolean expected = traceBoolean(instanceConstraint.get(varName));
                         if (expected == null) return false;
                         ProcessTransition taken = inboundTransition == null ? null : inboundTransition.findTransitionForAgent(inst);
-                        boolean actual = taken != null && varName.equals(taken.getLabel().getLabel());
+                        boolean actual = !stutter && taken != null && varName.equals(taken.getLabel().getLabel());
                         if (actual != expected) return false;
                         continue;
                     }

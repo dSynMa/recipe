@@ -152,12 +152,8 @@ public class Interpreter {
             if (currConstraint.optBoolean("___STUCK___", false)) break;
             // If we are deadlocked, but no variable is changing in trace, then it's all right
             if (interpreter.isDeadlocked()) {
-                JSONObject stateValues = new JSONObject();
-                for (String key : nextConstraint.keySet()) {
-                    if (!key.startsWith("___")) stateValues.put(key, nextConstraint.get(key));
-                }
-                // Compress this stutter, but still validate any later snapshots.
-                if (interpreter.currentStep.satisfies(Map.of(), stateValues)) continue;
+                // Validate the reset events and observations as well as persistent state.
+                if (interpreter.currentStep.satisfies(obsMap, nextConstraint, true)) continue;
             }
             if (!interpreter.findNext(obsMap, nextConstraint, currConstraint)) {
                 throw new Exception(String.format("[ofTrace] something wrong at step %d", i));
