@@ -461,17 +461,13 @@ public class Parsing {
                     if (numeric && target.getType() instanceof recipe.lang.types.Integer) {
                         try {
                             Expression simplified = value.simplify();
+                            if (!recipe.lang.expressions.arithmetic.NumericDomain.isSubsetOf(simplified, target.getType())) {
+                                throw new IllegalArgumentException("Invalid relabelling for " + target.getName()
+                                    + ": mapping domain is not contained in " + target.getType().name());
+                            }
                             if (simplified instanceof recipe.lang.expressions.TypedValue) {
                                 java.math.BigDecimal number = new java.math.BigDecimal(
                                     ((recipe.lang.expressions.TypedValue) simplified).getValue().toString());
-                                boolean valid = number.stripTrailingZeros().scale() <= 0;
-                                if (target.getType() instanceof BoundedInteger) {
-                                    BoundedInteger bounds = (BoundedInteger) target.getType();
-                                    valid &= number.compareTo(java.math.BigDecimal.valueOf(bounds.getMin())) >= 0
-                                        && number.compareTo(java.math.BigDecimal.valueOf(bounds.getMax())) <= 0;
-                                }
-                                if (!valid) throw new IllegalArgumentException("Invalid relabelling for "
-                                    + target.getName() + ": " + number + " is outside " + target.getType().name());
                                 if (target.getType() instanceof BoundedInteger) {
                                     // Preserve finite-domain numeric equality in the BDD backend.
                                     value = new recipe.lang.expressions.TypedValue(target.getType(),

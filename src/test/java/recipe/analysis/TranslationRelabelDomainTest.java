@@ -31,13 +31,41 @@ public class TranslationRelabelDomainTest {
         assertThrows(IllegalArgumentException.class, () -> parse(text));
         parse(text.replace("rank <- 0.5", "rank <- 1.0"));
     }
-    @Test public void constrainedSymbolicMappingsRemainSupported() throws Exception {
+    @Test public void widerSymbolicDomainsAreRejectedEvenWithRestrictiveInit() throws Exception {
         String text = model("score")
             .replace("local: received: boolean", "local: received: boolean, score: 0..2")
             .replace("init: !received", "init: !received & score == 1")
             .replace("@rank == 2", "@rank == 1");
-        assertCtl(ToNuXmv.transform(parse(text)), "AX (receiver-received & obs0)", true);
+        assertThrows(IllegalArgumentException.class, () -> parse(text));
+        assertCtl(ToNuXmv.transform(parse(text.replace("score: 0..2", "score: 0..1"))),
+            "AX (receiver-received & obs0)", true);
     }
+    @Test public void symbolicExpressionsMustFitForTheirEntireDeclaredDomain() throws Exception {
+        String base = model("score").replace("local: received: boolean", "local: received: boolean, score: 0..1")
+            .replace("init: !received", "init: !received & score == 1");
+        for (String expression : new String[]{"score + 1", "score - 1", "score * 2", "score / 2"}) {
+            String text = base.replace("rank <- score", "rank <- " + expression);
+            assertThrows(IllegalArgumentException.class, () -> parse(text));
+        }
+        for (String expression : new String[]{"score + 0", "1 - score", "score * 1", "score / 1", "(score - 1) * (score - 1)"})
+            parse(base.replace("rank <- score", "rank <- " + expression));
+        for (String type : new String[]{"integer", "real", "0..2"}) {
+            String text = base.replace("score: 0..1", "score: " + type);
+            assertThrows(IllegalArgumentException.class, () -> parse(text));
+        }
+        parse(base.replace("score: 0..1", "score: 1..1"));
+    }
+
+    @Test public void unboundedIntegerTargetsStillRequireIntegralSources() throws Exception {
+        String base = model("score").replace("rank: 0..1", "rank: integer")
+            .replace("local: received: boolean", "local: received: boolean, score: integer")
+            .replace("SPEC G (<exists(TRUE)>true);", "");
+        parse(base);
+        parse(base.replace("rank <- score", "rank <- score + 1"));
+        assertThrows(IllegalArgumentException.class, () -> parse(base.replace("score: integer", "score: real")));
+        assertThrows(IllegalArgumentException.class, () -> parse(base.replace("rank <- score", "rank <- score / 2")));
+    }
+
     @Test public void legalIntegralConstantsMatchSymbolicSenderValues() throws Exception {
         for (String mapping : new String[]{"1", "1.0", "1 + 0", "3 / 3"}) {
             String text = model(mapping).replace("local: sent: boolean", "local: sent: boolean, pivot: 0..1")
