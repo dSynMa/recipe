@@ -35,6 +35,7 @@ public class NuXmvInteraction {
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
     Thread process;
+    private volatile boolean stopped;
     boolean go = false;
     boolean go_msat = false;
     private boolean booleanModelBuilt;
@@ -64,6 +65,7 @@ public class NuXmvInteraction {
     }
 
     public String execute(Predicate<String> isFinished, String command) throws IOException{
+        ensureRunning();
         String outText = "";
         byteArrayOutputStream.reset();
         byteArrayOutputStream.flush();
@@ -74,6 +76,8 @@ public class NuXmvInteraction {
         while (!isFinished.test(outText)) {
             nuxmvTurn.set(true);
             while (nuxmvTurn.get()) {
+                ensureRunning();
+                pauseForResponse();
             }
             byteArrayOutputStream.flush();
             byteArrayOutputStream.flush();
@@ -236,97 +240,111 @@ public class NuXmvInteraction {
         }
     }
 
+    private void ensureRunning() throws IOException {
+        if (stopped || Thread.currentThread().isInterrupted()
+                || (process != null && process.getState() == Thread.State.TERMINATED)) {
+            throw new IOException("nuXmv interaction has stopped");
+        }
+    }
+
+    private static void pauseForResponse() throws IOException {
+        try {
+            Thread.sleep(1);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while waiting for nuXmv", interrupted);
+        }
+    }
+
     public Thread startNuXmvThread() throws IOException {
         Thread t = new Thread(() -> {
             try {
                 runNuXmv(path, in, byteArrayOutputStream);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
             } catch (Exception e) {
-                e.printStackTrace();
+                if (!stopped) e.printStackTrace();
             }
         });
         t.setDaemon(true);
         t.start();
 
-        //waiting for initialisation
-        while(nuxmvTurn.get()){}
+        while (nuxmvTurn.get()) {
+            if (!t.isAlive()) throw new IOException("nuXmv exited before its initial prompt");
+            pauseForResponse();
+        }
         return t;
     }
 
     public void stopNuXmvThread() throws IOException {
-        this.process.interrupt();
+        stopped = true;
+        process.interrupt();
+        boolean interrupted = Thread.interrupted();
+        long deadline = java.lang.System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5);
+        try {
+            while (process.isAlive()) {
+                long remaining = deadline - java.lang.System.nanoTime();
+                if (remaining <= 0) throw new IOException("nuXmv worker did not stop");
+                try {
+                    process.join(Math.max(1, java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(remaining)));
+                } catch (InterruptedException cancellation) {
+                    interrupted = true;
+                }
+            }
+        } finally {
+            try {
+                out.close();
+                in.close();
+                Files.deleteIfExists(path);
+            } finally {
+                if (interrupted) Thread.currentThread().interrupt();
+            }
+        }
     }
 
     static AtomicReference<Boolean> nuxmvTurn = new AtomicReference<>(true);
 
     public static void runNuXmv(Path path, InputStream inr, OutputStream outw) throws Exception {
-        String nuxmvPath = Config.getNuxmvPath();
-
-        ProcessBuilder builder = null;
-        try{
-            builder = new ProcessBuilder(nuxmvPath, "-int", path.toString());
-        } catch (Exception e){
-            if(e.getMessage().contains("The system cannot find the file specified")){
-                throw new Exception("Looked for nuxmv on PATH, in \"./nuxmv/bin/nuxmv\", and in \"./bin/nuxmv\" but could find any nuXmv executable.");
-            }
-            throw e;
-        } finally {
-            builder.redirectErrorStream(true);
-            Process process = builder.start();
-            Runnable runnable = () -> process.destroy();
-            Runtime.getRuntime().addShutdownHook(new Thread(runnable));
-
-            // String ttt = Files.readString(path);
-            BufferedInputStream out = (BufferedInputStream) process.getInputStream();
-            OutputStream in = process.getOutputStream();
-
+        Process process = new ProcessBuilder(Config.getNuxmvPath(), "-int", path.toString())
+            .redirectErrorStream(true).start();
+        Thread shutdown = new Thread(process::destroy);
+        Runtime.getRuntime().addShutdownHook(shutdown);
+        try (InputStream out = process.getInputStream(); OutputStream in = process.getOutputStream()) {
             byte[] buffer = new byte[4000];
             List<String> textt = new ArrayList<>();
-
-            while (isAlive(process)) {
-                String text = new String(buffer, 0, buffer.length);
-                int no = out.available();
-//            buffer = out.readNBytes(40);
-//            text = new String(out.readNBytes(160));
-
-                if (no > 0) {
-                    // int n = 
-                    out.read(buffer, 0, Math.min(no, buffer.length));
-                    text = new String(buffer, 0, Math.min(no, buffer.length));
-                    Thread.sleep(10);
-
-                    if(text.trim().replaceAll(" ", "").toLowerCase(Locale.ROOT).endsWith("nuxmv>")) {
-                        textt.add(text);
+            while (process.isAlive() && !Thread.currentThread().isInterrupted()) {
+                int available = out.available();
+                if (available > 0) {
+                    int count = out.read(buffer, 0, Math.min(available, buffer.length));
+                    if (count < 0) break;
+                    String text = new String(buffer, 0, count, StandardCharsets.UTF_8);
+                    textt.add(text);
+                    if (text.trim().replace(" ", "").toLowerCase(Locale.ROOT).endsWith("nuxmv>")) {
                         outw.write(String.join("", textt).getBytes(StandardCharsets.UTF_8));
                         outw.flush();
-                        outw.flush();
                         textt.clear();
-                        buffer = new byte[4000];
                         nuxmvTurn.set(false);
-                        while (!nuxmvTurn.get()) {
-                        }
-                    } else{
-                        textt.add(text);
+                        while (!nuxmvTurn.get()) Thread.sleep(1);
                     }
                 }
-
-                int ni = inr.available();
-                if (ni > 0) {
-                    int n = inr.read(buffer, 0, Math.min(ni, buffer.length));
-                    text = new String(buffer, 0, n);
-                    in.write(buffer, 0, n);
+                int availableInput = inr.available();
+                if (availableInput > 0) {
+                    int count = inr.read(buffer, 0, Math.min(availableInput, buffer.length));
+                    if (count < 0) break;
+                    in.write(buffer, 0, count);
                     in.flush();
-                    buffer = new byte[4000];
                 }
-
-                try {
-                    //TODO need to parse nuxmv output to see if it is ready, depends on command
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                }
-
+                Thread.sleep(10);
             }
-
-            System.out.println(process.exitValue());
+        } finally {
+            boolean interrupted = Thread.interrupted();
+            process.destroyForcibly();
+            try {
+                process.waitFor(2, java.util.concurrent.TimeUnit.SECONDS);
+            } finally {
+                Runtime.getRuntime().removeShutdownHook(shutdown);
+                if (interrupted) Thread.currentThread().interrupt();
+            }
         }
     }
 
