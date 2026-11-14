@@ -135,7 +135,7 @@ public class Interpreter {
                 }
             }
         }
-        String initConstraint = String.join(" & ", constraints);
+        String initConstraint = constraints.isEmpty() ? "TRUE" : String.join(" & ", constraints);
         interpreter.init(initConstraint);
         // Initial selection constrains local variables; also validate synthetic
         // state, action events, and observations supplied by the trace.
