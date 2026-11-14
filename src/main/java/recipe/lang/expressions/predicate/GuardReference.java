@@ -3,6 +3,8 @@ package recipe.lang.expressions.predicate;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
+import org.petitparser.parser.primitive.StringParser;
+import org.petitparser.parser.primitive.FailureParser;
 
 import recipe.lang.definitions.GuardDefinition;
 import recipe.lang.expressions.Expression;
@@ -92,15 +94,37 @@ public class GuardReference extends Condition {
                 .or(context.variableParser())
                 .or(Enum.generalValueParser());
 
-        Parser guard = context.guardNameParser();
-
-        Parser parser = (guard.map((Object v) -> {
-            return v;
-        }))
+        Parser genericArguments = expression.separatedBy(CharacterParser.of(',').trim()).trim()
+            .optional(new ArrayList<>());
+        Parser parser = FailureParser.withMessage("No guard call in scope");
+        for (Map.Entry<String, recipe.lang.types.Type> entry : context.getVarType().entrySet()) {
+            if (!(entry.getValue() instanceof Guard)) continue;
+            Guard type = (Guard) entry.getValue();
+            // Each call parser has a fixed argument position; nested calls cannot change it.
+            Parser typedArguments = StringParser.of("").map(ignored -> new ArrayList<Expression>());
+            TypedVariable[] parameters = type.getParameters();
+            for (int index = 0; index < parameters.length; index++) {
+                TypedVariable parameter = parameters[index];
+                Parser argument = expression;
+                if (parameter.getType() instanceof Enum) {
+                    argument = context.variableParser().or(((Enum) parameter.getType()).valueParser())
+                        .or(expression).trim();
+                }
+                Parser separator = index == 0
+                    ? StringParser.of("") : CharacterParser.of(',').trim();
+                typedArguments = typedArguments.seq(separator).seq(argument).map((List<Object> values) -> {
+                    List<Expression> arguments = new ArrayList<>((List<Expression>) values.get(0));
+                    arguments.add((Expression) values.get(2));
+                    return arguments;
+                });
+            }
+            // Keep the generic fallback so malformed arity still receives the usual diagnostic.
+            Parser arguments = typedArguments.seq(CharacterParser.of(')').trim().and()).pick(0)
+                .or(genericArguments);
+            Parser guard = StringParser.of(entry.getKey()).seq(CharacterParser.word().not()).flatten();
+            Parser call = guard
                 .seq(CharacterParser.of('(').trim())
-                .seq(((expression).separatedBy(CharacterParser.of(',').trim()).trim()).optional(new ArrayList<>()).map((Object v) -> {
-                    return v;
-                }))
+                .seq(arguments)
                 .seq(CharacterParser.of(')').trim())
                 .map((List<Object> values) -> {
                     String label = (String) values.get(0);
@@ -142,6 +166,8 @@ public class GuardReference extends Condition {
                     }
                 });
 
+            parser = parser.or(call);
+        }
         return parser;
     }
 
