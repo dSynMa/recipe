@@ -16,7 +16,6 @@ import org.json.JSONObject;
 
 import recipe.analysis.NuXmvBatch;
 import recipe.analysis.ToNuXmv;
-import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
@@ -105,12 +104,6 @@ public class Interpreter {
         Interpreter interpreter = new Interpreter(s);
         JSONObject initState = states.get(0);
 
-        // Compute set of variables in the system
-        Set<String> varNames = new HashSet<>(s.getCommunicationVariables().keySet());
-        for (Agent a : s.getAgents()) {
-            varNames.addAll(a.getStore().getAttributes().keySet());
-        }
-
         // Create constraint on initial state & find it
         List<String> constraints = new LinkedList<String>();
 
@@ -120,12 +113,12 @@ public class Interpreter {
             AgentInstance instance = s.getAgentInstances().stream()
                 .filter(candidate -> candidate.getLabel().equals(agentInstance)).findFirst().orElse(null);
             for (String var : agentState.keySet()) {
-                if (varNames.contains(var)) {
+                TypedVariable declaration = instance == null ? null
+                    : instance.getAgent().getStore().getAttributes().get(var);
+                if (declaration != null) {
                     Object value = agentState.get(var);
                     if (value instanceof java.lang.Boolean) value = (java.lang.Boolean) value ? "TRUE" : "FALSE";
-                    TypedVariable declaration = instance == null ? null
-                        : instance.getAgent().getStore().getAttributes().get(var);
-                    if (declaration != null && declaration.getType() instanceof recipe.lang.types.Boolean
+                    if (declaration.getType() instanceof recipe.lang.types.Boolean
                             && value instanceof String) {
                         if ("true".equalsIgnoreCase((String) value)) value = "TRUE";
                         else if ("false".equalsIgnoreCase((String) value)) value = "FALSE";
