@@ -137,6 +137,11 @@ public class Interpreter {
         }
         String initConstraint = String.join(" & ", constraints);
         interpreter.init(initConstraint);
+        // Initial selection constrains local variables; also validate synthetic
+        // state, action events, and observations supplied by the trace.
+        if (!interpreter.currentStep.satisfies(obsMap, initState)) {
+            throw new Exception("[ofTrace] something wrong at step 0");
+        }
         interpreter.currentStep.loadAnnotations(initState);
         // Walk the rest of the trace
         for (int i = 1; i < states.size(); i++) {
