@@ -70,7 +70,7 @@ public class AgentInstance {
 
         Parser parser = (agentParser.trim()
                 .seq(CharacterParser.of('(').trim())
-                .seq(CharacterParser.word().plus().trim().flatten())
+                .seq(CharacterParser.word().plus().flatten().trim())
                 .seq(CharacterParser.of(',').trim())
                 .seq(new LazyParser<TypingContext>((TypingContext contextt) -> {
                     try {
