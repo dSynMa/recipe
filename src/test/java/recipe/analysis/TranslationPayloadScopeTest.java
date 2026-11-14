@@ -23,7 +23,7 @@ public class TranslationPayloadScopeTest {
             String text = model(supply, "targetReady()")
                 .replace("agent Sender", "guard targetReady() := @ready;\nagent Sender");
             IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> parse(text));
-            assertTrue(error.getMessage(), error.getMessage().contains("not available in assignment"));
+            assertTrue(error.getMessage(), error.getMessage().contains("not available"));
         }
     }
 

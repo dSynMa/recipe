@@ -126,7 +126,17 @@ public class GuardReference extends Condition {
                             }
                         }
 
-                        return new GuardReference(guardType, paramValsTyped.toArray(new Expression[paramValsTyped.size()]));
+                        GuardReference reference = new GuardReference(guardType,
+                            paramValsTyped.toArray(new Expression[paramValsTyped.size()]));
+                        // A macro must not introduce free variables unavailable at its call site.
+                        reference.relabel(variable -> {
+                            if (context.get(variable.getName()) == null) {
+                                throw new IllegalArgumentException("Variable " + variable.getName()
+                                    + " is not available in guard call " + label);
+                            }
+                            return variable;
+                        });
+                        return reference;
                     } catch (Exception e){
                         throw new IllegalArgumentException("Invalid call to guard " + label + ": " + e.getMessage(), e);
                     }
