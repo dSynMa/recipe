@@ -1,6 +1,5 @@
 package recipe.analysis;
 
-import java.nio.file.Files;
 import org.junit.Test;
 import recipe.interpreter.Interpreter;
 import static org.junit.Assert.*;
@@ -14,7 +13,7 @@ public class ReplayActualBranchTest {
         text=text.replace("repeat: receive: <value> c? [received := value]",
             "repeat: one: <value> "+receive+"[received := value] + two: <value> "+receive+"[received := value]");
         var model=parse(text);
-        NuXmvBatch checker=new NuXmvBatch(model);
+        NuXmvInteraction checker=new NuXmvInteraction(model);
         try {
             var result=checker.modelCheckBmc("G !receiver-two",true,2);
             assertTrue(result.getRight(),result.getLeft());
@@ -23,7 +22,7 @@ public class ReplayActualBranchTest {
             assertEquals(2,replay.traceToJSON().size());
             assertEquals("two"+(supply?"":"?"),replay.getCurrentStep().toJSON().getJSONObject("state")
                 .getJSONObject("receiver").getString("**last_label**"));
-        } finally {Files.deleteIfExists(checker.path);}
+        } finally {checker.close();}
     }
     @Test(timeout=20000)
     public void realCounterexampleSelectsReceiveBranchByEvent() throws Exception {check(false);}
@@ -32,14 +31,15 @@ public class ReplayActualBranchTest {
     @Test(timeout=20000)
     public void actualInitialSimulationTraceCanBeReplayed() throws Exception {
         var model=parse(source("observation-forall-constant"));
-        NuXmvBatch checker=new NuXmvBatch(model);
+        NuXmvInteraction checker=new NuXmvInteraction(model);
         try {
-            var result=checker.pickInitialState("TRUE");
-            assertTrue(result.getRight(),result.getLeft());
-            assertTrue(result.getRight(),result.getRight().contains("Trace Type: Simulation"));
-            var replay=Interpreter.ofTrace(model,result.getRight());
+            assertTrue(checker.initialise(true).getLeft());
+            String result = checker.execute(output -> output.trim().endsWith("nuXmv >"),
+                "msat_pick_state -v -c \"TRUE\"");
+            assertTrue(result, result.contains("Trace Type: Simulation"));
+            var replay = Interpreter.ofTrace(model, result);
             assertEquals(1,replay.traceToJSON().size());
             assertFalse(replay.isDeadlocked());
-        } finally {Files.deleteIfExists(checker.path);}
+        } finally {checker.close();}
     }
 }

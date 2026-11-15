@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import recipe.analysis.NuXmvBatch;
+import recipe.analysis.NuXmvInteraction;
 import recipe.analysis.ToNuXmv;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
@@ -112,7 +112,7 @@ public class Interpreter {
                 for (TypedVariable variable : instance.getAgent().getStore().getAttributes().values()) {
                     if (variable.getType() instanceof recipe.lang.types.Number && locals.has(variable.getName())) {
                         String value = locals.get(variable.getName()).toString();
-                        locals.put(variable.getName(), recipe.analysis.NuXmvInteraction.interpreterNumber(
+                        locals.put(variable.getName(), NuXmvInteraction.interpreterNumber(
                                 instance.getLabel() + "-" + variable.getName() + " at trace step " + index, value));
                     }
                 }
@@ -220,14 +220,13 @@ public class Interpreter {
         int startPos = trace.indexOf(sentinel) + sentinel.length();
         trace = trace.substring(startPos);
 
-        NuXmvBatch nuxmv = new NuXmvBatch(s);
         String[] split = trace.split("->", 0);
         List<JSONObject> states = new ArrayList<>(split.length - 1);
         for (String string : split) {
             // Skip stuff that does not contain a state (shouldn't happen)
             if (!string.contains("<-")) continue;
 
-            JSONObject state = nuxmv.outputToJSON(string);
+            JSONObject state = NuXmvInteraction.outputToJSON(s, string);
             if (loopingStates.contains(states.size())) {
                 state.put("___LOOP___", true);
             }
@@ -239,12 +238,14 @@ public class Interpreter {
 
     private void rootStep(String constraint) throws IOException, Exception {
         HashMap<AgentInstance, ConcreteStore> rootStores = new HashMap<AgentInstance, ConcreteStore>();
-        NuXmvBatch nuxmv = new NuXmvBatch(sys);
-        Pair<Boolean, String> s0 = nuxmv.pickInitialState(constraint);
-        if (!s0.getLeft()) {
-            throw new IOException("Cannot select an initial state: " + s0.getRight());
+        JSONObject initValues;
+        try (NuXmvInteraction nuxmv = new NuXmvInteraction(sys)) {
+            Pair<Boolean, String> s0 = nuxmv.simulation_pick_init_state(constraint);
+            if (!s0.getLeft()) {
+                throw new IOException("Cannot select an initial state: " + s0.getRight());
+            }
+            initValues = nuxmv.outputToJSON(s0.getRight());
         }
-        JSONObject initValues = nuxmv.outputToJSON(s0.getRight());
 
         sys.getAgentInstances().forEach((x) -> {
             String name = x.getLabel();

@@ -1,6 +1,5 @@
 package recipe.analysis;
 
-import java.nio.file.Files;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static recipe.analysis.TranslationTestModels.*;
@@ -13,7 +12,7 @@ public class UnboundedBmcTest {
             .replace("count == 2", "count == 0")
             .replace("count * 2", "count + 1")
             .replace("ready <- !received", "ready <- TRUE");
-        NuXmvBatch checker = new NuXmvBatch(parse(text));
+        NuXmvInteraction checker = new NuXmvInteraction(parse(text));
         try {
             var result = checker.modelCheckBmc("G (sender-count < 12)", false, 3);
             assertTrue(result.getRight(), result.getLeft());
@@ -22,7 +21,7 @@ public class UnboundedBmcTest {
             assertTrue(proof.getRight(), proof.getLeft());
             assertTrue(proof.getRight(), proof.getRight().contains("is true"));
         } finally {
-            Files.deleteIfExists(checker.path);
+            checker.close();
         }
     }
 }

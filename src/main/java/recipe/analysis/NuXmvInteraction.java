@@ -1,6 +1,9 @@
 package recipe.analysis;
 
 import java.math.BigDecimal;
+import java.util.regex.Matcher;
+import java.util.HashSet;
+import java.util.Set;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -9,13 +12,10 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashSet;
 import java.util.Locale;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.json.JSONObject;
@@ -23,7 +23,7 @@ import org.json.JSONObject;
 import recipe.Config;
 import recipe.lang.utils.Pair;
 
-public class NuXmvInteraction {
+public class NuXmvInteraction implements AutoCloseable {
 
     private static final Pattern PROMPT = Pattern.compile("(?i)nuXmv *>\\s*$");
     // Empty responses signal shutdown or EOF; a complete response always includes a prompt.
@@ -71,7 +71,7 @@ public class NuXmvInteraction {
         StringBuilder output = new StringBuilder();
         while (true) {
             output.append(awaitResponse());
-            String text = output.toString().replaceAll("(^|\\r|\\n)+\\*\\*\\*[^\\n|$]*($|\\r|\\n)+", "");
+            String text = output.toString();
             if (text.contains("not built") || isFinished.test(text)) return text;
         }
     }
@@ -91,43 +91,38 @@ public class NuXmvInteraction {
         }
     }
 
-    private static boolean booleanEncodingFailed(String output) {
-        return output.contains("Impossible to build a boolean FSM with infinite precision variables")
-                || output.contains("not suitable constants for operator")
-                // nuXmv 2.0 reports unsupported FLOOR nodes as a Boolean encoder error.
-                || output.contains("bdd_enc_eval_recur:");
-    }
-
     public Pair<Boolean, String> modelCheck(String property, Boolean bmc, int steps) throws IOException {
-        if ((system.isSymbolic() || booleanModelUnavailable) && !bmc && steps < 0)
-            return modelCheckic3(property, false, steps);
-        Pair<Boolean, String> initialise = initialise(bmc || (system.isSymbolic() || booleanModelUnavailable));
-        if (!initialise.getLeft()) return initialise;
-
-        // Completion is signalled by the prompt, including errors and bounded unknowns.
-        if (booleanModelUnavailable && !bmc && steps < 0)
-            return modelCheckic3(property, false, steps);
-        Predicate<String> finished = x -> x.trim().endsWith("nuXmv >");
-
-        String out = "";
-        out = execute(finished, (((system.isSymbolic() || booleanModelUnavailable) || bmc ? "msat_" : "") + "check_ltlspec" + ((system.isSymbolic() || booleanModelUnavailable) || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ ((system.isSymbolic() || booleanModelUnavailable) || bmc ? "-k " + steps : "")));
-        if (!bmc && booleanEncodingFailed(out)) {
-            Pair<Boolean, String> smt = initialise(true);
-            if (!smt.getLeft()) return smt;
-            String command = steps < 0 ? "check_ltlspec_ic3 -i" : "msat_check_ltlspec_bmc -k " + steps;
-            out = execute(finished, command + " -p \"" + property + "\"");
+        if (bmc) return modelCheckBmc(property, true, steps);
+        if (system.isSymbolic() || booleanModelUnavailable) return modelCheckSmt(property, steps);
+        Pair<Boolean, String> initialised = initialise(false);
+        if (!initialised.getLeft()) {
+            if (!booleanEncodingFailed(initialised.getRight())) return initialised;
+            booleanModelUnavailable = true;
+            return modelCheckSmt(property, steps);
         }
-        out = out.replaceAll("nuXmv > ", "").trim();
-        out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
-        return new Pair<>(hasCheckResult(out), out);
+        Pair<Boolean, String> result = check("check_ltlspec -p \"" + property + "\"");
+        return booleanEncodingFailed(result.getRight()) ? modelCheckSmt(property, steps) : result;
     }
 
-    public Pair<Boolean, String> modelCheckic3(String property, boolean bounded, int steps) throws IOException {
-        Pair<Boolean, String> initialise = initialise(true);
-        if(!initialise.getLeft()){
-            return initialise;
-        }
+    private Pair<Boolean, String> modelCheckSmt(String property, int steps) throws IOException {
+        if (steps >= 0) return modelCheckBmc(property, true, steps);
+        Pair<Boolean, String> initialised = initialise(true);
+        if (!initialised.getLeft()) return initialised;
+        return check("check_ltlspec_ic3 -i -p \"" + property + "\"");
+    }
 
+    public Pair<Boolean, String> modelCheckBmc(String property, boolean bounded, int steps) throws IOException {
+        Pair<Boolean, String> initialised = initialise(true);
+        if (!initialised.getLeft()) return initialised;
+        // Completeness checking permits a proof; omitting -k would silently stop at 10.
+        String command = bounded ? "msat_check_ltlspec_bmc -k " + steps
+                : "msat_check_ltlspec_sbmc_inc -c -k " + Integer.MAX_VALUE;
+        return check(command + " -p \"" + property + "\"");
+    }
+
+    public Pair<Boolean, String> modelCheckIc3(String property, boolean bounded, int steps) throws IOException {
+        Pair<Boolean, String> initialised = initialise(true);
+        if (!initialised.getLeft()) return initialised;
         // nuXmv 2.0's finite IC3 engine does not enforce -k; use SMT for frame limits.
         boolean useBooleanModel = !bounded && !system.isSymbolic() && !booleanModelUnavailable;
         if (useBooleanModel && !booleanModelBuilt) {
@@ -136,21 +131,41 @@ public class NuXmvInteraction {
                 booleanModelUnavailable = true;
                 useBooleanModel = false;
             } else {
-                if (Pattern.compile("(?m)^\\s*file .+: line [0-9]+:").matcher(output).find())
-                    return new Pair<>(false, output);
+                if (hasCheckerError(output)) return new Pair<>(false, output);
                 booleanModelBuilt = true;
             }
         }
+        Pair<Boolean, String> result = check("check_ltlspec_ic3" + (useBooleanModel ? "" : " -i")
+                + (bounded ? " -k " + steps : "") + " -p \"" + property + "\"");
+        // A finite model can still have a property containing real arithmetic.
+        return useBooleanModel && booleanEncodingFailed(result.getRight())
+                ? modelCheckSmt(property, -1) : result;
+    }
 
-        Predicate<String> finished = x -> x.trim().endsWith("nuXmv >");
+    private static boolean booleanEncodingFailed(String output) {
+        return output.contains("Impossible to build a boolean FSM with infinite precision variables")
+                || output.contains("not suitable constants for operator")
+                // nuXmv 2.0 reports unsupported FLOOR nodes as a Boolean encoder error.
+                || output.contains("bdd_enc_eval_recur:");
+    }
 
-        String out = "";
-        out = execute(finished, ("check_ltlspec_ic3" + (useBooleanModel ? "" : " -i") + (bounded ? " -k " + steps : "") + " -p \"" + property + "\" "));
-        if (useBooleanModel && booleanEncodingFailed(out))
-            out = execute(finished, "check_ltlspec_ic3 -i -p \"" + property + "\"");
-        out = out.replaceAll("nuXmv > ", "").trim();
-        out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
-        return new Pair<>(hasCheckResult(out), out);
+    private Pair<Boolean, String> check(String command) throws IOException {
+        String output = execute(text -> text.trim().endsWith("nuXmv >"), command);
+        output = output.replace("nuXmv > ", "").trim();
+        return new Pair<>(!hasCheckerError(output) && hasCheckResult(output), output);
+    }
+
+    private static boolean hasCheckerError(String output) {
+        // A command may print a verdict before failing while constructing its trace.
+        return Pattern.compile("(?m)^\\s*file .+: line [0-9]+:").matcher(output).find()
+                || output.contains("*** internal error ***")
+                || output.contains("Type System Violation")
+                || output.contains("syntax error")
+                || output.contains("Parsing error")
+                || output.contains("There is a division by 0")
+                || output.contains("cannot be converted into INVARSPEC")
+                || output.contains("Impossible to build a boolean FSM with infinite precision variables")
+                || output.contains("aborting 'source");
     }
 
     private static boolean hasCheckResult(String output) {
@@ -162,18 +177,13 @@ public class NuXmvInteraction {
 
     public Pair<Boolean, String> initialise(boolean simulateOrBMC) throws IOException {
         ensureRunning();
-        boolean smt = (system.isSymbolic() || booleanModelUnavailable) || simulateOrBMC;
+        boolean smt = system.isSymbolic() || booleanModelUnavailable || simulateOrBMC;
         if (smt ? go_msat : go) return new Pair<>(true, "");
         String out = execute(x -> x.trim().endsWith("nuXmv >"), smt ? "go_msat" : "go");
-        if (!simulateOrBMC && !system.isSymbolic() && !booleanModelUnavailable && booleanEncodingFailed(out)) {
-            booleanModelUnavailable = true;
-            return initialise(true);
-        }
         // SMT simulation supports real arithmetic directly; Boolean conversion can
         // reject valid real expressions even when every state variable is finite.
 
-        // nuXmv diagnostics start with "file", without a preceding space.
-        if (Pattern.compile("(?m)^\\s*file .+: line [0-9]+:").matcher(out).find()) {
+        if (hasCheckerError(out)) {
             return new Pair<>(false, out);
         }
 
@@ -314,7 +324,24 @@ public class NuXmvInteraction {
         }
     }
 
-    public JSONObject outputToJSON(String nuxmvSimOutput){
+    public JSONObject outputToJSON(String output) {
+        return outputToJSON(system, output);
+    }
+
+    @Override
+    public void close() throws IOException {
+        stopNuXmvThread();
+    }
+    private static final Pattern FRACTION = Pattern.compile("(-?)f'([0-9]+)/([0-9]+)");
+
+    public static JSONObject outputToJSON(recipe.lang.System system, String nuxmvSimOutput){
+        Set<String> channelFields = new HashSet<>();
+        for (var instance : system.getAgentInstances()) {
+            for (var variable : instance.getAgent().getStore().getAttributes().values()) {
+                if (variable.getType().name().equals("channel"))
+                    channelFields.add(instance.getLabel() + "-" + variable.getName());
+            }
+        }
         JSONObject jsonObject = new JSONObject();
 
         if(Pattern.compile("(?mi)^[ \t]*progress[ \t]*=[ \t]*FALSE[ \t]*$").matcher(nuxmvSimOutput).find()){
@@ -359,7 +386,7 @@ public class NuXmvInteraction {
             String var = left[1].trim();
 
             String val = group[1].trim().replaceAll(agent + "\\-", "");
-            val = NuXmvInteraction.normalise(system, group[0].trim(), val);
+            val = normalise(channelFields, group[0].trim(), val);
 
 
             if (!jsonObject.has(agent)){
@@ -371,18 +398,8 @@ public class NuXmvInteraction {
 
         return jsonObject;
     }
-    private static final Pattern FRACTION = Pattern.compile("(-?)f'([0-9]+)/([0-9]+)");
-
-    static String normalise(recipe.lang.System system, String field, String value) {
-        if (value.equals(recipe.Config.nuxmvBroadcast)) {
-            for (var instance : system.getAgentInstances()) {
-                for (var variable : instance.getAgent().getStore().getAttributes().values()) {
-                    if (variable.getType().name().equals("channel")
-                            && field.equals(instance.getLabel() + "-" + variable.getName()))
-                        return recipe.Config.broadcast;
-                }
-            }
-        }
+    private static String normalise(Set<String> channelFields, String field, String value) {
+        if (channelFields.contains(field) && value.equals(recipe.Config.nuxmvBroadcast)) return recipe.Config.broadcast;
         return normaliseNumber(value);
     }
 

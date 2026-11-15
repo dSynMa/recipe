@@ -1,6 +1,5 @@
 package recipe.analysis;
 
-import java.nio.file.Files;
 import org.junit.Test;
 import recipe.interpreter.Interpreter;
 import static org.junit.Assert.*;
@@ -20,7 +19,7 @@ public class ReplaySequentialTraceTest {
     }
     private void check(boolean mixed) throws Exception {
         var model=parse(source(mixed));
-        NuXmvBatch checker=new NuXmvBatch(model);
+        NuXmvInteraction checker=new NuXmvInteraction(model);
         try {
             var trace=checker.modelCheckBmc("G (sender-count < 3)",true,4);
             assertTrue(trace.getRight(),trace.getLeft());
@@ -33,7 +32,7 @@ public class ReplaySequentialTraceTest {
             assertEquals("*",state.getJSONObject("sender").getString("ch"));
             assertEquals("3",state.getJSONObject("receiver").getString("total"));
             assertTrue(replay.getCurrentStep().toJSON().getJSONObject("___LTOL___").getBoolean("obs0"));
-        } finally { Files.deleteIfExists(checker.path); }
+        } finally { checker.close(); }
     }
     @Test(timeout=30000)
     public void changingChannelAndSequentialStatesReplayFromRealBmcTrace() throws Exception {check(false);}

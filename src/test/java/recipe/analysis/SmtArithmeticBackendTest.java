@@ -1,6 +1,5 @@
 package recipe.analysis;
 
-import java.nio.file.Files;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static recipe.analysis.TranslationTestModels.*;
@@ -18,7 +17,7 @@ public class SmtArithmeticBackendTest {
         var system = parse(model("count") + "\nSPEC (sender-count / 2) * 2 == sender-count;\n");
         String output = ToNuXmv.transform(system);
         String property = output.substring(output.indexOf("LTLSPEC ") + 8).trim();
-        NuXmvBatch checker = new NuXmvBatch(system);
+        NuXmvInteraction checker = new NuXmvInteraction(system);
         try {
             for (boolean bounded : new boolean[] {false, true}) {
                 var result = checker.modelCheckIc3(property, bounded, 4);
@@ -26,13 +25,13 @@ public class SmtArithmeticBackendTest {
                 assertTrue(result.getRight(), result.getRight().contains("is true"));
             }
         } finally {
-            Files.deleteIfExists(checker.path);
+            checker.close();
         }
     }
 
     @Test(timeout = 20000)
     public void realUpdateFeasibilityDoesNotRequireABooleanModel() throws Exception {
-        NuXmvBatch checker = new NuXmvBatch(parse(model("count / 2")));
+        NuXmvInteraction checker = new NuXmvInteraction(parse(model("count / 2")));
         try {
             var bmc = checker.modelCheckBmc("G !progress", true, 3);
             assertTrue(bmc.getRight(), bmc.getLeft());
@@ -41,7 +40,7 @@ public class SmtArithmeticBackendTest {
             assertTrue(ic3.getRight(), ic3.getLeft());
             assertTrue(ic3.getRight(), ic3.getRight().contains("is true"));
         } finally {
-            Files.deleteIfExists(checker.path);
+            checker.close();
         }
     }
 }

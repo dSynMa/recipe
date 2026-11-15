@@ -50,7 +50,7 @@ public class InteractiveCheckCompletionTest {
     public void interactiveIc3UsesThePreparedSmtModel() throws Exception {
         NuXmvInteraction checker = checker();
         try {
-            var result = checker.modelCheckic3("sender-sent", true, 4);
+            var result = checker.modelCheckIc3("sender-sent", true, 4);
             assertTrue(result.getRight(), result.getLeft());
             assertTrue(result.getRight(), result.getRight().contains("is false"));
         } finally { Files.deleteIfExists(checker.path); }
@@ -68,7 +68,7 @@ public class InteractiveCheckCompletionTest {
     public void boundedIc3UnknownCompletesWithoutATrueOrFalseVerdict() throws Exception {
         NuXmvInteraction checker = checker();
         try {
-            var result = checker.modelCheckic3("G (sender-sent -> first-received)", true, 1);
+            var result = checker.modelCheckIc3("G (sender-sent -> first-received)", true, 1);
             assertTrue(result.getRight(), result.getLeft());
             assertTrue(result.getRight(), result.getRight().contains("no proof or counterexample"));
             assertFalse(result.getRight(), result.getRight().contains(" is true"));

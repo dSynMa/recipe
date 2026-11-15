@@ -9,7 +9,6 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.petitparser.context.ParseError;
 
-import recipe.analysis.NuXmvBatch;
 import recipe.analysis.NuXmvInteraction;
 import recipe.analysis.ToNuXmv;
 import recipe.interpreter.Interpreter;
@@ -35,7 +34,7 @@ import java.util.logging.Logger;
 
 public class Server {
     NuXmvInteraction nuXmvInteraction;
-    NuXmvBatch nuXmvBatch;
+    private final Set<Future<?>> modelCheckWorkers = ConcurrentHashMap.newKeySet();
     System system;
 
     Interpreter interpreter;
@@ -158,6 +157,9 @@ public class Server {
         String script = req.getQuery().get("script").trim();
         try {
             system = recipe.lang.System.parser().end().parse(script).get();
+            interpreter = null;
+            latestDots = new HashMap<>();
+            latestDotsInterpreter = new ConcurrentHashMap<>();
             if(nuXmvInteraction != null){
                 nuXmvInteraction.stopNuXmvThread();
                 nuXmvInteraction = null;
@@ -188,7 +190,6 @@ public class Server {
                 nuXmvInteraction = null;
             }
             nuXmvInteraction = new NuXmvInteraction(system);
-            nuXmvBatch = new NuXmvBatch(system);
             Pair<Boolean, String> initialise = nuXmvInteraction.initialise(buildType);
 
             if(initialise.getLeft()){
@@ -301,25 +302,23 @@ public class Server {
             String unparsedSpec = system.getUnparsedSpecs().get(i).trim();
             // Number observations across the complete list, exactly as model generation does.
             Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
-            String spec = toLtl.getLeft().get(i).toString();
+            String spec = toLtl.getLeft().get(i).toNuXmv();
 
             String info = String.format("[%d]  %s, %s", i, unparsedSpec, mcConfig.type);
             logger.info(info);
-            switch (mcConfig.getType()) {
-                case BDD:
-                    NuXmvInteraction nuxmv = new NuXmvInteraction(system);
-                    nuxmv.initialise(true);
-                    nuxmv.initialise(mcConfig.getType() == MCType.BMC);
-                    result = nuxmv.modelCheck(spec, mcConfig.isBounded(), mcConfig.getBound());
-                    // Stop NuXmv
-                    nuxmv.stopNuXmvThread();
-                    break;
-                case BMC:
-                    result = nuXmvBatch.modelCheckBmc(spec, mcConfig.isBounded(), mcConfig.getBound());
-                    break;
-                default:
-                    result = nuXmvBatch.modelCheckIc3(spec, mcConfig.isBounded(), mcConfig.getBound());
-                    break;
+            // Each worker owns its checker so properties run in parallel and cancel independently.
+            try (NuXmvInteraction checker = new NuXmvInteraction(system)) {
+                switch (mcConfig.getType()) {
+                    case BDD:
+                        result = checker.modelCheck(spec, false, mcConfig.getBound());
+                        break;
+                    case BMC:
+                        result = checker.modelCheckBmc(spec, mcConfig.isBounded(), mcConfig.getBound());
+                        break;
+                    default:
+                        result = checker.modelCheckIc3(spec, mcConfig.isBounded(), mcConfig.getBound());
+                        break;
+                }
             }
 
             resultJSON.put("spec", unparsedSpec);
@@ -413,7 +412,7 @@ public class Server {
 
     @Route("/modelCheckStop")
     public String stopModelChecking(Request req) {
-        NuXmvBatch.stopAllProcesses();
+        for (Future<?> worker : modelCheckWorkers) worker.cancel(true);
         return "";
     }
 
