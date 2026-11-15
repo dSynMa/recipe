@@ -13,7 +13,6 @@ public class InteractiveConcurrentSessionTest {
         NuXmvInteraction second = new NuXmvInteraction(model);
         ExecutorService pool = Executors.newFixedThreadPool(2);
         try {
-            assertNotSame(first.nuxmvTurn, second.nuxmvTurn);
             for (int i = 0; i < 4; i++) {
                 CountDownLatch start = new CountDownLatch(1);
                 Future<?> left = pool.submit(() -> {

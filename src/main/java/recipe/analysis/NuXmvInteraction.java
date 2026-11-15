@@ -2,22 +2,18 @@ package recipe.analysis;
 
 import java.math.BigDecimal;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,10 +25,13 @@ import recipe.lang.utils.Pair;
 
 public class NuXmvInteraction {
 
-    PipedInputStream in = new PipedInputStream();
-    PipedOutputStream out = new PipedOutputStream(in);
-
-    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    private static final Pattern PROMPT = Pattern.compile("(?i)nuXmv *>\\s*$");
+    // Empty responses signal shutdown or EOF; a complete response always includes a prompt.
+    private final BlockingQueue<String> responses = new LinkedBlockingQueue<>();
+    private volatile IOException responseFailure;
+    private Process checkerProcess;
+    private OutputStream commandInput;
+    private Thread shutdownHook;
 
     Thread process;
     private volatile boolean stopped;
@@ -55,7 +54,7 @@ public class NuXmvInteraction {
             process = startNuXmvThread();
         } catch (IOException startupFailure) {
             try {
-                if (process != null) stopNuXmvThread();
+                if (checkerProcess != null) stopNuXmvThread();
                 else Files.deleteIfExists(path);
             } catch (IOException cleanupFailure) {
                 startupFailure.addSuppressed(cleanupFailure);
@@ -64,37 +63,31 @@ public class NuXmvInteraction {
         }
     }
 
-    public static boolean isAlive(Process p) {
-        try {
-            p.exitValue();
-            return false;
-        }
-        catch (IllegalThreadStateException e) {
-            return true;
+    public synchronized String execute(Predicate<String> isFinished, String command) throws IOException {
+        ensureRunning();
+        commandInput.write((command + "\n").getBytes(StandardCharsets.UTF_8));
+        commandInput.flush();
+
+        StringBuilder output = new StringBuilder();
+        while (true) {
+            output.append(awaitResponse());
+            String text = output.toString().replaceAll("(^|\\r|\\n)+\\*\\*\\*[^\\n|$]*($|\\r|\\n)+", "");
+            if (text.contains("not built") || isFinished.test(text)) return text;
         }
     }
 
-    public String execute(Predicate<String> isFinished, String command) throws IOException{
+    private String awaitResponse() throws IOException {
         ensureRunning();
-        String outText = "";
-        byteArrayOutputStream.reset();
-        // Let the worker drain the pipe before writing a command larger than its buffer.
-        nuxmvTurn.set(true);
-        out.write((command + "\n").getBytes(StandardCharsets.UTF_8));
-        out.flush();
-
-        while (true) {
-            while (nuxmvTurn.get()) {
-                ensureRunning();
-                pauseForResponse();
+        try {
+            String response = responses.take();
+            if (response.isEmpty()) {
+                responses.offer(response);
+                throw responseFailure != null ? responseFailure : new IOException("nuXmv interaction has stopped");
             }
-            outText += byteArrayOutputStream.toString(StandardCharsets.UTF_8);
-            outText = outText.replaceAll("(^|\\r|\\n)+\\*\\*\\*[^\\n|$]*($|\\r|\\n)+", "");
-            byteArrayOutputStream.reset();
-            if (outText.contains("not built") || isFinished.test(outText)) {
-                return outText;
-            }
-            nuxmvTurn.set(true);
+            return response;
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while waiting for nuXmv", interrupted);
         }
     }
 
@@ -108,17 +101,8 @@ public class NuXmvInteraction {
     public Pair<Boolean, String> modelCheck(String property, Boolean bmc, int steps) throws IOException {
         if ((system.isSymbolic() || booleanModelUnavailable) && !bmc && steps < 0)
             return modelCheckic3(property, false, steps);
-        if(bmc && !go_msat){
-            Pair<Boolean, String> initialise = initialise(bmc || (system.isSymbolic() || booleanModelUnavailable));
-            if(!initialise.getLeft()){
-                return initialise;
-            }
-        } else if(!bmc && !go){
-            Pair<Boolean, String> initialise = initialise(bmc || (system.isSymbolic() || booleanModelUnavailable));
-            if(!initialise.getLeft()){
-                return initialise;
-            }
-        }
+        Pair<Boolean, String> initialise = initialise(bmc || (system.isSymbolic() || booleanModelUnavailable));
+        if (!initialise.getLeft()) return initialise;
 
         // Completion is signalled by the prompt, including errors and bounded unknowns.
         if (booleanModelUnavailable && !bmc && steps < 0)
@@ -177,7 +161,10 @@ public class NuXmvInteraction {
     }
 
     public Pair<Boolean, String> initialise(boolean simulateOrBMC) throws IOException {
-        String out = execute((x) -> x.trim().endsWith("nuXmv >"),"go" + (((system.isSymbolic() || booleanModelUnavailable) || simulateOrBMC) ? "_msat" : ""));
+        ensureRunning();
+        boolean smt = (system.isSymbolic() || booleanModelUnavailable) || simulateOrBMC;
+        if (smt ? go_msat : go) return new Pair<>(true, "");
+        String out = execute(x -> x.trim().endsWith("nuXmv >"), smt ? "go_msat" : "go");
         if (!simulateOrBMC && !system.isSymbolic() && !booleanModelUnavailable && booleanEncodingFailed(out)) {
             booleanModelUnavailable = true;
             return initialise(true);
@@ -190,13 +177,14 @@ public class NuXmvInteraction {
             return new Pair<>(false, out);
         }
 
+        if (smt) go_msat = true;
+        else go = true;
         return new Pair<>(true, out);
     }
 
     public Pair<Boolean, String> simulation_pick_init_state(String constraint) throws IOException {
         if(!go_msat){
             Pair<Boolean, String> initialise = initialise(true);
-            initialise = initialise(true);
             if(!initialise.getLeft()){
                 return initialise;
             }
@@ -247,49 +235,67 @@ public class NuXmvInteraction {
     }
 
     private void ensureRunning() throws IOException {
-        if (stopped || Thread.currentThread().isInterrupted()
-                || (process != null && process.getState() == Thread.State.TERMINATED)) {
+        if (stopped || Thread.currentThread().isInterrupted()) {
             throw new IOException("nuXmv interaction has stopped");
         }
-    }
-
-    private static void pauseForResponse() throws IOException {
-        try {
-            Thread.sleep(1);
-        } catch (InterruptedException interrupted) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Interrupted while waiting for nuXmv", interrupted);
-        }
+        if (responseFailure != null) throw responseFailure;
     }
 
     public Thread startNuXmvThread() throws IOException {
-        Thread t = new Thread(() -> {
+        checkerProcess = new ProcessBuilder(Config.getNuxmvPath(), "-int", path.toString())
+                .redirectErrorStream(true).start();
+        commandInput = checkerProcess.getOutputStream();
+        shutdownHook = new Thread(checkerProcess::destroyForcibly);
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
+        process = new Thread(this::readResponses, "nuXmv-output");
+        process.setDaemon(true);
+        process.start();
+        awaitResponse(); // Consume the startup banner and prompt before sending commands.
+        return process;
+    }
+
+    private void readResponses() {
+        StringBuilder pending = new StringBuilder();
+        try (Reader reader = new InputStreamReader(checkerProcess.getInputStream(), StandardCharsets.UTF_8)) {
+            char[] buffer = new char[4096];
+            int count;
+            while ((count = reader.read(buffer)) != -1) {
+                pending.append(buffer, 0, count);
+                // Prompts have no newline and may span reads. Only inspect the trailing text.
+                if (PROMPT.matcher(pending).region(Math.max(0, pending.length() - 32), pending.length()).find()) {
+                    responses.offer(pending.toString());
+                    pending.setLength(0);
+                }
+            }
+            if (!stopped) responseFailure = new IOException("nuXmv exited before completing its response:\n" + pending);
+        } catch (IOException failure) {
+            if (!stopped) responseFailure = failure;
+        } finally {
+            responses.offer("");
+            checkerProcess.destroyForcibly();
             try {
-                runNuXmv(path, in, byteArrayOutputStream, nuxmvTurn);
+                checkerProcess.waitFor();
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
-            } catch (Exception e) {
-                if (!stopped) e.printStackTrace();
+            } finally {
+                try {
+                    Runtime.getRuntime().removeShutdownHook(shutdownHook);
+                } catch (IllegalStateException shuttingDown) {
+                    // JVM shutdown has already started the hook.
+                }
             }
-        });
-        t.setDaemon(true);
-        process = t;
-        t.start();
-
-        while (nuxmvTurn.get()) {
-            if (!t.isAlive()) throw new IOException("nuXmv exited before its initial prompt");
-            pauseForResponse();
         }
-        return t;
     }
 
     public void stopNuXmvThread() throws IOException {
         stopped = true;
-        process.interrupt();
+        responses.offer("");
+        // Destroying the child releases both blocked reads and blocked command writes.
+        if (checkerProcess != null) checkerProcess.destroyForcibly();
         boolean interrupted = Thread.interrupted();
         long deadline = java.lang.System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5);
         try {
-            while (process.isAlive()) {
+            while (process != null && process.isAlive()) {
                 long remaining = deadline - java.lang.System.nanoTime();
                 if (remaining <= 0) throw new IOException("nuXmv worker did not stop");
                 try {
@@ -300,64 +306,9 @@ public class NuXmvInteraction {
             }
         } finally {
             try {
-                out.close();
-                in.close();
+                if (commandInput != null) commandInput.close();
                 Files.deleteIfExists(path);
             } finally {
-                if (interrupted) Thread.currentThread().interrupt();
-            }
-        }
-    }
-
-    final AtomicReference<Boolean> nuxmvTurn = new AtomicReference<>(true);
-
-    // Direct callers own the supplied streams; only checker instances use the turn handshake.
-    public static void runNuXmv(Path path, InputStream inr, OutputStream outw) throws Exception {
-        runNuXmv(path, inr, outw, null);
-    }
-
-    private static void runNuXmv(Path path, InputStream inr, OutputStream outw,
-            AtomicReference<Boolean> turn) throws Exception {
-        Process process = new ProcessBuilder(Config.getNuxmvPath(), "-int", path.toString())
-            .redirectErrorStream(true).start();
-        Thread shutdown = new Thread(process::destroy);
-        Runtime.getRuntime().addShutdownHook(shutdown);
-        try (InputStream out = process.getInputStream(); OutputStream in = process.getOutputStream()) {
-            byte[] buffer = new byte[4000];
-            List<String> textt = new ArrayList<>();
-            while (process.isAlive() && !Thread.currentThread().isInterrupted()) {
-                int available = out.available();
-                if (available > 0) {
-                    int count = out.read(buffer, 0, Math.min(available, buffer.length));
-                    if (count < 0) break;
-                    String text = new String(buffer, 0, count, StandardCharsets.UTF_8);
-                    textt.add(text);
-                    if (String.join("", textt).trim().replace(" ", "").toLowerCase(Locale.ROOT).endsWith("nuxmv>")) {
-                        outw.write(String.join("", textt).getBytes(StandardCharsets.UTF_8));
-                        outw.flush();
-                        textt.clear();
-                        if (turn != null) {
-                            turn.set(false);
-                            while (!turn.get()) Thread.sleep(1);
-                        }
-                    }
-                }
-                int availableInput = inr.available();
-                if (availableInput > 0) {
-                    int count = inr.read(buffer, 0, Math.min(availableInput, buffer.length));
-                    if (count < 0) break;
-                    in.write(buffer, 0, count);
-                    in.flush();
-                }
-                Thread.sleep(10);
-            }
-        } finally {
-            boolean interrupted = Thread.interrupted();
-            process.destroyForcibly();
-            try {
-                process.waitFor(2, java.util.concurrent.TimeUnit.SECONDS);
-            } finally {
-                Runtime.getRuntime().removeShutdownHook(shutdown);
                 if (interrupted) Thread.currentThread().interrupt();
             }
         }

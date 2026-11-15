@@ -102,4 +102,16 @@ public class InteractiveShutdownTest {
             } finally { checker.stopNuXmvThread(); }
         }
     }
+    @Test(timeout = 10000)
+    public void checkerExitReleasesAResponseWait() throws Exception {
+        NuXmvInteraction checker = new NuXmvInteraction(parse(source("supplier-locality")));
+        try {
+            IOException failure = assertThrows(IOException.class,
+                () -> checker.execute(output -> output.contains("nuXmv >"), "quit"));
+            assertTrue(failure.getMessage(), failure.getMessage().contains("exited"));
+            assertThrows(IOException.class, () -> checker.modelCheck("!sender-sent", false, 0));
+        } finally {
+            checker.stopNuXmvThread();
+        }
+    }
 }
