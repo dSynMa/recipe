@@ -78,28 +78,24 @@ public class NuXmvInteraction {
         ensureRunning();
         String outText = "";
         byteArrayOutputStream.reset();
-        byteArrayOutputStream.flush();
-        byteArrayOutputStream.flush();
-        out.write((command + "\n").getBytes());
+        // Let the worker drain the pipe before writing a command larger than its buffer.
+        nuxmvTurn.set(true);
+        out.write((command + "\n").getBytes(StandardCharsets.UTF_8));
         out.flush();
 
-        while (!isFinished.test(outText)) {
-            nuxmvTurn.set(true);
+        while (true) {
             while (nuxmvTurn.get()) {
                 ensureRunning();
                 pauseForResponse();
             }
-            byteArrayOutputStream.flush();
-            byteArrayOutputStream.flush();
-            outText += new String(byteArrayOutputStream.toByteArray());
+            outText += byteArrayOutputStream.toString(StandardCharsets.UTF_8);
             outText = outText.replaceAll("(^|\\r|\\n)+\\*\\*\\*[^\\n|$]*($|\\r|\\n)+", "");
-            byteArrayOutputStream.flush();
             byteArrayOutputStream.reset();
-            if(outText.contains("not built")){
+            if (outText.contains("not built") || isFinished.test(outText)) {
                 return outText;
             }
+            nuxmvTurn.set(true);
         }
-        return outText;
     }
 
     private static boolean booleanEncodingFailed(String output) {

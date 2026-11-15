@@ -29,16 +29,6 @@ public class ToNuXmvTest {
     }
 
     @Test
-    public void directBatchCheckingRejectsInfiniteDomainModels() throws Exception {
-        String script = Files.readString(Paths.get("./bigger-example.txt"));
-        System system = System.parser().end().parse(script).get();
-        java.io.IOException error = org.junit.Assert.assertThrows(java.io.IOException.class,
-                () -> ToNuXmv.nuxmvModelChecking(system));
-        org.junit.Assert.assertTrue(error.getMessage(),
-                error.getMessage().contains("infinite domain variables"));
-    }
-
-    @Test
     public void nuxmvLTL2() throws Exception {
         String script = String.join("\n", Files.readAllLines(Paths.get("./example.rcp")));
         Parser system = System.parser().end();

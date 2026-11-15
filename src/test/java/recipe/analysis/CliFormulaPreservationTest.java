@@ -12,7 +12,7 @@ public class CliFormulaPreservationTest {
         assertCli(source("supplier-locality"), property, expected, true);
     }
 
-    private void assertCli(String source, String property, String expected, boolean bounded) throws Exception {
+    private void assertCli(String source, String property, String expected, boolean bounded, String... otherExpected) throws Exception {
         Path model = Files.createTempFile("cli-formula-", ".rcp");
         Path log = Files.createTempFile("cli-formula-", ".log");
         Process process = null;
@@ -32,6 +32,7 @@ public class CliFormulaPreservationTest {
             assertEquals(output, 0, process.exitValue());
             assertFalse(output, output.contains("syntax error"));
             assertTrue(output, output.contains(expected));
+            for (String verdict : otherExpected) assertTrue(output, output.contains(verdict));
         } finally {
             if (process != null) process.destroyForcibly();
             Files.deleteIfExists(model);
@@ -56,5 +57,26 @@ public class CliFormulaPreservationTest {
     public void symbolicCliChecksMultipleSpecificationsWithSeparateBounds() throws Exception {
         assertCli(source("arithmetic-multiplication"),
             "G (sender-count >= 2);\nSPEC G (sender-count >= 0)", ">= 0", false);
+    }
+    @Test(timeout = 30000)
+    public void finiteCliChecksEverySpecification() throws Exception {
+        assertCli(source("supplier-locality"),
+            "sender-sent;\nSPEC !sender-sent", " is false", false, " is true");
+    }
+
+    @Test(timeout = 30000)
+    public void finiteCliStillChecksObservationSpecifications() throws Exception {
+        String model = source("observation-forall-constant")
+            .replace("SPEC G (<forall(TRUE)>true);", "");
+        assertCli(model, "F (<value>TRUE);\nSPEC F (<!value>TRUE)",
+            " is true", false, " is false", "obs1");
+    }
+    @Test(timeout = 30000)
+    public void finiteCliChecksSpecificationsLargerThanTheCommandPipe() throws Exception {
+        String property = String.join(" & ", java.util.Collections.nCopies(
+            55, "(sender-sent | !sender-sent)"));
+        assertTrue(property.length() > 1024);
+        assertCli(source("supplier-locality"), property + ";\nSPEC sender-sent",
+            " is true", false, " is false");
     }
 }

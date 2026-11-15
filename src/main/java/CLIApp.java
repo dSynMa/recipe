@@ -133,28 +133,22 @@ public class CLIApp
                     if (system.getSpecs() == null || system.getSpecs().size() == 0) {
                         System.out.println("No specifications to model check.");
                     } else {
-                        // Skip the default nuXmv invocation: symbolic models require explicit SMT setup.
-                        String out = system.isSymbolic() ? "" : ToNuXmv.nuxmvModelChecking(system);
-                        if (out.equals("") || system.isSymbolic()) {
-                            nuXmvInteraction = new NuXmvInteraction(system);
-                            for (int i = 0; i < system.getSpecs().size(); i++) {
-                                String spec = system.getSpecs().get(i).toString();
-                                if(!system.getSpecs().get(i).isPureLTL()){
-                                    System.out.println("LTOL model checking not supported yet, skipping model checking of:\n" + spec);
-                                    continue;
-                                }
+                        StringBuilder out = new StringBuilder();
+                        var specifications = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs()).getLeft();
+                        nuXmvInteraction = new NuXmvInteraction(system);
+                        try {
+                            for (var specification : specifications) {
+                                String spec = specification.toNuXmv();
                                 int bound = 0;
                                 if (system.isSymbolic()) {
                                     System.out.println("There is a symbolic specification, and thus bounded model checking will be used. Please specify an integer bound: ");
                                     bound = Integer.parseInt(scanner.nextLine().trim());
                                 }
                                 Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, false, bound);
-                                if (result.getLeft()) {
-                                    out += spec + ":\n" + result.getRight() + "\n";
-                                } else {
-                                    out += spec + " (error) :\n" + result.getRight() + "\n";
-                                }
+                                out.append(spec).append(result.getLeft() ? ":\n" : " (error) :\n")
+                                        .append(result.getRight()).append('\n');
                             }
+                        } finally {
                             if (!cmd.hasOption("sim")) nuXmvInteraction.stopNuXmvThread();
                         }
                         System.out.println(out);

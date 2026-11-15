@@ -3,11 +3,6 @@ package recipe.analysis;
 import static recipe.Config.commVariableReferences;
 import static recipe.Config.isCvRef;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.charset.StandardCharsets;
-import java.util.stream.Collectors;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -298,30 +293,7 @@ public class ToNuXmv {
         return new Pair<>(pureLTLSpecs, observations);
     }
 
-    public static String nuxmvModelChecking(System system) throws Exception {
-        Path model = Files.createTempFile("rcheck-direct-", ".smv");
-        Process process = null;
-        try {
-            Files.writeString(model, transform(system));
-            process = new ProcessBuilder(Config.getNuxmvPath(), model.toString())
-                    .redirectErrorStream(true).start();
-            process.getOutputStream().close();
-            String output = new String(process.getInputStream().readAllBytes(),
-                    StandardCharsets.UTF_8);
-            int exitCode = process.waitFor();
-            if (exitCode != 0) throw new IOException("nuXmv exited with status " + exitCode + ":\n" + output);
-            return output.lines().filter(line -> !line.startsWith("***") && !line.isBlank())
-                    .collect(Collectors.joining("\n"));
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw e;
-        } finally {
-            if (process != null) process.destroy();
-            Files.deleteIfExists(model);
-        }
-    }
-
-    public static String nuxmvTypeOfTypedVar(TypedVariable typedVariable){
+    public static String nuxmvTypeOfTypedVar(TypedVariable<?> typedVariable){
         Type type = typedVariable.getType();
         if(type.getClass().equals(Enum.class)){
             return "{" + String.join(",", ((Enum) type).getValues()) + "}";
