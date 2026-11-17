@@ -37,6 +37,12 @@ public class Not extends Condition {
 	}
 
     @Override
+    public Expression<Boolean> definednessCondition()
+            throws RelabellingTypeException, MismatchingTypeException {
+        return arg.definednessCondition();
+    }
+
+    @Override
     public String toNuXmv() {
         return "!" + renderNuXmvOperand(arg);
     }

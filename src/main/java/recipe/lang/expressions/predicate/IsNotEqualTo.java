@@ -38,6 +38,12 @@ public class IsNotEqualTo extends Condition {
 	}
 
     @Override
+    public Expression<Boolean> definednessCondition()
+            throws RelabellingTypeException, MismatchingTypeException {
+        return new And(lhs.definednessCondition(), rhs.definednessCondition());
+    }
+
+    @Override
     public String toNuXmv() {
         return renderNuXmvOperand(lhs) + " != " + renderNuXmvOperand(rhs);
     }

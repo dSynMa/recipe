@@ -1,10 +1,13 @@
 package recipe.lang.expressions.arithmetic;
 
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.predicate.And;
+import recipe.lang.expressions.predicate.IsNotEqualTo;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
 import recipe.lang.types.Number;
+import recipe.lang.types.Boolean;
 import recipe.lang.types.Real;
 import recipe.lang.utils.exceptions.*;
 
@@ -19,6 +22,15 @@ public class Division extends ArithmeticExpression{
     public Division(Expression<Number> lhs, Expression<Number> rhs) {
         this.lhs = lhs;
         this.rhs = rhs;
+    }
+
+    @Override
+    public Expression<Boolean> definednessCondition()
+            throws RelabellingTypeException, MismatchingTypeException {
+        Expression<Boolean> operands = new And(lhs.definednessCondition(), rhs.definednessCondition());
+        return new And(operands,
+                new IsNotEqualTo(rhs,
+                    new TypedValue<>(recipe.lang.types.Integer.getType(), "0")));
     }
 
     @Override
@@ -51,7 +63,7 @@ public class Division extends ArithmeticExpression{
             try {
                 return numericResult(lhsNo.divide(rhsNo));
             } catch (ArithmeticException nonTerminatingDecimal) {
-                if (rhsNo.signum() == 0) throw nonTerminatingDecimal;
+                if (rhsNo.signum() == 0) return new Division(lhsValue, rhsValue);
                 // Keep the exact quotient for symbolic analysis. A real numerator
                 // prevents nuXmv from interpreting integer literals as integer division.
                 return new Division(new TypedValue<Number>(Real.getType(), lhsNo.toString()), rhsValue);

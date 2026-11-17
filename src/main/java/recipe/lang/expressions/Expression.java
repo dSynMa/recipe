@@ -15,6 +15,11 @@ public interface Expression<T extends Type> {
 
     java.lang.Boolean isValidAssignmentFor(TypedVariable var);
 
+    /** Conditions under which evaluating this expression is defined. */
+    default Expression<Boolean> definednessCondition() throws RelabellingTypeException, MismatchingTypeException {
+        return recipe.lang.expressions.predicate.Condition.getTrue();
+    }
+
     /** Render this expression using the centrally configured nuXmv broadcast constant. */
     String toNuXmv();
 

@@ -1,10 +1,12 @@
 package recipe.lang.expressions.arithmetic;
 
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
 import recipe.lang.types.Number;
+import recipe.lang.types.Boolean;
 import recipe.lang.types.Integer;
 import recipe.lang.types.Real;
 import recipe.lang.utils.exceptions.*;
@@ -19,6 +21,12 @@ public class Subtraction extends ArithmeticExpression{
     public Subtraction(Expression<Number> lhs, Expression<Number> rhs) {
         this.lhs = lhs;
         this.rhs = rhs;
+    }
+
+    @Override
+    public Expression<Boolean> definednessCondition()
+            throws RelabellingTypeException, MismatchingTypeException {
+        return new And(lhs.definednessCondition(), rhs.definednessCondition());
     }
 
     @Override

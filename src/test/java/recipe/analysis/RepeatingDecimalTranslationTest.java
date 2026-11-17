@@ -23,11 +23,11 @@ public class RepeatingDecimalTranslationTest {
         assertSmtInvariant(ToNuXmv.transform(parse(model)), "sender-sent -> sender-count * 2 = 1");
     }
 
-    @Test(expected = ArithmeticException.class)
-    public void zeroDivisorStillFails() throws Exception {
+    @Test
+    public void zeroDivisorDisablesTheTransition() throws Exception {
         String model = source("arithmetic-multiplication")
             .replace("count: integer", "count: real")
             .replace("count * 2", "1 / 0");
-        ToNuXmv.transform(parse(model));
+        assertSmtInvariant(ToNuXmv.transform(parse(model)), "!progress");
     }
 }

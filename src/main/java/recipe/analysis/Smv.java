@@ -39,6 +39,22 @@ final class Smv {
         }
     }
 
+    private record Conditional(Expr condition, Expr whenTrue, Expr whenFalse) implements Expr {
+        public void appendTo(StringBuilder output) {
+            output.append("case (");
+            condition.appendTo(output);
+            output.append(") : (");
+            whenTrue.appendTo(output);
+            output.append("); TRUE : (");
+            whenFalse.appendTo(output);
+            output.append("); esac");
+        }
+    }
+
+    static Expr conditional(Expr condition, Expr whenTrue, Expr whenFalse) {
+        return new Conditional(condition, whenTrue, whenFalse);
+    }
+
     static final Expr TRUE = atom("TRUE");
     static final Expr FALSE = atom("FALSE");
 

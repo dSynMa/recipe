@@ -82,8 +82,19 @@ final class NuXmvTranslation {
         return type.name();
     }
 
-    private Expr source(Expression<?> expression) {
-        return atom(expression.toNuXmv());
+    private Expr source(Expression<?> expression) throws Exception {
+        Expression<Boolean> defined = expression.definednessCondition().simplify();
+        if (defined.equals(Condition.getTrue())) return atom(expression.toNuXmv());
+        // nuXmv prints definitions even for disabled transitions. Their inactive values
+        // must be evaluable; action feasibility still forbids taking an undefined update.
+        Expr inactive = expression.getType() instanceof Boolean ? FALSE : atom("0");
+        if (defined.equals(Condition.getFalse())) return inactive;
+        return conditional(source(defined), atom(expression.toNuXmv()), inactive);
+    }
+
+    private Expr guard(Expression<Boolean> expression) throws Exception {
+        return source(new recipe.lang.expressions.predicate.And(
+            expression.definednessCondition(), expression).simplify());
     }
 
     String translate() throws Exception {
@@ -120,9 +131,9 @@ final class NuXmvTranslation {
         else if (channel instanceof TypedValue && receiveGuardExpr.toString().equals("FALSE")) {
             receiveGuard = FALSE;
         } else if(channel.getClass().equals(TypedValue.class)){
-            receiveGuard = source(receiveGuardExpr);
+            receiveGuard = guard(receiveGuardExpr);
         } else {
-            receiveGuard = or(source(receiveGuardExpr), eq(source(channel), atom(Config.nuxmvBroadcast)));
+            receiveGuard = or(guard(receiveGuardExpr), eq(source(channel), atom(Config.nuxmvBroadcast)));
         }
 
         Expression<Boolean> receiverSelection = sendGuardExpr.relabel(v -> {
@@ -612,7 +623,7 @@ final class NuXmvTranslation {
 
     private void addBroadcastWithoutReceiveCases(
         AgentInstance receiver, Expression<Enum> channel,
-        Map<State<?>, List<EncodedStep>> receiveTransitions, List<EncodedStep> cases) {
+        Map<State<?>, List<EncodedStep>> receiveTransitions, List<EncodedStep> cases) throws Exception {
         String name = receiver.getLabel();
         for (State<?> state : receiver.getAgent().getStates()) {
             Expr atState = eq(state(name), atom(state.toString()));
@@ -630,7 +641,7 @@ final class NuXmvTranslation {
 
     private void addEnabledReceiveCases(
         String receiver, Expr receiveGuard, Expression<Boolean> receiverSelection,
-        Map<State<?>, List<EncodedStep>> receiveTransitions, List<EncodedStep> cases) {
+        Map<State<?>, List<EncodedStep>> receiveTransitions, List<EncodedStep> cases) throws Exception {
         if (receiveTransitions.isEmpty()) return;
         List<Expr> relations = new ArrayList<>();
         List<Expr> enabled = new ArrayList<>();
@@ -639,7 +650,7 @@ final class NuXmvTranslation {
             relations.add(and(atState, or(relations(entry.getValue()))));
             enabled.add(and(atState, or(enabled(entry.getValue()))));
         }
-        Expr participates = and(receiveGuard, source(receiverSelection));
+        Expr participates = and(receiveGuard, guard(receiverSelection));
         cases.add(new EncodedStep(and(participates, or(relations)), and(participates, or(enabled))));
     }
 
@@ -649,8 +660,8 @@ final class NuXmvTranslation {
     }
 
     private void addUnselectedBroadcastCase(
-        Expression<Enum> channel, Expression<Boolean> selection, String receiver, List<EncodedStep> cases) {
-        Expr unselectedBroadcast = and(eq(source(channel), atom(Config.nuxmvBroadcast)), not(source(selection)));
+        Expression<Enum> channel, Expression<Boolean> selection, String receiver, List<EncodedStep> cases) throws Exception {
+        Expr unselectedBroadcast = and(eq(source(channel), atom(Config.nuxmvBroadcast)), not(guard(selection)));
         cases.add(new EncodedStep(and(unselectedBroadcast, atom("keep-all-" + receiver)), unselectedBroadcast));
     }
 
@@ -762,8 +773,8 @@ final class NuXmvTranslation {
         String lbl = splyLbl + "-" + getLbl;
         while (supplyGetDefinitions.contains(lbl)) lbl += "-" + unlabelledCounter++;
 
-        Expr sendSelection = supplyGuardExprHere instanceof NamedLocation ? TRUE : source(supplyGuardExprHere);
-        Expr getSelection = getterGuardExprHere instanceof NamedLocation ? TRUE : source(getterGuardExprHere);
+        Expr sendSelection = supplyGuardExprHere instanceof NamedLocation ? TRUE : guard(supplyGuardExprHere);
+        Expr getSelection = getterGuardExprHere instanceof NamedLocation ? TRUE : guard(getterGuardExprHere);
         Expr enabled = and(and(supplyTriggeredIf), sendSelection, and(getTriggeredIf), getSelection);
         module.define(lbl, and(enabled, and(supplyEffects), and(getEffects)));
         supplyGetDefinitions.add(lbl);

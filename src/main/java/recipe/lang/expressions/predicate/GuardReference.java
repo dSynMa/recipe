@@ -64,6 +64,16 @@ public class GuardReference extends Condition {
     }
 
     @Override
+    public Expression<Boolean> definednessCondition()
+            throws RelabellingTypeException, MismatchingTypeException {
+        Expression<Boolean> defined = unpack().definednessCondition();
+        for (Expression<?> argument : parametersValues) {
+            defined = new And(defined, argument.definednessCondition());
+        }
+        return defined;
+    }
+
+    @Override
     public TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException {
 
         GuardDefinition guardDef = definition;

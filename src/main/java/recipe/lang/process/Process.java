@@ -81,12 +81,25 @@ public abstract class Process {
         builder.group()
                 .primitive(sendProcess.or(receiveProcess).or(getProcess).or(supplyProcess).trim()
                         .map((BasicProcess action) -> {
-                            // Both updates and outgoing data must fit their declared domains.
-                            // Keep feasibility in psi so progress agrees with legal transitions.
-                            constrainNumericAssignments(action, action.getUpdate(), localContext);
-                            if (action instanceof BasicProcessWithMessage) {
-                                constrainNumericAssignments(action,
-                                    ((BasicProcessWithMessage) action).getMessage(), messageContext);
+                            try {
+                                Expression<Boolean> defined = action.getPsi().definednessCondition();
+                                for (Expression<?> update : action.getUpdate().values()) {
+                                    defined = new And(defined, update.definednessCondition());
+                                }
+                                if (action instanceof BasicProcessWithMessage messageAction) {
+                                    for (Expression<?> payload : messageAction.getMessage().values()) {
+                                        defined = new And(defined, payload.definednessCondition());
+                                    }
+                                    constrainNumericAssignments(action, messageAction.getMessage(), messageContext);
+                                }
+                                // Feasibility belongs in psi so progress agrees with legal transitions.
+                                constrainNumericAssignments(action, action.getUpdate(), localContext);
+                                defined = defined.simplify();
+                                if (!defined.equals(recipe.lang.expressions.predicate.Condition.getTrue())) {
+                                    action.addEntryCondition(defined);
+                                }
+                            } catch (Exception invalidExpression) {
+                                throw new IllegalArgumentException("Cannot determine action feasibility", invalidExpression);
                             }
                             return action;
                         }))
