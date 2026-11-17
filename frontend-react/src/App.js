@@ -90,8 +90,8 @@ function App() {
     setSimLoading(true);
 
     const params = new URLSearchParams();
-    params.append('reset', encodeURIComponent(!simstarted));
-    params.append('constraint', encodeURIComponent(simcondition));
+    params.append('reset', !simstarted);
+    params.append('constraint', simcondition);
 
     axios.get(server + "/simulateNext", { params })
       .then((response) => {
@@ -182,7 +182,7 @@ function App() {
     const reader = new FileReader();
     reader.onload = async (e) => {
       const params = new URLSearchParams();
-      params.append("trace", encodeURIComponent(e.target.result));
+      params.append("trace", e.target.result);
       axios.get(server + "/interpretLoadJSON", { params })
         .then((response) => { console.log(response) })
         .catch((error) => { console.log(error) });
@@ -192,7 +192,7 @@ function App() {
 
   function loadTraceIntoInterpreter(output) {
     const params = new URLSearchParams();
-    params.append("output", encodeURIComponent(output));
+    params.append("output", output);
     axios
       .get(server + "/interpretLoad", { params })
       .then((response) => {
@@ -258,7 +258,7 @@ function App() {
   useEffect(() => {
     if (built && interpreterloading) {
       const params = new URLSearchParams();
-      params.append('reset', encodeURIComponent(!interpreterstarted));
+      params.append('reset', !interpreterstarted);
       params.append('index', interpreternextindex || 0);
 
       // var url;
@@ -355,13 +355,13 @@ function App() {
       } else {
         const params = new URLSearchParams();
         if (radioValue == 2) {
-          params.append('ic3', encodeURIComponent(true));
+          params.append('ic3', true);
           if (bound > -1) {
-            params.append('bound', encodeURIComponent(bound));
+            params.append('bound', bound);
           }
         } else if (radioValue == 3) {
-          params.append('bmc', encodeURIComponent(true));
-          params.append('bound', encodeURIComponent(bound));
+          params.append('bmc', true);
+          params.append('bound', bound);
         }
 
         axios.get(server + "/modelCheck", { params })
@@ -396,7 +396,7 @@ function App() {
   function visualise() {
     setVLoading(true);
     const params = new URLSearchParams();
-    params.append('script', encodeURIComponent(code));
+    params.append('script', code);
 
     axios.get(server + "/setSystem", { params })
       .then((response) => {
@@ -438,7 +438,7 @@ function App() {
     setBound(-1);
     resetInterpreter();
     const params = new URLSearchParams();
-    params.append('script', encodeURIComponent(code));
+    params.append('script', code);
     console.log(server);
 
     var askSymbolic = obeyMCpane ? radioValue != 1 : symbolicBuild;
