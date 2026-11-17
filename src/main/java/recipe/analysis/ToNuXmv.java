@@ -156,8 +156,10 @@ public class ToNuXmv {
     }
 
     public static Expression<Boolean> handleCVsInObservation(Map<String, Type> cvs, Expression<Boolean> obs, Expression<Boolean> sendGuard) throws Exception {
-        // A bare Boolean common variable denotes universal agreement over the send predicate.
-        // Negation is handled below, giving the dual existential meaning for !cv.
+        // ReCiPe section 7: https://arxiv.org/html/2104.10998v3#S7
+        // m |= cv iff every valuation in the sender predicate satisfies cv.
+        // Negation stays outside: m |= !cv iff some selected valuation falsifies cv.
+        // These are valuations of common variables, not the actual connected receivers.
         if (obs instanceof TypedVariable && obs.getType().equals(Boolean.getType())) {
             String name = ((TypedVariable) obs).getName().replaceFirst("^@", "");
             if (cvs.containsKey(name) || cvs.containsKey("@" + name)) {
