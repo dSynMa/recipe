@@ -64,7 +64,13 @@ public abstract class ArithmeticExpression implements Expression<Number> {
 
     @Override
     public java.lang.Boolean isValidAssignmentFor(TypedVariable var){
-        return Number.class.isAssignableFrom(var.getType().getClass());
+        if (var.getType().accepts(getType())) return true;
+        if (!(var.getType() instanceof recipe.lang.types.Integer)) return false;
+        try {
+            return NumericDomain.isSubsetOf(simplify(), var.getType());
+        } catch (Exception invalidExpression) {
+            return false;
+        }
     }
 
     @Override

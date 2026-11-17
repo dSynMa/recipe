@@ -6,7 +6,6 @@ import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.types.*;
-import recipe.lang.types.Enum;
 
 import java.util.*;
 
@@ -125,30 +124,14 @@ public class TypingContext {
         return varType.get(name);
     }
 
-    public Set<String> get(Type type){
-        HashSet vars = new HashSet<>();
-        for(Map.Entry<Type, Set<String>> entries : typeVars.entrySet()){
-            if(type.getClass().isAssignableFrom(entries.getKey().getClass())) {
-                if (type.getClass().equals(Enum.class) && entries.getKey().getClass().equals(Enum.class)) {
-                    if (((Enum) type).name().equals(((Enum) entries.getKey()).name())) {
-                        vars.addAll(entries.getValue());
-                    }
-                } else {
-                    vars.addAll(entries.getValue());
-                }
-            }
-
-            if(type.getClass().equals(UnionType.class)){
-                if(entries.getKey().getClass().equals(UnionType.class)){
-                    if(!Collections.disjoint(((UnionType) type).getTypes(), ((UnionType) entries.getKey()).getTypes())){
-                        vars.addAll(entries.getValue());
-                    }
-                } else if(((UnionType) type).getTypes().contains(entries.getKey())){
-                    vars.addAll(entries.getValue());
-                }
+    public Set<String> get(Type type) {
+        Set<String> variables = new HashSet<>();
+        for (Map.Entry<Type, Set<String>> entry : typeVars.entrySet()) {
+            if (type.accepts(entry.getKey())) {
+                variables.addAll(entry.getValue());
             }
         }
-        return vars;
+        return variables;
     }
 
     public TypingContext getSubContext(Type type){
@@ -164,7 +147,7 @@ public class TypingContext {
     public TypingContext getComplementSubContext(Type type){
         TypingContext context = new TypingContext();
         for(Map.Entry<Type, Set<String>> entries : typeVars.entrySet()){
-            if(!type.getClass().isAssignableFrom(entries.getKey().getClass())) {
+            if(!type.accepts(entries.getKey())) {
                 for(String val : entries.getValue()){
                     context.set(val, varType.get(val));
                 }

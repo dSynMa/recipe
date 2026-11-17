@@ -4,10 +4,7 @@ import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.AttributeTypeException;
 import recipe.lang.utils.exceptions.RelabellingTypeException;
 import recipe.lang.store.Store;
-import recipe.lang.types.*;
-import recipe.lang.types.Enum;
-import recipe.lang.types.Integer;
-import recipe.lang.types.Process;
+import recipe.lang.types.Type;
 
 import java.lang.Boolean;
 import java.util.HashSet;
@@ -60,20 +57,7 @@ public class TypedVariable<T extends Type> implements Expression<T> {
 
     @Override
     public Boolean isValidAssignmentFor(TypedVariable var) {
-        if(getType().getClass().equals(Enum.class) && var.getType().getClass().equals(Enum.class)){
-            return getType().equals(var.getType());
-        } else if(getType().getClass().equals(Guard.class) && var.getType().getClass().equals(Guard.class)){
-            return getType().equals(var.getType());
-        } else if (var.getType() instanceof BoundedInteger) {
-            if (!(getType() instanceof BoundedInteger)) return Boolean.FALSE;
-            BoundedInteger source = (BoundedInteger) getType();
-            BoundedInteger target = (BoundedInteger) var.getType();
-            return source.getMin() >= target.getMin() && source.getMax() <= target.getMax();
-        } else if(getType().getClass().equals(Process.class) && var.getType().getClass().equals(Process.class)) {
-            return getType().equals(var.getType());
-        } else{
-            return var.getType().getClass().isAssignableFrom(this.getType().getClass());
-        }
+        return var.getType().accepts(getType());
     }
 
     @Override

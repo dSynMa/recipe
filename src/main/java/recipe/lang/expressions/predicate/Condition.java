@@ -198,7 +198,7 @@ public abstract class Condition implements Expression<Boolean> {
 
 	@Override
 	public java.lang.Boolean isValidAssignmentFor(TypedVariable var){
-		return var.getType().equals(Boolean.getType());
+		return var.getType().accepts(getType());
 	}
 
 	@Override

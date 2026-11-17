@@ -46,7 +46,20 @@ public class TypedValue<T extends Type> implements Expression<T> {
 
     @Override
     public java.lang.Boolean isValidAssignmentFor(TypedVariable var) {
-        return var.getType().isValidValue(this.getValue());
+        return fits(var.getType());
+    }
+
+    private boolean fits(Type target) {
+        if (value instanceof TypedValue) {
+            return ((TypedValue<?>) value).fits(target);
+        }
+        if (target instanceof UnionType) {
+            return ((UnionType) target).getTypes().stream().anyMatch(this::fits);
+        }
+        // Numeric literals can fit a narrower domain even when their declared type does not.
+        boolean numeric = type instanceof recipe.lang.types.Number
+                && target instanceof recipe.lang.types.Number;
+        return (numeric || target.accepts(type)) && target.isValidValue(value);
     }
 
     public T getType() {

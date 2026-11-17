@@ -137,8 +137,7 @@ public class Parsing {
                                 && value.getType() instanceof recipe.lang.types.Number;
                             // Numeric range/integrality is checked by process feasibility guards.
                             // Categorical mismatches cannot denote a well-typed assignment.
-                            if (!numeric && !(target.getType().getClass().isAssignableFrom(value.getType().getClass())
-                                    && value.isValidAssignmentFor(target))) {
+                            if (!numeric && !value.isValidAssignmentFor(target)) {
                                 throw new IllegalArgumentException("Invalid assignment to " + target.getName()
                                     + ": expected " + target.getType().name() + ", got " + value.getType().name());
                             }
@@ -453,8 +452,7 @@ public class Parsing {
                     Expression value = (Expression) relabel.get(2);
                     boolean numeric = target.getType() instanceof recipe.lang.types.Number
                         && value.getType() instanceof recipe.lang.types.Number;
-                    if (!numeric && !(target.getType().getClass().isAssignableFrom(value.getType().getClass())
-                            && value.isValidAssignmentFor(target))) {
+                    if (!numeric && !value.isValidAssignmentFor(target)) {
                         throw new IllegalArgumentException("Invalid relabelling for " + target.getName()
                             + ": expected " + target.getType().name() + ", got " + value.getType().name());
                     }
