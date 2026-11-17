@@ -1,80 +1,30 @@
 package recipe.analysis;
 
-import org.junit.Test;
-import org.petitparser.context.Result;
-import org.petitparser.parser.Parser;
-import recipe.lang.System;
-import recipe.lang.utils.exceptions.RelabellingTypeException;
-
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
+import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
+import static recipe.analysis.TranslationTestModels.parse;
 
 public class ToNuXmvTest {
-
     @Test
-    public void transform() throws Exception {
-        String script = String.join("\n", Files.readAllLines(Paths.get("./bigger-example.txt")));
-
-        Parser system = System.parser().end();
-        Result r = system.parse(script);
-        System s = r.get();
-        try {
-            String transform = ToNuXmv.transform(s);
-            java.lang.System.out.println(transform);
-        } catch (RelabellingTypeException e) {
-            e.printStackTrace();
-            assert r.isFailure();
-        }
-        assert r.isSuccess();
+    public void translatesBiggerExample() throws Exception {
+        assertTranslates("bigger-example.txt");
     }
 
     @Test
-    public void nuxmvLTL2() throws Exception {
-        String script = String.join("\n", Files.readAllLines(Paths.get("./example.rcp")));
-        Parser system = System.parser().end();
-        Result r = system.parse(script);
-        System s = r.get();
-        try {
-            String transform = ToNuXmv.transform(s);
-            java.lang.System.out.println(transform);
-        } catch (Exception e) {
-            e.printStackTrace();
-            assert r.isFailure();
-        }
-        assert r.isSuccess();
-
+    public void translatesExample() throws Exception {
+        assertTranslates("example.rcp");
     }
 
     @Test
-    public void transform2() throws Exception {
-        String script = String.join("\n", Files.readAllLines(Paths.get("./bigger-example.txt")));
-        Parser system = System.parser().end();
-        Result r = system.parse(script);
-        System s = r.get();
-        try {
-            String out = ToNuXmv.transform(s);
-            java.lang.System.out.println(out);
-        } catch (Exception e) {
-            e.printStackTrace();
-            assert r.isFailure();
-        }
-        assert r.isSuccess();
-
+    public void translatesExample3() throws Exception {
+        assertTranslates("example3.rcp");
     }
-    @Test
-    public void transform3() throws Exception {
-        String script = String.join("\n", Files.readAllLines(Paths.get("./example3.rcp")));
-        Parser system = System.parser().end();
-        Result r = system.parse(script);
-        System s = r.get();
-        try {
-            String out = ToNuXmv.transform(s);
-            java.lang.System.out.println(out);
-        } catch (Exception e) {
-            e.printStackTrace();
-            assert r.isFailure();
-        }
-        assert r.isSuccess();
 
+    private static void assertTranslates(String file) throws Exception {
+        String output = ToNuXmv.transform(parse(Files.readString(Path.of(file))));
+        assertTrue("Missing main module for " + file, output.startsWith("MODULE main\n"));
     }
 }
