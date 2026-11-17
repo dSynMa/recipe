@@ -108,7 +108,7 @@ public class InteractiveShutdownTest {
         try {
             IOException failure = assertThrows(IOException.class,
                 () -> checker.execute(output -> output.contains("nuXmv >"), "quit"));
-            assertTrue(failure.getMessage(), failure.getMessage().contains("exited"));
+            assertTrue(failure.getMessage(), failure.getMessage().contains("exited with status 0"));
             assertThrows(IOException.class, () -> checker.modelCheck("!sender-sent", false, 0));
         } finally {
             checker.stopNuXmvThread();

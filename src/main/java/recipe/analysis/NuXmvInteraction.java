@@ -277,7 +277,17 @@ public class NuXmvInteraction implements AutoCloseable {
                     pending.setLength(0);
                 }
             }
-            if (!stopped) responseFailure = new IOException("nuXmv exited before completing its response:\n" + pending);
+            if (!stopped) {
+                // EOF can precede process termination, or occur while the process is still alive.
+                // Capture a natural exit before cleanup, without waiting indefinitely for it.
+                boolean exited = checkerProcess.waitFor(100, java.util.concurrent.TimeUnit.MILLISECONDS);
+                if (!stopped) responseFailure = new IOException("nuXmv "
+                        + (exited ? "exited with status " + checkerProcess.exitValue() : "closed its output")
+                        + " before completing its response:\n" + pending);
+            }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            if (!stopped) responseFailure = new IOException("Interrupted while waiting for nuXmv to exit", interrupted);
         } catch (IOException failure) {
             if (!stopped) responseFailure = failure;
         } finally {
