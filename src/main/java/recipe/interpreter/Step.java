@@ -140,7 +140,7 @@ public class Step {
                 try {
                     SendProcess send = (SendProcess) inboundTransition.getProducerProcess();
                     TypedValue channel = send.getChannel().valueIn(senderStore);
-                    Map<String, Expression> message = new HashMap<>();
+                    Map<String, Expression<?>> message = new HashMap<>();
                     for (Map.Entry<String, Expression> entry : send.getMessage().entrySet()) {
                         message.put(entry.getKey(), entry.getValue().valueIn(senderStore));
                     }

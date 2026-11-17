@@ -16,6 +16,11 @@ public class Next extends LTOL{
     public LTOL getLTOL(){
         return ltol;
     }
+    @Override
+    public String toNuXmv() {
+        return "X(" + ltol.toNuXmv() + ")";
+    }
+
     public String toString(){
         return "X(" + ltol + ")";
     }
@@ -35,10 +40,4 @@ public class Next extends LTOL{
     public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return new Next(ltol.toLTOLwithoutQuantifiers());
     }
-
-    @Override
-    public String toNuXmv() {
-        return "X(" + ltol.toNuXmv() + ")";
-    }
-
 }

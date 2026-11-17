@@ -41,6 +41,11 @@ public class Implies extends Condition {
 		return false;
 	}
 
+    @Override
+    public String toNuXmv() {
+        return "(" + renderNuXmvOperand(lhs) + " -> " + renderNuXmvOperand(rhs) + ")";
+    }
+
 	@Override
 	public String toString() {
 		return "(" + renderOperand(lhs) + " -> " + renderOperand(rhs) + ")";
@@ -119,10 +124,4 @@ public class Implies extends Condition {
 	public Condition removePreds(){
 		return new Implies(this.lhs.removePreds(), this.rhs.removePreds());
 	}
-
-    @Override
-    public String toNuXmv() {
-        return "(" + renderNuXmvOperand(lhs) + " -> " + renderNuXmvOperand(rhs) + ")";
-    }
-
 }

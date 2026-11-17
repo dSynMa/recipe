@@ -62,14 +62,13 @@ public class Floor extends ArithmeticExpression {
     }
 
     @Override
-    public String toString() {
-        return isIntegral(operand) ? operand.toString() : "floor(" + operand + ")";
-    }
-
-    @Override
     public String toNuXmv() {
         String value = operand.toNuXmv();
         return isIntegral(operand) ? value : "floor(" + value + ")";
     }
 
+    @Override
+    public String toString() {
+        return isIntegral(operand) ? operand.toString() : "floor(" + operand + ")";
+    }
 }

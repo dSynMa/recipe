@@ -1,0 +1,31 @@
+MODULE main
+VAR
+	sender-name : {sender};
+	sender-sent : boolean;
+	sender-automaton-state : {0};
+	receiver-name : {receiver};
+	receiver-received : boolean;
+	receiver-automaton-state : {0};
+	sender-send : boolean;
+	receiver-receive : boolean;
+DEFINE
+	falsify-not-sender-send := TRUE;
+	falsify-not-sender := (TRUE) & ((next(sender-send)) = (FALSE));
+	falsify-sender := (TRUE) & ((next(sender-send)) = (FALSE));
+	keep-all-sender := (TRUE) & ((next(sender-name)) = (sender-name)) & ((next(sender-automaton-state)) = (sender-automaton-state)) & ((next(sender-sent)) = (sender-sent)) & ((next(sender-automaton-state)) = (sender-automaton-state)) & ((next(sender-send)) = (FALSE));
+	falsify-not-receiver-receive := TRUE;
+	falsify-not-receiver := (TRUE) & ((next(receiver-receive)) = (FALSE));
+	falsify-receiver := (TRUE) & ((next(receiver-receive)) = (FALSE));
+	keep-all-receiver := (TRUE) & ((next(receiver-name)) = (receiver-name)) & ((next(receiver-automaton-state)) = (receiver-automaton-state)) & ((next(receiver-received)) = (receiver-received)) & ((next(receiver-automaton-state)) = (receiver-automaton-state)) & ((next(receiver-receive)) = (FALSE));
+	keep-all := (TRUE) & ((next(sender-send)) = (FALSE)) & (keep-all-sender) & ((next(receiver-receive)) = (FALSE)) & (keep-all-receiver);
+	no-observations := TRUE;
+	sender-send-receiver-receive := ((((sender-automaton-state) = (0)) & (TRUE)) & ((!(receiver-received = TRUE)) = TRUE) & (((receiver-automaton-state) = (0)) & (TRUE = TRUE)) & (TRUE)) & ((((next(sender-send)) = (TRUE)) & (falsify-not-sender-send)) & (no-observations) & ((next(sender-automaton-state)) = (0)) & ((next(sender-sent)) = (TRUE)) & ((next(sender-name)) = (sender-name))) & ((((next(receiver-receive)) = (TRUE)) & (falsify-not-receiver-receive)) & ((next(receiver-received)) = (TRUE = TRUE)) & ((next(receiver-name)) = (receiver-name)) & ((next(receiver-automaton-state)) = (0)));
+	sender-send-receiver-receive-progress := (((sender-automaton-state) = (0)) & (TRUE)) & ((!(receiver-received = TRUE)) = TRUE) & (((receiver-automaton-state) = (0)) & (TRUE = TRUE)) & (TRUE);
+	transition := (FALSE) | (sender-send-receiver-receive);
+	progress := sender-send-receiver-receive-progress;
+CONSTANTS
+	sender, c, broadcast, receiver;
+INIT
+((sender-automaton-state) = (0)) & (!(sender-sent = TRUE)) & ((TRUE = TRUE) & (sender-name = sender)) & ((receiver-automaton-state) = (0)) & (!(receiver-received = TRUE)) & ((TRUE = TRUE) & (receiver-name = receiver)) & ((sender-send) = (FALSE)) & ((receiver-receive) = (FALSE))
+TRANS
+	(transition) | ((!(progress)) & (keep-all) & (no-observations))

@@ -55,13 +55,12 @@ public class Addition extends ArithmeticExpression{
     }
 
     @Override
-    public String toString(){
-        return "(" + lhs.toString() + " + " + rhs.toString() + ")";
-    }
-
-    @Override
     public String toNuXmv() {
         return "(" + lhs.toNuXmv() + " + " + rhs.toNuXmv() + ")";
     }
 
+    @Override
+    public String toString(){
+        return "(" + lhs.toString() + " + " + rhs.toString() + ")";
+    }
 }

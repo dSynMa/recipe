@@ -26,6 +26,11 @@ public class Until extends LTOL{
         return right;
     }
 
+    @Override
+    public String toNuXmv() {
+        return "((" + left.toNuXmv() + ") U (" + right.toNuXmv() + "))";
+    }
+
     public String toString() {
         return "((" + left + ") U (" + right + "))";
     }
@@ -50,10 +55,4 @@ public class Until extends LTOL{
     public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return new Until(left.toLTOLwithoutQuantifiers(), right.toLTOLwithoutQuantifiers());
     }
-
-    @Override
-    public String toNuXmv() {
-        return "((" + left.toNuXmv() + ") U (" + right.toNuXmv() + "))";
-    }
-
 }

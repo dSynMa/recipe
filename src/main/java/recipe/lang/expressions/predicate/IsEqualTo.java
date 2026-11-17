@@ -49,10 +49,16 @@ public class IsEqualTo<T extends Type> extends Condition {
 		return false;
 	}
 
+    @Override
+    public String toNuXmv() {
+        return renderNuXmvOperand(lhs) + " = " + renderNuXmvOperand(rhs);
+    }
+
 	@Override
 	public String toString() {
 		return renderOperand(lhs) + " = " + renderOperand(rhs);
 	}
+
 
 	@Override
 	public TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException, NotImplementedYetException {
@@ -141,12 +147,5 @@ public class IsEqualTo<T extends Type> extends Condition {
             throw new IllegalArgumentException(e);
         }
     }
-
-    @Override
-    public String toNuXmv() {
-        return renderNuXmvOperand(lhs) + " = " + renderNuXmvOperand(rhs);
-    }
-
-
 }
 

@@ -15,13 +15,12 @@ public interface Expression<T extends Type> {
 
     java.lang.Boolean isValidAssignmentFor(TypedVariable var);
 
+    /** Render this expression using the centrally configured nuXmv broadcast constant. */
+    String toNuXmv();
+
     Type getType();
     Set<Expression<Boolean>> subformulas();
     Expression<T> replace(java.util.function.Predicate<Expression<T>> cond,
                                 Function<Expression<T>, Expression<T>> act);
     Expression<T> removePreds();
-
-    /** Render this expression using the centrally configured nuXmv broadcast constant. */
-    String toNuXmv();
-
 }

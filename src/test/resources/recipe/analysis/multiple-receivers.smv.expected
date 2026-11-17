@@ -1,0 +1,36 @@
+MODULE main
+VAR
+	sender-name : {sender};
+	sender-sent : boolean;
+	sender-automaton-state : {0};
+	first-name : {first,second};
+	first-received : boolean;
+	first-automaton-state : {0};
+	second-name : {first,second};
+	second-received : boolean;
+	second-automaton-state : {0};
+	first-receive : boolean;
+	second-receive : boolean;
+DEFINE
+	falsify-not-sender := TRUE;
+	falsify-sender := TRUE;
+	keep-all-sender := (TRUE) & ((next(sender-name)) = (sender-name)) & ((next(sender-automaton-state)) = (sender-automaton-state)) & ((next(sender-sent)) = (sender-sent)) & ((next(sender-automaton-state)) = (sender-automaton-state));
+	falsify-not-first-receive := TRUE;
+	falsify-not-first := (TRUE) & ((next(first-receive)) = (FALSE));
+	falsify-first := (TRUE) & ((next(first-receive)) = (FALSE));
+	keep-all-first := (TRUE) & ((next(first-name)) = (first-name)) & ((next(first-automaton-state)) = (first-automaton-state)) & ((next(first-received)) = (first-received)) & ((next(first-automaton-state)) = (first-automaton-state)) & ((next(first-receive)) = (FALSE));
+	falsify-not-second-receive := TRUE;
+	falsify-not-second := (TRUE) & ((next(second-receive)) = (FALSE));
+	falsify-second := (TRUE) & ((next(second-receive)) = (FALSE));
+	keep-all-second := (TRUE) & ((next(second-name)) = (second-name)) & ((next(second-automaton-state)) = (second-automaton-state)) & ((next(second-received)) = (second-received)) & ((next(second-automaton-state)) = (second-automaton-state)) & ((next(second-receive)) = (FALSE));
+	keep-all := (TRUE) & (keep-all-sender) & ((next(first-receive)) = (FALSE)) & (keep-all-first) & ((next(second-receive)) = (FALSE)) & (keep-all-second);
+	no-observations := TRUE;
+	transition := (((sender-automaton-state) = (0)) & ((TRUE) & ((falsify-sender) & ((next(sender-automaton-state)) = (0)) & ((next(sender-sent)) = (TRUE)) & ((next(sender-name)) = (sender-name))) & (((((first-automaton-state) = (0)) & ((c) = (broadcast)) & (keep-all-first) & (!((TRUE) & ((c) = (c))))) | (((TRUE) & ((!(first-received = TRUE)) = TRUE)) & (((first-automaton-state) = (0)) & (((TRUE) & ((c) = (c))) & (((next(first-received)) = (TRUE = TRUE)) & ((next(first-name)) = (first-name)) & ((next(first-receive)) = (TRUE)) & (falsify-not-first-receive) & ((next(first-automaton-state)) = (0)))))) | ((!(TRUE)) & (keep-all-first)) | ((((c) = (broadcast)) & (!((!(first-received = TRUE)) = TRUE))) & (keep-all-first))) & ((((second-automaton-state) = (0)) & ((c) = (broadcast)) & (keep-all-second) & (!((TRUE) & ((c) = (c))))) | (((TRUE) & ((!(second-received = TRUE)) = TRUE)) & (((second-automaton-state) = (0)) & (((TRUE) & ((c) = (c))) & (((next(second-received)) = (TRUE = TRUE)) & ((next(second-name)) = (second-name)) & ((next(second-receive)) = (TRUE)) & (falsify-not-second-receive) & ((next(second-automaton-state)) = (0)))))) | ((!(TRUE)) & (keep-all-second)) | ((((c) = (broadcast)) & (!((!(second-received = TRUE)) = TRUE))) & (keep-all-second)))))) | (FALSE);
+	sender-send := ((sender-automaton-state) = (0)) & ((TRUE) & (((((first-automaton-state) = (0)) & ((c) = (broadcast)) & (!((TRUE) & ((c) = (c))))) | (((TRUE) & ((!(first-received = TRUE)) = TRUE)) & (((first-automaton-state) = (0)) & ((TRUE) & ((c) = (c))))) | (!(TRUE)) | (((c) = (broadcast)) & (!((!(first-received = TRUE)) = TRUE)))) & ((((second-automaton-state) = (0)) & ((c) = (broadcast)) & (!((TRUE) & ((c) = (c))))) | (((TRUE) & ((!(second-received = TRUE)) = TRUE)) & (((second-automaton-state) = (0)) & ((TRUE) & ((c) = (c))))) | (!(TRUE)) | (((c) = (broadcast)) & (!((!(second-received = TRUE)) = TRUE))))));
+	progress := ((sender-automaton-state) = (0)) & ((TRUE) & (((((first-automaton-state) = (0)) & ((c) = (broadcast)) & (!((TRUE) & ((c) = (c))))) | (((TRUE) & ((!(first-received = TRUE)) = TRUE)) & (((first-automaton-state) = (0)) & ((TRUE) & ((c) = (c))))) | (!(TRUE)) | (((c) = (broadcast)) & (!((!(first-received = TRUE)) = TRUE)))) & ((((second-automaton-state) = (0)) & ((c) = (broadcast)) & (!((TRUE) & ((c) = (c))))) | (((TRUE) & ((!(second-received = TRUE)) = TRUE)) & (((second-automaton-state) = (0)) & ((TRUE) & ((c) = (c))))) | (!(TRUE)) | (((c) = (broadcast)) & (!((!(second-received = TRUE)) = TRUE))))));
+CONSTANTS
+	sender, c, broadcast, first, second;
+INIT
+((sender-automaton-state) = (0)) & (!(sender-sent = TRUE)) & ((TRUE = TRUE) & (sender-name = sender)) & ((first-automaton-state) = (0)) & (!(first-received = TRUE)) & ((TRUE = TRUE) & (first-name = first)) & ((second-automaton-state) = (0)) & (!(second-received = TRUE)) & ((TRUE = TRUE) & (second-name = second)) & ((first-receive) = (FALSE)) & ((second-receive) = (FALSE))
+TRANS
+	(transition) | ((!(progress)) & (keep-all) & (no-observations))

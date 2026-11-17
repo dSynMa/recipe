@@ -44,6 +44,11 @@ public class IsGreaterThan extends Condition {
 		return false;
 	}
 
+    @Override
+    public String toNuXmv() {
+        return lhs.toNuXmv() + " > " + rhs.toNuXmv();
+    }
+
 	@Override
 	public String toString() {
 		return lhs + " > " + rhs.toString();
@@ -112,10 +117,4 @@ public class IsGreaterThan extends Condition {
 	public Condition removePreds(){
 		return this;
 	}
-
-    @Override
-    public String toNuXmv() {
-        return lhs.toNuXmv() + " > " + rhs.toNuXmv();
-    }
-
 }

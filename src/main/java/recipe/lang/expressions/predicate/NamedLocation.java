@@ -31,6 +31,11 @@ public class NamedLocation extends Condition {
     public NamedLocation(String name) { this.name = name; }
 
     @Override
+    public String toNuXmv() {
+        return toString();
+    }
+
+    @Override
     public String toString() { return _isSelf ? selfToken : name; }
 
     public boolean isSelf() { return _isSelf; }
@@ -88,10 +93,4 @@ public class NamedLocation extends Condition {
         return this;
     }
     
-
-    @Override
-    public String toNuXmv() {
-        return toString();
-    }
-
 }

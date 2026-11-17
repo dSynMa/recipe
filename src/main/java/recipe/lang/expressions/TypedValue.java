@@ -101,6 +101,11 @@ public class TypedValue<T extends Type> implements Expression<T> {
     }
 
     @Override
+    public String toNuXmv() {
+        return recipe.Config.broadcast.equals(value.toString()) ? recipe.Config.nuxmvBroadcast : toString();
+    }
+
+    @Override
     public String toString() {
         if(type.equals(Boolean.getType())){
             return value.toString().toUpperCase(Locale.ROOT);
@@ -130,10 +135,4 @@ public class TypedValue<T extends Type> implements Expression<T> {
     public Expression<T> removePreds(){
         return this;
     }
-
-    @Override
-    public String toNuXmv() {
-        return recipe.Config.broadcast.equals(value.toString()) ? recipe.Config.nuxmvBroadcast : toString();
-    }
-
 }

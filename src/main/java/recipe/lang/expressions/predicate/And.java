@@ -38,6 +38,11 @@ public class And extends Condition {
 		return false;
 	}
 
+    @Override
+    public String toNuXmv() {
+        return renderNuXmvOperand(lhs) + " & " + renderNuXmvOperand(rhs);
+    }
+
 	@Override
 	public String toString() {
 		return renderOperand(lhs) + " & " + renderOperand(rhs);
@@ -104,10 +109,4 @@ public class And extends Condition {
 	public Condition removePreds(){
 		return new And(this.lhs.removePreds(), this.rhs.removePreds());
 	}
-
-    @Override
-    public String toNuXmv() {
-        return renderNuXmvOperand(lhs) + " & " + renderNuXmvOperand(rhs);
-    }
-
 }

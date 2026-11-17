@@ -16,6 +16,11 @@ public class Globally extends LTOL{
     public LTOL getLTOL(){
         return ltol;
     }
+    @Override
+    public String toNuXmv() {
+        return "G(" + ltol.toNuXmv() + ")";
+    }
+
     public String toString(){
         return "G(" + ltol + ")";
     }
@@ -35,10 +40,4 @@ public class Globally extends LTOL{
     public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return new Globally(ltol.toLTOLwithoutQuantifiers());
     }
-
-    @Override
-    public String toNuXmv() {
-        return "G(" + ltol.toNuXmv() + ")";
-    }
-
 }

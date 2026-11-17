@@ -38,6 +38,11 @@ public class Or extends Condition {
 		return false;
 	}
 
+    @Override
+    public String toNuXmv() {
+        return renderNuXmvOperand(lhs) + " | " + renderNuXmvOperand(rhs);
+    }
+
 	@Override
 	public String toString() {
 		return renderOperand(lhs) + " | " + renderOperand(rhs);
@@ -107,10 +112,4 @@ public class Or extends Condition {
 	public Condition removePreds(){
 		return new Or(this.lhs.removePreds(), this.rhs.removePreds());
 	}
-
-    @Override
-    public String toNuXmv() {
-        return renderNuXmvOperand(lhs) + " | " + renderNuXmvOperand(rhs);
-    }
-
 }

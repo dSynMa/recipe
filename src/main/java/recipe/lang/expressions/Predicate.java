@@ -71,6 +71,11 @@ public class Predicate implements Expression<recipe.lang.types.Boolean> {
     }
 
     @Override
+    public String toNuXmv() {
+        return name + "(" + input.toNuXmv() + ")";
+    }
+
+    @Override
     public String toString() {
         return name + "(" + input.toString() + ")";
     }
@@ -94,10 +99,4 @@ public class Predicate implements Expression<recipe.lang.types.Boolean> {
     public Expression<recipe.lang.types.Boolean> removePreds(){
         return this.input;
     }
-
-    @Override
-    public String toNuXmv() {
-        return name + "(" + input.toNuXmv() + ")";
-    }
-
 }

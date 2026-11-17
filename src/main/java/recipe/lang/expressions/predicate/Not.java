@@ -36,6 +36,11 @@ public class Not extends Condition {
 		return false;
 	}
 
+    @Override
+    public String toNuXmv() {
+        return "!" + renderNuXmvOperand(arg);
+    }
+
 	@Override
 	public String toString() {
 		return "!" + renderOperand(arg);
@@ -91,10 +96,4 @@ public class Not extends Condition {
 	public Condition removePreds(){
 		return new Not(this.arg.removePreds());
 	}
-
-    @Override
-    public String toNuXmv() {
-        return "!" + renderNuXmvOperand(arg);
-    }
-
 }

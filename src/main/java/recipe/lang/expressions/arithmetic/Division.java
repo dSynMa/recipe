@@ -68,16 +68,15 @@ public class Division extends ArithmeticExpression{
     }
 
     @Override
-    public String toString(){
-        // Finite-domain integer operands otherwise use truncated division in nuXmv's BDD backend.
-        // Our evaluator and constant folding use mathematical (real) division.
-        return "((1.0 * " + lhs.toString() + ") / " + rhs.toString() + ")";
-    }
-
-    @Override
     public String toNuXmv() {
         // Force real division, including when both operands have integer domains.
         return "((1.0 * " + lhs.toNuXmv() + ") / " + rhs.toNuXmv() + ")";
     }
 
+    @Override
+    public String toString(){
+        // Finite-domain integer operands otherwise use truncated division in nuXmv's BDD backend.
+        // Our evaluator and constant folding use mathematical (real) division.
+        return "((1.0 * " + lhs.toString() + ") / " + rhs.toString() + ")";
+    }
 }

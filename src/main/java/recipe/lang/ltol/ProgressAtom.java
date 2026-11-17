@@ -19,6 +19,11 @@ public class ProgressAtom extends Atom {
     }
 
     @Override
+    public String toNuXmv() {
+        return "progress";
+    }
+
+    @Override
     public String toString(){
         return "progress";
     }
@@ -27,12 +32,6 @@ public class ProgressAtom extends Atom {
     public LTOL rename(Function<TypedVariable, TypedVariable> relabelling)
             throws RelabellingTypeException, MismatchingTypeException {
         return this;
-    }
-
-
-    @Override
-    public String toNuXmv() {
-        return "progress";
     }
 
 }
