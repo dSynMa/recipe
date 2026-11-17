@@ -50,6 +50,7 @@ function App() {
   const [vloading, setVLoading] = useState(false);
   const [bloading, setBLoading] = useState(false);
   const [mcloading, setMCLoading] = useState(false);
+  const [mcstopping, setMCStopping] = useState(false);
   const [simloading, setSimLoading] = useState(false);
   const [resetsimloading, setResetSimLoading] = useState(false);
   const [symbolicBuild, setSymbolicBuild] = useState(true);
@@ -68,6 +69,10 @@ function App() {
   const [interpreternextindex, setInterpreterNextIndex] = useState(0);
   const [interpreterbadge, setInterpreterBadge] = useState(false);
 
+  const [traceLoading, setTraceLoading] = useState(false);
+  const busy = bloading || mcloading || mcstopping || simloading || interpreterloading
+    || interpreterbacking || traceLoading || vloading;
+
   const [confirmBuild, setConfirmBuild] = useState(false);
 
   const radios = [
@@ -79,6 +84,7 @@ function App() {
   const interpreterTable = useRef(null);
 
   function simulate() {
+    if (busy) return;
     if (built != true) {
       alert("Build model first.");
       return;
@@ -188,6 +194,8 @@ function App() {
   }
 
   function loadTraceIntoInterpreter(output) {
+    if (busy) return;
+    setTraceLoading(true);
     const params = new URLSearchParams();
     params.append("output", output);
     axios
@@ -212,8 +220,8 @@ function App() {
       })
       .catch((err) => {
         alert(err.message);
-        setSimLoading(false);
-      });
+      })
+      .finally(() => setTraceLoading(false));
   }
 
 
@@ -248,6 +256,7 @@ function App() {
   }
 
   function interpret() {
+    if (busy) return;
     if (built != true) buildModel();
     setInterpreterLoading(true);
   }
@@ -328,11 +337,15 @@ function App() {
   }
 
   function modelCheckStop() {
+    setMCStopping(true);
     axios.get(server + "/modelCheckStop")
-      .then((_) => { console.log("Stopped all MC tasks as requested by the user."); });
+      .catch((err) => alert(err.message))
+      .finally(() => setMCStopping(false));
+    // Keep the interface busy until all outstanding check requests have settled.
   }
 
   function modelCheck() {
+    if (busy) return;
     // The "true" parameter forces to build a BDD model if "MC" is selected
     if (built != true) buildModel(true);
 
@@ -362,14 +375,14 @@ function App() {
         }
 
         axios.get(server + "/modelCheck", { params })
-          .then((response) => {
+          .then(async (response) => {
             console.log(response.data);
             if (response.data.error !== undefined) {
               alert(response.data.error);
             }
             else if (response.data !== undefined) {
               setMCResponse(response.data.results);
-              response.data.results.map((x) => modelCheckSingle(x));
+              await Promise.allSettled(response.data.results.map((x) => modelCheckSingle(x)));
             }
             setMCLoading(false);
           })
@@ -382,11 +395,13 @@ function App() {
   }, [built, mcloading]);
 
   function modelCheckSingle(data) {
-    axios.get(server + data.url).then((response) => {
+    return axios.get(server + data.url).then((response) => {
       setMCResponse(oldmcresponse =>
         oldmcresponse.map((x, i) => {
           return (i == data.id) ? response.data : x;
         }));
+    }).catch((err) => {
+      setMCResponse(old => old.map((x, i) => i === data.id ? { error: err.message } : x));
     });
   }
 
@@ -410,7 +425,8 @@ function App() {
 
   const handleClose = () => setConfirmBuild(false);
   function confirmBuildModel() {
-    if (mcresponse.length > 0) {
+    if (busy) return;
+    if (built) {
       setConfirmBuild(true);
     } else {
       buildModel();
@@ -418,43 +434,37 @@ function App() {
   }
 
   function buildModel(obeyMCpane = false) {
+    if (busy) return;
     setBLoading(true);
+    setBuilt(false);
     setConfirmBuild(false);
     setInterpreterBadge(false);
     setMCResponse([]);
     setBound(-1);
     resetInterpreter();
+    resetSimulate();
     const params = new URLSearchParams();
     params.append('script', code);
-    console.log(server);
-
-    var askSymbolic = obeyMCpane ? radioValue != 1 : symbolicBuild;
-
+    const askSymbolic = obeyMCpane ? radioValue != 1 : symbolicBuild;
 
     axios.get(server + "/setSystem", { params })
       .then((response) => {
-        console.log("system set");
+        if (response.data.error !== undefined) throw new Error(response.data.error);
         params.append('symbolic', askSymbolic);
-        axios.get(server + "/buildModel", { params })
-          .then((response2) => {
-            if (response2.data.hasOwnProperty("error")) {
-              alert(response2.data.error);
-            } else {
-              setBuilt(true);
-              visualise();
-              alert("Model built successfully");
-            }
-            setBLoading(false);
-          })
-          .catch((err) => {
-            console.log(err.message);
-            setBLoading(false);
-          })
+        return axios.get(server + "/buildModel", { params });
+      })
+      .then((response) => {
+        if (response.data.error !== undefined) throw new Error(response.data.error);
+        setBuilt(true);
+        visualise();
+        alert("Model built successfully");
       })
       .catch((err) => {
-        console.log(err.message);
-        setBLoading(false);
-      });
+        alert(err.message);
+        setMCLoading(false);
+        setInterpreterLoading(false);
+      })
+      .finally(() => setBLoading(false));
   }
 
   return (
@@ -463,12 +473,12 @@ function App() {
         <Modal.Header closeButton>
           <Modal.Title>Warning</Modal.Title>
         </Modal.Header>
-        <Modal.Body>This will reset the Model Checking results. Do you want to proceed?</Modal.Body>
+        <Modal.Body>Building replaces the active model and clears its checking results, simulation, and interpreter trace. Do you want to proceed?</Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleClose}>
             No
           </Button>
-          <Button variant="primary" onClick={buildModel}>
+          <Button variant="primary" onClick={() => buildModel()} disabled={busy}>
             Yes
           </Button>
         </Modal.Footer>
@@ -508,7 +518,7 @@ function App() {
                     <option value="smt">SMT model (allows for infinite-state verification)</option>
                     <option value="bdd">BDD model (only for finite-state verification)</option>
                   </Form.Select>
-                  <Button variant="primary" size="lg" onClick={confirmBuildModel} disabled={bloading}>
+                  <Button variant="primary" size="lg" onClick={confirmBuildModel} disabled={busy}>
                     Build model
                     {bloading && spinner}
                   </Button>
@@ -547,10 +557,10 @@ function App() {
                             onChange={(e) => { setBound(e.currentTarget.value.trim()) }}
                           />
                         }
-                        <Button variant="primary" size="lg" disabled={mcloading} onClick={modelCheck}>
+                        <Button variant="primary" size="lg" disabled={busy} onClick={modelCheck}>
                           Start {mcloading && spinner}
                         </Button>
-                        <Button variant="danger" size="lg" onClick={modelCheckStop}>
+                        <Button variant="danger" size="lg" disabled={!mcloading || mcstopping} onClick={modelCheckStop}>
                           Stop
                         </Button>
                       </InputGroup>
@@ -578,12 +588,12 @@ function App() {
                         <Col xs={3} style={{ textAlign: "end" }} className="align-self-center">
                           {/* <div className="d-grid"> */}
                           <Dropdown as={ButtonGroup}>
-                            <Button onClick={() => loadTraceIntoInterpreter(mcresponse[i].output)}>
+                            <Button disabled={busy} onClick={() => loadTraceIntoInterpreter(mcresponse[i].output)}>
                               Load into interpreter
                             </Button>
                             <Dropdown.Toggle split id="dropdown-split-basic" />
                             <Dropdown.Menu>
-                              <Dropdown.Item onClick={() => loadTraceIntoInterpreter(mcresponse[i].output)}>Load into interpreter</Dropdown.Item>
+                              <Dropdown.Item disabled={busy} onClick={() => loadTraceIntoInterpreter(mcresponse[i].output)}>Load into interpreter</Dropdown.Item>
                               <Dropdown.Item onClick={() => exportRaw(mcresponse[i].output)}>Download raw output</Dropdown.Item>
                             </Dropdown.Menu>
                           </Dropdown>
@@ -607,12 +617,12 @@ function App() {
                                   onChange={(e) => setSimCondition(e.currentTarget.value)}
                                 />
                             }
-                            <Button variant="primary" size="lg" disabled={simloading} onClick={simulate}>
+                            <Button variant="primary" size="lg" disabled={busy} onClick={simulate}>
                               {!simstarted && <span>Start</span>}
                               {simstarted && <span>Next</span>}
                               { simloading && spinner}
                             </Button>
-                            <Button variant="secondary" size="lg" disabled={resetsimloading} onClick={resetSimulate}>
+                            <Button variant="secondary" size="lg" disabled={busy || resetsimloading} onClick={resetSimulate}>
                               Reset
                               { resetsimloading && spinner}
                             </Button>
@@ -651,12 +661,12 @@ function App() {
                   <Row>
                     <Col xs={12}>
                       <InputGroup className="mb-3">
-                        <Button variant="primary" size="lg" disabled={interpreterbacking || interpreterloading || interpreterresponse.length == 0} onClick={backtrackInterpreter}>
+                        <Button variant="primary" size="lg" disabled={busy || interpreterresponse.length == 0} onClick={backtrackInterpreter}>
                           Back
                           {interpreterbacking && spinner}
                         </Button>
                         <Button variant="primary" size="lg"
-                          disabled={interpreterbacking || interpreterloading || (interpreterstarted && interpretertransitions.length == 0)}
+                          disabled={busy || (interpreterstarted && interpretertransitions.length == 0)}
                           onClick={interpret}>
                           {!interpreterstarted && <span>Start</span>}
                           {interpreterstarted && <span>Next</span>}
@@ -673,7 +683,7 @@ function App() {
                             })}
                           </Form.Select>
                         }
-                        <Button variant="secondary" size="lg" disabled={resetinterpreterloading} onClick={resetInterpreter}>
+                        <Button variant="secondary" size="lg" disabled={busy || resetinterpreterloading} onClick={resetInterpreter}>
                           Reset
                           {resetinterpreterloading && spinner}
                         </Button>
