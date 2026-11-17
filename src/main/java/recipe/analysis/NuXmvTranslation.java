@@ -1,5 +1,7 @@
 package recipe.analysis;
 
+import static recipe.lang.utils.Cancellation.checkCancellation;
+
 import static recipe.analysis.ToNuXmv.ltolToLTLAndObservationVariables;
 import static recipe.analysis.ToNuXmv.specialiseObservationToSendTransition;
 
@@ -357,6 +359,7 @@ final class NuXmvTranslation {
 
             declareAndInitializeAgent(sendingAgentInstance);
             for (State<?> state : sendingAgent.getStates()) {
+                checkCancellation();
                 Set<ProcessTransition> sendTransitions = agentStateSendTransitionMap.get(sendingAgent).get(state);
 
                 AgentState sendStateIsCurrentState = new AgentState(sendingAgentName, state.toString());

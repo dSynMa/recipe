@@ -73,10 +73,10 @@ public class InteractiveShutdownTest {
         Set<Long> before = ProcessHandle.current().children().map(ProcessHandle::pid).collect(Collectors.toSet());
         var createdPath = new java.util.concurrent.atomic.AtomicReference<java.nio.file.Path>();
         try {
-            Thread.currentThread().interrupt();
             assertThrows(IOException.class, () -> new NuXmvInteraction(model) {
                 @Override public Thread startNuXmvThread() throws IOException {
                     createdPath.set(this.path);
+                    Thread.currentThread().interrupt();
                     return super.startNuXmvThread();
                 }
             });

@@ -14,7 +14,12 @@ public final class NuXmvModelFile implements AutoCloseable {
 
     public NuXmvModelFile(System system) throws Exception {
         this.system = system;
-        String translation = ToNuXmv.transform(system);
+        String translation;
+        try {
+            translation = ToNuXmv.transform(system);
+        } catch (java.util.concurrent.CancellationException cancelled) {
+            throw new IOException("Model translation interrupted", cancelled);
+        }
         path = Files.createTempFile("rcheck-interactive-", ".smv");
         path.toFile().deleteOnExit();
         try {

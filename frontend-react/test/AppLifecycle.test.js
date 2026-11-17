@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
 test('building to start the interpreter never reselects the model after build', async ({ page }) => {
   const requests = [];
   const responses = {
-    '/setSystem': { symbolic: false },
+    '/prepareBuild': { buildId: 'test-build' },
     '/buildModel': { success: true },
     '/toDOTSVG': [],
     '/interpretNext': { state: {}, transitions: [], svgs: [] },
@@ -20,7 +20,7 @@ test('building to start the interpreter never reselects the model after build', 
   await page.route(backend + '/**', async route => {
     const url = new URL(route.request().url());
     requests.push(url.pathname);
-    if (url.pathname === '/setSystem') expect(url.searchParams.get('script')).toBe(script);
+    if (url.pathname === '/buildModel') expect(url.searchParams.get('script')).toBe(script);
     expect(responses).toHaveProperty(url.pathname);
     await route.fulfill({ json: responses[url.pathname] });
   });
@@ -28,8 +28,8 @@ test('building to start the interpreter never reselects the model after build', 
   await page.getByRole('button', { name: 'Start' }).click();
   await expect.poll(() => requests).toContain('/interpretNext');
   await expect.poll(() => requests).toContain('/toDOTSVG');
-  expect(requests.filter(route => route === '/setSystem')).toHaveLength(1);
-  expect(requests.indexOf('/setSystem')).toBeLessThan(requests.indexOf('/buildModel'));
+  expect(requests.filter(route => route === '/prepareBuild')).toHaveLength(1);
+  expect(requests.indexOf('/prepareBuild')).toBeLessThan(requests.indexOf('/buildModel'));
 });
 
 test('rebuilding waits for every check to settle, even after Stop is requested', async ({ page }) => {
@@ -38,7 +38,7 @@ test('rebuilding waits for every check to settle, even after Stop is requested',
     { id: 1, spec: 'second', url: '/modelCheck/1' },
   ];
   const responses = {
-    '/setSystem': { symbolic: false },
+    '/prepareBuild': { buildId: 'test-build' },
     '/buildModel': { success: true },
     '/toDOTSVG': [],
     '/modelCheck': { results: checks },
@@ -76,7 +76,7 @@ test('rebuilding waits for every check to settle, even after Stop is requested',
   await expect(page.getByText(/Building replaces the active model/)).toBeVisible();
 });
 
-test('failed model selection ends the build and does not submit another build request', async ({ page }) => {
+test('failed build preparation ends the build and does not submit another build request', async ({ page }) => {
   const requests = [];
   await page.route(backend + '/**', route => {
     requests.push(new URL(route.request().url()).pathname);
@@ -89,5 +89,61 @@ test('failed model selection ends the build and does not submit another build re
   });
   await build.click();
   await expect(build).toBeEnabled();
-  expect(requests).toEqual(['/setSystem']);
+  expect(requests).toEqual(['/prepareBuild']);
+});
+
+test('cancelling an interpreter build suppresses late success and permits a new build', async ({ page }) => {
+  let firstBuild;
+  let buildCount = 0;
+  const requests = [];
+  await page.route(backend + '/**', async route => {
+    const { pathname, searchParams } = new URL(route.request().url());
+    requests.push(pathname);
+    if (pathname === '/prepareBuild') {
+      return route.fulfill({ json: { buildId: String(++buildCount) } });
+    }
+    if (pathname === '/buildModel' && searchParams.get('buildId') === '1') {
+      firstBuild = route;
+      return;
+    }
+    if (pathname === '/cancelBuild') {
+      expect(searchParams.get('buildId')).toBe('1');
+      await route.fulfill({ json: {} });
+      return firstBuild.fulfill({ json: { success: true } });
+    }
+    if (pathname === '/buildModel') return route.fulfill({ json: { success: true } });
+    if (pathname === '/toDOTSVG') return route.fulfill({ json: [] });
+    throw new Error('Unexpected request ' + pathname);
+  });
+  await page.getByRole('tab', { name: /Interpreter/ }).click();
+  await page.getByRole('button', { name: 'Start' }).click();
+  await expect.poll(() => Boolean(firstBuild)).toBe(true);
+  await page.getByRole('tabpanel', { name: /Interpreter/ }).getByRole('button', { name: 'Cancel build' }).click();
+  await expect(page.getByRole('button', { name: 'Start' })).toBeEnabled();
+  expect(requests).toEqual(['/prepareBuild', '/buildModel', '/cancelBuild']);
+  await page.getByRole('tab', { name: 'Editor' }).click();
+  await page.getByRole('button', { name: 'Build model' }).click();
+  await expect.poll(() => requests.includes('/toDOTSVG')).toBe(true);
+});
+
+test('cancelling in the editor before preparation finishes skips the build', async ({ page }) => {
+  let prepare;
+  const requests = [];
+  await page.route(backend + '/**', route => {
+    const { pathname } = new URL(route.request().url());
+    requests.push(pathname);
+    if (pathname === '/prepareBuild') {
+      prepare = route;
+      return;
+    }
+    return route.fulfill({ json: {} });
+  });
+  const editor = page.getByRole('tabpanel', { name: 'Editor' });
+  await editor.getByRole('button', { name: 'Build model' }).click();
+  await editor.getByRole('button', { name: 'Cancel build' }).click();
+  await expect(editor.getByRole('button', { name: /Cancelling build/ })).toBeDisabled();
+  await expect.poll(() => Boolean(prepare)).toBe(true);
+  await prepare.fulfill({ json: { buildId: 'pending' } });
+  await expect(editor.getByRole('button', { name: 'Build model' })).toBeEnabled();
+  expect(requests).toEqual(['/prepareBuild', '/cancelBuild']);
 });

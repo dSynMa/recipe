@@ -49,6 +49,8 @@ function App() {
   const [bound, setBound] = useState(-1);
   const [vloading, setVLoading] = useState(false);
   const [bloading, setBLoading] = useState(false);
+  const [cancellingBuild, setCancellingBuild] = useState(false);
+  const activeBuild = useRef(null);
   const [mcloading, setMCLoading] = useState(false);
   const [mcstopping, setMCStopping] = useState(false);
   const [simloading, setSimLoading] = useState(false);
@@ -433,8 +435,27 @@ function App() {
     }
   }
 
-  function buildModel(obeyMCpane = false) {
-    if (busy) return;
+  function stopBuild(job) {
+    return axios.get(server + "/cancelBuild", { params: { buildId: job.id } })
+      .then(({ data }) => { if (data.error) throw new Error(data.error); })
+      .catch(error => {
+        alert("Could not cancel build: " + error.message);
+        setCancellingBuild(false);
+      });
+  }
+
+  function cancelBuild() {
+    const job = activeBuild.current;
+    if (!job || cancellingBuild) return;
+    job.cancelled = true;
+    setCancellingBuild(true);
+    if (job.id) job.stopRequest = stopBuild(job);
+  }
+
+  async function buildModel(obeyMCpane = false) {
+    if (busy || activeBuild.current) return;
+    const job = { cancelled: false };
+    activeBuild.current = job;
     setBLoading(true);
     setBuilt(false);
     setConfirmBuild(false);
@@ -443,29 +464,44 @@ function App() {
     setBound(-1);
     resetInterpreter();
     resetSimulate();
-    const params = new URLSearchParams();
-    params.append('script', code);
-    const askSymbolic = obeyMCpane ? radioValue != 1 : symbolicBuild;
-
-    axios.get(server + "/setSystem", { params })
-      .then((response) => {
-        if (response.data.error !== undefined) throw new Error(response.data.error);
-        params.append('symbolic', askSymbolic);
-        return axios.get(server + "/buildModel", { params });
-      })
-      .then((response) => {
-        if (response.data.error !== undefined) throw new Error(response.data.error);
-        setBuilt(true);
-        visualise();
-        alert("Model built successfully");
-      })
-      .catch((err) => {
-        alert(err.message);
+    try {
+      const prepared = await axios.get(server + "/prepareBuild");
+      if (!prepared.data.buildId) throw new Error(prepared.data.error || "Could not start build");
+      job.id = prepared.data.buildId;
+      if (job.cancelled) {
+        job.stopRequest = stopBuild(job);
+        return;
+      }
+      const params = new URLSearchParams({
+        script: code, symbolic: obeyMCpane ? radioValue != 1 : symbolicBuild, buildId: job.id,
+      });
+      const { data } = await axios.get(server + "/buildModel", { params });
+      if (job.cancelled) return;
+      if (!data.success) throw new Error(data.error || "Could not build model");
+      setBuilt(true);
+      visualise();
+      alert("Model built successfully");
+    } catch (error) {
+      if (!job.cancelled) alert(error.message);
+      setMCLoading(false);
+      setInterpreterLoading(false);
+    } finally {
+      if (job.cancelled) {
+        await job.stopRequest;
         setMCLoading(false);
         setInterpreterLoading(false);
-      })
-      .finally(() => setBLoading(false));
+      }
+      activeBuild.current = null;
+      setCancellingBuild(false);
+      setBLoading(false);
+    }
   }
+
+  const cancelBuildButton = (
+    <Button variant="outline-danger" size="lg" onClick={cancelBuild} disabled={cancellingBuild}>
+      {cancellingBuild ? "Cancelling build…" : "Cancel build"} {spinner}
+    </Button>
+  );
 
   return (
     <div className="App">
@@ -498,7 +534,7 @@ function App() {
           <Col xs={12} xl={10} xxl={8}>
             <Tabs defaultActiveKey="ed" id="uncontrolled-tab-example" className="mb-3"
               onSelect={(e) => { if (e === "interpreter") setInterpreterBadge(false); }}>
-              <Tab eventKey="ed" title="Editor" style={TabStyle}>
+              <Tab role="tabpanel" eventKey="ed" title="Editor" style={TabStyle}>
                 <AceEditor style={Bg}
                   mode="recipe"
                   theme="tomorrow"
@@ -518,13 +554,12 @@ function App() {
                     <option value="smt">SMT model (allows for infinite-state verification)</option>
                     <option value="bdd">BDD model (only for finite-state verification)</option>
                   </Form.Select>
-                  <Button variant="primary" size="lg" onClick={confirmBuildModel} disabled={busy}>
+                  {bloading ? cancelBuildButton : <Button variant="primary" size="lg" onClick={confirmBuildModel} disabled={busy}>
                     Build model
-                    {bloading && spinner}
-                  </Button>
+                  </Button>}
                 </InputGroup>
               </Tab>
-              <Tab eventKey="mc" title="Model Checker" style={TabStyle}>
+              <Tab role="tabpanel" eventKey="mc" title="Model Checker" style={TabStyle}>
                 <Container fluid>
                   <Row>
                     <Col xs={12}>
@@ -557,10 +592,10 @@ function App() {
                             onChange={(e) => { setBound(e.currentTarget.value.trim()) }}
                           />
                         }
-                        <Button variant="primary" size="lg" disabled={busy} onClick={modelCheck}>
+                        {bloading ? cancelBuildButton : <Button variant="primary" size="lg" disabled={busy} onClick={modelCheck}>
                           Start {mcloading && spinner}
-                        </Button>
-                        <Button variant="danger" size="lg" disabled={!mcloading || mcstopping} onClick={modelCheckStop}>
+                        </Button>}
+                        <Button variant="danger" size="lg" disabled={bloading || !mcloading || mcstopping} onClick={modelCheckStop}>
                           Stop
                         </Button>
                       </InputGroup>
@@ -651,7 +686,7 @@ function App() {
                   </Row>
                 </Container>
               </Tab> */}
-              <Tab eventKey="interpreter" title={
+              <Tab role="tabpanel" eventKey="interpreter" title={
                 <React.Fragment>
                   Interpreter{' '}
                   {interpreterbadge && <Badge pill bg="primary" show="false">!</Badge>}
@@ -665,13 +700,13 @@ function App() {
                           Back
                           {interpreterbacking && spinner}
                         </Button>
-                        <Button variant="primary" size="lg"
+                        {bloading ? cancelBuildButton : <Button variant="primary" size="lg"
                           disabled={busy || (interpreterstarted && interpretertransitions.length == 0)}
                           onClick={interpret}>
                           {!interpreterstarted && <span>Start</span>}
                           {interpreterstarted && <span>Next</span>}
                           {interpreterloading && spinner}
-                        </Button>
+                        </Button>}
                         {
                           <Form.Select
                             aria-label="interpreter-next"
