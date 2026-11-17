@@ -392,7 +392,7 @@ public class Step {
 
         // Evaluate which channels each agent is currently listening to
         try {
-            Type chanEnum = recipe.lang.types.Enum.getEnum("channel");
+            Type chanEnum = interpreter.getChannelTV().getType();
             for (AgentInstance instance : interpreter.sys.getAgentInstances()) {
                 ConcreteStore store = stores.get(instance);
                 for (Object objChan : chanEnum.getAllValues()) {

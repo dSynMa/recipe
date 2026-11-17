@@ -392,25 +392,15 @@ function App() {
 
   function visualise() {
     setVLoading(true);
-    const params = new URLSearchParams();
-    params.append('script', code);
-
-    axios.get(server + "/setSystem", { params })
+    // The build already selected the model. Selecting it again would discard
+    // any interpreter or model-check session started by the built effect.
+    axios.get(server + "/toDOTSVG")
       .then((response) => {
-        axios.get(server + "/toDOTSVG")
-          .then((response2) => {
-            console.log(response2.data);
-            setDot(response2.data.map(x => {
-              var svg = new DOMParser().parseFromString(x.svg, "image/svg+xml").getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
-              console.log("svg: " + svg);
-              return svg;
-            }));
-            setVLoading(false);
-          })
-          .catch((err) => {
-            alert(err.message);
-            setVLoading(false);
-          })
+        setDot(response.data.map(x => {
+          return new DOMParser().parseFromString(x.svg, "image/svg+xml")
+            .getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
+        }));
+        setVLoading(false);
       })
       .catch((err) => {
         alert(err.message);

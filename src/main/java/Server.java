@@ -163,15 +163,21 @@ public class Server {
         return "Started";
     }
 
+    private void discardCurrentSystem() throws IOException {
+        replaceSystem(null);
+        Enum.clear();
+        interpreter = null;
+        mcConfig = null;
+        latestDots.clear();
+        latestDotsInterpreter.clear();
+    }
+
     @Route("/setSystem")
     public synchronized String setSystem(Request req) {
-        Enum.clear();
-        String script = req.getQuery().get("script").trim();
         try {
-            replaceSystem(recipe.lang.System.parser().end().parse(script).get());
-            interpreter = null;
-            latestDots = new HashMap<>();
-            latestDotsInterpreter = new ConcurrentHashMap<>();
+            discardCurrentSystem();
+            String script = req.getQuery().get("script").trim();
+            system = recipe.lang.System.parser().end().parse(script).get();
             return "{\"symbolic\" : " + system.isSymbolic() + "}";
         } catch (ParseError parseError){
             return "{ \"error\" : \"" + parseError.getFailure().toString() + "\"}";
@@ -183,16 +189,12 @@ public class Server {
 
     @Route("/buildModel")
     public synchronized String buildModel(Request req) {
-        Enum.clear();
-        interpreter = null;
-        latestDots = new HashMap<>();
-        latestDotsInterpreter = new ConcurrentHashMap<>();
-
-        String script = req.getQuery().get("script").trim();
-        Boolean buildType = Boolean.valueOf(req.getQuery().get("symbolic").trim());
         JSONObject response = new JSONObject();
         try {
-            replaceSystem(recipe.lang.System.parser().end().parse(script).get());
+            discardCurrentSystem();
+            String script = req.getQuery().get("script").trim();
+            Boolean buildType = Boolean.valueOf(req.getQuery().get("symbolic").trim());
+            system = recipe.lang.System.parser().end().parse(script).get();
             nuXmvInteraction = modelFile().openChecker();
             Pair<Boolean, String> initialise = nuXmvInteraction.initialise(buildType);
 
