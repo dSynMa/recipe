@@ -1,4 +1,3 @@
-import logo from './logo.svg';
 import './App.css';
 import { Container, Table, Dropdown, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton, Badge, Navbar, OverlayTrigger, Tooltip, Modal, Nav } from 'react-bootstrap';
 import AceEditor from "react-ace";
@@ -7,10 +6,8 @@ import axios from "axios";
 import { useFetch } from "./hooks";
 import Graph from "./Graph";
 
-import Viz from "viz.js";
-import * as All from "./mode-recipe";
+import "./mode-recipe";
 import "ace-builds/src-noconflict/theme-tomorrow";
-import ReactHtmlParser from 'react-html-parser';
 
 const server = 'http://localhost:54044';
 
@@ -468,15 +465,6 @@ function App() {
         console.log(err.message);
         setBLoading(false);
       });
-  }
-
-  function xmlToJSX(input) {
-    return input.replace("xmlns:xlink", "xmlnsXlink")
-      .replace("xlink:title", "xlinkTitle")
-      .replace("font-size", "fontSize")
-      .replace("font-family", "fontFamily")
-      .replace("text-anchor", "textAnchor")
-      .replace("viewbox", "viewBox");
   }
 
   return (
