@@ -1,4 +1,3 @@
-import logo from './logo.svg';
 import './App.css';
 import { Container, Table, Dropdown, Spinner, FormControl, Row, Col, Tab, Tabs, Button, Form, InputGroup, ButtonGroup, ToggleButton, Badge, Navbar, OverlayTrigger, Tooltip, Modal, Nav } from 'react-bootstrap';
 import AceEditor from "react-ace";
@@ -7,10 +6,8 @@ import axios from "axios";
 import { useFetch } from "./hooks";
 import Graph from "./Graph";
 
-import Viz from "viz.js";
-import * as All from "./mode-recipe";
+import "./mode-recipe";
 import "ace-builds/src-noconflict/theme-tomorrow";
-import ReactHtmlParser from 'react-html-parser';
 
 const server = 'http://localhost:54044';
 
@@ -90,8 +87,8 @@ function App() {
     setSimLoading(true);
 
     const params = new URLSearchParams();
-    params.append('reset', encodeURIComponent(!simstarted));
-    params.append('constraint', encodeURIComponent(simcondition));
+    params.append('reset', !simstarted);
+    params.append('constraint', simcondition);
 
     axios.get(server + "/simulateNext", { params })
       .then((response) => {
@@ -182,7 +179,7 @@ function App() {
     const reader = new FileReader();
     reader.onload = async (e) => {
       const params = new URLSearchParams();
-      params.append("trace", encodeURIComponent(e.target.result));
+      params.append("trace", e.target.result);
       axios.get(server + "/interpretLoadJSON", { params })
         .then((response) => { console.log(response) })
         .catch((error) => { console.log(error) });
@@ -192,7 +189,7 @@ function App() {
 
   function loadTraceIntoInterpreter(output) {
     const params = new URLSearchParams();
-    params.append("output", encodeURIComponent(output));
+    params.append("output", output);
     axios
       .get(server + "/interpretLoad", { params })
       .then((response) => {
@@ -258,7 +255,7 @@ function App() {
   useEffect(() => {
     if (built && interpreterloading) {
       const params = new URLSearchParams();
-      params.append('reset', encodeURIComponent(!interpreterstarted));
+      params.append('reset', !interpreterstarted);
       params.append('index', interpreternextindex || 0);
 
       // var url;
@@ -355,13 +352,13 @@ function App() {
       } else {
         const params = new URLSearchParams();
         if (radioValue == 2) {
-          params.append('ic3', encodeURIComponent(true));
+          params.append('ic3', true);
           if (bound > -1) {
-            params.append('bound', encodeURIComponent(bound));
+            params.append('bound', bound);
           }
         } else if (radioValue == 3) {
-          params.append('bmc', encodeURIComponent(true));
-          params.append('bound', encodeURIComponent(bound));
+          params.append('bmc', true);
+          params.append('bound', bound);
         }
 
         axios.get(server + "/modelCheck", { params })
@@ -396,7 +393,7 @@ function App() {
   function visualise() {
     setVLoading(true);
     const params = new URLSearchParams();
-    params.append('script', encodeURIComponent(code));
+    params.append('script', code);
 
     axios.get(server + "/setSystem", { params })
       .then((response) => {
@@ -438,7 +435,7 @@ function App() {
     setBound(-1);
     resetInterpreter();
     const params = new URLSearchParams();
-    params.append('script', encodeURIComponent(code));
+    params.append('script', code);
     console.log(server);
 
     var askSymbolic = obeyMCpane ? radioValue != 1 : symbolicBuild;
@@ -468,15 +465,6 @@ function App() {
         console.log(err.message);
         setBLoading(false);
       });
-  }
-
-  function xmlToJSX(input) {
-    return input.replace("xmlns:xlink", "xmlnsXlink")
-      .replace("xlink:title", "xlinkTitle")
-      .replace("font-size", "fontSize")
-      .replace("font-family", "fontFamily")
-      .replace("text-anchor", "textAnchor")
-      .replace("viewbox", "viewBox");
   }
 
   return (

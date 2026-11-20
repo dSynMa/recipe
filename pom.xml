@@ -16,6 +16,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
+    <flak.version>3.7.0</flak.version>
   </properties>
 
   <dependencies>
@@ -40,13 +41,13 @@
     <dependency>
       <groupId>com.github.pcdv.flak</groupId>
       <artifactId>flak-backend-jdk</artifactId>
-      <version>1.2.0</version>
+      <version>${flak.version}</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.github.pcdv.flak/flak-api -->
     <dependency>
       <groupId>com.github.pcdv.flak</groupId>
       <artifactId>flak-api</artifactId>
-      <version>1.2.0</version>
+      <version>${flak.version}</version>
     </dependency>
     <dependency>
       <groupId>org.json</groupId>
@@ -64,10 +65,6 @@
     <repository>
       <id>central</id>
       <url>https://repo1.maven.org/maven2/</url>
-    </repository>
-    <repository>
-      <id>jcenter</id>
-      <url>https://jcenter.bintray.com/</url>
     </repository>
     <repository>
       <id>jitpack</id>
