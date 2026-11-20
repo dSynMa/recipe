@@ -4,6 +4,7 @@ import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
+import org.petitparser.parser.primitive.CharacterParser;
 import org.petitparser.tools.ExpressionBuilder;
 import recipe.Config;
 import recipe.lang.expressions.Expression;
@@ -26,6 +27,16 @@ import java.util.function.Function;
 import static org.petitparser.parser.primitive.CharacterParser.of;
 
 public abstract class Condition implements Expression<Boolean> {
+    protected static String renderOperand(Expression<?> operand) {
+        // Preserve grouping when a compound Boolean expression is used as an operand.
+        return operand instanceof Condition ? "(" + operand + ")" : operand.toString();
+    }
+
+    protected static String renderNuXmvOperand(Expression<?> operand) {
+        String rendered = operand.toNuXmv();
+        return operand instanceof Condition ? "(" + rendered + ")" : rendered;
+    }
+
 	static TypedValue<Boolean> TRUE;
 	static TypedValue<Boolean> FALSE;
 
@@ -65,6 +76,59 @@ public abstract class Condition implements Expression<Boolean> {
 	public static org.petitparser.parser.Parser parser(TypingContext context) throws Exception {
 		SettableParser condition = SettableParser.undefined();
 
+		ExpressionBuilder builder = new ExpressionBuilder();
+		builder.group()
+				.primitive(atomicParser(context, condition))
+				.wrapper(of('(').trim(), of(')').trim(),
+						(List<Expression<Boolean>> values) -> values.get(1));
+
+		// negation is a prefix
+		builder.group()
+				.prefix(of('!').trim(), (List<Condition> values) -> new Not(values.get(1)));
+
+		for(String pred : context.getPredicates()){
+			builder.group()
+					.prefix(StringParser.of(pred).seq(CharacterParser.word().not()).trim(), (List<Condition> values) -> new Predicate(pred, values.get(1)));
+		}
+
+		// Equality binds before conjunction; equivalence and implication bind after disjunction.
+        builder.group()
+                .left(StringParser.of("=").plus().trim(), (List<Condition> values) -> {
+                    try {
+                        return new IsEqualTo(values.get(0), values.get(2));
+                    } catch (MismatchingTypeException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+                })
+                .left(StringParser.of("!=").trim(), (List<Condition> values) -> new IsNotEqualTo(values.get(0), values.get(2)));
+        builder.group()
+                .left(of('&').plus().trim(), (List<Condition> values) -> new And(values.get(0), values.get(2)));
+        builder.group()
+                .left(of('|').plus().trim(), (List<Condition> values) -> new Or(values.get(0), values.get(2)));
+        builder.group()
+                .left(StringParser.of("<->").trim(), (List<Condition> values) -> {
+                    try {
+                        return new IsEqualTo(values.get(0), values.get(2));
+                    } catch (MismatchingTypeException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+                });
+        builder.group()
+                .right(StringParser.of("->").trim(), (List<Condition> values) -> new Implies(values.get(0), values.get(2)));
+
+		condition.set(builder.build());
+
+		return condition;
+	}
+
+    /** State atoms for LTOL: Boolean connectives and grouping belong to the LTOL parser. */
+    public static Parser atomicParser(TypingContext context) throws Exception {
+        SettableParser arguments = SettableParser.undefined();
+        arguments.set(parser(context));
+        return atomicParser(context, arguments);
+    }
+
+    private static Parser atomicParser(TypingContext context, SettableParser condition) throws Exception {
 		Parser primitiveBoolean =
 				(context.getSubContext(Boolean.getType()).variableParser().map((TypedVariable<Boolean> value) -> {
 					try {
@@ -113,72 +177,15 @@ public abstract class Condition implements Expression<Boolean> {
 			enumEquality = FailureParser.withMessage("");
 		}
 
-		ExpressionBuilder builder = new ExpressionBuilder();
-		builder.group()
-				.primitive(enumEquality
+        return enumEquality
 						.or(IsEqualTo.parser(arithmetic))
 						.or(IsNotEqualTo.parser(arithmetic))
 						.or(IsGreaterOrEqualThan.parser(ArithmeticExpression.parser(context)))
 						.or(IsGreaterThan.parser(ArithmeticExpression.parser(context)))
 						.or(IsLessOrEqualThan.parser(ArithmeticExpression.parser(context)))
 						.or(IsLessThan.parser(ArithmeticExpression.parser(context)))
-						.or(primitiveBoolean).trim())
-				.wrapper(of('(').trim(), of(')').trim(),
-						(List<Expression<Boolean>> values) -> values.get(1));
-
-		// negation is a prefix
-		builder.group()
-				.prefix(of('!').trim(), (List<Condition> values) -> new Not(values.get(1)));
-
-		for(String pred : context.getPredicates()){
-			builder.group()
-					.prefix(StringParser.of(pred).trim(), (List<Condition> values) -> new Predicate(pred, values.get(1)));
-		}
-
-		// implication is right-associative
-		builder.group()
-				.right(StringParser.of("->").plus().trim(), (List<Condition> values) -> new Implies(values.get(0), values.get(2)));
-
-		// iff is left and right-associative
-		builder.group()
-				.right(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<Condition> values) -> {
-					try {
-						return new IsEqualTo(values.get(0), values.get(2));
-					} catch (Exception e) {
-						return e;
-					}
-				})
-				.left(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<Condition> values) -> {
-					try {
-						return new IsEqualTo(values.get(0), values.get(2));
-					} catch (Exception e) {
-						return e;
-					}
-				});
-
-		// is not equal to is left and right-associative
-		builder.group()
-				.right(StringParser.of("!=").trim(), (List<Condition> values) -> {
-					return new IsNotEqualTo(values.get(0), values.get(2));
-				})
-				.left(StringParser.of("!=").trim(), (List<Condition> values) -> {
-					return new IsNotEqualTo(values.get(0), values.get(2));
-				});
-
-		// conjunction is right- and left-associative
-		builder.group()
-				.right(of('&').plus().trim(), (List<Condition> values) -> new And(values.get(0), values.get(2)))
-				.left(of('&').plus().trim(), (List<Condition> values) -> new And(values.get(0), values.get(2)));
-
-		// disjunction is right- and left-associative
-		builder.group()
-				.right(of('|').plus().trim(), (List<Condition> values) -> new Or(values.get(0), values.get(2)))
-				.left(of('|').plus().trim(), (List<Condition> values) -> new Or(values.get(0), values.get(2)));
-
-		condition.set(builder.build());
-
-		return condition;
-	}
+						.or(primitiveBoolean).trim();
+    }
 
 	public abstract Expression<Boolean> relabel(Function<TypedVariable, Expression> relabelling) throws RelabellingTypeException, MismatchingTypeException;
 

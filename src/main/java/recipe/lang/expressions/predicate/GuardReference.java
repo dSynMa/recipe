@@ -29,6 +29,10 @@ public class GuardReference extends Condition {
     public GuardReference(Guard guardType, Expression[] parametersValues) throws MismatchingTypeException {
         this.guardType = guardType;
         TypedVariable[] params = guardType.getParameters();
+        if (parametersValues.length != params.length) {
+            throw new MismatchingTypeException("Guard " + guardType.name() + " expects " + params.length
+                    + " arguments, got " + parametersValues.length + ".");
+        }
         this.parametersValues = new Expression[parametersValues.length];
 
         for (int i = 0; i < params.length; i++) {
@@ -99,7 +103,6 @@ public class GuardReference extends Condition {
                 }))
                 .seq(CharacterParser.of(')').trim())
                 .map((List<Object> values) -> {
-                    GuardReference guardReference = null;
                     String label = (String) values.get(0);
                     List<Object> paramValsUntyped = (List<Object>) values.get(2);
                     paramValsUntyped.removeIf(x -> Objects.equals(x, Character.valueOf(',')));
@@ -109,6 +112,10 @@ public class GuardReference extends Condition {
                         Guard guardType = (Guard) context.get(label);
 //                                Guard.getGuardDefinition(label);
                         TypedVariable[] params = guardType.getParameters();
+                        if (paramValsUntyped.size() != params.length) {
+                            throw new MismatchingTypeException("Guard " + label + " expects " + params.length
+                                    + " arguments, got " + paramValsUntyped.size() + ".");
+                        }
                         for(int i = 0 ; i < paramValsUntyped.size(); i++){
                             if(!paramValsUntyped.get(i).equals(',')){
                                 Expression paramVal = (Expression) paramValsUntyped.get(i);
@@ -121,10 +128,8 @@ public class GuardReference extends Condition {
 
                         return new GuardReference(guardType, paramValsTyped.toArray(new Expression[paramValsTyped.size()]));
                     } catch (Exception e){
-                        e.printStackTrace();
+                        throw new IllegalArgumentException("Invalid call to guard " + label + ": " + e.getMessage(), e);
                     }
-
-                    return guardReference;
                 });
 
         return parser;
@@ -177,4 +182,14 @@ public class GuardReference extends Condition {
     public Condition removePreds(){
         return this;
     }
+
+    @Override
+    public String toNuXmv() {
+        try {
+            return unpack().toNuXmv();
+        } catch (RelabellingTypeException | MismatchingTypeException error) {
+            throw new IllegalArgumentException("Cannot render guard reference", error);
+        }
+    }
+
 }

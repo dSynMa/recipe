@@ -17,6 +17,9 @@ public class IsNotEqualTo extends Condition {
 	private Expression lhs;
 	private Expression rhs;
 
+	public Expression getLhs() { return lhs; }
+	public Expression getRhs() { return rhs; }
+
 	public IsNotEqualTo(Expression lhs, Expression rhs) {
 		this.lhs = lhs;
 		this.rhs = rhs;
@@ -36,7 +39,7 @@ public class IsNotEqualTo extends Condition {
 
 	@Override
 	public String toString() {
-		return lhs + " != " + rhs;
+		return renderOperand(lhs) + " != " + renderOperand(rhs);
 	}
 
 	@Override
@@ -92,14 +95,23 @@ public class IsNotEqualTo extends Condition {
 									   Function<Expression<Boolean>, Expression<Boolean>> act) {
 		if (cond.test(this)) {
 			return act.apply(this);
-		} else {
-			return this;
-		}
-	}
+        } else if (lhs.getType().equals(Boolean.getType()) && rhs.getType().equals(Boolean.getType())) {
+            return new IsNotEqualTo(((Expression<Boolean>) lhs).replace(cond, act),
+                    ((Expression<Boolean>) rhs).replace(cond, act));
+        } else {
+            return this;
+        }
+    }
 
-	public Condition removePreds(){
+    public Condition removePreds(){
 		return new IsNotEqualTo(this.lhs.removePreds(), this.rhs.removePreds());
 	}
+
+
+    @Override
+    public String toNuXmv() {
+        return renderNuXmvOperand(lhs) + " != " + renderNuXmvOperand(rhs);
+    }
 
 }
 

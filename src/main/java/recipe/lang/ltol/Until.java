@@ -27,7 +27,7 @@ public class Until extends LTOL{
     }
 
     public String toString() {
-        return "(" + left + " U " + right + ")";
+        return "((" + left + ") U (" + right + "))";
     }
 
     public boolean isPureLTL() {
@@ -50,4 +50,10 @@ public class Until extends LTOL{
     public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return new Until(left.toLTOLwithoutQuantifiers(), right.toLTOLwithoutQuantifiers());
     }
+
+    @Override
+    public String toNuXmv() {
+        return "((" + left.toNuXmv() + ") U (" + right.toNuXmv() + "))";
+    }
+
 }

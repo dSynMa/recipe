@@ -66,12 +66,14 @@ public class IsGreaterThan extends Condition {
 		Expression<Number> lhsObject = lhs.simplify();
 		Expression<Number> rhsObject = rhs.simplify();
 		if (lhsObject.equals(rhsObject)) {
-			return Condition.TRUE;
+			return Condition.FALSE;
 		} else if(!lhsObject.getClass().equals(TypedValue.class) ||
 				!rhsObject.getClass().equals(TypedValue.class)) {
 			return new IsGreaterThan(lhsObject, rhsObject);
 		} else{
-			return Condition.TRUE;
+			int comparison = new BigDecimal(((TypedValue<?>) lhsObject).getValue().toString())
+				.compareTo(new BigDecimal(((TypedValue<?>) rhsObject).getValue().toString()));
+			return comparison > 0 ? Condition.TRUE : Condition.FALSE;
 		}
 	}
 
@@ -110,4 +112,10 @@ public class IsGreaterThan extends Condition {
 	public Condition removePreds(){
 		return this;
 	}
+
+    @Override
+    public String toNuXmv() {
+        return lhs.toNuXmv() + " > " + rhs.toNuXmv();
+    }
+
 }

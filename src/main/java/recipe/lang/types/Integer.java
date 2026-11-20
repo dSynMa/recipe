@@ -23,9 +23,8 @@ public class Integer extends Real {
             try {
                 return new TypedValue(this, (String) val);
             } catch (MismatchingTypeException e) {
-                e.printStackTrace();
+                throw new IllegalArgumentException("Invalid integer literal '" + val + "': " + e.getMessage(), e);
             }
-            return null;
         });
     }
 

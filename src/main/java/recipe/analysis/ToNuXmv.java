@@ -34,6 +34,7 @@ import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.GuardReference;
 import recipe.lang.expressions.predicate.Implies;
 import recipe.lang.expressions.predicate.IsEqualTo;
+import recipe.lang.expressions.predicate.IsNotEqualTo;
 import recipe.lang.expressions.predicate.NamedLocation;
 import recipe.lang.expressions.predicate.Not;
 import recipe.lang.expressions.predicate.Or;
@@ -59,12 +60,51 @@ import recipe.lang.utils.exceptions.TypeCreationException;
 
 public class ToNuXmv {
 
+    /** Receive, supply, and get labels record the action leading into the next state. */
+    private static String labelEffects(String agent, recipe.lang.process.BasicProcess action) {
+        String label = action.getLabel();
+        if (label == null || label.isEmpty()) return "falsify-" + agent;
+        return "next(" + agent + "-" + label + ") = TRUE & falsify-not-" + agent + "-" + label;
+    }
+
+    private static void validateActionLabels(recipe.lang.System system) throws Exception {
+        for (recipe.lang.agents.Agent agent : system.getAgents()) {
+            for (recipe.lang.process.Process process : agent.getActions()) {
+                if (process instanceof recipe.lang.process.BasicProcess) {
+                    String label = ((recipe.lang.process.BasicProcess) process).getLabel();
+                    if (label != null && agent.getStore().getAttributes().containsKey(label)) {
+                        throw new IllegalArgumentException("Action label '" + label + "' in agent "
+                                + agent.getName() + " conflicts with a local variable. Rename the label or variable.");
+                    }
+                }
+            }
+        }
+    }
+
+
+    private static String nuxmvType(Type type) {
+        if (type instanceof Enum enumeration) {
+            return "{" + String.join(",", enumeration.getValues().stream()
+                .map(value -> Config.broadcast.equals(value) ? Config.nuxmvBroadcast : value)
+                .toArray(String[]::new)) + "}";
+        }
+        return type.name();
+    }
+
     public static Expression<Boolean> specialiseObservationToSendTransition(Map<String, Type> cvs,
                                                                             Expression<Boolean> obs,
                                                                             Expression<Boolean> sendGuard,
                                                                             Map<String, Expression> message,
                                                                             TypedValue sender,
-                                                                            Expression channel) throws Exception {
+                                                                            Expression channel,
+                                                                            Set<String> messageFields) throws Exception {
+        AtomicReference<java.lang.Boolean> missingField = new AtomicReference<>(false);
+        obs.relabel(v -> {
+            if (messageFields.contains(v.getName()) && !message.containsKey(v.getName())) missingField.set(true);
+            return v;
+        });
+        // Match interpreter evaluation: an observation requiring absent data is not satisfied.
+        if (missingField.get()) return Condition.getFalse();
         //handle message and sender variables
         Expression<Boolean> observation = obs.relabel((v) -> message.containsKey(v.getName()) ? message.get(v.getName()) : v)
                                                 .relabel((v) -> v.getName().equals("sender") ? sender : v)
@@ -116,6 +156,16 @@ public class ToNuXmv {
     }
 
     public static Expression<Boolean> handleCVsInObservation(Map<String, Type> cvs, Expression<Boolean> obs, Expression<Boolean> sendGuard) throws Exception {
+        // ReCiPe section 7: https://arxiv.org/html/2104.10998v3#S7
+        // m |= cv iff every valuation in the sender predicate satisfies cv.
+        // Negation stays outside: m |= !cv iff some selected valuation falsifies cv.
+        // These are valuations of common variables, not the actual connected receivers.
+        if (obs instanceof TypedVariable && obs.getType().equals(Boolean.getType())) {
+            String name = ((TypedVariable) obs).getName().replaceFirst("^@", "");
+            if (cvs.containsKey(name) || cvs.containsKey("@" + name)) {
+                return handleCVsInObservation(cvs, new Predicate("forall", obs), sendGuard);
+            }
+        }
         if(obs.getClass().equals(And.class)){
             And obss = (And) obs;
             return new And(handleCVsInObservation(cvs, obss.getLhs(), sendGuard), handleCVsInObservation(cvs, obss.getRhs(), sendGuard));
@@ -124,7 +174,7 @@ public class ToNuXmv {
             return new Or(handleCVsInObservation(cvs, obss.getLhs(), sendGuard), handleCVsInObservation(cvs, obss.getRhs(), sendGuard));
         } else if(obs.getClass().equals(Not.class)){
             Not obss = (Not) obs;
-            return new Not(handleCVsInObservation(cvs, obss, sendGuard));
+            return new Not(handleCVsInObservation(cvs, obss.getArgument(), sendGuard));
         } else if(obs.getClass().equals(Implies.class)){
             Implies obss = (Implies) obs;
             return new Implies(handleCVsInObservation(cvs, obss.getLhs(), sendGuard), handleCVsInObservation(cvs, obss.getRhs(), sendGuard));
@@ -135,8 +185,12 @@ public class ToNuXmv {
                         new Implies(handleCVsInObservation(cvs, obss.getLhs(), sendGuard), handleCVsInObservation(cvs, obss.getRhs(), sendGuard)),
                         new Implies(handleCVsInObservation(cvs, obss.getRhs(), sendGuard), handleCVsInObservation(cvs, obss.getLhs(), sendGuard)));
             } else {
-                return obs;
+                return specialiseAtomicObservation(cvs, obs, sendGuard);
             }
+        } else if (obs instanceof IsNotEqualTo) {
+            IsNotEqualTo inequality = (IsNotEqualTo) obs;
+            return new Not(handleCVsInObservation(cvs,
+                new IsEqualTo(inequality.getLhs(), inequality.getRhs()), sendGuard));
         } else if(obs.getClass().equals(Predicate.class)){
             Predicate obss = (Predicate) obs;
             //t(forall(o)) = /\cv g_s -> o
@@ -172,7 +226,7 @@ public class ToNuXmv {
                         finalExpression = new And(finalExpression, expr).simplify();
                     }
                 }
-                return finalExpression;
+                return finalExpression == null ? Condition.getTrue() : finalExpression;
             } else if(obss.getName().equals("exists")) {
                 //t(exists(o)) = \/cv g_s && o
                 Expression<Boolean> t = null;
@@ -206,13 +260,26 @@ public class ToNuXmv {
                         t = new Or(t, expr).simplify();
                     }
                 }
-                return t;
+                return t == null ? Condition.getFalse() : t;
             } else{
                 throw new Exception("Predicate " + obss.getName() + " unknown.");
             }
         } else{
-            return obs;
+            return specialiseAtomicObservation(cvs, obs, sendGuard);
         }
+    }
+
+    private static Expression<Boolean> specialiseAtomicObservation(Map<String, Type> cvs,
+            Expression<Boolean> atom, Expression<Boolean> sendGuard) throws Exception {
+        AtomicReference<java.lang.Boolean> hasCommonVariable = new AtomicReference<>(false);
+        atom.relabel(variable -> {
+            String name = variable.getName().replaceFirst("^@", "");
+            if (cvs.containsKey(name) || cvs.containsKey("@" + name)) hasCommonVariable.set(true);
+            return variable;
+        });
+        // Finite comparison atoms use the same implicit universal scope as bare CVs.
+        return hasCommonVariable.get()
+            ? handleCVsInObservation(cvs, new Predicate("forall", atom), sendGuard) : atom;
     }
 
     public static Pair<List<LTOL>, Map<String, Observation>> ltolToLTLAndObservationVariables(List<LTOL> specs) throws Exception {
@@ -288,7 +355,6 @@ public class ToNuXmv {
 
         String nuxmv = "MODULE main\n";
         String vars = "VAR\n";
-        String broadcastChannel = "broadcast";
 
         String define = "DEFINE\n";
         String init = "INIT\n";
@@ -305,12 +371,18 @@ public class ToNuXmv {
             noObservations += " & next(" + entry.getKey() + ") = FALSE";
         }
 
+        for(String obs : observations.keySet()){
+            if (!init.equals("INIT\n")) init += "\t& ";
+            init += obs + " = FALSE\n";
+        }
+
         List<AgentInstance> agentInstances = system.getAgentInstances();
         Map<String, List<String>> agentSendPreds = new HashMap<>();
         Map<String, List<String>> agentSendProgressConds = new HashMap<>();
+        Map<String, List<String>> sendLabels = new java.util.LinkedHashMap<>();
 
         Set<String> sendProcessNames = new HashSet<>();
-        Set<String> receiveProcessNames = new HashSet<>();
+        Set<String> actionLabelNames = new HashSet<>();
         List<String> keepFunctions = new ArrayList<>();
 
         String keepAll = "keep-all := TRUE";
@@ -340,20 +412,22 @@ public class ToNuXmv {
             String falsifyAllLabelsNotOfI = "falsify-not-" + namei + " := TRUE";
             String falsifyAllLabelsOfI = "falsify-" + namei + " := TRUE";
 
-            Set<Transition> receiveAndSupplyTransitions = new HashSet<>(agenti.getReceiveTransitions());
-            // receiveAndSupplyTransitions.addAll(agenti.getSupplyTransitions());
+            Set<Transition> labelledTransitions = new HashSet<>(agenti.getReceiveTransitions());
+            labelledTransitions.addAll(agenti.getSupplyTransitions());
+            labelledTransitions.addAll(agenti.getGetTransitions());
+            Set<String> seenLabels = new HashSet<>();
 
-            for(Transition t : receiveAndSupplyTransitions){
+            for(Transition t : labelledTransitions){
                 String label = ((BasicProcess) t.getLabel()).getLabel();
-                if (label != null && !label.equals("")){
+                if (label != null && !label.equals("") && seenLabels.add(label)){
                     keepThis += " & next(" + namei + "-" + label + ") = FALSE";
                     falsifyAllLabelsNotOfI += " & next(" + namei + "-" + label + ") = FALSE";
                     keepAll += " & next(" + namei + "-" + label + ") = FALSE";
                     falsifyAllLabelsOfI += " & next(" + namei + "-" + label + ") = FALSE";
-                    receiveProcessNames.add(namei + "-" + label);
+                    actionLabelNames.add(namei + "-" + label);
 
                     String falsifyAllLabelsExceptThis = "falsify-not-" + namei + "-" + label + " := TRUE";
-                    for(Transition tt : receiveAndSupplyTransitions){
+                    for(Transition tt : labelledTransitions){
                         String receiveLabel = ((BasicProcess) tt.getLabel()).getLabel();
                         if(receiveLabel != null && !receiveLabel.equals(label) &&!receiveLabel.equals("")){
                             falsifyAllLabelsExceptThis += " & next(" + namei + "-" + receiveLabel + ") = FALSE";
@@ -404,7 +478,7 @@ public class ToNuXmv {
             String stateList = String.join(",", allStates.toArray(String[]::new));
 
             for (TypedVariable typedVariable : sendingAgent.getStore().getAttributes().values()) {
-                vars += "\t" + sendingAgentName + "-" + typedVariable.getName() + " : " + nuxmvTypeOfTypedVar(typedVariable) + ";\n";
+                vars += "\t" + sendingAgentName + "-" + typedVariable.getName() + " : " + nuxmvType(typedVariable.getType()) + ";\n";
             }
 
             vars += "\t" + sendingAgentName + "-automaton-state" + " : {" + stateList + "};\n";
@@ -417,13 +491,8 @@ public class ToNuXmv {
 
             init += sendingAgentName + "-automaton-state" + " = " + sendingAgent.getInitialState().toString() + "\n";
 
-            init += "\t& " + sendingAgent.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
-            init += "\t& " + sendingAgentInstance.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)) + "\n";
-
-            for(String obs : observations.keySet()){
-                init += "\t& " + obs + " = FALSE\n";
-            }
-            ///////////////
+            init += "\t& " + (sendingAgent.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v))).toNuXmv() + "\n";
+            init += "\t& " + (sendingAgentInstance.getInit().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v))).toNuXmv() + "\n";
 
 
             //For each state of the sending agents we are going to iterate over all of its possible send transitions
@@ -450,8 +519,8 @@ public class ToNuXmv {
                                 .relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v));
 
                         // add the guard of the sendingProcess to the guards required for the send to trigger
-                        sendTriggeredIf.add(sendingProcess.getPsi()
-                                .relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify().toString());
+                        sendTriggeredIf.add((sendingProcess.getPsi()
+                                .relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify()).toNuXmv());
 
                         sendEffects.add("falsify-" + sendingAgentName);
                         // add next state to send effects
@@ -461,7 +530,7 @@ public class ToNuXmv {
                         for (Map.Entry<String, Expression> entry : sendingProcess.getUpdate().entrySet()) {
                             sendEffects.add(
                                     "next(" + sendingAgentName + "-" + entry.getKey() + ") " +
-                                    "= (" + entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)).simplify() + ")");
+                                    "= (" + (entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)).simplify()).toNuXmv() + ")");
                         }
                         //keep variable values not mentioned in the update
                         for (String var : sendingAgent.getStore().getAttributes().keySet()) {
@@ -501,9 +570,10 @@ public class ToNuXmv {
                                     sendGuardExpr,
                                     relabelledMessage,
                                     sendingAgentNameValue,
-                                    sendingOnThisChannelVarOrVal);
+                                    sendingOnThisChannelVarOrVal,
+                                    system.getMessageStructure().keySet());
 
-                            sendEffects.add("next(" + var + ") = (" + observationCondition + ")");
+                            sendEffects.add("next(" + var + ") = (" + (observationCondition).toNuXmv() + ")");
                         }
 
                         //Now we will iterate over all other agents, and for every receive transition,
@@ -529,12 +599,12 @@ public class ToNuXmv {
                                 if (sendingOnThisChannelVarOrVal.toString().equals(Config.broadcast))
                                     //then sending channel is broadcast and we always want to listen to broadcasts
                                     receiveGuard = "TRUE";
-                                else if (receiveGuardExpr.toString().equals("FALSE")) {
+                                else if (sendingOnThisChannelVarOrVal instanceof TypedValue && receiveGuardExpr.toString().equals("FALSE")) {
                                     receiveGuard = "FALSE";
                                 } else if(sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)){
-                                    receiveGuard = "(" + receiveGuardExpr + ")";
+                                    receiveGuard = "(" + (receiveGuardExpr).toNuXmv() + ")";
                                 } else {
-                                    receiveGuard = "(" + receiveGuardExpr + ") | " + sendingOnThisChannelVarOrVal + " = " + broadcastChannel;
+                                    receiveGuard = "(" + (receiveGuardExpr).toNuXmv() + ") | " + (sendingOnThisChannelVarOrVal).toNuXmv() + " = " + Config.nuxmvBroadcast;
                                 }
 
                                 //relabelling sendGuard
@@ -608,7 +678,7 @@ public class ToNuXmv {
                                         if (receiveTransitionGuard.equals(Condition.getFalse()))
                                             continue receiveTransLoop;
                                         else
-                                            receiveTransTriggeredIf.add(receiveTransitionGuard.toString());
+                                            receiveTransTriggeredIf.add((receiveTransitionGuard).toNuXmv());
 
 
                                         Expression<Enum> receivingOnThisChannelVarOrVal = receiveProcess.getChannel()
@@ -622,7 +692,7 @@ public class ToNuXmv {
                                                 && !sendingOnThisChannelVarOrVal.equals(receivingOnThisChannelVarOrVal))
                                             continue receiveTransLoop;
                                         else
-                                            receiveTransTriggeredIf.add(sendingOnThisChannelVarOrVal + " = " + receivingOnThisChannelVarOrVal);
+                                            receiveTransTriggeredIf.add((sendingOnThisChannelVarOrVal).toNuXmv() + " = " + (receivingOnThisChannelVarOrVal).toNuXmv());
 //                                            agentReceiveNows.add(receiveNow);
 
                                         //for each variable update, if the updates uses a message variable that is
@@ -631,12 +701,12 @@ public class ToNuXmv {
                                         for (Map.Entry<String, Expression> entry : receiveProcess.getUpdate().entrySet()) {
                                             receiveTransEffects
                                                     .add("next(" + receiveName + "-" + entry.getKey() + ") = ("
-                                                            + entry.getValue().relabel(v ->
+                                                            + (entry.getValue().relabel(v ->
                                                             sendingProcess.getMessage().containsKey(((TypedVariable) v).getName())
                                                                     ? relabelledMessage.get(((TypedVariable) v).getName())
                                                                     : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
                                                                     ? stopHelper.apply((TypedVariable) v)
-                                                                    : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v))) + ")");
+                                                                    : ((TypedVariable) v).sameTypeWithName(receiveName + "-" + v)))).toNuXmv() + ")");
                                         }
 
                                         //stop considering this transition if update uses a message variable
@@ -683,7 +753,7 @@ public class ToNuXmv {
 
                                 for(State explicitState : receiveAgent.getStates()) {
                                     String stateCond = receiveName + "-automaton-state = " + explicitState.toString();
-                                    String noExplicitTransition = sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel;
+                                    String noExplicitTransition = (sendingOnThisChannelVarOrVal).toNuXmv() + " = " + Config.nuxmvBroadcast;
                                     if (receiveAgentReceivePreds.containsKey(stateCond)
                                             && !(receiveAgentReceivePreds.get(stateCond) == null)){
                                         List<String> receiveTransPreds = receiveAgentReceivePreds.get(stateCond);
@@ -726,18 +796,18 @@ public class ToNuXmv {
                                         currentAgentReceivePreds.add(transitionPred);
                                         currentAgentProgressConds.add(transitionProgressCond);
                                     } else if (receiveGuard.equals("TRUE")) {
-                                        currentAgentReceivePreds.add("(" + transitionPred + ")\n \t\t& (" + sendGuardExprHere + ")");
-                                        currentAgentProgressConds.add("(" + transitionProgressCond + ")\n \t\t& (" + sendGuardExprHere + ")");
+                                        currentAgentReceivePreds.add("(" + transitionPred + ")\n \t\t& (" + (sendGuardExprHere).toNuXmv() + ")");
+                                        currentAgentProgressConds.add("(" + transitionProgressCond + ")\n \t\t& (" + (sendGuardExprHere).toNuXmv() + ")");
                                     } else if (sendGuardExprHere.toString().equals("TRUE")) {
                                         currentAgentReceivePreds.add("(" + receiveGuard + ")\n \t\t& (" + transitionPred + ")");
                                         currentAgentProgressConds.add("(" + receiveGuard + ")\n \t\t& (" + transitionProgressCond + ")");
                                     } else {
-                                        currentAgentReceivePreds.add("(" + receiveGuard + ")\n \t\t& (" + transitionPred + ")\n \t\t& (" + sendGuardExprHere + ")");
-                                        currentAgentProgressConds.add("(" + receiveGuard + ")\n \t\t& (" + transitionProgressCond + ")\n \t\t& (" + sendGuardExprHere + ")");
+                                        currentAgentReceivePreds.add("(" + receiveGuard + ")\n \t\t& (" + transitionPred + ")\n \t\t& (" + (sendGuardExprHere).toNuXmv() + ")");
+                                        currentAgentProgressConds.add("(" + receiveGuard + ")\n \t\t& (" + transitionProgressCond + ")\n \t\t& (" + (sendGuardExprHere).toNuXmv() + ")");
                                     }
-                                } else if(receiveAgentReceivePreds.size() > 0){
-                                    throw new Exception("receiveAgentReceivePreds is empty");
                                 }
+                                // Disabled reception is handled by the idle/broadcast cases below.
+                                // On multicast, a connected receiver without a matching action blocks.
 
                                 //if receiveguard is false then the whole predicate is true
                                 if (receiveGuard.equals("FALSE")){
@@ -771,14 +841,14 @@ public class ToNuXmv {
                                 } else{
                                     if(sendingOnThisChannelVarOrVal.getClass().equals(TypedValue.class)
                                             && sendingOnThisChannelVarOrVal.toString().equals(Config.broadcast)){
-                                        currentAgentReceivePreds.add("!(" + sendGuardExprHere.toString() + ") & " + "keep-all-" + receiveName);
-                                        currentAgentProgressConds.add("!(" + sendGuardExprHere.toString() + ")");
+                                        currentAgentReceivePreds.add("!(" + (sendGuardExprHere).toNuXmv() + ") & " + "keep-all-" + receiveName);
+                                        currentAgentProgressConds.add("!(" + (sendGuardExprHere).toNuXmv() + ")");
                                     } else if(sendGuardExprHere.toString().equals("FALSE")){
-                                        currentAgentReceivePreds.add(sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel + " & " + "keep-all-" + receiveName);
-                                        currentAgentProgressConds.add(sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel);
+                                        currentAgentReceivePreds.add((sendingOnThisChannelVarOrVal).toNuXmv() + " = " + Config.nuxmvBroadcast + " & " + "keep-all-" + receiveName);
+                                        currentAgentProgressConds.add((sendingOnThisChannelVarOrVal).toNuXmv() + " = " + Config.nuxmvBroadcast);
                                     } else{
-                                        currentAgentReceivePreds.add(sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel + " & !(" + sendGuardExprHere.toString() + ") & " + "keep-all-" + receiveName);
-                                        currentAgentProgressConds.add(sendingOnThisChannelVarOrVal.toString() + " = " + broadcastChannel + " & !(" + sendGuardExprHere.toString() + ")");
+                                        currentAgentReceivePreds.add((sendingOnThisChannelVarOrVal).toNuXmv() + " = " + Config.nuxmvBroadcast + " & !(" + (sendGuardExprHere).toNuXmv() + ") & " + "keep-all-" + receiveName);
+                                        currentAgentProgressConds.add((sendingOnThisChannelVarOrVal).toNuXmv() + " = " + Config.nuxmvBroadcast + " & !(" + (sendGuardExprHere).toNuXmv() + ")");
                                     }
                                 }
 
@@ -803,11 +873,11 @@ public class ToNuXmv {
                             agentSendProgressCond += "\n \t\t& (" + String.join(")\n\n \t\t& (", agentReceiveProgressConds) + ")";
                         }
 
-                        if(sendingProcess.getLabel() != null && !sendingProcess.getLabel().equals("")) {
-                            define +=  "\t" + sendingAgentName + "-" + sendingProcess.getLabel() + " := " + agentSendPred + ";\n";
-                            transitionSendPreds.add(sendingAgentName + "-" + sendingProcess.getLabel());
-                        } else {
-                            transitionSendPreds.add(agentSendPred);
+                        transitionSendPreds.add(agentSendPred);
+                        String label = sendingProcess.getLabel();
+                        if (label != null && !label.isEmpty()) {
+                            sendLabels.computeIfAbsent(sendingAgentName + "-" + label, key -> new ArrayList<>())
+                                .add("(" + sendStateIsCurrentState + ") & (" + agentSendProgressCond + ")");
                         }
 
                         transitionSendProgressCond.add(agentSendProgressCond);
@@ -825,9 +895,11 @@ public class ToNuXmv {
                         SupplyProcess supplyProcess = (SupplyProcess) t.getLabel();
                         // add the guard of the supplyProcess to the guards required for the supply to trigger
                         supplyTriggeredIf.add(supplierStateIsCurrentState);
-                        supplyTriggeredIf.add(supplyProcess.getPsi().relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify().toString());
+                        supplyTriggeredIf.add((supplyProcess.getPsi().relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify()).toNuXmv());
                         
-                        // supplyEffects.add("falsify-" + sendingAgentName);
+                        supplyEffects.add(labelEffects(sendingAgentName, supplyProcess));
+                        // A supply/get interaction does not execute a channel send.
+                        supplyEffects.add("no-observations");
                         // add next state to supply effects
                         supplyEffects.add("next(" + sendingAgentName + "-automaton-state" + ") = " + t.getDestination());
 
@@ -835,7 +907,7 @@ public class ToNuXmv {
                         for (Map.Entry<String, Expression> entry : supplyProcess.getUpdate().entrySet()) {
                             supplyEffects.add(
                                     "next(" + sendingAgentName + "-" + entry.getKey() + ") " +
-                                    "= (" + entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)).simplify() + ")");
+                                    "= (" + (entry.getValue().relabel(v -> ((TypedVariable) v).sameTypeWithName(sendingAgentName + "-" + v)).simplify()).toNuXmv() + ")");
                         }
                         //keep variable values not mentioned in the update
                         for (String var : sendingAgent.getStore().getAttributes().keySet()) {
@@ -893,7 +965,7 @@ public class ToNuXmv {
                             for (State getterState : getterAgent.getStates()) {
                                 Set<ProcessTransition> getTransitions = agentStateGetTransitionMap.get(getterAgent).get(getterState);
                                 if (getTransitions == null || getTransitions.size() == 0) continue; // no get's in this state, nothing to do
-                                String getterStateIsCurrentState = getterName + "-automaton-state" + " = " + state;
+                                String getterStateIsCurrentState = getterName + "-automaton-state" + " = " + getterState;
                                 
                                 // We'll set this to true if we need to skip a transition
                                 AtomicReference<java.lang.Boolean> stop = new AtomicReference<java.lang.Boolean>(false);
@@ -901,9 +973,11 @@ public class ToNuXmv {
 
                                 getterTrLoop:
                                 for (ProcessTransition gt : getTransitions) {
+                                    stop.set(false);
                                     List<String> getTriggeredIf = new ArrayList<>();
                                     getTriggeredIf.add(getterStateIsCurrentState);
                                     List<String> getEffects = new ArrayList<>();
+                                    getEffects.add(labelEffects(getterName, gt.getLabel()));
                                     GetProcess getProcess = (GetProcess) gt.getLabel();
                                 
                                     Expression<recipe.lang.types.Boolean> getTransitionGuard = getProcess.getPsi()
@@ -917,11 +991,18 @@ public class ToNuXmv {
                                         if (stop.get()) continue getterTrLoop;
                                         // If guard evaluates to false, we can skip
                                         if (getTransitionGuard.equals(Condition.getFalse())) continue getterTrLoop;
-                                        else getTriggeredIf.add(getTransitionGuard.toString());    
+                                        else getTriggeredIf.add((getTransitionGuard).toNuXmv());
 
 
                                         // Handle message guard
                                         Expression<Boolean> getterGuardExpr = getProcess.getMessageGuard();
+                                        if (supplyGuardExprHere instanceof NamedLocation) {
+                                            NamedLocation supplierLocation = (NamedLocation) supplyGuardExprHere;
+                                            // SELF serves only getters that explicitly name this supplier.
+                                            if (supplierLocation.isSelf()) {
+                                                if (!getterGuardExpr.toString().equals(sendingAgentName)) continue getterTrLoop;
+                                            } else if (!supplierLocation.toString().equals(getterName)) continue getterTrLoop;
+                                        }
                                         if (getterGuardExpr instanceof NamedLocation) {
                                             NamedLocation getterLocation = (NamedLocation) getterGuardExpr;
                                             if (getterLocation.isSelf()) throw new Exception("GET@SELF is not allowed.");
@@ -961,12 +1042,12 @@ public class ToNuXmv {
                                         // else relabel variables appropriately
                                         for (Map.Entry<String, Expression> entry : getProcess.getUpdate().entrySet()) {
                                             getEffects.add("next(" + getterName + "-" + entry.getKey() + ") = ("
-                                            + entry.getValue().relabel(v ->
+                                            + (entry.getValue().relabel(v ->
                                             supplyProcess.getMessage().containsKey(((TypedVariable) v).getName())
                                             ? relabelledMessage.get(((TypedVariable) v).getName())
                                             : (system.getMessageStructure().containsKey(((TypedVariable) v).getName())
                                             ? stopHelper.apply((TypedVariable) v)
-                                            : ((TypedVariable) v).sameTypeWithName(getterName + "-" + v))) + ")");
+                                            : ((TypedVariable) v).sameTypeWithName(getterName + "-" + v)))).toNuXmv() + ")");
                                         }
                                         
                                         // Stop considering this transition if update uses a message variable
@@ -990,7 +1071,7 @@ public class ToNuXmv {
                                             if (otherName != sendingAgentName && otherName != getterName)
                                                 getEffects.add(String.format("keep-all-%s", otherName));
                                         }
-                                        // TODO add "falsify-" defines to allow mentioning labelled get/supply actions in specs
+
                                         // TODO deal with LTOL observations
 
                                         String splyLbl = sendingAgentName + "-";
@@ -1006,15 +1087,16 @@ public class ToNuXmv {
                                             getLbl += String.format("unlabelled_get_%d", unlabelledCounter++);
                                         }
                                         String lbl = splyLbl + "-" + getLbl;
+                                        while (getSupplyTrans.contains(lbl)) lbl += "-" + unlabelledCounter++;
 
                                         define += String.format(
                                             "\t%s := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s) \n\t\t& (%s);\n",
                                             lbl,
                                             String.join(" & ", supplyTriggeredIf),
-                                            (supplyGuardExprHere instanceof NamedLocation) ? "TRUE" : supplyGuardExprHere.toString(),
+                                            (supplyGuardExprHere instanceof NamedLocation) ? "TRUE" : (supplyGuardExprHere).toNuXmv(),
                                             String.join(" & ", supplyEffects),
                                             String.join(" & ", getTriggeredIf),
-                                            (getterGuardExprHere instanceof NamedLocation) ? "TRUE" : getterGuardExprHere.toString(),
+                                            (getterGuardExprHere instanceof NamedLocation) ? "TRUE" : (getterGuardExprHere).toNuXmv(),
                                             String.join(" & ", getEffects));
                                         getSupplyTrans.add(lbl);
                                         
@@ -1022,9 +1104,9 @@ public class ToNuXmv {
                                             "\t%s-progress := (%s)\n\t\t& (%s)\n\t\t& (%s)\n\t\t& (%s);\n",
                                             lbl,
                                             String.join(" & ", supplyTriggeredIf),
-                                            (supplyGuardExprHere instanceof NamedLocation) ? "TRUE" : supplyGuardExprHere.toString(),
+                                            (supplyGuardExprHere instanceof NamedLocation) ? "TRUE" : (supplyGuardExprHere).toNuXmv(),
                                             String.join(" & ", getTriggeredIf),
-                                            (getterGuardExprHere instanceof NamedLocation) ? "TRUE" : getterGuardExprHere.toString());
+                                            (getterGuardExprHere instanceof NamedLocation) ? "TRUE" : (getterGuardExprHere).toNuXmv());
                                         progress.add(String.format("%s-progress", lbl));
                                         
                                     } // getter transition loop
@@ -1059,10 +1141,15 @@ public class ToNuXmv {
         if (trans.strip() == "") trans = "FALSE";
         trans += ";\n";
 
-        for(String name : receiveProcessNames){
+        for(String name : actionLabelNames){
             vars += "\t" + name + " : " + "boolean;\n";
         }
         nuxmv += vars;
+        for (Map.Entry<String, List<String>> label : sendLabels.entrySet()) {
+            if (actionLabelNames.contains(label.getKey()))
+                throw new IllegalArgumentException("Send and event actions cannot share label " + label.getKey());
+            define += "\t" + label.getKey() + " := (" + String.join(") | (", label.getValue()) + ");\n";
+        }
         define += "\ttransition := " + trans;
         if(progress.size() > 0)
             define += "\tprogress := (" + String.join(")\n \t\t| (", progress) + ");\n";
@@ -1071,27 +1158,23 @@ public class ToNuXmv {
         nuxmv += define;
         List<String> constants = new ArrayList<>();
         for(String label : Enum.getEnumLabels()){
-            constants.addAll(Enum.getEnum(label).getValues());
+            for (String value : Enum.getEnum(label).getValues()) constants.add((Config.broadcast.equals(value) ? Config.nuxmvBroadcast : value));
         }
         if(constants.size() > 0)
             nuxmv += "CONSTANTS\n\t";
             nuxmv +=  String.join(", ", constants);
             nuxmv += ";\n";
 
-        for(String name : receiveProcessNames){
+        for(String name : actionLabelNames){
             init += "\t& " + name + " = " + "FALSE\n";
         }
 
         nuxmv += init;
         nuxmv += "TRANS\n";
         nuxmv += "\t(transition)\n \t\t| (!progress & keep-all & no-observations)\n";
-        nuxmv = nuxmv.replaceAll("&( |\n)*TRUE(( )*&( )*)( |\n)*", "");
-        nuxmv = nuxmv.replaceAll("TRUE(( )*&( )*)", "");
         nuxmv = nuxmv.replaceAll("==", " = ");
-        nuxmv = nuxmv.replaceAll("\\*", broadcastChannel);
 
-
-        nuxmv += String.join("\n", specs.stream().map((s) -> "LTLSPEC " + s.toString()).toArray(String[]::new));
+        nuxmv += String.join("\n", specs.stream().map((s) -> "LTLSPEC " + (s).toNuXmv()).toArray(String[]::new));
 
         GuardReference.resolve = false;
 

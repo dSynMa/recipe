@@ -28,8 +28,7 @@ public class BigAnd extends LTOL {
         for (TypedVariable variable : vars) {
             fmt.add(variable.toTypedString());
         }
-        return "/\\" + String.join(" , ", fmt) + "." + "(" + ltol.toString() + ")";
-        // return "/\\" + vars.stream().map(Object::toString).collect(Collectors.joining(" , ")) + "." + "(" + ltol.toString() + ")";
+        return "/\\" + String.join(" , ", fmt) + ".(" + ltol + ")";
     }
 
     public boolean isPureLTL() {
@@ -49,7 +48,8 @@ public class BigAnd extends LTOL {
 
     @Override
     public LTOL rename(Function<TypedVariable, TypedVariable> relabelling) throws RelabellingTypeException, MismatchingTypeException {
-        return new BigAnd(vars, ltol.rename((x) -> !vars.contains(x) ? relabelling.apply(x) : x));
+        recipe.lang.utils.Pair<List<TypedVariable>, LTOL> renamed = renameAgentBindings(vars, ltol, relabelling);
+        return new BigAnd(renamed.getLeft(), renamed.getRight());
     }
 
     public LTOL toLTOLwithoutQuantifiers() throws Exception {

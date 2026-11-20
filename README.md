@@ -22,7 +22,7 @@ When the agents use infinite-state variables the tool will use symbolic bounded 
 
 Simulation is performed using nuXmv, with a symbolic model.
 
-Simulation will show changes in variables in the next state only, with the exception of receive label variables which are only shown when they are true. Send labels do not appear in the simulation output since they are defined as nuXmv predicate definitions rather than as variables.
+Send labels (`instance-label`) denote whether that send is currently enabled, including the required receiver participation. They do not indicate execution. Receive labels are Boolean event flags: initially false, true after that receive, and cleared by the next step unless the same label occurs again. Supply/get labels are supported as an extension with the same event-flag convention. Repeated send labels combine their alternatives; a label cannot name both a send and an event action. This follows the send/receive distinction in [Model Checking Reconfigurable Interacting Systems](https://doi.org/10.1007/978-3-031-19759-8_23) and the send-enabledness explanation in [Language Support for Verifying Reconfigurable Interacting Systems, §6.1](https://www.lucadistefano.eu/papers/sttt2023rcheck.pdf).
 
 ### Compilation
 

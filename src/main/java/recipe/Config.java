@@ -18,6 +18,8 @@ public class Config {
 
     public static void reset(){
         agentEnumTypeNames.clear();
+        agentEnumTypeNamesToAgent.clear();
+        agentType = new UnionType();
     }
 
     private static final List<String> agentEnumTypeNames = new ArrayList<>();
@@ -47,6 +49,7 @@ public class Config {
     }
 
     public static final String broadcast = "*";
+    public static final String nuxmvBroadcast = "broadcast";
 
     public static String getNuxmvPath() {
         String nuxmvPath = "";

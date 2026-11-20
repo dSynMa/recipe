@@ -54,10 +54,7 @@ public class IsLessOrEqualThan extends Condition {
 		TypedValue<Number> lhsValue = lhs.valueIn(store);
 		TypedValue<Number> rhsValue = rhs.valueIn(store);
 
-		Number lhsNo = (Number) lhsValue.getValue();
-		Number rhsNo = (Number) rhsValue.getValue();
-
-		if(0 >= new BigDecimal(lhsNo.toString()).compareTo(new BigDecimal(rhsNo.toString()))) {
+		if(0 >= new BigDecimal(lhsValue.getValue().toString()).compareTo(new BigDecimal(rhsValue.getValue().toString()))) {
 			return Condition.TRUE;
 		} else {
 			return Condition.FALSE;
@@ -74,7 +71,9 @@ public class IsLessOrEqualThan extends Condition {
 				!rhsObject.getClass().equals(TypedValue.class)) {
 			return new IsLessOrEqualThan(lhsObject, rhsObject);
 		} else {
-			return Condition.FALSE;
+			int comparison = new BigDecimal(((TypedValue<?>) lhsObject).getValue().toString())
+				.compareTo(new BigDecimal(((TypedValue<?>) rhsObject).getValue().toString()));
+			return comparison <= 0 ? Condition.TRUE : Condition.FALSE;
 		}
 
 	}
@@ -114,4 +113,10 @@ public class IsLessOrEqualThan extends Condition {
 	public Condition removePreds(){
 		return this;
 	}
+
+    @Override
+    public String toNuXmv() {
+        return lhs.toNuXmv() + " <= " + rhs.toNuXmv();
+    }
+
 }

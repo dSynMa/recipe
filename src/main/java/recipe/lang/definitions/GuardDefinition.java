@@ -39,7 +39,7 @@ public class GuardDefinition extends Definition<Expression<Boolean>> {
                     Guard guardType =
                             null;
                     try {
-                        guardType = new Guard((String) values.get(1), (TypedVariable[]) values.get(3));
+                        guardType = new Guard(((String) values.get(1)).trim(), (TypedVariable[]) values.get(3));
                     } catch (TypeCreationException e) {
                         e.printStackTrace();
                     }

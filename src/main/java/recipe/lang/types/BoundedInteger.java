@@ -2,7 +2,9 @@ package recipe.lang.types;
 
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.expressions.TypedValue;
-import recipe.lang.utils.Parsing;
+import org.petitparser.context.Result;
+import org.petitparser.parser.Parser;
+import org.petitparser.parser.primitive.CharacterParser;
 
 import java.util.*;
 
@@ -11,6 +13,10 @@ public class BoundedInteger extends Integer {
     private int max;
 
     public BoundedInteger(int min, int max){
+        if (min > max) {
+            throw new IllegalArgumentException("Invalid integer domain " + min + ".." + max
+                + ": lower bound exceeds upper bound");
+        }
         this.min = min;
         this.max = max;
     }
@@ -31,21 +37,26 @@ public class BoundedInteger extends Integer {
         return min == that.min && max == that.max;
     }
 
-    public org.petitparser.parser.Parser valueParser(){
-        List<String> nums = new ArrayList<>();
-        int i = min;
-        while(i <= max){
-            nums.add(i + "");
-            i ++;
-        }
+    @Override
+    public Parser valueParser() {
+        Parser integerLiteral = CharacterParser.of('-').optional()
+                .seq(CharacterParser.digit().plus())
+                .flatten()
+                .seq(CharacterParser.word().not())
+                .pick(0);
 
-        return Parsing.disjunctiveWordParser(nums, (String name) -> {
-            try {
-                return new TypedValue(this, name);
-            } catch (MismatchingTypeException e) {
-                e.printStackTrace();
+        return integerLiteral.callCC((parse, context) -> {
+            Result result = parse.apply(context);
+            if (result.isFailure()) {
+                return result;
             }
-            return null;
+
+            String literal = result.get();
+            try {
+                return result.success(new TypedValue<>(this, literal));
+            } catch (MismatchingTypeException e) {
+                return context.failure(e.getMessage());
+            }
         });
     }
 
@@ -70,7 +81,7 @@ public class BoundedInteger extends Integer {
     }
     public Set<TypedValue> getAllValues() throws MismatchingTypeException {
         Set<TypedValue> values = new HashSet<>();
-        for(int i = min; i <= max; i++){
+        for(long i = min; i <= max; i++){
             values.add(new TypedValue<BoundedInteger>(this, "" + i));
         }
         return values;

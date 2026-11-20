@@ -115,9 +115,19 @@ public class Interpreter {
         for (String agentInstance : initState.keySet()) {
             if (agentInstance.startsWith("___")) continue;
             JSONObject agentState = initState.getJSONObject(agentInstance);
+            AgentInstance instance = s.getAgentInstances().stream()
+                .filter(candidate -> candidate.getLabel().equals(agentInstance)).findFirst().orElse(null);
             for (String var : agentState.keySet()) {
                 if (varNames.contains(var)) {
                     constraints.add(String.format("%s-%s = %s", agentInstance, var, agentState.get(var)));
+                } else if (instance != null && instance.getAgent().getSendTransitions().stream()
+                        .anyMatch(action -> var.equals(action.getLabel().getLabel()))) {
+                    String value = agentState.get(var).toString();
+                    if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                        throw new IllegalArgumentException("[ofTrace] invalid send label value at step 0: " + var);
+                    }
+                    constraints.add(String.format("%s-%s = %s", agentInstance, var,
+                        java.lang.Boolean.parseBoolean(value) ? "TRUE" : "FALSE"));
                 }
             }
         }
@@ -132,24 +142,24 @@ public class Interpreter {
             if (currConstraint.has("___STUCK___")) break;
             // If we are deadlocked, but no variable is changing in trace, then it's all right
             if (interpreter.isDeadlocked()) {
-                boolean hasVars = false;
-                JSONObject jo;
-                if (nextConstraint instanceof CompositeJSON) jo = ((CompositeJSON) nextConstraint).getDiff();
-                else jo = nextConstraint;
-                OuterLoop:
-                for (String key : jo.keySet()) {
+                JSONObject stateValues = new JSONObject();
+                for (String key : nextConstraint.keySet()) {
                     if (key.startsWith("___")) continue;
-                    // key is an agentInstance's name
-                    if (initState.keySet().contains(key)) {
-                        for (String x : jo.getJSONObject(key).keySet()) {
-                            if (varNames.contains(x)) {
-                                hasVars = true;
-                                break OuterLoop;
+                    JSONObject values = new JSONObject(nextConstraint.getJSONObject(key).toString());
+                    // Event flags reset on deadlock stuttering; only persistent
+                    // state values must agree with the terminal interpreter state.
+                    for (AgentInstance instance : s.getAgentInstances()) {
+                        if (!instance.getLabel().equals(key)) continue;
+                        for (recipe.lang.process.Process action : instance.getAgent().getActions()) {
+                            if (action instanceof recipe.lang.process.BasicProcess) {
+                                String label = ((recipe.lang.process.BasicProcess) action).getLabel();
+                                if (label != null) values.remove(label);
                             }
                         }
                     }
+                    stateValues.put(key, values);
                 }
-                if (!hasVars) break;
+                if (constraints.isEmpty()) break;
             }
             if (!interpreter.findNext(obsMap, nextConstraint, currConstraint)) {
                 throw new Exception(String.format("[ofTrace] something wrong at step %d", i));

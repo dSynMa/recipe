@@ -57,13 +57,12 @@ public abstract class LTOL {
                 }
 
                 Set<String> agentspecificTransitionLabels = new HashSet<>();
-                for(ProcessTransition t : possibleAgent.getSendTransitions()){
-                    if(t.getLabel() != null && t.getLabel().getLabel() != null && !t.getLabel().getLabel().equals("")) {
-                        agentspecificTransitionLabels.add(t.getLabel().getLabel());
-                    }
-                }
-                for(ProcessTransition t : possibleAgent.getReceiveTransitions()){
-                    if(t.getLabel() != null && t.getLabel().getLabel() != null && !t.getLabel().getLabel().equals("")) {
+                Set<ProcessTransition> labelledTransitions = new HashSet<>(possibleAgent.getSendTransitions());
+                labelledTransitions.addAll(possibleAgent.getReceiveTransitions());
+                labelledTransitions.addAll(possibleAgent.getSupplyTransitions());
+                labelledTransitions.addAll(possibleAgent.getGetTransitions());
+                for (ProcessTransition t : labelledTransitions) {
+                    if (t.getLabel() != null && t.getLabel().getLabel() != null && !t.getLabel().getLabel().isEmpty()) {
                         agentspecificTransitionLabels.add(t.getLabel().getLabel());
                     }
                 }
@@ -89,8 +88,20 @@ public abstract class LTOL {
         return new Pair<>(agentVariables, transitionLabels);
     }
 
+    private static TypingContext shadowAgentReferences(TypingContext enclosing,
+                                                       TypingContext inner, TypingContext binders) {
+        Map<String, Type> references = new HashMap<>(enclosing.getVarType());
+        // A shadowed agent loses all old fields and labels, including ones absent from its new type.
+        for (String name : binders.getVarType().keySet()) {
+            references.keySet().removeIf(reference -> reference.startsWith(name + "-"));
+        }
+        references.putAll(inner.getVarType());
+        return new TypingContext(references);
+    }
+
     public static org.petitparser.parser.Parser parser(System system) throws Exception {
-        TypingContext commonVars = new TypingContext(system.getCommunicationVariables());
+        TypingContext commonVars = new TypingContext(new HashMap<>(system.getCommunicationVariables()));
+        commonVars.setAll(new TypingContext(system.getGuardDefinitions()));
         TypingContext messageVars = new TypingContext(system.getMessageStructure());
 
         TypingContext agents = new TypingContext();
@@ -105,6 +116,7 @@ public abstract class LTOL {
         Pair<TypingContext, TypingContext> agentVarLabelsPair = agentTyping(agents);
 
         TypingContext agentVariables = agentVarLabelsPair.getLeft();
+        agentVariables.setAll(new TypingContext(system.getGuardDefinitions()));
         TypingContext transitionLabels = agentVarLabelsPair.getRight();
 
         return parser(commonVars, messageVars, agents, agentVariables, transitionLabels, new TypingContext());
@@ -128,6 +140,7 @@ public abstract class LTOL {
                 .map((List<Object> types) -> {
                     UnionType type;
                     try {
+                        if (types.contains("Agent")) return Config.getAgentType();
                         Type firstType = Enum.getEnum((String) types.get(0));
 
                         if(types.size() == 1) return firstType;
@@ -138,11 +151,7 @@ public abstract class LTOL {
                         for(int i = 1; i < types.size(); i++){
                             if(((String) types.get(i)).contains("|")) continue;
                             String agentType = (String) types.get(i);
-                            if(agentType == "Agent") {
-                                return Config.getAgentType();
-                            } else{
-                                type.addType(Enum.getEnum(agentType));
-                            }
+                            type.addType(Enum.getEnum(agentType));
                         }
 
                         return type;
@@ -157,9 +166,8 @@ public abstract class LTOL {
         Parser agentParametrizedStatement =
                 (Parsing.typedVariableList(agentTypeParser)
                         .map((List<TypedVariable> values) -> {
-                            for(TypedVariable value : values) {
-                                newAgentVars.get().set(value.getName(), value.getType());
-                            }
+                            // Each binder starts a fresh scope, including when this parser is reused.
+                            newAgentVars.set(new TypingContext(values));
                             return values;
                         })).seq(CharacterParser.of('.').trim())
                         .seq(new LazyParser<LazyTypingContext>((LazyTypingContext context) -> {
@@ -167,17 +175,21 @@ public abstract class LTOL {
                             newAgentNames.setAll(agentNames);
 
                             TypingContext params = context.resolve();
+                            // Observations see enclosing binders, with the innermost binding winning.
+                            Map<String, Type> visibleAgentTypes = new HashMap<>(agentVariables.getVarType());
+                            visibleAgentTypes.putAll(params.getVarType());
+                            TypingContext visibleAgents = new TypingContext(visibleAgentTypes);
 
                             Pair<TypingContext, TypingContext> agentVarLabelsPair = agentTyping(params);
 
-                            TypingContext newAgentVariables = agentVarLabelsPair.getLeft();
-                            newAgentVariables.setAll(agentLocalVariables);
-                            TypingContext newTransitionLabels = agentVarLabelsPair.getRight();
-                            newTransitionLabels.setAll(transitionLabels);
+                            TypingContext newAgentVariables = shadowAgentReferences(
+                                    agentLocalVariables, agentVarLabelsPair.getLeft(), params);
+                            TypingContext newTransitionLabels = shadowAgentReferences(
+                                    transitionLabels, agentVarLabelsPair.getRight(), params);
 
                             try {
                                 Parser ltolParser = LTOL.parser(commonVars, messageVars, newAgentNames, newAgentVariables,
-                                        newTransitionLabels, params).trim();
+                                        newTransitionLabels, visibleAgents).trim();
                                 return ltolParser;
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -200,7 +212,7 @@ public abstract class LTOL {
                 });
 
         builder.group()
-                .primitive(Condition.parser(vars).map((Condition value) -> {
+                .primitive(Condition.atomicParser(vars).map((Condition value) -> {
                     return new Atom(value);
                 })
                 .or(StringParser.of("PROGRESS").map((String x)-> {return new ProgressAtom();}))
@@ -271,11 +283,11 @@ public abstract class LTOL {
 
         builder.group()
                 .prefix(of('!').trim(), (List<LTOL> values) -> new Not(values.get(1)))
-                .prefix(of('G').trim(), (List<LTOL> values) -> new Globally(values.get(1)))
-                .prefix(of('F').trim(), (List<LTOL> values) -> {
+                .prefix(of('G').seq(CharacterParser.word().or(of('-')).not()).trim(), (List<LTOL> values) -> new Globally(values.get(1)))
+                .prefix(of('F').seq(CharacterParser.word().or(of('-')).not()).trim(), (List<LTOL> values) -> {
                     return new Eventually(values.get(1));
                 })
-                .prefix(of('X').trim(), (List<LTOL> values) -> new Next(values.get(1)))
+                .prefix(of('X').seq(CharacterParser.word().or(of('-')).not()).trim(), (List<LTOL> values) -> new Next(values.get(1)))
                 .prefix(sufficientObs.trim(), (List<Object> values) -> new Possibly((Observation) values.get(0), (LTOL) values.get(1)))
                 .prefix(necessaryObs.trim(), (List<Object> values) -> {
                     return new Necessary((Observation) values.get(0), (LTOL) values.get(1));
@@ -285,37 +297,21 @@ public abstract class LTOL {
         builder.group()
                 .left(StringParser.of("U").trim(), (List<LTOL> values) -> new Until(values.get(0), values.get(2)))
                 .left(StringParser.of("W").trim(), (List<LTOL> values) -> new Or(new Globally(values.get(0)), new Until(values.get(0), values.get(2))))
-                .left(StringParser.of("R").trim(), (List<LTOL> values) -> new Until(new Not(values.get(0)), new Not(values.get(2))));
+                .left(StringParser.of("R").trim(), (List<LTOL> values) -> new Not(new Until(new Not(values.get(0)), new Not(values.get(2)))));
 
 
+        // Higher precedence groups are registered first.
         builder.group()
-                .right(StringParser.of("->").trim(), (List<LTOL> values) -> new Or(new Not(values.get(0)), values.get(2)))
-                .right(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<LTOL> values) -> {
-                    try {
-                        return new Iff(values.get(0), values.get(2));
-                    } catch (Exception e) {
-                        return e;
-                    }
-                })
-                .left(StringParser.of("<->").or(StringParser.of("=").plus()).trim(), (List<LTOL> values) -> {
-                    try {
-                        return new Iff(values.get(0), values.get(2));
-                    } catch (Exception e) {
-                        return e;
-                    }
-                })
-                .right(StringParser.of("!=").trim(), (List<LTOL> values) -> {
-                    return new Not(new Iff(values.get(0), values.get(2)));
-                })
-                .left(StringParser.of("!=").trim(), (List<LTOL> values) -> {
-                    return new Not(new Iff(values.get(0), values.get(2)));
-                });
-
+                .left(StringParser.of("=").plus().trim(), (List<LTOL> values) -> new Iff(values.get(0), values.get(2)))
+                .left(StringParser.of("!=").trim(), (List<LTOL> values) -> new Not(new Iff(values.get(0), values.get(2))));
         builder.group()
-                .right(of('&').plus().trim(), (List<LTOL> values) -> new And(values.get(0), values.get(2)))
-                .left(of('&').plus().trim(), (List<LTOL> values) -> new And(values.get(0), values.get(2)))
-                .right(of('|').plus().trim(), (List<LTOL> values) -> new Or(values.get(0), values.get(2)))
+                .left(of('&').plus().trim(), (List<LTOL> values) -> new And(values.get(0), values.get(2)));
+        builder.group()
                 .left(of('|').plus().trim(), (List<LTOL> values) -> new Or(values.get(0), values.get(2)));
+        builder.group()
+                .left(StringParser.of("<->").trim(), (List<LTOL> values) -> new Iff(values.get(0), values.get(2)));
+        builder.group()
+                .right(StringParser.of("->").trim(), (List<LTOL> values) -> new Or(new Not(values.get(0)), values.get(2)));
 
         return builder.build();
     }
@@ -336,51 +332,70 @@ public abstract class LTOL {
 
     public abstract LTOL toLTOLwithoutQuantifiers() throws Exception;
 
-    protected static Set<LTOL> rewriteOutBigAndOr(List<TypedVariable> vars, LTOL ltol) throws Exception {
-        Set<LTOL> possibleValues = new HashSet<>();
-        possibleValues.add(ltol);
+    /** Bound agent references include local variables, labels, and automaton state. */
+    protected static boolean isBoundAgentReference(TypedVariable reference, List<TypedVariable> boundVariables) {
+        for (TypedVariable bound : boundVariables) {
+            if (reference.getName().equals(bound.getName())
+                    || reference.getName().startsWith(bound.getName() + "-")) return true;
+        }
+        return false;
+    }
+
+    private static final java.util.concurrent.atomic.AtomicLong nextBinderId =
+            new java.util.concurrent.atomic.AtomicLong();
+
+    /** Give binders internal names before substitution, so instance names cannot be captured. */
+    protected static Pair<List<TypedVariable>, LTOL> renameAgentBindings(
+            List<TypedVariable> vars, LTOL body, Function<TypedVariable, TypedVariable> relabelling)
+            throws RelabellingTypeException, MismatchingTypeException {
+        List<TypedVariable> freshVars = new ArrayList<>();
+        Map<String, String> names = new HashMap<>();
         for (TypedVariable var : vars) {
-            Set<TypedVariable> possibleReferences = new HashSet<>();
-            Set<TypedValue> possibleAgentInstances = var.getType().getAllValues();
-            Set<String> possibleAgentInstancesNames = new HashSet<>();
-            Set<Agent> possibleAgentTypes = new HashSet<>();
-            Map<String, Type> agentInstanceNameToType = new HashMap<>();
-
-            for (Object concreteVar : possibleAgentInstances) {
-                TypedValue value = (TypedValue) concreteVar;
-                possibleAgentInstancesNames.add((String) value.getValue());
-                possibleAgentTypes.add(Config.getAgent(value.getType().name()));
-                agentInstanceNameToType.put((String) value.getValue(), value.getType());
-            }
-
-            boolean start = true;
-            for (Agent agent : possibleAgentTypes) {
-                if (start) {
-                    possibleReferences.addAll(agent.getStore().getAttributes().values());
-                    possibleReferences.addAll(agent.getAllTransitionLabels());
-                } else {
-                    possibleReferences.retainAll(agent.getStore().getAttributes().values());
-                    possibleReferences.retainAll(agent.getAllTransitionLabels());
-                }
-            }
-
-            Set<TypedVariable> labelledPossibleReferences = new HashSet<>();
-
-            for(TypedVariable ref : possibleReferences){
-                labelledPossibleReferences.add(new TypedVariable(ref.getType(), var.getName() + "-" + ref.getName()));
-            }
-
-            Set<LTOL> newPossibleValues = new HashSet<>();
-
-            for(LTOL ltol1 : possibleValues){
-                for(String agentName : possibleAgentInstancesNames){
-                    LTOL ltol2 = ltol1.rename((x) -> labelledPossibleReferences.contains(x) ? new TypedVariable(x.getType(), x.toString().replaceAll("^" + var.toString(), agentName)) : x);
-                    Type agentType = agentInstanceNameToType.get(agentName);
-                    for(TypedVariable agentVar : vars) {
-                        ltol2 = ltol2.rename((x) -> x.getName().equals(agentVar.getName()) ? new TypedVariable(agentType, agentName) : x);
-                        java.lang.System.out.println(ltol2.toString());
-                        newPossibleValues.add(ltol2);
+            // ':' cannot occur in a parsed variable or instance name. Keep already-fresh binders.
+            String fresh = var.getName().startsWith(":agent:") ? var.getName()
+                    : ":agent:" + nextBinderId.getAndIncrement();
+            freshVars.add(new TypedVariable(var.getType(), fresh));
+            if (!fresh.equals(var.getName())) names.put(var.getName(), fresh);
+        }
+        if (!names.isEmpty()) {
+            body = body.rename(reference -> {
+                for (Map.Entry<String, String> entry : names.entrySet()) {
+                    String name = reference.getName();
+                    if (name.equals(entry.getKey()) || name.startsWith(entry.getKey() + "-")) {
+                        return new TypedVariable(reference.getType(),
+                                entry.getValue() + name.substring(entry.getKey().length()));
                     }
+                }
+                return reference;
+            });
+        }
+        LTOL renamed = body.rename(reference -> isBoundAgentReference(reference, freshVars)
+                ? reference : relabelling.apply(reference));
+        return new Pair<>(freshVars, renamed);
+    }
+
+    protected static Set<LTOL> rewriteOutBigAndOr(List<TypedVariable> vars, LTOL ltol) throws Exception {
+        Pair<List<TypedVariable>, LTOL> hygienic = renameAgentBindings(vars, ltol, reference -> reference);
+        Set<LTOL> possibleValues = new HashSet<>();
+        possibleValues.add(hygienic.getRight());
+        for (TypedVariable var : hygienic.getLeft()) {
+            Set<TypedValue> instances = var.getType().getAllValues();
+            Set<LTOL> newPossibleValues = new HashSet<>();
+            for (LTOL formula : possibleValues) {
+                for (TypedValue instance : instances) {
+                    String name = (String) instance.getValue();
+                    // The parsed formula already carries the types of valid local references.
+                    // rename also respects variables shadowed by nested quantifiers.
+                    newPossibleValues.add(formula.rename(reference -> {
+                        if (reference.getName().startsWith(var.getName() + "-")) {
+                            return new TypedVariable(reference.getType(),
+                                    name + reference.getName().substring(var.getName().length()));
+                        }
+                        if (reference.getName().equals(var.getName())) {
+                            return new TypedVariable(instance.getType(), name);
+                        }
+                        return reference;
+                    }));
                 }
             }
 
@@ -405,4 +420,10 @@ public abstract class LTOL {
         }
         return false;
     }
+
+    /** Render pure LTL after observation abstraction and quantifier expansion. */
+    public String toNuXmv() {
+        throw new IllegalStateException("Lower observations and expand quantifiers before rendering nuXmv");
+    }
+
 }

@@ -29,4 +29,10 @@ public class ProgressAtom extends Atom {
         return this;
     }
 
+
+    @Override
+    public String toNuXmv() {
+        return "progress";
+    }
+
 }

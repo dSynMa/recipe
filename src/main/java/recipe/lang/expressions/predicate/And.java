@@ -40,7 +40,7 @@ public class And extends Condition {
 
 	@Override
 	public String toString() {
-		return "(" + lhs.toString() + ") & (" + rhs.toString() + ")";
+		return renderOperand(lhs) + " & " + renderOperand(rhs);
 	}
 
 	public Expression<Boolean> getLhs() {
@@ -104,4 +104,10 @@ public class And extends Condition {
 	public Condition removePreds(){
 		return new And(this.lhs.removePreds(), this.rhs.removePreds());
 	}
+
+    @Override
+    public String toNuXmv() {
+        return renderNuXmvOperand(lhs) + " & " + renderNuXmvOperand(rhs);
+    }
+
 }

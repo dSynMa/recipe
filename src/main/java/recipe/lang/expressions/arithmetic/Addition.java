@@ -60,4 +60,10 @@ public class Addition extends ArithmeticExpression{
     public String toString(){
         return "(" + lhs.toString() + " + " + rhs.toString() + ")";
     }
+
+    @Override
+    public String toNuXmv() {
+        return "(" + lhs.toNuXmv() + " + " + rhs.toNuXmv() + ")";
+    }
+
 }

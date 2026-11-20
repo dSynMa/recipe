@@ -17,9 +17,11 @@ public class Or extends LTOL{
         this.right = right;
     }
 
-    @Override
+    public LTOL getLeft() { return left; }
+    public LTOL getRight() { return right; }
+
     public String toString(){
-        return "(" + left.toString() + " | " + right.toString() + ")";
+        return "((" + left + ") | (" + right + "))";
     }
 
     public boolean isPureLTL() {
@@ -40,4 +42,10 @@ public class Or extends LTOL{
     public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return new Or(left.toLTOLwithoutQuantifiers(), right.toLTOLwithoutQuantifiers());
     }
+
+    @Override
+    public String toNuXmv() {
+        return "((" + left.toNuXmv() + ") | (" + right.toNuXmv() + "))";
+    }
+
 }

@@ -63,6 +63,7 @@ public class AgentInstance {
                     for(TypedVariable tv : agentLocalVars.get(val).values()){
                         contextt.set(tv.getName(), tv.getType());
                     }
+                    context.get().clear();
                     context.get().setAll(contextt);
                     return val;
                 });
@@ -81,7 +82,7 @@ public class AgentInstance {
                 }, context.get()).trim())
                 .seq(CharacterParser.of(')').trim())
                 .map((List<Object> values) -> {
-                    return new AgentInstance((String) values.get(2), (Expression<Boolean>) values.get(4), agentNames.get((String) values.get(0)));
+                    return new AgentInstance(Parsing.constantName((String) values.get(2)), (Expression<Boolean>) values.get(4), agentNames.get((String) values.get(0)));
                 }));
                 //.or(agentParser.map((String value) -> {
                 //    return new AgentInstance("", Condition.getTrue(), agentNames.get(value));

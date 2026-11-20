@@ -27,7 +27,7 @@ public class Multiplication extends ArithmeticExpression{
         TypedValue<Number> rhsValue = rhs.valueIn(store);
 
         BigDecimal lhsNo = new BigDecimal(lhsValue.getValue().toString());
-        BigDecimal rhsNo = new BigDecimal(rhsValue.getType().toString());
+        BigDecimal rhsNo = new BigDecimal(rhsValue.getValue().toString());
         BigDecimal result = lhsNo.multiply(rhsNo);
         Number resultType = isInteger(result) ? Integer.getType() : Real.getType();
         return new TypedValue<Number>(resultType, result.toString());
@@ -58,4 +58,10 @@ public class Multiplication extends ArithmeticExpression{
     public String toString(){
         return "(" + lhs.toString() + " * " + rhs.toString() + ")";
     }
+
+    @Override
+    public String toNuXmv() {
+        return "(" + lhs.toNuXmv() + " * " + rhs.toNuXmv() + ")";
+    }
+
 }

@@ -1,0 +1,21 @@
+channels: c
+message-structure: value: boolean
+communication-variables: ready: boolean
+
+agent Sender
+    local: sent: boolean
+    init: !sent
+    relabel: ready <- TRUE
+    receive-guard: TRUE
+    repeat: send: <TRUE> c! (@ready)(value := TRUE)[sent := TRUE]
+
+agent Receiver
+    local: received: boolean
+    init: !received
+    relabel: ready <- !received
+    receive-guard: channel == c
+    repeat: receive: <value> c? [received := value]
+
+system = Sender(sender, TRUE) | Receiver(receiver, TRUE)
+
+SPEC G (<exists(FALSE)>true);

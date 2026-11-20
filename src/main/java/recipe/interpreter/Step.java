@@ -29,7 +29,6 @@ import recipe.lang.store.CompositeStore;
 import recipe.lang.store.ConcreteStore;
 import recipe.lang.store.Store;
 import recipe.lang.types.Type;
-import recipe.lang.utils.Pair;
 import recipe.lang.utils.exceptions.AttributeNotInStoreException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 
@@ -108,48 +107,54 @@ public class Step {
      * @param constraint a JSON object
      * @return true iff the state satisfies the constraint
      */
+    private static java.lang.Boolean traceBoolean(Object value) {
+        if (value instanceof java.lang.Boolean) return (java.lang.Boolean) value;
+        if (value instanceof String) {
+            if ("TRUE".equalsIgnoreCase((String) value)) return true;
+            if ("FALSE".equalsIgnoreCase((String) value)) return false;
+        }
+        return null;
+    }
+
     public boolean satisfies(Map<String,Observation> obsMap, JSONObject constraint) {
         // LTOL
         JSONObject ltol = constraint.optJSONObject("___LTOL___");
         if (ltol != null) {
             for (String obsVar : ltol.keySet()) {
                 if (obsVar.equals("no-observations")) continue;
-                Expression<recipe.lang.types.Boolean> observation = obsMap.get(obsVar).getObservation();
-                AgentInstance sender = this.inboundTransition.getProducer();
-                System.out.println(observation.toString());
-                System.out.println(sender.getLabel());
-                Store senderStore = this.parent.stores.get(sender);
+                java.lang.Boolean expectedObservation = traceBoolean(ltol.get(obsVar));
+                if (expectedObservation == null) return false;
+                Observation descriptor = obsMap.get(obsVar);
+                if (descriptor == null) return false;
+                if (inboundTransition == null || !(inboundTransition.getProducerProcess() instanceof SendProcess)) {
+                    if (expectedObservation) return false;
+                    continue;
+                }
+                AgentInstance sender = inboundTransition.getProducer();
+                Store senderStore = parent.stores.get(sender);
                 try {
-                    SendProcess sendProcess = (SendProcess) this.inboundTransition.getProducerTransition().getLabel();
-                    Expression chanExpr = sendProcess.getChannel();
-                    TypedValue chan = chanExpr.valueIn(senderStore);
-                    Map<TypedVariable, TypedValue> mp = new HashMap<>();
-                    mp.put(new TypedVariable<Type>(chan.getType(), "channel"), chan);
-                    recipe.lang.types.Enum senderEnum = recipe.lang.types.Enum.getEnum(sender.getAgent().getName());
-                    TypedValue senderName = null;
-                    for (TypedValue tv : senderEnum.getAllValues()) {
-                        // In some cases the agent instance name gets
-                        // treated like a variable. So we just add variables
-                        mp.put(new TypedVariable<Type>(tv.getType(), tv.toString()), tv);
-                        if (tv.toString().equals(sender.getLabel())) {
-                            senderName = tv;
-                            break;
-                        }
+                    SendProcess send = (SendProcess) inboundTransition.getProducerProcess();
+                    TypedValue channel = send.getChannel().valueIn(senderStore);
+                    Map<String, Expression> message = new HashMap<>();
+                    for (Map.Entry<String, Expression> entry : send.getMessage().entrySet()) {
+                        message.put(entry.getKey(), entry.getValue().valueIn(senderStore));
                     }
-                    mp.put(new TypedVariable<Type>(Config.getAgentType(), "sender"), senderName);
-                    Pair<Store, TypedValue> msgPair = makeMessageStore(senderStore, sendProcess, this.sys);
-                    Store store = new ConcreteStore(mp).push(msgPair.getLeft());
-                    boolean isObserved = Condition.getTrue().equals(observation.valueIn(store));
-                    if (isObserved != ltol.get(obsVar).equals("TRUE")) {
-                        System.out.printf(">> %s (%s): expected %s, got %s\n", obsVar, observation, ltol.get(obsVar), isObserved);
-                        return false;
-                    }
+                    Expression<recipe.lang.types.Boolean> selection = send.getMessageGuard().relabel(variable -> {
+                        if (variable.getName().equals("channel")) return channel;
+                        if (Config.isCvRef(sys, variable.getName())) return variable;
+                        return senderStore.getValue(variable);
+                    });
+                    // Use the same finite-domain observation semantics as translation:
+                    // quantify over assignments satisfying the sender's selection predicate.
+                    Expression<recipe.lang.types.Boolean> observed = recipe.analysis.ToNuXmv.specialiseObservationToSendTransition(
+                        Config.commVariableReferences(sys.getCommunicationVariables()), descriptor.getObservation(),
+                        selection, message, new TypedValue(Config.getAgentType(), sender.getLabel()), channel,
+                        sys.getMessageStructure().keySet());
+                    boolean actual = Condition.getTrue().equals(observed.valueIn(senderStore));
+                    if (actual != expectedObservation) return false;
                 } catch (Exception e) {
                     handleEvaluationException(e);
-                    // If the observation was supposed to be satisfied
-                    // then something's wrong
-                    if (ltol.get(obsVar).equals("TRUE"))
-                        return false;
+                    return false;
                 }
             }
         }
@@ -200,6 +205,28 @@ public class Step {
                             System.out.printf(">> Expected %s, got %s\n", stateConstraint, stateInst);
                             return false;
                         }
+                        continue;
+                    }
+                    boolean sendLabel = inst.getAgent().getSendTransitions().stream()
+                        .anyMatch(action -> varName.equals(action.getLabel().getLabel()));
+                    if (sendLabel) {
+                        String value = instanceConstraint.get(varName).toString();
+                        if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) return false;
+                        boolean expected = java.lang.Boolean.parseBoolean(value);
+                        boolean enabled = transitions.stream().anyMatch(action ->
+                            action.getProducer().getLabel().equals(agentInstanceName) && action.getProducerProcess() instanceof SendProcess
+                                && varName.equals(action.getProducerProcess().getLabel()));
+                        if (enabled != expected) return false;
+                        continue;
+                    }
+                    boolean eventLabel = inst.getAgent().getActions().stream().anyMatch(action ->
+                        action instanceof BasicProcess && varName.equals(((BasicProcess) action).getLabel()));
+                    if (eventLabel) {
+                        java.lang.Boolean expected = traceBoolean(instanceConstraint.get(varName));
+                        if (expected == null) return false;
+                        ProcessTransition taken = inboundTransition == null ? null : inboundTransition.findTransitionForAgent(inst);
+                        boolean actual = taken != null && varName.equals(taken.getLabel().getLabel());
+                        if (actual != expected) return false;
                         continue;
                     }
                     TypedVariable var = inst.getAgent().getStore().getAttribute(varName);
@@ -264,10 +291,10 @@ public class Step {
             ConcreteStore nextSenderStore = stores.get(initiator).BuildNext(chosenTransition.getProducerTransition());
             nextStores.put(initiator, nextSenderStore);
 
-            Pair<Store, TypedValue> msgPair = makeMessageStore(stores.get(initiator), chosenTransition.getProducerProcess(), sys);
+            Store msgStore = makeMessageStore(stores.get(initiator), chosenTransition.getProducerProcess(), sys);
             for (AgentInstance receiver : chosenTransition.getConsumers()) {
                 ProcessTransition receive = chosenTransition.findTransitionForAgent(receiver);
-                ConcreteStore nextReceiverStore = stores.get(receiver).BuildNext(receive, msgPair.getLeft());
+                ConcreteStore nextReceiverStore = stores.get(receiver).BuildNext(receive, msgStore);
                 nextStores.put(receiver, nextReceiverStore);
             }
         } catch (Exception e) {
@@ -284,15 +311,21 @@ public class Step {
                 annotations.put(key, obj.get(key));
     }
 
-    protected Pair<Store, TypedValue> makeMessageStore(Store senderStore, BasicProcessWithMessage procWithMsg, recipe.lang.System sys) {
+    protected Store makeMessageStore(Store senderStore, BasicProcessWithMessage procWithMsg, recipe.lang.System sys) {
         // Add message and channel to a new map
         Map<TypedVariable, TypedValue> msgMap = new HashMap<TypedVariable, TypedValue>();
-        TypedValue chan = null;
         try {
             procWithMsg.getMessage().forEach((msgVar, msgExpr) -> {
                 try {
                     TypedValue msgVal = msgExpr.valueIn(senderStore);
                     Type msgType = sys.getMessageStructure().get(msgVar);
+                    // Numeric expressions may evaluate to a wider numeric type.
+                    // Validate and represent the value in the declared message domain.
+                    if (msgType instanceof recipe.lang.types.Number
+                            && msgVal.getType() instanceof recipe.lang.types.Number) {
+                        msgVal = new TypedValue(msgType, new java.math.BigDecimal(
+                            msgVal.getValue().toString()).stripTrailingZeros().toPlainString());
+                    }
                     if (msgType != msgVal.getType()) {
                         throw new MismatchingTypeException(
                             String.format("Mismatch type for message variable %s (expected %s, got %s)",
@@ -308,14 +341,35 @@ public class Step {
             });
             if (procWithMsg instanceof SendProcess) {
                 Expression chanExpr = procWithMsg.getChannel();
-                chan = chanExpr.valueIn(senderStore);
+                TypedValue chan = chanExpr.valueIn(senderStore);
                 msgMap.put(interpreter.getChannelTV(), chan);
             }
-            return new Pair<Store, TypedValue>(new ConcreteStore(msgMap), chan);
+            return new ConcreteStore(msgMap);
         } catch (Exception e) {
             handleEvaluationException(e);
         }
         return null;
+    }
+
+    private static boolean actionEnabled(BasicProcess action, Store store) {
+        try {
+            if (!Condition.getTrue().equals(action.getPsi().valueIn(store))) return false;
+            for (Expression update : action.getUpdate().values()) {
+                if (update.valueIn(store) == null) return false;
+            }
+            return true;
+        } catch (Exception unavailableValue) {
+            // Reject only this candidate, not the other receive/get alternatives.
+            return false;
+        }
+    }
+
+    private static boolean selectionHolds(Expression selection, Store store) {
+        try {
+            return Condition.getTrue().equals(selection.valueIn(store));
+        } catch (Exception unavailableValue) {
+            return false;
+        }
     }
 
     public Step(Map<AgentInstance,ConcreteStore> stores, Step parent, Interpreter interp) {
@@ -340,7 +394,7 @@ public class Step {
                     TypedValue chan = (TypedValue) objChan;
                     Store s = store.push(interpreter.getChannelTV(), chan);
                     TypedValue evalGuard = instance.getAgent().getReceiveGuard().valueIn(s);
-                    boolean isListening = Condition.getTrue().equals(evalGuard);
+                    boolean isListening = chan.toString().equals(Config.broadcast) || Condition.getTrue().equals(evalGuard);
                     // System.out.printf("eval %s on store %s ---> %s\n", instance.getAgent().getReceiveGuard(), s, isListening);
                     if (isListening) {
                         listeners.putIfAbsent(chan, new HashSet<>());
@@ -360,16 +414,13 @@ public class Step {
             if (instSends != null) {
                 instSends.forEach(tr -> {
                     SendProcess sendProcess = (SendProcess) tr.getLabel();
-                    Expression<recipe.lang.types.Boolean> psi = sendProcess.getPsi();
                     try {
-                        TypedValue psiEval = psi.valueIn(senderStore);
-                        boolean psiSat = Condition.getTrue().equals(psiEval);
+                        boolean psiSat = actionEnabled(sendProcess, senderStore);
 
                         if (psiSat) {
                             // Add message and channel to a new map
-                            Pair<Store, TypedValue> msgPair = makeMessageStore(senderStore, sendProcess, sys);
-                            Store msgStore = msgPair.getLeft();
-                            TypedValue chan = msgPair.getRight();
+                            Store msgStore = makeMessageStore(senderStore, sendProcess, sys);
+                            TypedValue chan = msgStore.getValue(interpreter.getChannelTV());
 
                             // Set up map of receivers
                             // A receiver must
@@ -377,29 +428,33 @@ public class Step {
                             // b) be listening to channel "chan"
                             // c) satisfy send guard
                             Map<AgentInstance, Set<ProcessTransition>> receivesMap = new HashMap<AgentInstance, Set<ProcessTransition>>();
-                            for (AgentInstance inst : listeners.get(chan)) {
+                            for (AgentInstance inst : listeners.getOrDefault(chan, Set.of())) {
                                 if (inst != sender) {
                                     try {
                                         Store instStore = stores.get(inst).push(msgStore);
                                         // Local variables get evaluated over the sender,
                                         // CVs get evaluated over the receiver (inst)
                                         CompositeStore sendGuardStore = new CompositeStore(sys);
-                                        sendGuardStore.push(senderStore);
+                                        sendGuardStore.push(senderStore.push(interpreter.getChannelTV(), chan));
                                         sendGuardStore.pushReceiverStore(instStore);
 
                                         TypedValue sendGuard = sendProcess.getMessageGuard().valueIn(sendGuardStore);
                                         boolean sendGuardOk = Condition.getTrue().equals(sendGuard);
 
                                         TypedValue receiveGuard = inst.getAgent().getReceiveGuard().valueIn(instStore);
-                                        boolean receiveGuardOk = Condition.getTrue().equals(receiveGuard);
+                                        boolean receiveGuardOk = chan.toString().equals(Config.broadcast) || Condition.getTrue().equals(receiveGuard);
                                         // System.out.printf("sendguard: %s (%s)\n", sendGuard, sendGuardOk);
                                         // System.out.printf("receiveguard: %s (%s)\n", receiveGuard, receiveGuardOk);
 
                                         if (sendGuardOk && receiveGuardOk) {
                                             receivesMap.put(inst, new HashSet<ProcessTransition>());
+                                        } else if (!chan.toString().equals(Config.broadcast)) {
+                                            // Every listening multicast receiver must be selected.
+                                            return;
                                         }
                                     } catch (Exception e) {
                                         handleEvaluationException(e);
+                                        if (!chan.toString().equals(Config.broadcast)) return;
                                     }
                                 }
                             }
@@ -414,8 +469,7 @@ public class Step {
                                             ReceiveProcess recLbl = (ReceiveProcess) rec.getLabel();
                                             Expression recChanExpr = recLbl.getChannel();
                                             if (recChanExpr.valueIn(store).equals(chan)) {
-                                                Expression<recipe.lang.types.Boolean> recPsi = recLbl.getPsi();
-                                                boolean recPsiSat = Condition.getTrue().equals(recPsi.valueIn(store));
+                                                boolean recPsiSat = actionEnabled(recLbl, store);
                                                 // System.err.printf("%s evaluates to %s\n", recPsi, recPsiSat);
                                                 // System.err.printf("receive: %s\n", recLbl);
                                                 // System.err.printf("store: %s\n", store);
@@ -431,51 +485,33 @@ public class Step {
                                 }
                             });
 
-                            // Compute total number of transitions.
-                            int transitionCount = 1;
-                            Set<AgentInstance> instancesToRemove = new HashSet<AgentInstance>();
-                            for (AgentInstance ins : receivesMap.keySet()) {
-                                int receivesCount = receivesMap.get(ins).size();
-                                // System.err.printf("%s has %d receives over %s\n", ins, receivesCount, chan);
-                                if (!chan.toString().equals(Config.broadcast)) {
-                                    transitionCount *= receivesCount;
-                                } else {
-                                    // If this receiver has no receives
-                                    // but the communication is broadcast,
-                                    // just remove him from receivesMap
-                                    transitionCount *= Math.max(transitionCount, 1);
-                                    if (receivesCount == 0) {
-                                        // System.err.printf("removing %s from bcast\n", ins);
-                                        instancesToRemove.add(ins);
+                            // Each receiver chooses independently. Empty broadcast choices
+                            // idle; an empty multicast choice blocks the whole send.
+                            List<Map<AgentInstance, ProcessTransition>> combinations = new ArrayList<>();
+                            combinations.add(new HashMap<>());
+                            for (Map.Entry<AgentInstance, Set<ProcessTransition>> entry : receivesMap.entrySet()) {
+                                if (entry.getValue().isEmpty()) {
+                                    if (chan.toString().equals(Config.broadcast)) continue;
+                                    combinations.clear();
+                                    break;
+                                }
+                                List<Map<AgentInstance, ProcessTransition>> expanded = new ArrayList<>();
+                                for (Map<AgentInstance, ProcessTransition> combination : combinations) {
+                                    for (ProcessTransition receive : entry.getValue()) {
+                                        Map<AgentInstance, ProcessTransition> choice = new HashMap<>(combination);
+                                        choice.put(entry.getKey(), receive);
+                                        expanded.add(choice);
                                     }
                                 }
+                                combinations = expanded;
                             }
-                            for (AgentInstance instance : instancesToRemove) {
-                                receivesMap.remove(instance);
-                            }
-
-                            // If nobody is blocking we can create transitions
-                            if (transitionCount > 0) {
-                                SendReceiveTransition[] newTransitions = new SendReceiveTransition[transitionCount];
-                                for (int i = 0; i < transitionCount; i++) {
-                                    newTransitions[i] = new SendReceiveTransition();
-                                    newTransitions[i].setProducer(sender, tr);
+                            for (Map<AgentInstance, ProcessTransition> combination : combinations) {
+                                SendReceiveTransition transition = new SendReceiveTransition();
+                                transition.setProducer(sender, tr);
+                                for (Map.Entry<AgentInstance, ProcessTransition> entry : combination.entrySet()) {
+                                    transition.pushConsumer(entry.getKey(), entry.getValue());
                                 }
-                                // System.err.printf("Generated %d transition objects\n", transitionCount);
-                                // Populate transitions with the cartesian product of receives
-                                for (AgentInstance receiver : receivesMap.keySet()) {
-                                    // System.err.printf("Adding %s\n", receiver);
-                                    int i = 0;
-                                    while (i < transitionCount) {
-                                        for (ProcessTransition transition : receivesMap.get(receiver)) {
-                                            newTransitions[i].pushConsumer(receiver, transition);
-                                            i++;
-                                        }
-                                    }
-                                }
-                                for (SendReceiveTransition t : newTransitions) {
-                                    transitions.add(t);
-                                }
+                                transitions.add(transition);
                             }
                         }
                     } catch (Exception e) {
@@ -492,10 +528,8 @@ public class Step {
             if (splys == null) return;
             for (ProcessTransition sply : splys) {
                 SupplyProcess splyProc = (SupplyProcess) sply.getLabel();
-                Expression<recipe.lang.types.Boolean> psi = splyProc.getPsi();
                 try {
-                    TypedValue psiEval = psi.valueIn(supplierStore);
-                    boolean psiSat = Condition.getTrue().equals(psiEval);
+                    boolean psiSat = actionEnabled(splyProc, supplierStore);
                     if (!psiSat) continue;
                     for (AgentInstance getter : interpreter.sys.getAgentInstances()) {
                         if (getter == supplier) continue;
@@ -503,11 +537,10 @@ public class Step {
                         Set<ProcessTransition> gets = interpreter.gets.get(getterStore.getState());
                         if (gets == null) continue;
                         for (ProcessTransition get : gets) {
-                            Pair<Store, TypedValue> msgPair = makeMessageStore(supplierStore, splyProc, sys);
-                            Store instStore = getterStore.push(msgPair.getLeft());
+                            Store msgStore = makeMessageStore(supplierStore, splyProc, sys);
+                            Store instStore = getterStore.push(msgStore);
                             GetProcess getProc = (GetProcess) get.getLabel();
-                            Expression getPsi = getProc.getPsi();
-                            boolean getPsiSat = Condition.getTrue().equals(getPsi.valueIn(instStore));
+                            boolean getPsiSat = actionEnabled(getProc, instStore);
                             if (!getPsiSat) continue;
                             // Check if predicates match
                             Expression<recipe.lang.types.Boolean> splyGuard = splyProc.getMessageGuard();
@@ -527,8 +560,14 @@ public class Step {
                                 // GET@foo = Only supplier with name foo will be chosen
                                 if (!isSelf && !getGuard.toString().equals(supplier.getLabel())) continue;
                             }
-                            if (!(splyGuard instanceof NamedLocation) && !Condition.getTrue().equals(splyGuard.valueIn(getterStore))) continue;
-                            if (!(getGuard instanceof NamedLocation) && !Condition.getTrue().equals(getGuard.valueIn(supplierStore))) continue;
+                            CompositeStore supplySelection = new CompositeStore(sys);
+                            supplySelection.push(supplierStore);
+                            supplySelection.pushReceiverStore(getterStore);
+                            CompositeStore getSelection = new CompositeStore(sys);
+                            getSelection.push(instStore);
+                            getSelection.pushReceiverStore(supplierStore);
+                            if (!(splyGuard instanceof NamedLocation) && !selectionHolds(splyGuard, supplySelection)) continue;
+                            if (!(getGuard instanceof NamedLocation) && !selectionHolds(getGuard, getSelection)) continue;
 
                             Transition tr = new SupplyGetTransition();
                             tr.setProducer(supplier, sply);

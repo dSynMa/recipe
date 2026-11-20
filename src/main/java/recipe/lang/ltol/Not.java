@@ -14,8 +14,10 @@ public class Not extends LTOL{
         this.ltol = ltol;
     }
 
+    public LTOL getLTOL() { return ltol; }
+
     public String toString(){
-        return "!(" + ltol.toString() + ")";
+        return "!(" + ltol + ")";
     }
 
     public boolean isPureLTL() {
@@ -35,4 +37,10 @@ public class Not extends LTOL{
     public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return new Not(ltol.toLTOLwithoutQuantifiers());
     }
+
+    @Override
+    public String toNuXmv() {
+        return "!(" + ltol.toNuXmv() + ")";
+    }
+
 }

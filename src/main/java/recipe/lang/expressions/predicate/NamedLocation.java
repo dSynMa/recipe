@@ -39,6 +39,7 @@ public class NamedLocation extends Condition {
         Parser baseParser =
             CharacterParser.noneOf("()[],;").plus().trim().flatten().map(
                 (String word) -> {
+                    word = word.trim();
                     if (word.equals(selfToken)) return new NamedLocation();
                     else return new NamedLocation(word);
             });
@@ -87,4 +88,10 @@ public class NamedLocation extends Condition {
         return this;
     }
     
+
+    @Override
+    public String toNuXmv() {
+        return toString();
+    }
+
 }

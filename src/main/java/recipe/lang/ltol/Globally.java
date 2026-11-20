@@ -35,4 +35,10 @@ public class Globally extends LTOL{
     public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return new Globally(ltol.toLTOLwithoutQuantifiers());
     }
+
+    @Override
+    public String toNuXmv() {
+        return "G(" + ltol.toNuXmv() + ")";
+    }
+
 }
