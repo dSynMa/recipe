@@ -1,10 +1,6 @@
 package recipe.lang.expressions;
 
 import recipe.lang.store.Store;
-import recipe.lang.types.Enum;
-import recipe.lang.types.Integer;
-import recipe.lang.types.Process;
-import recipe.lang.types.*;
 import recipe.lang.utils.exceptions.*;
 
 import java.lang.Boolean;
@@ -58,17 +54,7 @@ public class Predicate implements Expression<recipe.lang.types.Boolean> {
 
     @Override
     public Boolean isValidAssignmentFor(TypedVariable var) {
-        if(getType().getClass().equals(Enum.class) && var.getType().getClass().equals(Enum.class)){
-            return getType().equals(var.getType());
-        } else if(getType().getClass().equals(Guard.class) && var.getType().getClass().equals(Guard.class)){
-            return getType().equals(var.getType());
-        } else if(getType().getClass().equals(BoundedInteger.class) && var.getType().getClass().equals(Integer.class)) {
-            return Boolean.TRUE;
-        } else if(getType().getClass().equals(Process.class) && var.getType().getClass().equals(Process.class)) {
-            return getType().equals(var.getType());
-        } else{
-            return this.getType().getClass().isAssignableFrom(var.getType().getClass());
-        }
+        return var.getType().accepts(getType());
     }
 
     @Override

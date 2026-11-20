@@ -30,7 +30,7 @@ public class Real extends Number {
     @Override
     public java.lang.Number interpret(String value) throws MismatchingTypeException {
         try{
-            return Double.parseDouble(value);
+            return new java.math.BigDecimal(value);
         } catch (Exception e) {
             throw new MismatchingTypeException(value + " is not of type " + name());
         }

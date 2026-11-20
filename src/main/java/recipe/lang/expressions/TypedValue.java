@@ -46,7 +46,20 @@ public class TypedValue<T extends Type> implements Expression<T> {
 
     @Override
     public java.lang.Boolean isValidAssignmentFor(TypedVariable var) {
-        return var.getType().isValidValue(this.getValue());
+        return fits(var.getType());
+    }
+
+    private boolean fits(Type target) {
+        if (value instanceof TypedValue) {
+            return ((TypedValue<?>) value).fits(target);
+        }
+        if (target instanceof UnionType) {
+            return ((UnionType) target).getTypes().stream().anyMatch(this::fits);
+        }
+        // Numeric literals can fit a narrower domain even when their declared type does not.
+        boolean numeric = type instanceof recipe.lang.types.Number
+                && target instanceof recipe.lang.types.Number;
+        return (numeric || target.accepts(type)) && target.isValidValue(value);
     }
 
     public T getType() {
@@ -73,7 +86,8 @@ public class TypedValue<T extends Type> implements Expression<T> {
     }
 
     private Object equalityValue() {
-        if (value instanceof java.lang.Number && Double.isFinite(((java.lang.Number) value).doubleValue())) {
+        if (value instanceof BigDecimal || (value instanceof java.lang.Number
+                && Double.isFinite(((java.lang.Number) value).doubleValue()))) {
             return new BigDecimal(value.toString()).stripTrailingZeros();
         }
         return value;
@@ -92,6 +106,11 @@ public class TypedValue<T extends Type> implements Expression<T> {
             return value.toString().toUpperCase(Locale.ROOT);
         }
 
+        if (value instanceof BigDecimal) {
+            String decimal = ((BigDecimal) value).toPlainString();
+            // Keep a real literal even when the value is integral (not integer division in SMV).
+            return decimal.contains(".") ? decimal : decimal + ".0";
+        }
         return value.toString();
     }
 

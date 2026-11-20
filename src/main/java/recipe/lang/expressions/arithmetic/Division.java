@@ -28,9 +28,15 @@ public class Division extends ArithmeticExpression{
 
         BigDecimal lhsNo = new BigDecimal(lhsValue.getValue().toString());
         BigDecimal rhsNo = new BigDecimal(rhsValue.getValue().toString());
-        // Concrete real values are doubles; retain extra precision before that conversion.
-        // Symbolic simplification below keeps nonterminating quotients exact.
-        return new TypedValue<Number>((Number) Real.getType(), lhsNo.divide(rhsNo, MathContext.DECIMAL128).toString());
+        BigDecimal result;
+        try {
+            result = lhsNo.divide(rhsNo);
+        } catch (ArithmeticException nonTerminatingDecimal) {
+            if (rhsNo.signum() == 0) throw nonTerminatingDecimal;
+            // Only nonterminating quotients need a finite precision approximation.
+            result = lhsNo.divide(rhsNo, MathContext.DECIMAL128);
+        }
+        return new TypedValue<Number>(Real.getType(), result.toString());
     }
 
     @Override
@@ -42,10 +48,17 @@ public class Division extends ArithmeticExpression{
                 && rhsValue.getClass().equals(TypedValue.class)){
             BigDecimal lhsNo = new BigDecimal(((TypedValue) lhsValue).getValue().toString());
             BigDecimal rhsNo = new BigDecimal(((TypedValue) rhsValue).getValue().toString());
-            return new TypedValue<Number>((Number) Real.getType(), lhsNo.divide(rhsNo).toString());
+            try {
+                return numericResult(lhsNo.divide(rhsNo));
+            } catch (ArithmeticException nonTerminatingDecimal) {
+                if (rhsNo.signum() == 0) throw nonTerminatingDecimal;
+                // Keep the exact quotient for symbolic analysis. A real numerator
+                // prevents nuXmv from interpreting integer literals as integer division.
+                return new Division(new TypedValue<Number>(Real.getType(), lhsNo.toString()), rhsValue);
+            }
         }
         else {
-            return new Division(lhs.simplify(), rhs.simplify());
+            return new Division(lhsValue, rhsValue);
         }
     }
 
@@ -56,7 +69,9 @@ public class Division extends ArithmeticExpression{
 
     @Override
     public String toString(){
-        return "(" + lhs.toString() + " / " + rhs.toString() + ")";
+        // Finite-domain integer operands otherwise use truncated division in nuXmv's BDD backend.
+        // Our evaluator and constant folding use mathematical (real) division.
+        return "((1.0 * " + lhs.toString() + ") / " + rhs.toString() + ")";
     }
 
     @Override

@@ -549,7 +549,8 @@ public class ToNuXmv {
                         Expression<Boolean> sendGuardExpr = sendingProcess.getMessageGuard().relabel(v -> {
                             //if v is just the special variable we use in our syntax to refer to the current
                             // channel being sent on, then replace it with the sending transitions channel reference
-                            if (v.getName().equals(Config.channelLabel)) {
+                            if (v.getName().equals(Config.channelLabel)
+                                && !sendingAgent.getStore().getAttributes().containsKey(v.getName())) {
                                 return sendingOnThisChannelVarOrVal;
                             } else {
                                 //relabelling local variables to those of the sending agents

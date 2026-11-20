@@ -154,7 +154,8 @@ public abstract class Condition implements Expression<Boolean> {
 		UnionType agentType = Config.getAgentType();
 		if(agentType.getTypes().size() > 0) {
 			TypingContext agentTypingContext = context.getSubContext(Config.getAgentType());
-			Parser agentParser = (agentTypingContext.variableParser()).or(Config.getAgentType().valueParser());
+			Parser agentParser = agentTypingContext.variableParser().or(context.variableParser().not()
+                    .seq(Config.getAgentType().valueParser()).pick(1));
 			enumEquality = (IsEqualTo.parser(agentParser).or(IsNotEqualTo.parser(agentParser)));
 		} else{
 			enumEquality = null;
@@ -163,7 +164,8 @@ public abstract class Condition implements Expression<Boolean> {
 		for(String label : Enum.getEnumLabels()){
 			recipe.lang.types.Enum enumm = Enum.getEnum(label);
 			TypingContext enumTypingContext = context.getSubContext(enumm);
-			Parser enummParser = (enumTypingContext.variableParser()).or(enumm.valueParser());
+			Parser enummParser = enumTypingContext.variableParser().or(context.variableParser().not()
+                .seq(enumm.valueParser()).pick(1));
 			Parser enummEqualityParser = IsEqualTo.parser(enummParser).or(IsNotEqualTo.parser(enummParser));
 			if(enumEquality == null){
 				enumEquality = enummEqualityParser;
@@ -196,7 +198,7 @@ public abstract class Condition implements Expression<Boolean> {
 
 	@Override
 	public java.lang.Boolean isValidAssignmentFor(TypedVariable var){
-		return var.getType().equals(Boolean.getType());
+		return var.getType().accepts(getType());
 	}
 
 	@Override
