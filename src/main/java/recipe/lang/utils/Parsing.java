@@ -104,14 +104,58 @@ public class Parsing {
                 .or(Enum.generalValueParser());
     }
 
+    private static Parser assignmentValueParser(TypingContext expressionContext,
+                                                AtomicReference<Type> assignmentType) throws Exception {
+        Parser generalExpression = expressionParser(expressionContext);
+        return new LazyParser<Type>(ignored -> {
+            Type type = assignmentType.get();
+            if (type instanceof Enum) {
+                // Enum literals may also spell Boolean literals or values of another enum.
+                // In-scope variables retain precedence over literal names.
+                return expressionContext.variableParser().or(((Enum) type).valueParser())
+                    .or(generalExpression).trim();
+            }
+            return generalExpression;
+        }, null);
+    }
+
     public static org.petitparser.parser.Parser assignmentListParser(TypingContext variableContext,
                                                                      TypingContext expressionContext) throws Exception {
+        AtomicReference<Type> assignmentType = new AtomicReference<>();
+        Parser assignmentValue = assignmentValueParser(expressionContext, assignmentType);
         Parser assignment =
-                variableContext.variableParser()
+                variableContext.variableParser().mapWithSideEffects((TypedVariable target) -> {
+                            assignmentType.set(target.getType());
+                            return target;
+                        })
                         .seq(StringParser.of(":=").trim())
-                        .seq(expressionParser(expressionContext))
+                        .seq(assignmentValue)
                         .map((List<Object> values) -> {
-                            return new Pair(values.get(0).toString(), values.get(2));
+                            TypedVariable target = (TypedVariable) values.get(0);
+                            Expression value = (Expression) values.get(2);
+                            boolean numeric = target.getType() instanceof recipe.lang.types.Number
+                                && value.getType() instanceof recipe.lang.types.Number;
+                            // Numeric range/integrality is checked by process feasibility guards.
+                            // Categorical mismatches cannot denote a well-typed assignment.
+                            if (!numeric && !value.isValidAssignmentFor(target)) {
+                                throw new IllegalArgumentException("Invalid assignment to " + target.getName()
+                                    + ": expected " + target.getType().name() + ", got " + value.getType().name());
+                            }
+                            try {
+                                // Guard macros may contain free variables beyond their arguments.
+                                value.relabel(reference -> {
+                                    TypedVariable variable = (TypedVariable) reference;
+                                    if (expressionContext.get(variable.getName()) == null) {
+                                        throw new IllegalArgumentException("Variable " + variable.getName()
+                                            + " is not available in assignment to " + target.getName());
+                                    }
+                                    return variable;
+                                });
+                            } catch (recipe.lang.utils.exceptions.RelabellingTypeException
+                                    | recipe.lang.utils.exceptions.MismatchingTypeException e) {
+                                throw new IllegalArgumentException("Cannot resolve assignment to " + target.getName(), e);
+                            }
+                            return new Pair(target.toString(), value);
                         });
 
         Parser assignmentList =
@@ -391,15 +435,50 @@ public class Parsing {
 
     public static Parser relabellingParser(TypingContext localContext, TypingContext communicationContext) throws Exception {
         if(communicationContext.getVarType().size() > 0) {
+            AtomicReference<Type> targetType = new AtomicReference<>();
             return labelledParser("relabel", (communicationContext.variableParser().trim()
+                    .mapWithSideEffects((TypedVariable target) -> {
+                        targetType.set(target.getType());
+                        return target;
+                    })
                     .seq(StringParser.of("<-").trim())
-                    .seq(Parsing.expressionParser(localContext)).trim()).plus()
+                    .seq(assignmentValueParser(localContext, targetType)).trim()).plus()
             ).trim().map((List<Object> values) -> {
                 values.removeIf(v -> isWhitespace(v));
                 Map<TypedVariable, Expression> relabellingMap = new HashMap<>();
                 for (Object relabelObj : values) {
                     List relabel = (List) relabelObj;
-                    relabellingMap.put((TypedVariable) relabel.get(0), (Expression) relabel.get(2));
+                    TypedVariable target = (TypedVariable) relabel.get(0);
+                    Expression value = (Expression) relabel.get(2);
+                    boolean numeric = target.getType() instanceof recipe.lang.types.Number
+                        && value.getType() instanceof recipe.lang.types.Number;
+                    if (!numeric && !value.isValidAssignmentFor(target)) {
+                        throw new IllegalArgumentException("Invalid relabelling for " + target.getName()
+                            + ": expected " + target.getType().name() + ", got " + value.getType().name());
+                    }
+                    if (numeric && target.getType() instanceof recipe.lang.types.Integer) {
+                        try {
+                            Expression simplified = value.simplify();
+                            if (!recipe.lang.expressions.arithmetic.NumericDomain.isSubsetOf(simplified, target.getType())) {
+                                throw new IllegalArgumentException("Invalid relabelling for " + target.getName()
+                                    + ": mapping domain is not contained in " + target.getType().name());
+                            }
+                            if (simplified instanceof recipe.lang.expressions.TypedValue) {
+                                java.math.BigDecimal number = new java.math.BigDecimal(
+                                    ((recipe.lang.expressions.TypedValue) simplified).getValue().toString());
+                                if (target.getType() instanceof BoundedInteger) {
+                                    // Preserve finite-domain numeric equality in the BDD backend.
+                                    value = new recipe.lang.expressions.TypedValue(target.getType(),
+                                        number.toBigIntegerExact().toString());
+                                }
+                            }
+                        } catch (IllegalArgumentException e) {
+                            throw e;
+                        } catch (Exception e) {
+                            throw new IllegalArgumentException("Cannot validate relabelling for " + target.getName(), e);
+                        }
+                    }
+                    relabellingMap.put(target, value);
                 }
                 return relabellingMap;
             });

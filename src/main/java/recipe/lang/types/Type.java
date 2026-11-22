@@ -19,6 +19,25 @@ public abstract class Type {
         }
     }
 
+    /** Whether every value of the source type can be assigned to this type. */
+    public boolean accepts(Type source) {
+        if (source instanceof UnionType) {
+            return ((UnionType) source).getTypes().stream().allMatch(this::accepts);
+        }
+        if (this instanceof UnionType) {
+            return ((UnionType) this).getTypes().stream().anyMatch(member -> member.accepts(source));
+        }
+        if (this instanceof BoundedInteger) {
+            if (!(source instanceof BoundedInteger)) return false;
+            BoundedInteger target = (BoundedInteger) this;
+            BoundedInteger bounds = (BoundedInteger) source;
+            return bounds.getMin() >= target.getMin() && bounds.getMax() <= target.getMax();
+        }
+        if (this instanceof Integer) return source instanceof Integer;
+        if (this instanceof Real) return source instanceof Real;
+        return equals(source);
+    }
+
     public abstract Set getAllValues() throws InfiniteValueTypeException, MismatchingTypeException;
 
     @Override

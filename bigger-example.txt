@@ -30,7 +30,7 @@ agent Line
             )
 
 agent Robot
-        local: btype : int, lnk : channel, basgn : bool, brdy : 0..2, no  : int
+        local: btype : 0..3, lnk : channel, basgn : bool, brdy : 0..2, no  : int
         init: btype == 1 && lnk == empty && basgn == false && brdy == 0 && no == 0
         relabel:
             type <- btype

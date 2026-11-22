@@ -29,8 +29,7 @@ public class Multiplication extends ArithmeticExpression{
         BigDecimal lhsNo = new BigDecimal(lhsValue.getValue().toString());
         BigDecimal rhsNo = new BigDecimal(rhsValue.getValue().toString());
         BigDecimal result = lhsNo.multiply(rhsNo);
-        Number resultType = isInteger(result) ? Integer.getType() : Real.getType();
-        return new TypedValue<Number>(resultType, result.toString());
+        return numericResult(result);
     }
 
     @Override
@@ -42,7 +41,7 @@ public class Multiplication extends ArithmeticExpression{
                 && rhsValue.getClass().equals(TypedValue.class)){
             BigDecimal lhsNo = new BigDecimal(((TypedValue) lhsValue).getValue().toString());
             BigDecimal rhsNo = new BigDecimal(((TypedValue) rhsValue).getValue().toString());
-            return new TypedValue<Number>((Number) Real.getType(), lhsNo.multiply(rhsNo).toString());
+            return numericResult(lhsNo.multiply(rhsNo));
         }
         else {
             return new Multiplication(lhs.simplify(), rhs.simplify());

@@ -74,7 +74,7 @@ public class SupplyProcess extends BasicProcessWithMessage {
 
         Parser messageGuard = Condition.typeParser(localAndChannelAndCommunicationContext);
 
-        Parser messageAssignment = Parsing.assignmentListParser(messageContext, localAndChannelAndCommunicationContext);
+        Parser messageAssignment = Parsing.assignmentListParser(messageContext, localContext);
         Parser localAssignment = Parsing.assignmentListParser(localContext, localContext);
         Parser namedLocationParser = NamedLocation.parser();
         

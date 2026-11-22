@@ -30,9 +30,7 @@ public class Subtraction extends ArithmeticExpression{
             BigDecimal lhsNo = new BigDecimal(lhsValue.getValue().toString());
             BigDecimal rhsNo = new BigDecimal(rhsValue.getValue().toString());
             BigDecimal result = lhsNo.subtract(rhsNo);
-            Number resultType = isInteger(result) ? Integer.getType() : Real.getType();
-
-            return new TypedValue<Number>(resultType, result.toString());
+            return numericResult(result);
         } catch (NumberFormatException e) {
             System.out.printf("%s %s\n", lhsValue.toString(), lhsValue.getValue().getClass().toString());
             System.out.printf("%s %s\n", rhsValue.toString(), rhsValue.getValue().getClass().toString());
@@ -56,7 +54,7 @@ public class Subtraction extends ArithmeticExpression{
                 && rhsValue.getClass().equals(TypedValue.class)){
             BigDecimal lhsNo = new BigDecimal(((TypedValue) lhsValue).getValue().toString());
             BigDecimal rhsNo = new BigDecimal(((TypedValue) rhsValue).getValue().toString());
-            return new TypedValue<Number>((Number) Real.getType(), lhsNo.subtract(rhsNo).toString());
+            return numericResult(lhsNo.subtract(rhsNo));
         }
         else {
             return new Subtraction(lhs.simplify(), rhs.simplify());

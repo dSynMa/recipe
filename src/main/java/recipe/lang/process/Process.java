@@ -6,6 +6,14 @@ import org.petitparser.tools.ExpressionBuilder;
 import recipe.lang.agents.State;
 import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
+import recipe.lang.expressions.TypedValue;
+import recipe.lang.expressions.predicate.And;
+import recipe.lang.expressions.predicate.IsEqualTo;
+import recipe.lang.expressions.arithmetic.Floor;
+import recipe.lang.expressions.predicate.IsLessOrEqualThan;
+import recipe.lang.types.BoundedInteger;
+import recipe.lang.types.Number;
+import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.types.Boolean;
 import recipe.lang.utils.TypingContext;
 
@@ -29,6 +37,37 @@ public abstract class Process {
 
     public abstract void addEntryCondition(Expression<Boolean> condition);
 
+    private static void constrainNumericAssignments(BasicProcess action,
+            java.util.Map<String, Expression> assignments, TypingContext context) {
+        assignments.forEach((name, value) -> {
+            if (context.get(name) instanceof recipe.lang.types.Integer) {
+                try {
+                    action.addEntryCondition(new IsEqualTo(value, new Floor(value)));
+                } catch (MismatchingTypeException e) {
+                    throw new IllegalArgumentException("Non-numeric assignment for " + name, e);
+                }
+            }
+            if (context.get(name) instanceof BoundedInteger) {
+                BoundedInteger type = (BoundedInteger) context.get(name);
+                try {
+                    action.addEntryCondition(boundedAssignmentCondition(type, value));
+                } catch (MismatchingTypeException e) {
+                    throw new IllegalArgumentException("Invalid bounds for " + name, e);
+                }
+            }
+        });
+    }
+
+    /** Require the assigned value to stay within its target's declared bounds. */
+    private static Expression<Boolean> boundedAssignmentCondition(
+            BoundedInteger type, Expression<Number> value) throws MismatchingTypeException {
+        TypedValue<Number> min = new TypedValue<>(recipe.lang.types.Integer.getType(), String.valueOf(type.getMin()));
+        TypedValue<Number> max = new TypedValue<>(recipe.lang.types.Integer.getType(), String.valueOf(type.getMax()));
+        Expression<Boolean> aboveMinimum = new IsLessOrEqualThan(min, value);
+        Expression<Boolean> belowMaximum = new IsLessOrEqualThan(value, max);
+        return new And(aboveMinimum, belowMaximum);
+    }
+
     public static Parser parser(TypingContext messageContext,
                                 TypingContext localContext,
                                 TypingContext communicationContext) throws Exception {
@@ -39,7 +78,17 @@ public abstract class Process {
 
         ExpressionBuilder builder = new ExpressionBuilder();
         builder.group()
-                .primitive(sendProcess.or(receiveProcess).or(getProcess).or(supplyProcess).trim())
+                .primitive(sendProcess.or(receiveProcess).or(getProcess).or(supplyProcess).trim()
+                        .map((BasicProcess action) -> {
+                            // Both updates and outgoing data must fit their declared domains.
+                            // Keep feasibility in psi so progress agrees with legal transitions.
+                            constrainNumericAssignments(action, action.getUpdate(), localContext);
+                            if (action instanceof BasicProcessWithMessage) {
+                                constrainNumericAssignments(action,
+                                    ((BasicProcessWithMessage) action).getMessage(), messageContext);
+                            }
+                            return action;
+                        }))
                 .wrapper(of('(').trim(), of(')').trim(),
                         (List<Process> values) -> values.get(1));
         

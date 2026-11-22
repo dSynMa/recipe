@@ -37,4 +37,19 @@ public class TranslationDifferentialTest {
         }
     }
 
+    @Test
+    public void arithmeticEvaluationAgreesWithExactDecimalArithmetic() throws Exception {
+        Random random = new Random(5432);
+        for (int i = 0; i < 100; i++) {
+            java.math.BigDecimal a = java.math.BigDecimal.valueOf(random.nextInt(1000000), random.nextInt(4));
+            java.math.BigDecimal b = java.math.BigDecimal.valueOf(random.nextInt(1000000), random.nextInt(4));
+            int operation = i % 3;
+            String op = new String[]{"+", "-", "*"}[operation];
+            java.math.BigDecimal expected = operation == 0 ? a.add(b) : operation == 1 ? a.subtract(b) : a.multiply(b);
+            recipe.lang.expressions.Expression expr = recipe.lang.expressions.arithmetic.ArithmeticExpression
+                .parser(new recipe.lang.utils.TypingContext()).end().parse(a.toPlainString() + " " + op + " " + b.toPlainString()).get();
+            assertEquals(0, expected.compareTo(new java.math.BigDecimal(expr.valueIn(null).getValue().toString())));
+            assertEquals(expr.simplify(), expr.valueIn(null));
+        }
+    }
 }

@@ -34,6 +34,16 @@ public class TranslationDynamicParticipationTest {
         assertCtl(smv, "AX AX (sender-count = 2 & receiver-count = 1)", true);
     }
 
+    @Test public void multicastBlocksWhenReceiverUpdateBecomesInfeasible() throws Exception {
+        String model = twoSends()
+            .replace("local: received: boolean", "local: received: boolean, count: 0..1")
+            .replace("ready <- !received", "ready <- TRUE")
+            .replace("init: !received", "init: !received & count == 0")
+            .replace("[received := value]", "[received := value, count := count + 1]");
+        String smv = ToNuXmv.transform(parse(model));
+        assertCtl(smv, "AX (sender-count = 1 & receiver-count = 1)", true);
+        assertCtl(smv, "EX EX (sender-count = 2)", false);
+    }
 
     @Test public void competingSendersTakeSeparateJointTransitions() throws Exception {
         String model = source("observation-forall-constant")

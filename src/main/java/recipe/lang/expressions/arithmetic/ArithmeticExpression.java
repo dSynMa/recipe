@@ -64,7 +64,13 @@ public abstract class ArithmeticExpression implements Expression<Number> {
 
     @Override
     public java.lang.Boolean isValidAssignmentFor(TypedVariable var){
-        return Number.class.isAssignableFrom(var.getType().getClass());
+        if (var.getType().accepts(getType())) return true;
+        if (!(var.getType() instanceof recipe.lang.types.Integer)) return false;
+        try {
+            return NumericDomain.isSubsetOf(simplify(), var.getType());
+        } catch (Exception invalidExpression) {
+            return false;
+        }
     }
 
     @Override
@@ -72,9 +78,14 @@ public abstract class ArithmeticExpression implements Expression<Number> {
         return Real.getType();
     }
 
-    // Helper function to check if n is integer or real
-    protected static boolean isInteger(BigDecimal n) {
-        return n.signum() == 0 || n.scale() <= 0 || n.stripTrailingZeros().scale() <= 0;
+    /** Use an integer only when the exact result fits its concrete representation. */
+    protected static TypedValue<Number> numericResult(BigDecimal result) throws MismatchingTypeException {
+        try {
+            int integer = result.intValueExact();
+            return new TypedValue<>(recipe.lang.types.Integer.getType(), java.lang.Integer.toString(integer));
+        } catch (ArithmeticException fractionalOrOutOfRange) {
+            return new TypedValue<>(Real.getType(), result.toPlainString());
+        }
     }
 
     public Set<Expression<Boolean>> subformulas(){
