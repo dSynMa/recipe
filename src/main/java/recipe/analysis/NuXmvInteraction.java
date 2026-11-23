@@ -10,7 +10,6 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.concurrent.BlockingQueue;
@@ -41,21 +40,24 @@ public class NuXmvInteraction implements AutoCloseable {
     private boolean booleanModelUnavailable;
     boolean simulationStarted = false;
     private String simulationStateHeader;
-    Path path;
-    recipe.lang.System system;
+    final Path path;
+    final recipe.lang.System system;
+    private final NuXmvModelFile model;
+    private boolean modelReleased;
 
     public NuXmvInteraction(recipe.lang.System system) throws Exception {
-        this.system = system;
-        String nuxmvScript = ToNuXmv.transform(system);
-        path = Files.createTempFile("rcheck-interactive-", ".smv");
-        path.toFile().deleteOnExit();
-        Files.write(path, nuxmvScript.getBytes(StandardCharsets.UTF_8));
+        this(new NuXmvModelFile(system));
+    }
+
+    NuXmvInteraction(NuXmvModelFile model) throws IOException {
+        this.model = model;
+        this.system = model.system;
+        this.path = model.path;
         try {
             process = startNuXmvThread();
-        } catch (IOException startupFailure) {
+        } catch (IOException | RuntimeException startupFailure) {
             try {
-                if (checkerProcess != null) stopNuXmvThread();
-                else Files.deleteIfExists(path);
+                stopNuXmvThread();
             } catch (IOException cleanupFailure) {
                 startupFailure.addSuppressed(cleanupFailure);
             }
@@ -325,11 +327,19 @@ public class NuXmvInteraction implements AutoCloseable {
                 }
             }
         } finally {
-            try {
-                if (commandInput != null) commandInput.close();
-                Files.deleteIfExists(path);
+            try (OutputStream input = commandInput) {
+                releaseModel();
             } finally {
                 if (interrupted) Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    private void releaseModel() throws IOException {
+        synchronized (model) {
+            if (!modelReleased) {
+                modelReleased = true;
+                model.release();
             }
         }
     }

@@ -30,11 +30,10 @@ public class ServerObservationNumberingTest {
                     Object backend = java.lang.Enum.valueOf((Class) kind, mode);
                     Object config = Class.forName("Server$MCConfig").getConstructor(kind, int.class).newInstance(backend, 5);
                     field(serverType, "mcConfig").set(server, config);
-                    var method = serverType.getDeclaredMethod("doModelCheck", int.class);
-                    method.setAccessible(true);
-                    JSONObject firstResult = (JSONObject) method.invoke(server, 0);
+                    var method = serverType.getMethod("modelCheck", flak.Request.class, String.class);
+                    JSONObject firstResult = new JSONObject((String) method.invoke(server, null, "0"));
                     assertEquals(firstResult.toString(), mode.equals("BMC") ? "unknown" : "true", firstResult.getString("result"));
-                    JSONObject secondResult = (JSONObject) method.invoke(server, 1);
+                    JSONObject secondResult = new JSONObject((String) method.invoke(server, null, "1"));
                     assertEquals(secondResult.toString(), "false", secondResult.getString("result"));
                 } finally {
                     ((ExecutorService) field(serverType, "service").get(server)).shutdownNow();

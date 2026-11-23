@@ -9,10 +9,15 @@ public class InteractiveConcurrentSessionTest {
     @Test(timeout = 20000)
     public void concurrentCheckersKeepResponsesAndShutdownIndependent() throws Exception {
         var model = parse(source("supplier-locality"));
-        NuXmvInteraction first = new NuXmvInteraction(model);
-        NuXmvInteraction second = new NuXmvInteraction(model);
+        NuXmvModelFile build = new NuXmvModelFile(model);
+        NuXmvInteraction first = build.openChecker();
+        NuXmvInteraction second = build.openChecker();
         ExecutorService pool = Executors.newFixedThreadPool(2);
         try {
+            assertEquals(first.path, second.path);
+            build.close();
+            assertThrows(java.io.IOException.class, build::openChecker);
+            assertTrue(java.nio.file.Files.exists(first.path));
             for (int i = 0; i < 4; i++) {
                 CountDownLatch start = new CountDownLatch(1);
                 Future<?> left = pool.submit(() -> {
@@ -40,7 +45,9 @@ public class InteractiveConcurrentSessionTest {
         } finally {
             first.stopNuXmvThread();
             second.stopNuXmvThread();
+            build.close();
             pool.shutdownNow();
         }
+        assertFalse(java.nio.file.Files.exists(first.path));
     }
 }

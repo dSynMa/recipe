@@ -10,13 +10,13 @@ import org.json.JSONTokener;
 import org.petitparser.context.ParseError;
 
 import recipe.analysis.NuXmvInteraction;
+import recipe.analysis.NuXmvModelFile;
 import recipe.analysis.ToNuXmv;
 import recipe.interpreter.Interpreter;
 import recipe.lang.System;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.ltol.LTOL;
-import recipe.lang.ltol.Observation;
 import recipe.lang.types.Enum;
 import recipe.lang.utils.Pair;
 
@@ -29,19 +29,22 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.CancellationException;
 import java.util.logging.Logger;
 
 public class Server {
     NuXmvInteraction nuXmvInteraction;
     private final Set<Future<?>> modelCheckWorkers = ConcurrentHashMap.newKeySet();
+    private NuXmvModelFile checkModel;
+    private List<String> checkFormulas;
     System system;
 
     Interpreter interpreter;
     Map<String, String> latestDots = new HashMap<>();
     Map<String, String> latestDotsInterpreter = new ConcurrentHashMap<>();
 
-    MCConfig mcConfig;
+    volatile MCConfig mcConfig;
 
     private static Logger logger = Logger.getLogger(Server.class.getName());
     private final ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
@@ -134,17 +137,26 @@ public class Server {
         }
     }
 
-    private class MCWorker implements Callable<JSONObject> {
-        private int i;
-
-        public MCWorker(int i) {
-            this.i = i;
-        }
-        public JSONObject call() throws Exception {
-            return doModelCheck(i);
-        }
+    private NuXmvModelFile modelFile() throws Exception {
+        if (checkModel == null) checkModel = new NuXmvModelFile(system);
+        return checkModel;
     }
 
+    private void replaceSystem(System replacement) throws IOException {
+        cancelChecks();
+        resetChecker();
+        if (checkModel != null) checkModel.close();
+        checkModel = null;
+        checkFormulas = null;
+        system = replacement;
+    }
+
+    private void resetChecker() throws IOException {
+        if (nuXmvInteraction != null) {
+            nuXmvInteraction.close();
+            nuXmvInteraction = null;
+        }
+    }
 
     @Route("/")
     public String index() {
@@ -152,18 +164,14 @@ public class Server {
     }
 
     @Route("/setSystem")
-    public String setSystem(Request req) {
+    public synchronized String setSystem(Request req) {
         Enum.clear();
         String script = req.getQuery().get("script").trim();
         try {
-            system = recipe.lang.System.parser().end().parse(script).get();
+            replaceSystem(recipe.lang.System.parser().end().parse(script).get());
             interpreter = null;
             latestDots = new HashMap<>();
             latestDotsInterpreter = new ConcurrentHashMap<>();
-            if(nuXmvInteraction != null){
-                nuXmvInteraction.stopNuXmvThread();
-                nuXmvInteraction = null;
-            }
             return "{\"symbolic\" : " + system.isSymbolic() + "}";
         } catch (ParseError parseError){
             return "{ \"error\" : \"" + parseError.getFailure().toString() + "\"}";
@@ -174,7 +182,7 @@ public class Server {
 
 
     @Route("/buildModel")
-    public String buildModel(Request req) {
+    public synchronized String buildModel(Request req) {
         Enum.clear();
         interpreter = null;
         latestDots = new HashMap<>();
@@ -184,12 +192,8 @@ public class Server {
         Boolean buildType = Boolean.valueOf(req.getQuery().get("symbolic").trim());
         JSONObject response = new JSONObject();
         try {
-            system = recipe.lang.System.parser().end().parse(script).get();
-            if(nuXmvInteraction != null){
-                nuXmvInteraction.stopNuXmvThread();
-                nuXmvInteraction = null;
-            }
-            nuXmvInteraction = new NuXmvInteraction(system);
+            replaceSystem(recipe.lang.System.parser().end().parse(script).get());
+            nuXmvInteraction = modelFile().openChecker();
             Pair<Boolean, String> initialise = nuXmvInteraction.initialise(buildType);
 
             if(initialise.getLeft()){
@@ -294,20 +298,12 @@ public class Server {
     }
 
 
-    private JSONObject doModelCheck(int i) {
+    private JSONObject doModelCheck(NuXmvModelFile model, MCConfig mcConfig, String spec, String unparsedSpec) {
         JSONObject resultJSON = new JSONObject();
         Pair<Boolean, String> result;
         try {
-            // Convert i-th formula
-            String unparsedSpec = system.getUnparsedSpecs().get(i).trim();
-            // Number observations across the complete list, exactly as model generation does.
-            Pair<List<LTOL>,Map<String, Observation>> toLtl = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs());
-            String spec = toLtl.getLeft().get(i).toNuXmv();
-
-            String info = String.format("[%d]  %s, %s", i, unparsedSpec, mcConfig.type);
-            logger.info(info);
-            // Each worker owns its checker so properties run in parallel and cancel independently.
-            try (NuXmvInteraction checker = new NuXmvInteraction(system)) {
+            // Each worker starts its own process against the build's shared translation.
+            try (NuXmvInteraction checker = model.openChecker()) {
                 switch (mcConfig.getType()) {
                     case BDD:
                         result = checker.modelCheck(spec, false, mcConfig.getBound());
@@ -345,38 +341,57 @@ public class Server {
         return resultJSON;
     }
 
+    private synchronized FutureTask<JSONObject> submitCheck(int id) throws Exception {
+        MCConfig config = mcConfig;
+        if (config == null) throw new IllegalStateException("No active model check");
+        NuXmvModelFile model = modelFile();
+        if (checkFormulas == null) {
+            // Number observations across the full list, as in model generation.
+            List<String> formulas = new ArrayList<>();
+            for (LTOL formula : ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs()).getLeft()) {
+                formulas.add(formula.toNuXmv());
+            }
+            checkFormulas = formulas;
+        }
+        String formula = checkFormulas.get(id);
+        String source = system.getUnparsedSpecs().get(id).trim();
+        FutureTask<JSONObject> task = new FutureTask<>(() -> doModelCheck(model, config, formula, source));
+        synchronized (modelCheckWorkers) {
+            if (config != mcConfig) throw new CancellationException();
+            modelCheckWorkers.add(task);
+            try {
+                service.execute(task);
+            } catch (RuntimeException error) {
+                modelCheckWorkers.remove(task);
+                throw error;
+            }
+        }
+        return task;
+    }
+
     @Route("/modelCheck/:id")
     public String modelCheck(Request req, String idString) {
-        JSONObject result;
-        String info = "";
+        FutureTask<JSONObject> task = null;
         try {
-            int id = Integer.valueOf(idString);
-            // MCConfig config = MCConfig.ofRequest(req);
-            Future<JSONObject> future = this.service.submit(new MCWorker(id));
-            result = future.get();
-            info = String.format("[%s] -- DONE", idString);
-        } catch (Exception e) {
-            e.printStackTrace();
-            info = String.format("[%s] -- ERROR", idString);
-            result = new JSONObject();
-            result.put("error", e.getMessage());
+            task = submitCheck(Integer.parseInt(idString));
+            return task.get().toString();
+        } catch (CancellationException cancelled) {
+            return new JSONObject().put("error", "Model check cancelled").toString();
+        } catch (InterruptedException interrupted) {
+            if (task != null) task.cancel(true);
+            Thread.currentThread().interrupt();
+            return new JSONObject().put("error", "Model check interrupted").toString();
+        } catch (Exception error) {
+            return new JSONObject().put("error", error.toString()).toString();
         } finally {
-            logger.info(info);
+            if (task != null) modelCheckWorkers.remove(task);
         }
-        return result.toString();
     }
 
     @Route("/modelCheck")
-    public String modelCheck(Request req) throws Exception {
+    public synchronized String modelCheck(Request req) throws Exception {
         if(system == null){
             return "{ \"error\" : \"Compile system first.\"}";
-        }
-
-        if(nuXmvInteraction == null){
-            String init = this.init(req);
-            if(init.contains("error")){
-                return init;
-            }
         }
 
         try {
@@ -387,6 +402,7 @@ public class Server {
             } else{
                 JSONObject jsonObject = new JSONObject();
                 JSONArray array = new JSONArray();
+                modelFile();
                 mcConfig = MCConfig.ofRequest(req);
 
                 for(int i = 0; i < system.getUnparsedSpecs().size(); i++) {
@@ -398,7 +414,6 @@ public class Server {
                 }
                 jsonObject.put("results", array);
 
-                nuXmvInteraction.stopNuXmvThread();
                 return jsonObject.toString();
             }
         } catch (ParseError parseError){
@@ -412,18 +427,26 @@ public class Server {
 
     @Route("/modelCheckStop")
     public String stopModelChecking(Request req) {
-        for (Future<?> worker : modelCheckWorkers) worker.cancel(true);
+        cancelChecks();
         return "";
     }
 
+    private void cancelChecks() {
+        synchronized (modelCheckWorkers) {
+            mcConfig = null;
+            for (Future<?> worker : modelCheckWorkers) worker.cancel(true);
+        }
+    }
+
     @Route("/init")
-    public String init(Request req) throws Exception {
+    public synchronized String init(Request req) throws Exception {
         if(system == null){
             return "{ \"error\" : \"Compile system first.\"}";
         }
 
         try {
-            nuXmvInteraction = new NuXmvInteraction(system);
+            resetChecker();
+            nuXmvInteraction = modelFile().openChecker();
             return "{}";
         } catch (ParseError parseError){
             JSONObject jsonObject = new JSONObject();
@@ -507,7 +530,7 @@ public class Server {
     }
 
     @Route("/simulateNext")
-    public String simulateNext(Request req) throws Exception {
+    public synchronized String simulateNext(Request req) throws Exception {
         if(system == null){
             return "{ \"error\" : \"Compile system first.\"}";
         }
@@ -572,8 +595,8 @@ public class Server {
     }
 
     @Route("/resetSimulation")
-    public void resetSimulation(Request req) throws Exception {
-        nuXmvInteraction = null;
+    public synchronized void resetSimulation(Request req) throws Exception {
+        resetChecker();
         cors();
     }
 
