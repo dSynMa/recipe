@@ -41,4 +41,19 @@ public class TranslationChannelLocalTest {
    assertCtl(ToNuXmv.transform(parse(text)), "EX receiver-received",channel.equals("c"));
   }
  }
+ @Test public void interpreterAndObservationReplayRetainLocalChannel() throws Exception {
+  for (String type : new String[]{"boolean", "channel"}) {
+   boolean bool=type.equals("boolean");
+   String text=model(type, bool ? "channel" : "channel == d", bool ? "channel" : "channel == d")
+    .replace("forall(TRUE)", "exists(TRUE)");
+   var system=parse(text);
+   Interpreter interpreter=new Interpreter(system);
+   interpreter.init("TRUE");
+   assertFalse(interpreter.isDeadlocked());
+   JSONObject initial=new JSONObject("{sender:{sent:false},receiver:{received:false}}");
+   initial.getJSONObject("sender").put("channel",bool ? "TRUE" : "d");
+   JSONObject next=new JSONObject("{sender:{sent:true},receiver:{received:true},___LTOL___:{obs0:true}}");
+   assertEquals(2,Interpreter.ofJSON(system,new JSONArray().put(initial).put(next)).traceToJSON().size());
+  }
+ }
 }

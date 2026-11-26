@@ -14,7 +14,7 @@ The language allows the definition of a set of agents that interact synchronousl
 
 For model checking add specifications at the end of the script in the form of `LTLSPEC <spec>;`, where `<spec>` respects nuXmv syntax for LTL predicates. When making reference to the variables of an agent instance prefix them by the name of the agent in the following form `id-var`, similarly for their state: `id-state`, and any transition label.
 
-To check whether the system is stuck, the predicate `keep-all` can be queried, e.g. `F keep-all` will be true if the system eventually settles in a state (where from then on no variable values may change).
+A deadlock has `progress = FALSE` in the generated model. Use `SPEC F !PROGRESS;` to check that every execution eventually reaches a state with no enabled interaction. `keep-all` describes an unchanged transition and can also hold during an enabled self-loop.
 
 When the agents use infinite-state variables the tool will use symbolic bounded model checking (using `msat`).
 

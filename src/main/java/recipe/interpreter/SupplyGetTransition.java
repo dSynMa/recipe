@@ -89,7 +89,8 @@ class SupplyGetTransition implements Transition {
         String getLbl = get.getLabel().getLabel();
         String supplierName = supplier.getLabel();
         String getterName = getter.getLabel();
-        JSONObject supplierState = constraint.getJSONObject(supplierName);
+        JSONObject supplierState = constraint.optJSONObject(supplierName);
+        if (supplierState == null) return true;
         for (String key : supplierState.keySet()) {
             if (!supplierState.get(key).equals("TRUE")) continue;
             String[] pieces = key.split("-");

@@ -16,7 +16,6 @@ import org.json.JSONObject;
 
 import recipe.analysis.NuXmvBatch;
 import recipe.analysis.ToNuXmv;
-import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.agents.State;
@@ -91,7 +90,9 @@ public class Interpreter {
         
         List<JSONObject> list = new ArrayList<>(json.length());
         for (int i = 0; i < json.length(); i++) {
-            list.add(json.getJSONObject(i));
+            JSONObject state = json.getJSONObject(i);
+            // Like nuXmv text traces, omitted values retain their preceding state.
+            list.add(list.isEmpty() ? state : new CompositeJSON(list.get(i - 1), state));
         }
         return Interpreter.ofJSON(s, obsMap, list);
     }
@@ -100,14 +101,27 @@ public class Interpreter {
         if (states.size() == 0) {
             throw new Exception("Empty JSON");
         }
+        // Reject unsupported values before selecting an initial state or walking a partial trace.
+        // Materialise copies because delta states are immutable and callers own JSON input.
+        List<JSONObject> decodedStates = new ArrayList<>();
+        for (int index = 0; index < states.size(); index++) {
+            JSONObject state = new JSONObject(states.get(index).toString());
+            for (AgentInstance instance : s.getAgentInstances()) {
+                JSONObject locals = state.optJSONObject(instance.getLabel());
+                if (locals == null) continue;
+                for (TypedVariable variable : instance.getAgent().getStore().getAttributes().values()) {
+                    if (variable.getType() instanceof recipe.lang.types.Number && locals.has(variable.getName())) {
+                        String value = locals.get(variable.getName()).toString();
+                        locals.put(variable.getName(), recipe.analysis.NuXmvInteraction.interpreterNumber(
+                                instance.getLabel() + "-" + variable.getName() + " at trace step " + index, value));
+                    }
+                }
+            }
+            decodedStates.add(state);
+        }
+        states = decodedStates;
         Interpreter interpreter = new Interpreter(s);
         JSONObject initState = states.get(0);
-
-        // Compute set of variables in the system
-        Set<String> varNames = new HashSet<>(s.getCommunicationVariables().keySet());
-        for (Agent a : s.getAgents()) {
-            varNames.addAll(a.getStore().getAttributes().keySet());
-        }
 
         // Create constraint on initial state & find it
         List<String> constraints = new LinkedList<String>();
@@ -118,8 +132,18 @@ public class Interpreter {
             AgentInstance instance = s.getAgentInstances().stream()
                 .filter(candidate -> candidate.getLabel().equals(agentInstance)).findFirst().orElse(null);
             for (String var : agentState.keySet()) {
-                if (varNames.contains(var)) {
-                    constraints.add(String.format("%s-%s = %s", agentInstance, var, agentState.get(var)));
+                TypedVariable declaration = instance == null ? null
+                    : instance.getAgent().getStore().getAttributes().get(var);
+                if (declaration != null) {
+                    Object value = agentState.get(var);
+                    if (value instanceof java.lang.Boolean) value = (java.lang.Boolean) value ? "TRUE" : "FALSE";
+                    if (declaration.getType() instanceof recipe.lang.types.Boolean
+                            && value instanceof String) {
+                        if ("true".equalsIgnoreCase((String) value)) value = "TRUE";
+                        else if ("false".equalsIgnoreCase((String) value)) value = "FALSE";
+                    }
+                    value = initialValue(declaration, value);
+                    constraints.add(String.format("%s-%s = %s", agentInstance, var, value));
                 } else if (instance != null && instance.getAgent().getSendTransitions().stream()
                         .anyMatch(action -> var.equals(action.getLabel().getLabel()))) {
                     String value = agentState.get(var).toString();
@@ -131,41 +155,41 @@ public class Interpreter {
                 }
             }
         }
-        String initConstraint = String.join(" & ", constraints);
+        String initConstraint = constraints.isEmpty() ? "TRUE" : String.join(" & ", constraints);
         interpreter.init(initConstraint);
+        // Initial selection constrains local variables; also validate synthetic
+        // state, action events, and observations supplied by the trace.
+        if (!interpreter.currentStep.satisfies(obsMap, initState)) {
+            throw new Exception("[ofTrace] something wrong at step 0");
+        }
+        interpreter.validateDeadlockAnnotation(initState, 0);
+        interpreter.currentStep.loadAnnotations(initState);
         // Walk the rest of the trace
         for (int i = 1; i < states.size(); i++) {
             JSONObject nextConstraint = states.get(i);
             JSONObject currConstraint = states.get(i-1);
-            // We got to a state where progress = false, all the rest is irrelevant
-            
-            if (currConstraint.has("___STUCK___")) break;
             // If we are deadlocked, but no variable is changing in trace, then it's all right
             if (interpreter.isDeadlocked()) {
-                JSONObject stateValues = new JSONObject();
-                for (String key : nextConstraint.keySet()) {
-                    if (key.startsWith("___")) continue;
-                    JSONObject values = new JSONObject(nextConstraint.getJSONObject(key).toString());
-                    // Event flags reset on deadlock stuttering; only persistent
-                    // state values must agree with the terminal interpreter state.
-                    for (AgentInstance instance : s.getAgentInstances()) {
-                        if (!instance.getLabel().equals(key)) continue;
-                        for (recipe.lang.process.Process action : instance.getAgent().getActions()) {
-                            if (action instanceof recipe.lang.process.BasicProcess) {
-                                String label = ((recipe.lang.process.BasicProcess) action).getLabel();
-                                if (label != null) values.remove(label);
-                            }
-                        }
+                // Validate the reset events and observations as well as persistent state.
+                if (interpreter.currentStep.satisfies(obsMap, nextConstraint, true)) {
+                    if (nextConstraint.optBoolean("___LOOP___", false)) {
+                        interpreter.currentStep.loadAnnotations(new JSONObject().put("___LOOP___", true));
                     }
-                    stateValues.put(key, values);
+                    continue;
                 }
-                if (constraints.isEmpty()) break;
             }
             if (!interpreter.findNext(obsMap, nextConstraint, currConstraint)) {
                 throw new Exception(String.format("[ofTrace] something wrong at step %d", i));
             }
+            interpreter.validateDeadlockAnnotation(nextConstraint, i);
         }
         return interpreter;
+    }
+
+    private void validateDeadlockAnnotation(JSONObject state, int index) throws Exception {
+        if (state.optBoolean("___STUCK___", false) && !isDeadlocked()) {
+            throw new Exception("[ofTrace] false deadlock annotation at step " + index);
+        }
     }
 
     /**
@@ -181,7 +205,7 @@ public class Interpreter {
         
         // Find states that are loop-starts
         Matcher m = Pattern.compile(
-            "-- Loop starts here[\s\n]*-> State: 1.([0-9]+)",
+            "-- Loop starts here\\s*-> State: [0-9]+\\.([0-9]+)",
             Pattern.DOTALL
         ).matcher(trace);
         Set<Integer> loopingStates = new HashSet<>();
@@ -217,6 +241,9 @@ public class Interpreter {
         HashMap<AgentInstance, ConcreteStore> rootStores = new HashMap<AgentInstance, ConcreteStore>();
         NuXmvBatch nuxmv = new NuXmvBatch(sys);
         Pair<Boolean, String> s0 = nuxmv.pickInitialState(constraint);
+        if (!s0.getLeft()) {
+            throw new IOException("Cannot select an initial state: " + s0.getRight());
+        }
         JSONObject initValues = nuxmv.outputToJSON(s0.getRight());
 
         sys.getAgentInstances().forEach((x) -> {
@@ -275,4 +302,15 @@ public class Interpreter {
     public Step getCurrentStep() {
         return currentStep;
     }
+
+    private static String initialValue(recipe.lang.expressions.TypedVariable variable, Object value) throws Exception {
+        if (variable.getType().name().equals("channel") && recipe.Config.broadcast.equals(value.toString()))
+            return recipe.Config.nuxmvBroadcast;
+        // Render numbers as plain decimal real literals, avoiding scientific notation
+        // and nuXmv's integer-literal range limit.
+        if (variable.getType() instanceof recipe.lang.types.Number)
+            return new recipe.lang.expressions.TypedValue<>(recipe.lang.types.Real.getType(), value.toString()).toString();
+        return value.toString();
+    }
+
 }

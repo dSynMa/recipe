@@ -168,7 +168,10 @@ public class ConcreteStore extends Store {
                 try {
                     TypedVariable v = agent.getStore().getAttribute(var);
                     if (v != null) {
-                        TypedValue val = typedValueFactory(v.getType(), obj.getString(var));
+                        String raw = obj.get(var).toString();
+                        if (v.getType() instanceof Number)
+                            raw = recipe.analysis.NuXmvInteraction.interpreterNumber(instance.getLabel() + "-" + var, raw);
+                        TypedValue val = typedValueFactory(v.getType(), raw);
                         this.data.put(v, val);
                         // System.out.println(v.getName());
                         // // System.out.println(v.getType());
@@ -179,7 +182,8 @@ public class ConcreteStore extends Store {
                 } catch (AttributeNotInStoreException x) {
                     System.out.println(var + " not found");
                 } catch (MismatchingTypeException x) {
-                    System.out.println(var + " throws MismatchingTypeException");
+                    throw new IllegalArgumentException("Cannot load " + instance.getLabel() + "-" + var
+                            + " = " + obj.get(var) + ": " + x.getMessage(), x);
                 }
             }
         });

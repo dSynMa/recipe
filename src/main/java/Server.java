@@ -442,25 +442,26 @@ public class Server {
         if (system == null) {
             return "{ \"error\" : \"Compile system first.\"}";
         }
-        if (interpreter == null) {
-            interpreter = new Interpreter(system);
-        }
-
-        if(req.getQuery().get("reset").toLowerCase(Locale.ROOT).trim().equals("true")){
-            interpreter = new Interpreter(system);
-            interpreter.init("TRUE");
-        } else {
-            int index = Integer.parseInt(req.getQuery().get("index"));
-            if (interpreter.isDeadlocked()) {
-                return "{ \"error\" : \"No successor state (system is deadlocked).\"}";
+        try {
+            if (interpreter == null || req.getQuery().get("reset").equalsIgnoreCase("true")) {
+                Interpreter replacement = new Interpreter(system);
+                replacement.init("TRUE");
+                interpreter = replacement;
+            } else {
+                int index = Integer.parseInt(req.getQuery().get("index"));
+                if (interpreter.isDeadlocked()) {
+                    return "{ \"error\" : \"No successor state (system is deadlocked).\"}";
+                }
+                interpreter.next(index);
             }
-            interpreter.next(index);
+            JSONObject response = interpreter.getCurrentStep().toJSON();
+            response.put("svgs", renderSVGs(response));
+            return response.toString();
+        } catch (Exception failure) {
+            return new JSONObject().put("error", failure.getMessage()).toString();
         }
-        JSONObject response = interpreter.getCurrentStep().toJSON();
-        response.put("svgs", renderSVGs(response));
-
-        return response.toString();
     }
+
 
     @Route("/interpretBack")
     public String interpretBack(Request req) throws Exception {
@@ -498,14 +499,13 @@ public class Server {
     @Route("/interpretLoadJSON")
     public String loadInterpreterJSON(Request req) {
         String trace = req.getQuery().get("trace");
-        JSONTokener toks = new JSONTokener(trace);
-        JSONArray json = new JSONArray(toks);
-
         try {
+            JSONTokener toks = new JSONTokener(trace);
+            JSONArray json = new JSONArray(toks);
             interpreter = Interpreter.ofJSON(system, json);
             return "{}";
         } catch (Exception e) {
-            return String.format("{ \"error\" : \"%s\"}", e.getMessage());
+            return new JSONObject().put("error", e.getMessage()).toString();
         }
     }
 

@@ -1,5 +1,7 @@
 package recipe.analysis;
 
+import java.math.BigDecimal;
+
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -23,7 +25,6 @@ import java.util.regex.Pattern;
 import org.json.JSONObject;
 
 import recipe.Config;
-import recipe.lang.agents.ProcessTransition;
 import recipe.lang.utils.Pair;
 
 public class NuXmvInteraction {
@@ -119,7 +120,7 @@ public class NuXmvInteraction {
         String out = "";
         out = execute(finished, ((system.isSymbolic() || bmc ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() || bmc ? "-k " + steps : "")));
         out = out.replaceAll("nuXmv > ", "").trim();
-        out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
+        out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
         return new Pair<>(true, out);
     }
 
@@ -143,7 +144,7 @@ public class NuXmvInteraction {
         String out = "";
         out = execute(finished, ("check_ltlspec_ic3" + (bounded ? " -k " + steps : "") + " -p \"" + property + "\" "));
         out = out.replaceAll("nuXmv > ", "").trim();
-        out = out.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)", "");
+        out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
         if(out.contains("syntax error")){
             return new Pair<>(false, out);
         } else{
@@ -304,30 +305,34 @@ public class NuXmvInteraction {
     public JSONObject outputToJSON(String nuxmvSimOutput){
         JSONObject jsonObject = new JSONObject();
 
-        if(nuxmvSimOutput.toLowerCase(Locale.ROOT).contains("keep-all = true")){
-            // We're stuttering
+        if(Pattern.compile("(?mi)^[ \t]*progress[ \t]*=[ \t]*FALSE[ \t]*$").matcher(nuxmvSimOutput).find()){
+            // No interaction is enabled; an unchanged transition alone is not a deadlock.
             jsonObject.put("___STUCK___", true);
         }
 
-        Set<String> receiveLabels = new HashSet<>();
+        Set<String> stateVariables = new HashSet<>();
         system.getAgentInstances().forEach(ag -> {
-            for (ProcessTransition receiveTransition : ag.getAgent().getReceiveTransitions()) {
-                String label = receiveTransition.getLabel().getLabel();
-                if(label != null && !label.equals(""))
-                    receiveLabels.add(ag.getLabel() + "-" + receiveTransition.getLabel().getLabel());
-            }
+            stateVariables.add(ag.getLabel() + "-automaton-state");
+            ag.getAgent().getStore().getAttributes().keySet().forEach(name ->
+                stateVariables.add(ag.getLabel() + "-" + name));
+            ag.getAgent().getActions().forEach(action -> {
+                if (action instanceof recipe.lang.process.BasicProcess) {
+                    String label = ((recipe.lang.process.BasicProcess) action).getLabel();
+                    if (label != null && !label.isEmpty()) stateVariables.add(ag.getLabel() + "-" + label);
+                }
+            });
+
         });
 
-        nuxmvSimOutput = nuxmvSimOutput.replaceAll("(obs[0-9]+)", "___LTOL___-$1");
+        nuxmvSimOutput = nuxmvSimOutput.replaceAll("(?m)^([ \t]*)(obs[0-9]+)([ \t]*=)", "$1___LTOL___-$2$3");
         nuxmvSimOutput = nuxmvSimOutput.replaceAll(
-            "\\bno-observations\\b", 
-            "___LTOL___-no-observations");
+            "(?m)^([ \t]*)(no-observations)([ \t]*=)",
+            "$1___LTOL___-$2$3");
 
         String agentStateRegex = "(^|\\n)[^=\\n\\^]+\\-[^=\\n\\^]+ =[^=\\n$]+(\\n|$)";
         Pattern compile = Pattern.compile(agentStateRegex, Pattern.MULTILINE);
         Matcher matcher = compile.matcher(nuxmvSimOutput);
 
-        match:
         while(matcher.find()){
             String[] group = matcher.toMatchResult().group().split("=");
 
@@ -335,17 +340,15 @@ public class NuXmvInteraction {
 
             String agent = left[0].trim();
 
-            if(agent.startsWith("falsify") || agent.startsWith("keep")){
+            if(!stateVariables.contains(group[0].trim()) && !agent.equals("___LTOL___")){
                 continue;
             }
 
             String var = left[1].trim();
 
             String val = group[1].trim().replaceAll(agent + "\\-", "");
+            val = NuXmvInteraction.normalise(system, group[0].trim(), val);
 
-            if(receiveLabels.contains(group[0].trim()) && val.equals("FALSE")){
-                continue match;
-            }
 
             if (!jsonObject.has(agent)){
                 jsonObject.put(agent, new JSONObject());
@@ -355,5 +358,43 @@ public class NuXmvInteraction {
         }
 
         return jsonObject;
+    }
+    private static final Pattern FRACTION = Pattern.compile("(-?)f'([0-9]+)/([0-9]+)");
+
+    static String normalise(recipe.lang.System system, String field, String value) {
+        if (value.equals(recipe.Config.nuxmvBroadcast)) {
+            for (var instance : system.getAgentInstances()) {
+                for (var variable : instance.getAgent().getStore().getAttributes().values()) {
+                    if (variable.getType().name().equals("channel")
+                            && field.equals(instance.getLabel() + "-" + variable.getName()))
+                        return recipe.Config.broadcast;
+                }
+            }
+        }
+        return normaliseNumber(value);
+    }
+
+    public static String interpreterNumber(String field, String value) {
+        String decimal = normaliseNumber(value);
+        try {
+            new BigDecimal(decimal);
+            return decimal;
+        } catch (NumberFormatException invalid) {
+            throw new IllegalArgumentException("Cannot load " + field + " = " + value
+                    + ": the interpreter requires an exact finite decimal; this numeric value is unsupported.", invalid);
+        }
+    }
+
+    private static String normaliseNumber(String value) {
+        Matcher fraction = FRACTION.matcher(value);
+        if (!fraction.matches()) return value;
+        try {
+            BigDecimal numerator = new BigDecimal(fraction.group(2));
+            if (!fraction.group(1).isEmpty()) numerator = numerator.negate();
+            return numerator.divide(new BigDecimal(fraction.group(3))).toPlainString();
+        } catch (ArithmeticException nonDecimalValue) {
+            // Do not silently round exact checker values that lack a finite decimal.
+            return value;
+        }
     }
 }

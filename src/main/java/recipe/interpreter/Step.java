@@ -102,11 +102,6 @@ public class Step {
         return result;
     }
 
-    /**
-     * Check satisfaction of a state constraint
-     * @param constraint a JSON object
-     * @return true iff the state satisfies the constraint
-     */
     private static java.lang.Boolean traceBoolean(Object value) {
         if (value instanceof java.lang.Boolean) return (java.lang.Boolean) value;
         if (value instanceof String) {
@@ -116,7 +111,17 @@ public class Step {
         return null;
     }
 
+    /**
+     * Check satisfaction of a state constraint
+     * @param constraint a JSON object
+     * @return true iff the state satisfies the constraint
+     */
     public boolean satisfies(Map<String,Observation> obsMap, JSONObject constraint) {
+        return satisfies(obsMap, constraint, false);
+    }
+
+    boolean satisfies(Map<String,Observation> obsMap, JSONObject constraint, boolean stutter) {
+        // A deadlock stutter has no new action or observed send.
         // LTOL
         JSONObject ltol = constraint.optJSONObject("___LTOL___");
         if (ltol != null) {
@@ -126,7 +131,7 @@ public class Step {
                 if (expectedObservation == null) return false;
                 Observation descriptor = obsMap.get(obsVar);
                 if (descriptor == null) return false;
-                if (inboundTransition == null || !(inboundTransition.getProducerProcess() instanceof SendProcess)) {
+                if (stutter || inboundTransition == null || !(inboundTransition.getProducerProcess() instanceof SendProcess)) {
                     if (expectedObservation) return false;
                     continue;
                 }
@@ -200,7 +205,7 @@ public class Step {
             for (String varName : instanceConstraint.keySet()) {
                 try {
                     if (varName.equals("automaton-state")) {
-                        String stateConstraint = instanceConstraint.getString(varName);
+                        String stateConstraint = instanceConstraint.get(varName).toString();
                         String stateInst = instanceStore.getState().getLabel().toString();
                         if (!stateInst.equals(stateConstraint)) {
                             System.out.printf(">> Expected %s, got %s\n", stateConstraint, stateInst);
@@ -211,9 +216,8 @@ public class Step {
                     boolean sendLabel = inst.getAgent().getSendTransitions().stream()
                         .anyMatch(action -> varName.equals(action.getLabel().getLabel()));
                     if (sendLabel) {
-                        String value = instanceConstraint.get(varName).toString();
-                        if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) return false;
-                        boolean expected = java.lang.Boolean.parseBoolean(value);
+                        java.lang.Boolean expected = traceBoolean(instanceConstraint.get(varName));
+                        if (expected == null) return false;
                         boolean enabled = transitions.stream().anyMatch(action ->
                             action.getProducer().getLabel().equals(agentInstanceName) && action.getProducerProcess() instanceof SendProcess
                                 && varName.equals(action.getProducerProcess().getLabel()));
@@ -226,7 +230,7 @@ public class Step {
                         java.lang.Boolean expected = traceBoolean(instanceConstraint.get(varName));
                         if (expected == null) return false;
                         ProcessTransition taken = inboundTransition == null ? null : inboundTransition.findTransitionForAgent(inst);
-                        boolean actual = taken != null && varName.equals(taken.getLabel().getLabel());
+                        boolean actual = !stutter && taken != null && varName.equals(taken.getLabel().getLabel());
                         if (actual != expected) return false;
                         continue;
                     }
@@ -236,13 +240,12 @@ public class Step {
                         if (value.getType() instanceof recipe.lang.types.Number) {
                             // Go for numerical comparison
                             try {
-                                Double x = Double.valueOf(instanceConstraint.get(varName).toString());
-                                Double y = Double.valueOf(value.getValue().toString());
-                                double delta = Math.abs(x - y);
-                                if (delta > Double.MIN_VALUE) {
+                                java.math.BigDecimal x = new java.math.BigDecimal(instanceConstraint.get(varName).toString());
+                                java.math.BigDecimal y = new java.math.BigDecimal(value.getValue().toString());
+                                if (x.compareTo(y) != 0) {
                                     System.out.printf(
-                                        ">>%s-%s: Expected %s, got %s (%s)\n",
-                                        inst.getLabel(), varName, x, y, delta);
+                                        ">>%s-%s: Expected %s, got %s\n",
+                                        inst.getLabel(), varName, x, y);
                                     return false;
                                 }
                             } catch (NumberFormatException e) {
@@ -253,7 +256,8 @@ public class Step {
                         }
                         else if (value.getType() instanceof recipe.lang.types.Boolean) {
                             // Go for Boolean comparison
-                            boolean isConstraintTrue = instanceConstraint.get(varName).equals("TRUE");
+                            java.lang.Boolean isConstraintTrue = traceBoolean(instanceConstraint.get(varName));
+                            if (isConstraintTrue == null) return false;
                             if (!value.getValue().equals(isConstraintTrue)) {
                                 System.out.printf(
                                     ">>%s-%s: Expected %s, got %s\n",

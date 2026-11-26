@@ -19,7 +19,6 @@ import org.json.JSONObject;
 
 import recipe.Config;
 import recipe.lang.System;
-import recipe.lang.agents.ProcessTransition;
 import recipe.lang.utils.Pair;
 
 import java.util.logging.Logger;
@@ -53,47 +52,50 @@ public class NuXmvBatch {
     public JSONObject outputToJSON(String nuxmvSimOutput) {
         JSONObject jsonObject = new JSONObject();
 
-        if (nuxmvSimOutput.toLowerCase(Locale.ROOT).contains("keep-all = true")) {
-            // We're stuttering
+        if (Pattern.compile("(?mi)^[ \t]*progress[ \t]*=[ \t]*FALSE[ \t]*$").matcher(nuxmvSimOutput).find()) {
+            // No interaction is enabled; an unchanged transition alone is not a deadlock.
             jsonObject.put("___STUCK___", true);
         }
 
-        Set<String> receiveLabels = new HashSet<>();
+        Set<String> stateVariables = new HashSet<>();
         system.getAgentInstances().forEach(ag -> {
-            for (ProcessTransition receiveTransition : ag.getAgent().getReceiveTransitions()) {
-                String label = receiveTransition.getLabel().getLabel();
-                if (label != null && !label.equals(""))
-                    receiveLabels.add(ag.getLabel() + "-" + receiveTransition.getLabel().getLabel());
-            }
+            stateVariables.add(ag.getLabel() + "-automaton-state");
+            ag.getAgent().getStore().getAttributes().keySet().forEach(name ->
+                stateVariables.add(ag.getLabel() + "-" + name));
+            ag.getAgent().getActions().forEach(action -> {
+                if (action instanceof recipe.lang.process.BasicProcess) {
+                    String label = ((recipe.lang.process.BasicProcess) action).getLabel();
+                    if (label != null && !label.isEmpty()) stateVariables.add(ag.getLabel() + "-" + label);
+                }
+            });
+
         });
 
-        nuxmvSimOutput = nuxmvSimOutput.replaceAll("(obs[0-9]+)", "___LTOL___-$1");
+        nuxmvSimOutput = nuxmvSimOutput.replaceAll("(?m)^([ \t]*)(obs[0-9]+)([ \t]*=)", "$1___LTOL___-$2$3");
         nuxmvSimOutput = nuxmvSimOutput.replaceAll(
-                "\\bno-observations\\b",
-                "___LTOL___-no-observations");
+                "(?m)^([ \t]*)(no-observations)([ \t]*=)",
+                "$1___LTOL___-$2$3");
 
         String agentStateRegex = "(^|\\n)[^=\\n\\^]+\\-[^=\\n\\^]+ =[^=\\n$]+(\\n|$)";
         Pattern compile = Pattern.compile(agentStateRegex, Pattern.MULTILINE);
         Matcher matcher = compile.matcher(nuxmvSimOutput);
 
-        match: while (matcher.find()) {
+        while (matcher.find()) {
             String[] group = matcher.toMatchResult().group().split("=");
 
             String[] left = group[0].split("-", 2);
 
             String agent = left[0].trim();
 
-            if (agent.startsWith("falsify") || agent.startsWith("keep")) {
+            if (!stateVariables.contains(group[0].trim()) && !agent.equals("___LTOL___")) {
                 continue;
             }
 
             String var = left[1].trim();
 
             String val = group[1].trim().replaceAll(agent + "\\-", "");
+            val = NuXmvInteraction.normalise(system, group[0].trim(), val);
 
-            if (receiveLabels.contains(group[0].trim()) && val.equals("FALSE")) {
-                continue match;
-            }
 
             if (!jsonObject.has(agent)) {
                 jsonObject.put(agent, new JSONObject());
@@ -216,7 +218,7 @@ public class NuXmvBatch {
             }
             if (nextLine.startsWith("*** "))
                 continue;
-            nextLine = nextLine.replaceAll("\n *(falsify-not-|keep-all|transition |progress )[^\\n$)]*(?=$|\\r?\\n)",
+            nextLine = nextLine.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)",
                     "");
 
             if (!nextLine.isBlank()) {
