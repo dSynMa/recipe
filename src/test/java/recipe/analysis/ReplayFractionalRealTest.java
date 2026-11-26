@@ -17,13 +17,14 @@ public class ReplayFractionalRealTest {
     @Test(timeout=20000)
     public void fractionalInitialSelectionKeepsTheRealValue() throws Exception {
         var model=model("0.5");
-        NuXmvBatch batch=new NuXmvBatch(model);
-        var raw=batch.pickInitialState("TRUE");
-        assertTrue(raw.getRight(),raw.getLeft());
-        Interpreter interpreter=new Interpreter(model);
-        interpreter.init("TRUE");
-        JSONObject state=interpreter.getCurrentStep().toJSON().getJSONObject("state");
-        assertEquals(0,new java.math.BigDecimal("0.5").compareTo(new java.math.BigDecimal(state.getJSONObject("sender").getString("count"))));
+        try (NuXmvInteraction checker = new NuXmvInteraction(model)) {
+            var raw=checker.simulation_pick_init_state("TRUE");
+            assertTrue(raw.getRight(),raw.getLeft());
+            Interpreter interpreter=new Interpreter(model);
+            interpreter.init("TRUE");
+            JSONObject state=interpreter.getCurrentStep().toJSON().getJSONObject("state");
+            assertEquals(0,new java.math.BigDecimal("0.5").compareTo(new java.math.BigDecimal(state.getJSONObject("sender").getString("count"))));
+        }
     }
     @Test(timeout=20000)
     public void terminatingFractionReplayMatchesConcreteArithmetic() throws Exception {
@@ -34,30 +35,34 @@ public class ReplayFractionalRealTest {
     @Test(timeout=20000)
     public void actualFractionalBmcCounterexampleReplays() throws Exception {
         var model=model("0.25");
-        NuXmvBatch batch=new NuXmvBatch(model);
-        var raw=batch.modelCheckBmc("G !sender-sent",true,3);
-        assertTrue(raw.getRight(),raw.getLeft());
-        assertTrue(raw.getRight(),raw.getRight().contains("is false"));
-        var replay=Interpreter.ofTrace(model,raw.getRight());
-        assertEquals(2,replay.traceToJSON().size());
-        assertEquals(0,new java.math.BigDecimal("0.75").compareTo(new java.math.BigDecimal(
-            replay.getCurrentStep().toJSON().getJSONObject("state").getJSONObject("sender").getString("count"))));
+        try (NuXmvInteraction checker = new NuXmvInteraction(model)) {
+            var raw=checker.modelCheckBmc("G !sender-sent",true,3);
+            assertTrue(raw.getRight(),raw.getLeft());
+            assertTrue(raw.getRight(),raw.getRight().contains("is false"));
+            var replay=Interpreter.ofTrace(model,raw.getRight());
+            assertEquals(2,replay.traceToJSON().size());
+            assertEquals(0,new java.math.BigDecimal("0.75").compareTo(new java.math.BigDecimal(
+                replay.getCurrentStep().toJSON().getJSONObject("state").getJSONObject("sender").getString("count"))));
+        }
     }
     @Test(timeout=20000)
     public void negativeFractionalInitialStateKeepsItsSign() throws Exception {
         var model=model("(0 - 0.5)");
-        NuXmvBatch batch=new NuXmvBatch(model);
-        var raw=batch.pickInitialState("TRUE");
-        assertTrue(raw.getRight(),raw.getLeft());
-        Interpreter interpreter=new Interpreter(model);
-        interpreter.init("TRUE");
-        assertEquals(0,new java.math.BigDecimal("-0.5").compareTo(new java.math.BigDecimal(
-            interpreter.getCurrentStep().toJSON().getJSONObject("state").getJSONObject("sender").getString("count"))));
+        try (NuXmvInteraction checker = new NuXmvInteraction(model)) {
+            var raw=checker.simulation_pick_init_state("TRUE");
+            assertTrue(raw.getRight(),raw.getLeft());
+            Interpreter interpreter=new Interpreter(model);
+            interpreter.init("TRUE");
+            assertEquals(0,new java.math.BigDecimal("-0.5").compareTo(new java.math.BigDecimal(
+                interpreter.getCurrentStep().toJSON().getJSONObject("state").getJSONObject("sender").getString("count"))));
+        }
     }
     @Test(timeout=20000)
-    public void bothDecodersPreserveExactFractionValues() throws Exception {
+    public void traceAndInteractiveDecodersPreserveExactFractionValues() throws Exception {
         var model = model("0.5");
-        NuXmvBatch batch = new NuXmvBatch(model);
+        var traceModel = model;
+        java.util.function.Function<String, org.json.JSONObject> parser =
+                output -> NuXmvInteraction.outputToJSON(traceModel, output);
         NuXmvInteraction interactive = new NuXmvInteraction(model) {
             @Override public Thread startNuXmvThread() { return new Thread(); }
         };
@@ -68,14 +73,13 @@ public class ReplayFractionalRealTest {
         };
         try {
             for (var decode : java.util.List.<java.util.function.Function<String, JSONObject>>of(
-                    batch::outputToJSON, interactive::outputToJSON)) {
+                    parser, interactive::outputToJSON)) {
                 for (String[] pair : cases) {
                     assertEquals(pair[1], decode.apply("  sender-count = " + pair[0] + "\n")
                         .getJSONObject("sender").getString("count"));
                 }
             }
         } finally {
-            java.nio.file.Files.deleteIfExists(batch.path);
             java.nio.file.Files.deleteIfExists(interactive.path);
         }
     }

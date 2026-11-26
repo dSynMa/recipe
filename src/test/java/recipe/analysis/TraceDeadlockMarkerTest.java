@@ -16,31 +16,32 @@ public class TraceDeadlockMarkerTest {
             .replace("c! (@ready)", "*! (FALSE)").replace("sent := TRUE", "sent := sent");
         String output = ToNuXmv.transform(parse(model));
         assertCtl(output, "AG progress", true);
-        NuXmvBatch batch = new NuXmvBatch(parse(model));
+        NuXmvInteraction checker = new NuXmvInteraction(parse(model));
         try {
-            String trace = batch.modelCheckBmc("G !obs0", true, 2).getRight();
+            String trace = checker.modelCheckBmc("G !obs0", true, 2).getRight();
             assertTrue(trace, trace.contains("is false"));
             assertTrue(trace, trace.contains("keep-all = TRUE"));
-            assertFalse(batch.outputToJSON(trace).toString(), batch.outputToJSON(trace).has("___STUCK___"));
+            assertFalse(checker.outputToJSON(trace).toString(), checker.outputToJSON(trace).has("___STUCK___"));
         } finally {
-            Files.deleteIfExists(batch.path);
+            checker.close();
         }
     }
 
     @Test
     public void deadlockMarkerUsesProgressRatherThanStateEquality() throws Exception {
-        NuXmvBatch batch = new NuXmvBatch(parse(source("supplier-locality")));
+        var traceModel = parse(source("supplier-locality"));
+        java.util.function.Function<String, org.json.JSONObject> parser =
+                output -> NuXmvInteraction.outputToJSON(traceModel, output);
         NuXmvInteraction interactive = new NuXmvInteraction(parse(source("supplier-locality"))) {
             @Override public Thread startNuXmvThread() { return new Thread(); }
         };
         try {
             for (java.util.function.Function<String, JSONObject> decode :
-                    java.util.List.<java.util.function.Function<String, JSONObject>>of(batch::outputToJSON, interactive::outputToJSON)) {
+                    java.util.List.<java.util.function.Function<String, JSONObject>>of(parser, interactive::outputToJSON)) {
                 assertFalse(decode.apply("  keep-all = TRUE\n  progress = TRUE\n").has("___STUCK___"));
                 assertTrue(decode.apply("  progress = FALSE\n").getBoolean("___STUCK___"));
             }
         } finally {
-            Files.deleteIfExists(batch.path);
             Files.deleteIfExists(interactive.path);
         }
     }

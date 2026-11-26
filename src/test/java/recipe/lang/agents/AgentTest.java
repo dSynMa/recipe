@@ -51,9 +51,6 @@ public class AgentTest {
 
         Parser parser = Agent.parser(messageContext, communicationContext, new TypingContext()).end();
         Result r = parser.parse(agent);
-        System.out.println(r.getPosition());
-        System.out.println(agent.substring(r.getPosition()));
-        System.out.println(r.getMessage());
-        assert r.isSuccess();
+        assert r.isSuccess() : r;
     }
 }

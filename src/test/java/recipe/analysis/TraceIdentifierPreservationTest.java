@@ -8,16 +8,17 @@ import static recipe.analysis.TranslationTestModels.*;
 
 public class TraceIdentifierPreservationTest {
     private void assertBoth(String model, String trace, java.util.function.Consumer<JSONObject> assertion) throws Exception {
-        NuXmvBatch batch = new NuXmvBatch(parse(model));
+        var traceModel = parse(model);
+        java.util.function.Function<String, org.json.JSONObject> parser =
+                output -> NuXmvInteraction.outputToJSON(traceModel, output);
         NuXmvInteraction interactive = null;
         try {
             interactive = new NuXmvInteraction(parse(model)) {
                 @Override public Thread startNuXmvThread() { return new Thread(); }
             };
-            assertion.accept(batch.outputToJSON(trace));
+            assertion.accept(parser.apply(trace));
             assertion.accept(interactive.outputToJSON(trace));
         } finally {
-            Files.deleteIfExists(batch.path);
             if (interactive != null) Files.deleteIfExists(interactive.path);
         }
     }

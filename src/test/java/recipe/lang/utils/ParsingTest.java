@@ -204,8 +204,7 @@ public class ParsingTest {
 
         Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
-        System.out.println(r.getPosition() + " " + r.getMessage());
-        assert r.isSuccess();
+        assert r.isSuccess() : r;
     }
 
     @Test
@@ -219,8 +218,7 @@ public class ParsingTest {
 
         Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
-        System.out.println(r.getPosition() + " " + r.getMessage());
-        assert r.isSuccess();
+        assert r.isSuccess() : r;
     }
 
     @Test
@@ -234,8 +232,7 @@ public class ParsingTest {
 
         Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
-        System.out.println(r.getPosition() + " " + r.getMessage());
-        assert r.isSuccess();
+        assert r.isSuccess() : r;
     }
 
     @Test
@@ -252,9 +249,7 @@ public class ParsingTest {
 
         Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
-        System.out.println(r.getPosition() + " " + r.getMessage());
-        System.out.println(script.substring(r.getPosition()));
-        assert r.isSuccess();
+        assert r.isSuccess() : r;
     }
 
     @Test
@@ -271,9 +266,7 @@ public class ParsingTest {
 
         Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
-        System.out.println(r.getPosition() + " " + r.getMessage());
-        System.out.println(script.substring(r.getPosition()));
-        assert !r.isSuccess();
+        assert r.isFailure() : "Unexpectedly parsed: " + script;
     }
     @Test
     public void receiveGuardParser5() throws Exception {
@@ -289,9 +282,7 @@ public class ParsingTest {
 
         Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
-        System.out.println(r.getPosition() + " " + r.getMessage());
-        System.out.println(script.substring(r.getPosition()));
-        assert !r.isSuccess();
+        assert r.isFailure() : "Unexpectedly parsed: " + script;
     }
     @Test
     public void receiveGuardParser6() throws Exception {
@@ -302,9 +293,7 @@ public class ParsingTest {
 
         Parser parser = Parsing.receiveGuardParser(localContext).end();
         Result r = parser.parse(script);
-        System.out.println(r.getPosition() + " " + r.getMessage());
-        System.out.println(script.substring(r.getPosition()));
-        assert r.isSuccess();
+        assert r.isSuccess() : r;
     }
 
     @Test

@@ -32,14 +32,15 @@ public class ReplayBroadcastValueTest {
     public void actualBroadcastCounterexamplesReplayWithSimilarNames() throws Exception {
         for (boolean similarName : new boolean[]{false, true}) {
             var model = model(similarName);
-            NuXmvBatch batch = new NuXmvBatch(model);
-            var raw = batch.modelCheckBmc("G !receiver-received", true, 3);
-            assertTrue(raw.getRight(), raw.getLeft());
-            assertTrue(raw.getRight(), raw.getRight().contains("is false"));
-            var replay = Interpreter.ofTrace(model, raw.getRight());
-            assertEquals(2, replay.traceToJSON().size());
-            assertEquals("*", replay.getCurrentStep().toJSON().getJSONObject("state")
-                .getJSONObject("sender").getString("ch"));
+            try (NuXmvInteraction checker = new NuXmvInteraction(model)) {
+                var raw = checker.modelCheckBmc("G !receiver-received", true, 3);
+                assertTrue(raw.getRight(), raw.getLeft());
+                assertTrue(raw.getRight(), raw.getRight().contains("is false"));
+                var replay = Interpreter.ofTrace(model, raw.getRight());
+                assertEquals(2, replay.traceToJSON().size());
+                assertEquals("*", replay.getCurrentStep().toJSON().getJSONObject("state")
+                    .getJSONObject("sender").getString("ch"));
+            }
         }
     }
 
@@ -61,23 +62,24 @@ public class ReplayBroadcastValueTest {
             .getJSONObject("receiver").getString("received"));
     }
     @Test(timeout=20000)
-    public void bothDecodersDistinguishBroadcastFromSimilarNames() throws Exception {
+    public void traceAndInteractiveDecodersDistinguishBroadcastFromSimilarNames() throws Exception {
         var first = model(true);
-        NuXmvBatch batch = new NuXmvBatch(first);
+        var traceModel = first;
+        java.util.function.Function<String, org.json.JSONObject> parser =
+                output -> NuXmvInteraction.outputToJSON(traceModel, output);
         NuXmvInteraction interactive = new NuXmvInteraction(first) {
             @Override public Thread startNuXmvThread() { return new Thread(); }
         };
         model(false); // A later parse must not change the broadcast decoding.
         try {
             for (var decode : java.util.List.<java.util.function.Function<String, org.json.JSONObject>>of(
-                    batch::outputToJSON, interactive::outputToJSON)) {
+                    parser, interactive::outputToJSON)) {
                 assertEquals("*", decode.apply("  sender-ch = broadcast\n")
                     .getJSONObject("sender").getString("ch"));
                 assertEquals("broadcast1", decode.apply("  sender-ch = broadcast1\n")
                     .getJSONObject("sender").getString("ch"));
             }
         } finally {
-            java.nio.file.Files.deleteIfExists(batch.path);
             java.nio.file.Files.deleteIfExists(interactive.path);
         }
     }

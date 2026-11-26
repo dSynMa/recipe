@@ -40,9 +40,7 @@ public class SystemTest {
 
         Parser system = System.parser().end();
         Result r = system.parse(script);
-        java.lang.System.out.println(r.getMessage());
-        java.lang.System.out.println(script.substring(r.getPosition()));
-        assert r.isSuccess();
+        assert r.isSuccess() : r;
     }
 
     @Test
@@ -50,9 +48,7 @@ public class SystemTest {
         String script = String.join("\n", Files.readAllLines(Paths.get("./bigger-example-2.txt")));
         Parser system = System.parser().end();
         Result r = system.parse(script);
-        java.lang.System.out.println(r.getMessage());
-        java.lang.System.out.println(script.substring(r.getPosition()));
-        assert r.isSuccess();
+        assert r.isSuccess() : r;
     }
 
     @Test
@@ -61,8 +57,6 @@ public class SystemTest {
 
         Parser system = System.parser().end();
         Result r = system.parse(script);
-        java.lang.System.out.println(r.getMessage());
-        java.lang.System.out.println(script.substring(r.getPosition()));
-        assert r.isSuccess();
+        assert r.isSuccess() : r;
     }
 }

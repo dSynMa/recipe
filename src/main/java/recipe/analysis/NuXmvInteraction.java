@@ -1,25 +1,20 @@
 package recipe.analysis;
 
 import java.math.BigDecimal;
-
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Predicate;
 import java.util.regex.Matcher;
+import java.util.HashSet;
+import java.util.Set;
+
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.Locale;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import org.json.JSONObject;
@@ -27,148 +22,181 @@ import org.json.JSONObject;
 import recipe.Config;
 import recipe.lang.utils.Pair;
 
-public class NuXmvInteraction {
+public class NuXmvInteraction implements AutoCloseable {
 
-    PipedInputStream in = new PipedInputStream();
-    PipedOutputStream out = new PipedOutputStream(in);
-
-    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    private static final Pattern PROMPT = Pattern.compile("(?i)nuXmv *>\\s*$");
+    // Empty responses signal shutdown or EOF; a complete response always includes a prompt.
+    private final BlockingQueue<String> responses = new LinkedBlockingQueue<>();
+    private volatile IOException responseFailure;
+    private Process checkerProcess;
+    private OutputStream commandInput;
+    private Thread shutdownHook;
 
     Thread process;
+    private volatile boolean stopped;
     boolean go = false;
     boolean go_msat = false;
+    private boolean booleanModelBuilt;
+    private boolean booleanModelUnavailable;
     boolean simulationStarted = false;
-    Path path;
-    recipe.lang.System system;
+    private String simulationStateHeader;
+    final Path path;
+    final recipe.lang.System system;
+    private final NuXmvModelFile model;
+    private boolean modelReleased;
 
     public NuXmvInteraction(recipe.lang.System system) throws Exception {
-        this.system = system;
-        String nuxmvScript = ToNuXmv.transform(system);
-        if(Files.exists(Path.of("./forInteraction.smv"))) Files.delete(Path.of("./forInteraction.smv"));
-        path = Files.createFile(Path.of("./forInteraction.smv"));
-        Files.write(path, nuxmvScript.getBytes(StandardCharsets.UTF_8));
-        process = startNuXmvThread();
+        this(new NuXmvModelFile(system));
     }
 
-    public static boolean isAlive(Process p) {
+    NuXmvInteraction(NuXmvModelFile model) throws IOException {
+        this.model = model;
+        this.system = model.system;
+        this.path = model.path;
         try {
-            p.exitValue();
-            return false;
-        }
-        catch (IllegalThreadStateException e) {
-            return true;
+            process = startNuXmvThread();
+        } catch (IOException | RuntimeException startupFailure) {
+            try {
+                stopNuXmvThread();
+            } catch (IOException cleanupFailure) {
+                startupFailure.addSuppressed(cleanupFailure);
+            }
+            throw startupFailure;
         }
     }
 
-    public String execute(Predicate<String> isFinished, String command) throws IOException{
-        String outText = "";
-        byteArrayOutputStream.reset();
-        byteArrayOutputStream.flush();
-        byteArrayOutputStream.flush();
-        out.write((command + "\n").getBytes());
-        out.flush();
+    public synchronized String execute(Predicate<String> isFinished, String command) throws IOException {
+        ensureRunning();
+        commandInput.write((command + "\n").getBytes(StandardCharsets.UTF_8));
+        commandInput.flush();
 
-        while (!isFinished.test(outText)) {
-            nuxmvTurn.set(true);
-            while (nuxmvTurn.get()) {
-            }
-            byteArrayOutputStream.flush();
-            byteArrayOutputStream.flush();
-            outText += new String(byteArrayOutputStream.toByteArray());
-            outText = outText.replaceAll("(^|\\r|\\n)+\\*\\*\\*[^\\n|$]*($|\\r|\\n)+", "");
-            byteArrayOutputStream.flush();
-            byteArrayOutputStream.reset();
-            out.write(("\n").getBytes());
-            out.flush();
-            if(outText.contains("not built")){
-                return outText;
-            }
+        StringBuilder output = new StringBuilder();
+        while (true) {
+            output.append(awaitResponse());
+            String text = output.toString();
+            if (text.contains("not built") || isFinished.test(text)) return text;
         }
-        return outText;
+    }
+
+    private String awaitResponse() throws IOException {
+        ensureRunning();
+        try {
+            String response = responses.take();
+            if (response.isEmpty()) {
+                responses.offer(response);
+                throw responseFailure != null ? responseFailure : new IOException("nuXmv interaction has stopped");
+            }
+            return response;
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while waiting for nuXmv", interrupted);
+        }
     }
 
     public Pair<Boolean, String> modelCheck(String property, Boolean bmc, int steps) throws IOException {
-        if(bmc && !go_msat){
-            Pair<Boolean, String> initialise = initialise(bmc);
-            if(!initialise.getLeft()){
-                return initialise;
-            }
-        } else if(!bmc && !go){
-            Pair<Boolean, String> initialise = initialise(bmc);
-            if(!initialise.getLeft()){
-                return initialise;
-            }
+        if (bmc) return modelCheckBmc(property, true, steps);
+        if (system.isSymbolic() || booleanModelUnavailable) return modelCheckSmt(property, steps);
+        Pair<Boolean, String> initialised = initialise(false);
+        if (!initialised.getLeft()) {
+            if (!booleanEncodingFailed(initialised.getRight())) return initialised;
+            booleanModelUnavailable = true;
+            return modelCheckSmt(property, steps);
         }
-
-        Predicate<String> finished = (x) ->{
-            if(bmc){
-                if(x.contains("no counterexample found with bound " + steps)
-                        || x.replaceAll(" |\n|\r|\t|\\(|\\)", "").contains(property.trim().replaceAll(" |\n|\r|\t|\\(|\\)", "") + "is")) {
-                    return true;
-                } else{
-                    return false;
-                }
-            } else{
-                if(x.replaceAll(" |\n|\r|\t|\\(|\\)", "").contains(property.trim().replaceAll(" |\n|\r|\t|\\(|\\)", "") + "is")) {
-                    return true;
-                } else{
-                    return false;
-                }
-            }
-        };
-
-        String out = "";
-        out = execute(finished, ((system.isSymbolic() || bmc ? "msat_" : "") + "check_ltlspec" + (system.isSymbolic() || bmc ? "_bmc" : "") + " -p \"" + property + "\" "+ (system.isSymbolic() || bmc ? "-k " + steps : "")));
-        out = out.replaceAll("nuXmv > ", "").trim();
-        out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
-        return new Pair<>(true, out);
+        Pair<Boolean, String> result = check("check_ltlspec -p \"" + property + "\"");
+        return booleanEncodingFailed(result.getRight()) ? modelCheckSmt(property, steps) : result;
     }
 
-    public Pair<Boolean, String> modelCheckic3(String property, boolean bounded, int steps) throws IOException {
-        Pair<Boolean, String> initialise = initialise(true);
-        if(!initialise.getLeft()){
-            return initialise;
-        }
+    private Pair<Boolean, String> modelCheckSmt(String property, int steps) throws IOException {
+        if (steps >= 0) return modelCheckBmc(property, true, steps);
+        Pair<Boolean, String> initialised = initialise(true);
+        if (!initialised.getLeft()) return initialised;
+        return check("check_ltlspec_ic3 -i -p \"" + property + "\"");
+    }
 
-        Predicate<String> finished = (x) -> {
-            String s = x.replaceAll(" |\n|\r|\t|\\(|\\)", "");
-            if(s.contains(property.trim().replaceAll(" |\n|\r|\t|\\(|\\)", "") + "is")) {
-                return true;
-            } else if(s.contains("syntaxerror")){
-                return true;
-            } else{
-                return false;
+    public Pair<Boolean, String> modelCheckBmc(String property, boolean bounded, int steps) throws IOException {
+        Pair<Boolean, String> initialised = initialise(true);
+        if (!initialised.getLeft()) return initialised;
+        // Completeness checking permits a proof; omitting -k would silently stop at 10.
+        String command = bounded ? "msat_check_ltlspec_bmc -k " + steps
+                : "msat_check_ltlspec_sbmc_inc -c -k " + Integer.MAX_VALUE;
+        return check(command + " -p \"" + property + "\"");
+    }
+
+    public Pair<Boolean, String> modelCheckIc3(String property, boolean bounded, int steps) throws IOException {
+        Pair<Boolean, String> initialised = initialise(true);
+        if (!initialised.getLeft()) return initialised;
+        // nuXmv 2.0's finite IC3 engine does not enforce -k; use SMT for frame limits.
+        boolean useBooleanModel = !bounded && !system.isSymbolic() && !booleanModelUnavailable;
+        if (useBooleanModel && !booleanModelBuilt) {
+            String output = execute(text -> text.trim().endsWith("nuXmv >"), "build_boolean_model");
+            if (booleanEncodingFailed(output)) {
+                booleanModelUnavailable = true;
+                useBooleanModel = false;
+            } else {
+                if (hasCheckerError(output)) return new Pair<>(false, output);
+                booleanModelBuilt = true;
             }
-        };
-
-        String out = "";
-        out = execute(finished, ("check_ltlspec_ic3" + (bounded ? " -k " + steps : "") + " -p \"" + property + "\" "));
-        out = out.replaceAll("nuXmv > ", "").trim();
-        out = out.replaceAll("\n *(falsify-not-|keep-all|transition )[^\\n$)]*(?=$|\\r?\\n)", "");
-        if(out.contains("syntax error")){
-            return new Pair<>(false, out);
-        } else{
-            return new Pair<>(true, out);
         }
+        Pair<Boolean, String> result = check("check_ltlspec_ic3" + (useBooleanModel ? "" : " -i")
+                + (bounded ? " -k " + steps : "") + " -p \"" + property + "\"");
+        // A finite model can still have a property containing real arithmetic.
+        return useBooleanModel && booleanEncodingFailed(result.getRight())
+                ? modelCheckSmt(property, -1) : result;
+    }
+
+    private static boolean booleanEncodingFailed(String output) {
+        return output.contains("Impossible to build a boolean FSM with infinite precision variables")
+                || output.contains("not suitable constants for operator")
+                // nuXmv 2.0 reports unsupported FLOOR nodes as a Boolean encoder error.
+                || output.contains("bdd_enc_eval_recur:");
+    }
+
+    private Pair<Boolean, String> check(String command) throws IOException {
+        String output = execute(text -> text.trim().endsWith("nuXmv >"), command);
+        output = output.replace("nuXmv > ", "").trim();
+        return new Pair<>(!hasCheckerError(output) && hasCheckResult(output), output);
+    }
+
+    private static boolean hasCheckerError(String output) {
+        // A command may print a verdict before failing while constructing its trace.
+        return Pattern.compile("(?m)^\\s*file .+: line [0-9]+:").matcher(output).find()
+                || output.contains("*** internal error ***")
+                || output.contains("Type System Violation")
+                || output.contains("syntax error")
+                || output.contains("Parsing error")
+                || output.contains("There is a division by 0")
+                || output.contains("cannot be converted into INVARSPEC")
+                || output.contains("Impossible to build a boolean FSM with infinite precision variables")
+                || output.contains("aborting 'source");
+    }
+
+    private static boolean hasCheckResult(String output) {
+        return output.lines().anyMatch(line -> line.startsWith("-- ") &&
+                (line.endsWith(" is true") || line.endsWith(" is false")
+                || line.startsWith("-- no counterexample found with bound ")
+                || line.startsWith("-- no proof or counterexample found with bound ")));
     }
 
     public Pair<Boolean, String> initialise(boolean simulateOrBMC) throws IOException {
-        String out = execute((x) -> x.trim().endsWith("nuXmv >"),"go" + ((system.isSymbolic() || simulateOrBMC) ? "_msat" : ""));
-        if(system.isSymbolic() || simulateOrBMC){
-            out += execute((x) -> x.trim().endsWith("nuXmv >"),"build_boolean_model");
-        }
+        ensureRunning();
+        boolean smt = system.isSymbolic() || booleanModelUnavailable || simulateOrBMC;
+        if (smt ? go_msat : go) return new Pair<>(true, "");
+        String out = execute(x -> x.trim().endsWith("nuXmv >"), smt ? "go_msat" : "go");
+        // SMT simulation supports real arithmetic directly; Boolean conversion can
+        // reject valid real expressions even when every state variable is finite.
 
-        if(out.contains(" file ")) {
+        if (hasCheckerError(out)) {
             return new Pair<>(false, out);
         }
 
+        if (smt) go_msat = true;
+        else go = true;
         return new Pair<>(true, out);
     }
 
     public Pair<Boolean, String> simulation_pick_init_state(String constraint) throws IOException {
         if(!go_msat){
             Pair<Boolean, String> initialise = initialise(true);
-            initialise = initialise(true);
             if(!initialise.getLeft()){
                 return initialise;
             }
@@ -178,8 +206,11 @@ public class NuXmvInteraction {
             return new Pair<>(false, out);
         }
 
+        String state = parseLastState(out);
+        if (!state.startsWith("State:")) return new Pair<>(false, out);
+        simulationStateHeader = state.lines().findFirst().orElse("");
         simulationStarted = true;
-        return new Pair<>(true, parseLastState(out));
+        return new Pair<>(true, state);
     }
 
     private String parseLastState(String text){
@@ -204,105 +235,133 @@ public class NuXmvInteraction {
         if (out.contains("UNSAT")) {
             return new Pair<>(false, "No reachable states.");
         } else {
-            return new Pair<>(true, parseLastState(out)); //To parse next state
+            String state = parseLastState(out);
+            if (!state.startsWith("State:")) return new Pair<>(false, out);
+            String header = state.lines().findFirst().orElse("");
+            // nuXmv can print the existing trace without an UNSAT diagnostic when
+            // the constraint admits no successor. A state must actually advance.
+            if (header.equals(simulationStateHeader)) return new Pair<>(false, "No reachable states.");
+            simulationStateHeader = header;
+            return new Pair<>(true, state);
         }
+    }
+
+    private void ensureRunning() throws IOException {
+        if (stopped || Thread.currentThread().isInterrupted()) {
+            throw new IOException("nuXmv interaction has stopped");
+        }
+        if (responseFailure != null) throw responseFailure;
     }
 
     public Thread startNuXmvThread() throws IOException {
-        Thread t = new Thread(() -> {
-            try {
-                runNuXmv(path, in, byteArrayOutputStream);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-        t.setDaemon(true);
-        t.start();
-
-        //waiting for initialisation
-        while(nuxmvTurn.get()){}
-        return t;
+        checkerProcess = new ProcessBuilder(Config.getNuxmvPath(), "-int", path.toString())
+                .redirectErrorStream(true).start();
+        commandInput = checkerProcess.getOutputStream();
+        shutdownHook = new Thread(checkerProcess::destroyForcibly);
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
+        process = new Thread(this::readResponses, "nuXmv-output");
+        process.setDaemon(true);
+        process.start();
+        awaitResponse(); // Consume the startup banner and prompt before sending commands.
+        return process;
     }
 
-    public void stopNuXmvThread() throws IOException {
-        this.process.interrupt();
-    }
-
-    static AtomicReference<Boolean> nuxmvTurn = new AtomicReference<>(true);
-
-    public static void runNuXmv(Path path, InputStream inr, OutputStream outw) throws Exception {
-        String nuxmvPath = Config.getNuxmvPath();
-
-        ProcessBuilder builder = null;
-        try{
-            builder = new ProcessBuilder(nuxmvPath, "-int", path.toString());
-        } catch (Exception e){
-            if(e.getMessage().contains("The system cannot find the file specified")){
-                throw new Exception("Looked for nuxmv on PATH, in \"./nuxmv/bin/nuxmv\", and in \"./bin/nuxmv\" but could find any nuXmv executable.");
+    private void readResponses() {
+        StringBuilder pending = new StringBuilder();
+        try (Reader reader = new InputStreamReader(checkerProcess.getInputStream(), StandardCharsets.UTF_8)) {
+            char[] buffer = new char[4096];
+            int count;
+            while ((count = reader.read(buffer)) != -1) {
+                pending.append(buffer, 0, count);
+                // Prompts have no newline and may span reads. Only inspect the trailing text.
+                if (PROMPT.matcher(pending).region(Math.max(0, pending.length() - 32), pending.length()).find()) {
+                    responses.offer(pending.toString());
+                    pending.setLength(0);
+                }
             }
-            throw e;
+            if (!stopped) {
+                // EOF can precede process termination, or occur while the process is still alive.
+                // Capture a natural exit before cleanup, without waiting indefinitely for it.
+                boolean exited = checkerProcess.waitFor(100, java.util.concurrent.TimeUnit.MILLISECONDS);
+                if (!stopped) responseFailure = new IOException("nuXmv "
+                        + (exited ? "exited with status " + checkerProcess.exitValue() : "closed its output")
+                        + " before completing its response:\n" + pending);
+            }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            if (!stopped) responseFailure = new IOException("Interrupted while waiting for nuXmv to exit", interrupted);
+        } catch (IOException failure) {
+            if (!stopped) responseFailure = failure;
         } finally {
-            builder.redirectErrorStream(true);
-            Process process = builder.start();
-            Runnable runnable = () -> process.destroy();
-            Runtime.getRuntime().addShutdownHook(new Thread(runnable));
-
-            // String ttt = Files.readString(path);
-            BufferedInputStream out = (BufferedInputStream) process.getInputStream();
-            OutputStream in = process.getOutputStream();
-
-            byte[] buffer = new byte[4000];
-            List<String> textt = new ArrayList<>();
-
-            while (isAlive(process)) {
-                String text = new String(buffer, 0, buffer.length);
-                int no = out.available();
-//            buffer = out.readNBytes(40);
-//            text = new String(out.readNBytes(160));
-
-                if (no > 0) {
-                    // int n = 
-                    out.read(buffer, 0, Math.min(no, buffer.length));
-                    text = new String(buffer, 0, Math.min(no, buffer.length));
-                    Thread.sleep(10);
-
-                    if(text.trim().replaceAll(" ", "").toLowerCase(Locale.ROOT).endsWith("nuxmv>")) {
-                        textt.add(text);
-                        outw.write(String.join("", textt).getBytes(StandardCharsets.UTF_8));
-                        outw.flush();
-                        outw.flush();
-                        textt.clear();
-                        buffer = new byte[4000];
-                        nuxmvTurn.set(false);
-                        while (!nuxmvTurn.get()) {
-                        }
-                    } else{
-                        textt.add(text);
-                    }
-                }
-
-                int ni = inr.available();
-                if (ni > 0) {
-                    int n = inr.read(buffer, 0, Math.min(ni, buffer.length));
-                    text = new String(buffer, 0, n);
-                    in.write(buffer, 0, n);
-                    in.flush();
-                    buffer = new byte[4000];
-                }
-
+            responses.offer("");
+            checkerProcess.destroyForcibly();
+            try {
+                checkerProcess.waitFor();
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            } finally {
                 try {
-                    //TODO need to parse nuxmv output to see if it is ready, depends on command
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
+                    Runtime.getRuntime().removeShutdownHook(shutdownHook);
+                } catch (IllegalStateException shuttingDown) {
+                    // JVM shutdown has already started the hook.
                 }
-
             }
-
-            System.out.println(process.exitValue());
         }
     }
 
-    public JSONObject outputToJSON(String nuxmvSimOutput){
+    public void stopNuXmvThread() throws IOException {
+        stopped = true;
+        responses.offer("");
+        // Destroying the child releases both blocked reads and blocked command writes.
+        if (checkerProcess != null) checkerProcess.destroyForcibly();
+        boolean interrupted = Thread.interrupted();
+        long deadline = java.lang.System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5);
+        try {
+            while (process != null && process.isAlive()) {
+                long remaining = deadline - java.lang.System.nanoTime();
+                if (remaining <= 0) throw new IOException("nuXmv worker did not stop");
+                try {
+                    process.join(Math.max(1, java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(remaining)));
+                } catch (InterruptedException cancellation) {
+                    interrupted = true;
+                }
+            }
+        } finally {
+            try (OutputStream input = commandInput) {
+                releaseModel();
+            } finally {
+                if (interrupted) Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    private void releaseModel() throws IOException {
+        synchronized (model) {
+            if (!modelReleased) {
+                modelReleased = true;
+                model.release();
+            }
+        }
+    }
+
+    public JSONObject outputToJSON(String output) {
+        return outputToJSON(system, output);
+    }
+
+    @Override
+    public void close() throws IOException {
+        stopNuXmvThread();
+    }
+    private static final Pattern FRACTION = Pattern.compile("(-?)f'([0-9]+)/([0-9]+)");
+
+    public static JSONObject outputToJSON(recipe.lang.System system, String nuxmvSimOutput){
+        Set<String> channelFields = new HashSet<>();
+        for (var instance : system.getAgentInstances()) {
+            for (var variable : instance.getAgent().getStore().getAttributes().values()) {
+                if (variable.getType().name().equals("channel"))
+                    channelFields.add(instance.getLabel() + "-" + variable.getName());
+            }
+        }
         JSONObject jsonObject = new JSONObject();
 
         if(Pattern.compile("(?mi)^[ \t]*progress[ \t]*=[ \t]*FALSE[ \t]*$").matcher(nuxmvSimOutput).find()){
@@ -347,7 +406,7 @@ public class NuXmvInteraction {
             String var = left[1].trim();
 
             String val = group[1].trim().replaceAll(agent + "\\-", "");
-            val = NuXmvInteraction.normalise(system, group[0].trim(), val);
+            val = normalise(channelFields, group[0].trim(), val);
 
 
             if (!jsonObject.has(agent)){
@@ -359,18 +418,8 @@ public class NuXmvInteraction {
 
         return jsonObject;
     }
-    private static final Pattern FRACTION = Pattern.compile("(-?)f'([0-9]+)/([0-9]+)");
-
-    static String normalise(recipe.lang.System system, String field, String value) {
-        if (value.equals(recipe.Config.nuxmvBroadcast)) {
-            for (var instance : system.getAgentInstances()) {
-                for (var variable : instance.getAgent().getStore().getAttributes().values()) {
-                    if (variable.getType().name().equals("channel")
-                            && field.equals(instance.getLabel() + "-" + variable.getName()))
-                        return recipe.Config.broadcast;
-                }
-            }
-        }
+    private static String normalise(Set<String> channelFields, String field, String value) {
+        if (channelFields.contains(field) && value.equals(recipe.Config.nuxmvBroadcast)) return recipe.Config.broadcast;
         return normaliseNumber(value);
     }
 

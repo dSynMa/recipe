@@ -126,36 +126,30 @@ public class CLIApp
                     Files.write(Path.of(filename + "/" + agentName + ".dot"), agentDot.getBytes(StandardCharsets.UTF_8));
                 }
             }
+            Scanner scanner = new Scanner(System.in);
             NuXmvInteraction nuXmvInteraction = null;
             if (cmd.hasOption("mc")) {
                 try {
                     if (system.getSpecs() == null || system.getSpecs().size() == 0) {
                         System.out.println("No specifications to model check.");
                     } else {
-                        String out = ToNuXmv.nuxmvModelChecking(system);
-                        if (out.equals("") || system.isSymbolic()) {
-                            nuXmvInteraction = new NuXmvInteraction(system);
-                            for (int i = 0; i < system.getSpecs().size(); i++) {
-                                String spec = system.getSpecs().get(i).toString().replaceAll("^ *[^ ]+ +", "");
-                                if(!system.getSpecs().get(i).isPureLTL()){
-                                    System.out.println("LTOL model checking not supported yet, skipping model checking of:\n" + spec);
-                                    continue;
-                                }
+                        StringBuilder out = new StringBuilder();
+                        var specifications = ToNuXmv.ltolToLTLAndObservationVariables(system.getSpecs()).getLeft();
+                        nuXmvInteraction = new NuXmvInteraction(system);
+                        try {
+                            for (var specification : specifications) {
+                                String spec = specification.toNuXmv();
                                 int bound = 0;
                                 if (system.isSymbolic()) {
                                     System.out.println("There is a symbolic specification, and thus bounded model checking will be used. Please specify an integer bound: ");
-                                    Scanner scanner = new Scanner(System.in);
-                                    bound = scanner.nextInt();
-                                    scanner.close();
+                                    bound = Integer.parseInt(scanner.nextLine().trim());
                                 }
                                 Pair<Boolean, String> result = nuXmvInteraction.modelCheck(spec, false, bound);
-                                if (result.getLeft()) {
-                                    out += spec + ":\n" + result.getRight() + "\n";
-                                } else {
-                                    out += spec + " (error) :\n" + result.getRight() + "\n";
-                                }
+                                out.append(spec).append(result.getLeft() ? ":\n" : " (error) :\n")
+                                        .append(result.getRight()).append('\n');
                             }
-                            nuXmvInteraction.stopNuXmvThread();
+                        } finally {
+                            if (!cmd.hasOption("sim")) nuXmvInteraction.stopNuXmvThread();
                         }
                         System.out.println(out);
                     }
@@ -173,7 +167,7 @@ public class CLIApp
                         String out = "";
                         nuXmvInteraction = new NuXmvInteraction(system);
                         for (int i = 0; i < system.getSpecs().size(); i++) {
-                            String spec = system.getSpecs().get(i).toString().replaceAll("^ *[^ ]+ +", "");
+                            String spec = system.getSpecs().get(i).toString();
                             if(!system.getSpecs().get(i).isPureLTL()){
                                 System.out.println("LTOL model checking not supported yet, skipping model checking of:\n" + spec);
                                 continue;
@@ -192,7 +186,7 @@ public class CLIApp
                                 out += spec + " (error) :\n" + result.getRight() + "\n";
                             }
                         }
-                        nuXmvInteraction.stopNuXmvThread();
+                        if (!cmd.hasOption("sim")) nuXmvInteraction.stopNuXmvThread();
                         System.out.println(out);
                     }
                 } catch (ParseError parseError) {
@@ -206,11 +200,13 @@ public class CLIApp
                     nuXmvInteraction = new NuXmvInteraction(system);
                 }
 
-                boolean exit = false;
-                Scanner scanner = new Scanner(System.in);
                 System.out.println("You have started simulation interactive mode, exit by pressing <ctrl+c>.");
                 System.out.println("Write any constraint you wish of the initial state and press <enter> to continue.");
-                String constraint = scanner.next();
+                if (!scanner.hasNextLine()) {
+                    scanner.close();
+                    return;
+                }
+                String constraint = scanner.nextLine();
                 Pair<Boolean, String> result = nuXmvInteraction.simulation_pick_init_state(constraint);
                 if (!result.getLeft()) {
                     System.out.println(result.getRight());
@@ -218,9 +214,10 @@ public class CLIApp
                     return;
                 }
 
-                while (!exit) {
+                while (true) {
                     System.out.println("Write any constraint you wish of the next state and press <enter> to continue.");
-                    constraint = scanner.next();
+                    if (!scanner.hasNextLine()) break;
+                    constraint = scanner.nextLine();
                     result = nuXmvInteraction.simulation_next(constraint);
                     System.out.println(result.getRight());
                     if (!result.getLeft()) {
