@@ -68,7 +68,7 @@ public class BoundedInteger extends Integer {
     @Override
     public java.lang.Number interpret(String value) throws MismatchingTypeException {
         try{
-            int val = java.lang.Integer.parseInt(value);
+            int val = new java.math.BigDecimal(value).intValueExact();
             if(val >= min && val <= max){
                 return val;
             } else{

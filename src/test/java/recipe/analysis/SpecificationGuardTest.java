@@ -19,6 +19,14 @@ public class SpecificationGuardTest {
         }
     }
 
+    @Test
+    public void parsedSpecificationKeepsItsGuardAfterAnotherModelIsParsed() throws Exception {
+        recipe.lang.System first = parse(model() + "\nSPEC allowed(sender-sent);\n");
+        parse(model().replace(":= !a", ":= a"));
+        String output = ToNuXmv.transform(first);
+        assertValid(output);
+        assertCtl(output, output.substring(output.indexOf("LTLSPEC ") + 8).trim(), true);
+    }
 
     @Test
     public void guardsCanReceiveMessageFieldsInObservations() throws Exception {

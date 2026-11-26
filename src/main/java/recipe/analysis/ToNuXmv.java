@@ -355,6 +355,7 @@ public class ToNuXmv {
 
         String nuxmv = "MODULE main\n";
         String vars = "VAR\n";
+        validateActionLabels(system);
 
         String define = "DEFINE\n";
         String init = "INIT\n";

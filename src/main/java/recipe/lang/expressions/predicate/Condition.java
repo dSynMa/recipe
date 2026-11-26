@@ -146,7 +146,7 @@ public abstract class Condition implements Expression<Boolean> {
 								return null;
 							}
 						}))
-						.or(GuardReference.parser(context, condition));
+                        .or(GuardReference.parser(context, condition));
 
 		Parser arithmetic = ArithmeticExpression.parser(context);
 

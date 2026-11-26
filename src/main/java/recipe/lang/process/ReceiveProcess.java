@@ -67,13 +67,14 @@ public class ReceiveProcess extends BasicProcess {
         Parser parser = (CharacterParser.word().plus().trim()
                         .seq(CharacterParser.of(':').trim()).flatten()).optional()
                         .seq(delimetedCondition.trim())
-                        .seq((((Enum.getEnum(Config.channelLabel).valueParser()).seq(StringParser.of("?").trim())).or(localChannelVars.variableParser().seq(StringParser.of("?").trim()))))
+                        .seq(Enum.getEnum(Config.channelLabel).valueParser().or(localChannelVars.variableParser())
+                            .seq(StringParser.of("?").trim()))
                         .seq((CharacterParser.of('[').trim()))
                         .seq(localAssignment.optional(new HashMap<String, Expression>()))
                         .seq((CharacterParser.of(']').trim()))
                         .map((List<Object> values) -> {
                             String label = ((String) values.get(0));
-                            if(label != null) label = label.replace(":", "").trim();
+                            if(label != null) label = recipe.lang.utils.Parsing.declarationName(label.replace(":", "").trim());
                             int i = 1;
                             Expression<Boolean> psi = (Expression<Boolean>) values.get(i);
                             Expression channel = (Expression) ((List) values.get(i+1)).get(0);

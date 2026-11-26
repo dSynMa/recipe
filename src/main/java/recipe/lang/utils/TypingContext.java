@@ -31,6 +31,7 @@ public class TypingContext {
     }
 
     public TypingContext(Map<String, Type> varType){
+        predicates = new HashSet<>();
         types = new HashSet<>();
         this.varType = varType;
         typeVars = new HashMap<>();
@@ -46,6 +47,7 @@ public class TypingContext {
     }
 
     public TypingContext(List<TypedVariable> varss){
+        predicates = new HashSet<>();
         types = new HashSet<>();
         this.varType = new HashMap<>();
         typeVars = new HashMap<>();
@@ -63,6 +65,7 @@ public class TypingContext {
     }
 
     public TypingContext(Set<Type> types, Map<String, Type> varType, Map<Type, Set<String>> typeVars){
+        predicates = new HashSet<>();
         this.types = types;
         this.varType = varType;
         this.typeVars = typeVars;
@@ -188,7 +191,11 @@ public class TypingContext {
     }
 
     public org.petitparser.parser.Parser variableParser(){
-        return Parsing.disjunctiveWordParser(varType.keySet(), (String parsed) -> {
+        Set<String> variables = new HashSet<>();
+        for (Map.Entry<String, Type> entry : varType.entrySet()) {
+            if (!(entry.getValue() instanceof Guard)) variables.add(entry.getKey());
+        }
+        return Parsing.disjunctiveWordParser(variables, (String parsed) -> {
             return new TypedVariable(varType.get(parsed), parsed);
         });
     }

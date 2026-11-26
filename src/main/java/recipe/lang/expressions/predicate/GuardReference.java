@@ -3,6 +3,8 @@ package recipe.lang.expressions.predicate;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.CharacterParser;
+import org.petitparser.parser.primitive.StringParser;
+import org.petitparser.parser.primitive.FailureParser;
 
 import recipe.lang.definitions.GuardDefinition;
 import recipe.lang.expressions.Expression;
@@ -23,11 +25,18 @@ import java.util.function.Function;
 
 public class GuardReference extends Condition {
     private Guard guardType;
+    private final GuardDefinition definition;
     private Expression[] parametersValues;
     public static boolean resolve = false;
 
     public GuardReference(Guard guardType, Expression[] parametersValues) throws MismatchingTypeException {
+        this(guardType, parametersValues, Guard.getDefinition(guardType.name()));
+    }
+
+    private GuardReference(Guard guardType, Expression[] parametersValues, GuardDefinition definition)
+            throws MismatchingTypeException {
         this.guardType = guardType;
+        this.definition = definition;
         TypedVariable[] params = guardType.getParameters();
         if (parametersValues.length != params.length) {
             throw new MismatchingTypeException("Guard " + guardType.name() + " expects " + params.length
@@ -40,6 +49,13 @@ public class GuardReference extends Condition {
             Expression value = parametersValues[i];
 
             if (value.isValidAssignmentFor(typedVariable)) {
+                if (value instanceof TypedValue && value.getType() instanceof recipe.lang.types.Number
+                        && typedVariable.getType() instanceof recipe.lang.types.Integer) {
+                    // Integer parameters must not introduce real tokens into finite-domain equality.
+                    String integer = new java.math.BigDecimal(((TypedValue) value).getValue().toString())
+                        .toBigIntegerExact().toString();
+                    value = new TypedValue(typedVariable.getType(), integer);
+                }
                 this.parametersValues[i] = value;
             } else {
                 throw new MismatchingTypeException(value.toString() + " is not a valid value for " + typedVariable.toString() + " in guard definition " + guardType.name() + ".");
@@ -50,7 +66,7 @@ public class GuardReference extends Condition {
     @Override
     public TypedValue<Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, MismatchingTypeException {
 
-        GuardDefinition guardDef = Guard.getDefinition(guardType.name());
+        GuardDefinition guardDef = definition;
         Map<TypedVariable, TypedValue> paramsMap = new HashMap<TypedVariable, TypedValue>();
 
         // Evaluate parameters and bind values to their identifiers
@@ -92,15 +108,37 @@ public class GuardReference extends Condition {
                 .or(context.variableParser())
                 .or(Enum.generalValueParser());
 
-        Parser guard = context.guardNameParser();
-
-        Parser parser = (guard.map((Object v) -> {
-            return v;
-        }))
+        Parser genericArguments = expression.separatedBy(CharacterParser.of(',').trim()).trim()
+            .optional(new ArrayList<>());
+        Parser parser = FailureParser.withMessage("No guard call in scope");
+        for (Map.Entry<String, recipe.lang.types.Type> entry : context.getVarType().entrySet()) {
+            if (!(entry.getValue() instanceof Guard)) continue;
+            Guard type = (Guard) entry.getValue();
+            // Each call parser has a fixed argument position; nested calls cannot change it.
+            Parser typedArguments = StringParser.of("").map(ignored -> new ArrayList<Expression>());
+            TypedVariable[] parameters = type.getParameters();
+            for (int index = 0; index < parameters.length; index++) {
+                TypedVariable parameter = parameters[index];
+                Parser argument = expression;
+                if (parameter.getType() instanceof Enum) {
+                    argument = context.variableParser().or(((Enum) parameter.getType()).valueParser())
+                        .or(expression).trim();
+                }
+                Parser separator = index == 0
+                    ? StringParser.of("") : CharacterParser.of(',').trim();
+                typedArguments = typedArguments.seq(separator).seq(argument).map((List<Object> values) -> {
+                    List<Expression> arguments = new ArrayList<>((List<Expression>) values.get(0));
+                    arguments.add((Expression) values.get(2));
+                    return arguments;
+                });
+            }
+            // Keep the generic fallback so malformed arity still receives the usual diagnostic.
+            Parser arguments = typedArguments.seq(CharacterParser.of(')').trim().and()).pick(0)
+                .or(genericArguments);
+            Parser guard = StringParser.of(entry.getKey()).seq(CharacterParser.word().not()).flatten();
+            Parser call = guard
                 .seq(CharacterParser.of('(').trim())
-                .seq(((expression).separatedBy(CharacterParser.of(',').trim()).trim()).optional(new ArrayList<>()).map((Object v) -> {
-                    return v;
-                }))
+                .seq(arguments)
                 .seq(CharacterParser.of(')').trim())
                 .map((List<Object> values) -> {
                     String label = (String) values.get(0);
@@ -126,17 +164,42 @@ public class GuardReference extends Condition {
                             }
                         }
 
-                        return new GuardReference(guardType, paramValsTyped.toArray(new Expression[paramValsTyped.size()]));
+                        GuardReference reference = new GuardReference(guardType,
+                            paramValsTyped.toArray(new Expression[paramValsTyped.size()]));
+                        // A macro must not introduce free variables unavailable at its call site.
+                        reference.relabel(variable -> {
+                            if (context.get(variable.getName()) == null) {
+                                throw new IllegalArgumentException("Variable " + variable.getName()
+                                    + " is not available in guard call " + label);
+                            }
+                            TypedVariable available = new TypedVariable(context.get(variable.getName()), variable.getName());
+                            if (!available.isValidAssignmentFor(variable)) {
+                                throw new IllegalArgumentException("Variable " + variable.getName()
+                                    + " has incompatible type in guard call " + label + ": expected "
+                                    + variable.getType().name() + ", got " + available.getType().name());
+                            }
+                            return variable;
+                        });
+                        // Store keys include types: compatible free variables must use the caller's
+                        // declared type, while formal parameters retain their argument bindings.
+                        List<TypedVariable> formalParameters = Arrays.asList(params);
+                        Expression<Boolean> boundTemplate = reference.definition.getTemplate().relabel(variable ->
+                            formalParameters.contains(variable) ? variable
+                                : new TypedVariable(context.get(variable.getName()), variable.getName()));
+                        return new GuardReference(guardType, reference.parametersValues,
+                            new GuardDefinition(guardType, boundTemplate));
                     } catch (Exception e){
                         throw new IllegalArgumentException("Invalid call to guard " + label + ": " + e.getMessage(), e);
                     }
                 });
 
+            parser = parser.or(call);
+        }
         return parser;
     }
 
     public Expression<Boolean> unpack() throws RelabellingTypeException, MismatchingTypeException {
-        GuardDefinition guardDefinition = Guard.getDefinition(this.guardType.name());
+        GuardDefinition guardDefinition = definition;
         Expression<Boolean> template = guardDefinition.getTemplate();
         List params = List.of(guardDefinition.getType().getParameters());
         return template.relabel((x) -> {

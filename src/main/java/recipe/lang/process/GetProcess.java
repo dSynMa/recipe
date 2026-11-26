@@ -92,7 +92,7 @@ public class GetProcess extends BasicProcess {
                             Expression<Boolean> psi = (Expression<Boolean>) values.get(1);
                             Expression<Boolean> locationPredicate = (Expression<Boolean>) values.get(3);
                             Map<String, Expression> update = (Map<String, Expression>) values.get(5);
-                            if(label != null) label = label.replace(":", "").trim();
+                            if(label != null) label = recipe.lang.utils.Parsing.declarationName(label.replace(":", "").trim());
                             GetProcess action = new GetProcess(label, psi, locationPredicate, update);
                             return action;
                         });

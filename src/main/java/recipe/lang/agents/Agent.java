@@ -196,6 +196,7 @@ public class Agent {
     public static org.petitparser.parser.Parser parser(TypingContext messageContext,
                                                        TypingContext communicationContext,
                                                        TypingContext guardDefinitionContext) throws Exception {
+        java.util.List<String> channelNames = recipe.lang.types.Enum.getEnum(recipe.Config.channelLabel).getValues();
         SettableParser parser = SettableParser.undefined();
         Function<TypingContext, Parser> process = (TypingContext localContext) -> {
             try {
@@ -219,7 +220,14 @@ public class Agent {
         parser.set((StringParser.of("agent").trim().or(FailureParser.withMessage("Could not parse agent definition.")))
                     .seq(name.or(FailureParser.withMessage("Could not parse agent name.")))
                     .seq(Parsing.labelledParser("local", Parsing.typedVariableList().optional(new ArrayList<>()))
+                            .optional(new ArrayList<>())
                             .mapWithSideEffects((List<TypedVariable> values) -> {
+                                for (TypedVariable variable : values) {
+                                    if (channelNames.contains(variable.getName())) {
+                                        throw new IllegalArgumentException("Local variable '" + variable.getName()
+                                            + "' conflicts with a declared channel constant.");
+                                    }
+                                }
                                 localContext.get().clear();
                                 localContext.get().setAll(new TypingContext(values));
                                 Map<String, TypedVariable> vars = new HashMap();
@@ -227,7 +235,7 @@ public class Agent {
                                     vars.put(var.getName(), new TypedVariable(var.getType(), var.getName()));
                                 }
                                 return vars;
-                            }).optional(new HashMap<>())) //.or(LazyParser.failingParser(nameString, "Could not parse agent's local definition."))))
+                            }))
                     .seq(Parsing.labelledParser("init", new LazyParser<TypingContext>((TypingContext context) -> {
                         try {
                             return Condition.parser(context).map((Object v) -> {
@@ -258,7 +266,7 @@ public class Agent {
                         return process.apply(TypingContext.union(guardAndLocalContext.getLeft(), guardAndLocalContext.getRight()));
                     }, new Pair(guardDefinitionContext, localContext.get())).trim().or(LazyParser.failingParser(nameString, "Could not parse agent's process definition.")))
                 .map((List<Object> values) -> {
-                    String agentName = ((String) values.get(1)).trim();
+                    String agentName = Parsing.declarationName(((String) values.get(1)).trim());
                     Map<String, TypedVariable> localVars = (Map<String, TypedVariable>) values.get(2);
                     Store store = null;
                     try {

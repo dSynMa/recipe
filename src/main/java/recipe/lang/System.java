@@ -79,6 +79,13 @@ public class System{
     public System(Map<String, Type> messageStructure, Map<String, Type> communicationVariables,
                   Map<String, Type> guardDefinitions, Set<Agent> agents,
                   List<AgentInstance> agentsInstances, List<LTOL> specs) throws Exception {
+        for (String reserved : new String[]{"sender", Config.channelLabel}) {
+            if (messageStructure.containsKey(reserved) || communicationVariables.containsKey(reserved)
+                    || guardDefinitions.containsKey(reserved)) {
+                throw new IllegalArgumentException("Variable '" + reserved
+                    + "' is reserved for observation metadata; rename the message variable, communication variable, or guard.");
+            }
+        }
         if(!validate(messageStructure, communicationVariables, guardDefinitions, agents)){
             throw new Exception("Message and communication variables, and guard definition names need to be disjoint, " +
                     "and they also need to be disjoin with each agent's local variables.");
@@ -211,7 +218,7 @@ public class System{
                                             return agentInstances;
                                         }).or(StringParser.of("system").and().seq(FailureParser.withMessage("Error in system definition.")))
                         )
-                        .seq(((StringParser.of("SPEC "))
+                        .seq(((StringParser.of("SPEC").seq(CharacterParser.whitespace().plus()))
                                 .flatten()
                                 .seq(CharacterParser.noneOf(";").plus()).flatten())
                              .delimitedBy((CharacterParser.of(';').or(CharacterParser.of('\n'))).trim())
@@ -223,16 +230,12 @@ public class System{
                             Map<String, Type> guardDefinitions = (Map<String, Type>) values.get(4);
                             List<AgentInstance> agentInstances = (List) values.get(6);
 
-                            List<String> specsStrings = new ArrayList<>();
+                            List<String> specChunks = new ArrayList<>();
                             for(Object obj : (List<Object>) values.get(7)){
                                 if(obj.getClass().equals(String.class)){
-                                    String[] spec = ((String) obj).split("(?=SPEC)");
-                                    specsStrings.addAll(List.of(spec));
+                                    specChunks.add((String) obj);
                                 }
                             }
-
-                            specsStrings.removeIf(x -> x.trim().equals(""));
-                            specsStrings.forEach(x -> x.trim());
 
                             System system = null;
                             try {
@@ -269,6 +272,10 @@ public class System{
 
                                     if(entry.getValue().size() > 0) {
                                         Agent agent = entry.getValue().get(0).getAgent();
+                                        if (agent.getStore().getAttributes().containsKey("name")) {
+                                            throw new IllegalArgumentException("Agent " + agent.getName()
+                                                    + " declares local 'name', which is reserved for its instance identity.");
+                                        }
                                         Map<String, TypedVariable> name = new HashMap<>();
                                         TypedVariable nameVar = new TypedVariable(agentType, "name");
                                         name.put("name", nameVar);
@@ -284,6 +291,15 @@ public class System{
 
                                 List<LTOL> ltolSpecs = new ArrayList<>();
                                 try {
+                                    // Let the formula grammar distinguish declaration headers from
+                                    // identifiers and guard calls containing the word SPEC.
+                                    Parser declarations = StringParser.of("SPEC")
+                                        .seq(CharacterParser.whitespace().plus())
+                                        .seq(LTOL.parser(system)).flatten().trim().plus().end();
+                                    List<String> specsStrings = new ArrayList<>();
+                                    for (String chunk : specChunks) {
+                                        specsStrings.addAll((List<String>) declarations.parse(chunk).get());
+                                    }
                                     Parser ltolParser = LTOL.parser(system).end();
 
                                     for(String spec : specsStrings){

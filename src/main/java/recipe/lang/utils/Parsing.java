@@ -39,8 +39,17 @@ public class Parsing {
         "unsigned", "URGENT", "uwconst", "V", "VALID", "VAR", "Word", "word", "word1", "WRITE",
         "X", "xnor", "xor", "Y", "Z", "process");
 
+    public static String declarationName(String name) {
+        if (name.equalsIgnoreCase("true") || name.equalsIgnoreCase("false")) {
+            throw new IllegalArgumentException("Invalid name '" + name
+                + "': Boolean literals are reserved keywords.");
+        }
+        return name;
+    }
+
     /** Check names emitted as unqualified nuXmv constants, not prefixed local variables. */
     public static String constantName(String name) {
+        declarationName(name);
         if (name.contains("-")) {
             throw new IllegalArgumentException("Invalid constant '" + name
                 + "': hyphens are reserved for qualified references.");
@@ -69,11 +78,11 @@ public class Parsing {
         allowedSorted.sort(Comparator.comparingInt(String::length));
         Collections.reverse(allowedSorted);
 
-        org.petitparser.parser.Parser parser = (StringParser.of(allowed.get(0)).seq(CharacterParser.word().not())).flatten();
-        for (int i = 1; i < allowed.size(); i++) {
+        org.petitparser.parser.Parser parser = (StringParser.of(allowedSorted.get(0)).seq(CharacterParser.word().not())).flatten();
+        for (int i = 1; i < allowedSorted.size(); i++) {
             //DOC: .seq(CharacterParser.word().not()) is added with each parser to allow for parsing when
             // one element in allowed is a prefix of another.
-            parser = parser.or((StringParser.of(allowed.get(i)).seq(CharacterParser.word().not())).flatten());
+            parser = parser.or((StringParser.of(allowedSorted.get(i)).seq(CharacterParser.word().not())).flatten());
         }
 
         return parser;
@@ -110,7 +119,7 @@ public class Parsing {
         return new LazyParser<Type>(ignored -> {
             Type type = assignmentType.get();
             if (type instanceof Enum) {
-                // Enum literals may also spell Boolean literals or values of another enum.
+                // Enum literals may also spell values of another enum.
                 // In-scope variables retain precedence over literal names.
                 return expressionContext.variableParser().or(((Enum) type).valueParser())
                     .or(generalExpression).trim();
@@ -178,10 +187,12 @@ public class Parsing {
     public static Parser numberType(){
         return (StringParser.ofIgnoringCase("integer")
                 .or(StringParser.ofIgnoringCase("int"))
+                .seq(CharacterParser.word().not())
                 .map((Object value) -> {
                     return recipe.lang.types.Integer.getType();
                 }))
                 .or(StringParser.ofIgnoringCase("real")
+                        .seq(CharacterParser.word().not())
                         .map((Object value) -> {
                             return recipe.lang.types.Real.getType();
                         }))
@@ -228,7 +239,7 @@ public class Parsing {
         return typedVariableList(numberType().or(enumType()).or(booleanType()));
     }
 
-    static org.petitparser.parser.Parser stringParser = word().plus().seq(CharacterParser.word().not()).flatten().trim();
+    static org.petitparser.parser.Parser stringParser = word().plus().seq(CharacterParser.word().not()).flatten().trim().map((String name) -> declarationName(name));
 
     public static org.petitparser.parser.Parser variableNameParser(){
         return stringParser;
@@ -335,7 +346,7 @@ public class Parsing {
                             .seq(CharacterParser.word().plus().trim().flatten().separatedBy(CharacterParser.of(',').trim()))
                             .seq(CharacterParser.of('}').trim())
                             .map((List<Object> values) -> {
-                                String enumName = ((String) values.get(1)).trim();
+                                String enumName = declarationName(((String) values.get(1)).trim());
                                 List<String> enumValues = new ArrayList<>();
                                 for(Object v : (List<Object>) values.get(3)){
                                     if(v.getClass().equals(String.class)){
