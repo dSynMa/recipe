@@ -55,7 +55,7 @@ final class TranslationTestModels {
             line.startsWith("-- invariant ") && line.endsWith(" is true")));
     }
 
-    private static String runNuXmv(String output, String script) throws Exception {
+    static String runNuXmv(String output, String script) throws Exception {
         Path executable = Path.of("nuxmv/bin/nuxmv").toAbsolutePath();
         assumeTrue("nuXmv executable is required for semantic checks", Files.isExecutable(executable));
         Path directory = Files.createTempDirectory("recipe-ctl-");

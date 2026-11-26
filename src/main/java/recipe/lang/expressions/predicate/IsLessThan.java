@@ -44,6 +44,17 @@ public class IsLessThan extends Condition {
 		return false;
 	}
 
+    @Override
+    public Expression<Boolean> definednessCondition()
+            throws RelabellingTypeException, MismatchingTypeException {
+        return new And(lhs.definednessCondition(), rhs.definednessCondition());
+    }
+
+    @Override
+    public String toNuXmv() {
+        return lhs.toNuXmv() + " < " + rhs.toNuXmv();
+    }
+
 	@Override
 	public String toString() {
 		return lhs + " < " + rhs.toString();
@@ -115,10 +126,4 @@ public class IsLessThan extends Condition {
 	public Condition removePreds(){
 		return this;
 	}
-
-    @Override
-    public String toNuXmv() {
-        return lhs.toNuXmv() + " < " + rhs.toNuXmv();
-    }
-
 }

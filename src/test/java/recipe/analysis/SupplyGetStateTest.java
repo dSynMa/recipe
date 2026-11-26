@@ -16,11 +16,11 @@ public class SupplyGetStateTest {
         int checked = 0;
         for (AgentInstance instance : model.getAgentInstances()) {
             for (ProcessTransition transition : instance.getAgent().getGetTransitions()) {
-                String name = "sender-send-" + instance.getLabel() + "-" + transition.getLabel().getLabel();
-                String sourceCondition = "(" + instance.getLabel() + "-automaton-state = "
-                    + transition.getSource() + " &";
-                assertTrue(name, definition(output, name).contains(sourceCondition));
-                assertTrue(name + "-progress", definition(output, name + "-progress").contains(sourceCondition));
+                String state = instance.getLabel() + "-automaton-state";
+                String event = instance.getLabel() + "-" + transition.getLabel().getLabel();
+                // The action event must never be entered from another source state.
+                assertCtl(output, "AG (" + state + " != " + transition.getSource()
+                    + " -> AX !" + event + ")", true);
                 checked++;
             }
         }

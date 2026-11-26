@@ -74,6 +74,11 @@ public class TypedVariable<T extends Type> implements Expression<T> {
     }
 
     @Override
+    public String toNuXmv() {
+        return name;
+    }
+
+    @Override
     public String toString() {
         return name;
     }
@@ -103,10 +108,4 @@ public class TypedVariable<T extends Type> implements Expression<T> {
     public Expression<T> removePreds(){
         return this;
     }
-
-    @Override
-    public String toNuXmv() {
-        return name;
-    }
-
 }

@@ -1,0 +1,35 @@
+MODULE main
+VAR
+	sender-name : {sender};
+	sender-sent : boolean;
+	sender-automaton-state : {0};
+	first-name : {first,second};
+	first-received : boolean;
+	first-automaton-state : {0};
+	second-name : {first,second};
+	second-received : boolean;
+	second-automaton-state : {0};
+DEFINE
+	falsify-not-sender := TRUE;
+	falsify-sender := TRUE;
+	keep-all-sender := (TRUE) & ((next(sender-name)) = (sender-name)) & ((next(sender-automaton-state)) = (sender-automaton-state)) & ((next(sender-sent)) = (sender-sent)) & ((next(sender-automaton-state)) = (sender-automaton-state));
+	falsify-not-first := TRUE;
+	falsify-first := TRUE;
+	keep-all-first := (TRUE) & ((next(first-name)) = (first-name)) & ((next(first-automaton-state)) = (first-automaton-state)) & ((next(first-received)) = (first-received)) & ((next(first-automaton-state)) = (first-automaton-state));
+	falsify-not-second := TRUE;
+	falsify-second := TRUE;
+	keep-all-second := (TRUE) & ((next(second-name)) = (second-name)) & ((next(second-automaton-state)) = (second-automaton-state)) & ((next(second-received)) = (second-received)) & ((next(second-automaton-state)) = (second-automaton-state));
+	keep-all := (TRUE) & (keep-all-sender) & (keep-all-first) & (keep-all-second);
+	no-observations := TRUE;
+	sender-unlabelled_supply_0-first-unlabelled_get_1 := ((((sender-automaton-state) = (0)) & (TRUE)) & ((!(first-received = TRUE)) = TRUE) & (((first-automaton-state) = (0)) & (TRUE = TRUE)) & (TRUE)) & ((falsify-sender) & (no-observations) & ((next(sender-automaton-state)) = (0)) & ((next(sender-sent)) = (TRUE)) & ((next(sender-name)) = (sender-name))) & ((falsify-first) & ((next(first-received)) = (TRUE = TRUE)) & ((next(first-name)) = (first-name)) & ((next(first-automaton-state)) = (0)) & (keep-all-second));
+	sender-unlabelled_supply_0-first-unlabelled_get_1-progress := (((sender-automaton-state) = (0)) & (TRUE)) & ((!(first-received = TRUE)) = TRUE) & (((first-automaton-state) = (0)) & (TRUE = TRUE)) & (TRUE);
+	sender-unlabelled_supply_2-second-unlabelled_get_3 := ((((sender-automaton-state) = (0)) & (TRUE)) & ((!(second-received = TRUE)) = TRUE) & (((second-automaton-state) = (0)) & (TRUE = TRUE)) & (TRUE)) & ((falsify-sender) & (no-observations) & ((next(sender-automaton-state)) = (0)) & ((next(sender-sent)) = (TRUE)) & ((next(sender-name)) = (sender-name))) & ((falsify-second) & ((next(second-received)) = (TRUE = TRUE)) & ((next(second-name)) = (second-name)) & ((next(second-automaton-state)) = (0)) & (keep-all-first));
+	sender-unlabelled_supply_2-second-unlabelled_get_3-progress := (((sender-automaton-state) = (0)) & (TRUE)) & ((!(second-received = TRUE)) = TRUE) & (((second-automaton-state) = (0)) & (TRUE = TRUE)) & (TRUE);
+	transition := (FALSE) | ((sender-unlabelled_supply_0-first-unlabelled_get_1) | (sender-unlabelled_supply_2-second-unlabelled_get_3));
+	progress := (sender-unlabelled_supply_0-first-unlabelled_get_1-progress) | (sender-unlabelled_supply_2-second-unlabelled_get_3-progress);
+CONSTANTS
+	sender, c, broadcast, first, second;
+INIT
+((sender-automaton-state) = (0)) & (!(sender-sent = TRUE)) & ((TRUE = TRUE) & (sender-name = sender)) & ((first-automaton-state) = (0)) & (!(first-received = TRUE)) & ((TRUE = TRUE) & (first-name = first)) & ((second-automaton-state) = (0)) & (!(second-received = TRUE)) & ((TRUE = TRUE) & (second-name = second))
+TRANS
+	(transition) | ((!(progress)) & (keep-all) & (no-observations))

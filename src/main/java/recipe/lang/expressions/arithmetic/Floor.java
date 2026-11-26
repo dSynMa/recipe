@@ -8,6 +8,7 @@ import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.store.Store;
 import recipe.lang.types.Number;
+import recipe.lang.types.Boolean;
 import recipe.lang.utils.exceptions.*;
 
 /** Internal arithmetic operation used to check integer update feasibility. */
@@ -16,6 +17,12 @@ public class Floor extends ArithmeticExpression {
 
     public Floor(Expression<Number> operand) {
         this.operand = operand;
+    }
+
+    @Override
+    public Expression<Boolean> definednessCondition()
+            throws RelabellingTypeException, MismatchingTypeException {
+        return operand.definednessCondition();
     }
 
     @Override
@@ -62,14 +69,13 @@ public class Floor extends ArithmeticExpression {
     }
 
     @Override
-    public String toString() {
-        return isIntegral(operand) ? operand.toString() : "floor(" + operand + ")";
-    }
-
-    @Override
     public String toNuXmv() {
         String value = operand.toNuXmv();
         return isIntegral(operand) ? value : "floor(" + value + ")";
     }
 
+    @Override
+    public String toString() {
+        return isIntegral(operand) ? operand.toString() : "floor(" + operand + ")";
+    }
 }

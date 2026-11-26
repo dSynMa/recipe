@@ -16,6 +16,11 @@ public class Not extends LTOL{
 
     public LTOL getLTOL() { return ltol; }
 
+    @Override
+    public String toNuXmv() {
+        return "!(" + ltol.toNuXmv() + ")";
+    }
+
     public String toString(){
         return "!(" + ltol + ")";
     }
@@ -37,10 +42,4 @@ public class Not extends LTOL{
     public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return new Not(ltol.toLTOLwithoutQuantifiers());
     }
-
-    @Override
-    public String toNuXmv() {
-        return "!(" + ltol.toNuXmv() + ")";
-    }
-
 }

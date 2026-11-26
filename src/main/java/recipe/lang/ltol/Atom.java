@@ -28,6 +28,11 @@ public class Atom extends LTOL{
     }
 
     @Override
+    public String toNuXmv() {
+        return condition.toNuXmv();
+    }
+
+    @Override
     public String toString() {
         return condition.toString();
     }
@@ -49,10 +54,4 @@ public class Atom extends LTOL{
     public LTOL toLTOLwithoutQuantifiers() throws RelabellingTypeException, InfiniteValueTypeException, MismatchingTypeException {
         return this;
     }
-
-    @Override
-    public String toNuXmv() {
-        return condition.toNuXmv();
-    }
-
 }

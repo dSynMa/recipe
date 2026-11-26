@@ -11,7 +11,7 @@ public class ObservationInitializationTest {
         String output = ToNuXmv.transform(parse(source("negated-observation")));
         String init = output.substring(output.indexOf("INIT\n") + 5, output.indexOf("TRANS\n"));
         assertFalse(init.stripLeading().startsWith("&"));
-        assertEquals(1, init.split("obs0 = FALSE", -1).length - 1);
+        assertEquals(1, java.util.regex.Pattern.compile("\\bobs0\\b").matcher(init).results().count());
         assertValid(output);
         assertCtl(output, "!obs0", true);
     }

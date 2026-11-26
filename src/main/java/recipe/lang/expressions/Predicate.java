@@ -37,6 +37,12 @@ public class Predicate implements Expression<recipe.lang.types.Boolean> {
     }
 
     @Override
+    public Expression<recipe.lang.types.Boolean> definednessCondition()
+            throws RelabellingTypeException, MismatchingTypeException {
+        return new Predicate(name, input.definednessCondition());
+    }
+
+    @Override
     public TypedValue<recipe.lang.types.Boolean> valueIn(Store store) throws AttributeNotInStoreException, AttributeTypeException, NotImplementedYetException, MismatchingTypeException {
         // throw new NotImplementedYetException("Predicate.valueIn not implemented yet");
         return input.valueIn(store);
@@ -71,6 +77,11 @@ public class Predicate implements Expression<recipe.lang.types.Boolean> {
     }
 
     @Override
+    public String toNuXmv() {
+        return name + "(" + input.toNuXmv() + ")";
+    }
+
+    @Override
     public String toString() {
         return name + "(" + input.toString() + ")";
     }
@@ -94,10 +105,4 @@ public class Predicate implements Expression<recipe.lang.types.Boolean> {
     public Expression<recipe.lang.types.Boolean> removePreds(){
         return this.input;
     }
-
-    @Override
-    public String toNuXmv() {
-        return name + "(" + input.toNuXmv() + ")";
-    }
-
 }

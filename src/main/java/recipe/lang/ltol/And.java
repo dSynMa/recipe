@@ -20,6 +20,11 @@ public class And extends LTOL{
     public LTOL getLeft() { return left; }
     public LTOL getRight() { return right; }
 
+    @Override
+    public String toNuXmv() {
+        return "((" + left.toNuXmv() + ") & (" + right.toNuXmv() + "))";
+    }
+
     public String toString(){
         return "((" + left + ") & (" + right + "))";
     }
@@ -44,10 +49,4 @@ public class And extends LTOL{
     public LTOL toLTOLwithoutQuantifiers() throws Exception {
         return new And(left.toLTOLwithoutQuantifiers(), right.toLTOLwithoutQuantifiers());
     }
-
-    @Override
-    public String toNuXmv() {
-        return "((" + left.toNuXmv() + ") & (" + right.toNuXmv() + "))";
-    }
-
 }

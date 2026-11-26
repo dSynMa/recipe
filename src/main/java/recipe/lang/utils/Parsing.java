@@ -68,7 +68,6 @@ public class Parsing {
         return name;
     }
 
-
     public static org.petitparser.parser.Parser disjunctiveStringParser(List<String> allowed) {
         if(allowed == null || allowed.size() == 0){
             return FailureParser.withMessage("No variables of expected type.");

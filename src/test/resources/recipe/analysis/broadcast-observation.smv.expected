@@ -1,0 +1,30 @@
+MODULE main
+VAR
+	obs0 : boolean;
+	sender-name : {sender};
+	sender-sent : boolean;
+	sender-automaton-state : {0};
+	receiver-name : {receiver};
+	receiver-received : boolean;
+	receiver-automaton-state : {0};
+	receiver-receive : boolean;
+DEFINE
+	falsify-not-sender := TRUE;
+	falsify-sender := TRUE;
+	keep-all-sender := (TRUE) & ((next(sender-name)) = (sender-name)) & ((next(sender-automaton-state)) = (sender-automaton-state)) & ((next(sender-sent)) = (sender-sent)) & ((next(sender-automaton-state)) = (sender-automaton-state));
+	falsify-not-receiver-receive := TRUE;
+	falsify-not-receiver := (TRUE) & ((next(receiver-receive)) = (FALSE));
+	falsify-receiver := (TRUE) & ((next(receiver-receive)) = (FALSE));
+	keep-all-receiver := (TRUE) & ((next(receiver-name)) = (receiver-name)) & ((next(receiver-automaton-state)) = (receiver-automaton-state)) & ((next(receiver-received)) = (receiver-received)) & ((next(receiver-automaton-state)) = (receiver-automaton-state)) & ((next(receiver-receive)) = (FALSE));
+	keep-all := (TRUE) & (keep-all-sender) & ((next(receiver-receive)) = (FALSE)) & (keep-all-receiver);
+	no-observations := (TRUE) & ((next(obs0)) = (FALSE));
+	transition := (((sender-automaton-state) = (0)) & ((TRUE) & ((falsify-sender) & ((next(sender-automaton-state)) = (0)) & ((next(sender-sent)) = (TRUE)) & ((next(sender-name)) = (sender-name)) & ((next(obs0)) = (TRUE))) & ((((receiver-automaton-state) = (0)) & ((broadcast) = (broadcast)) & (keep-all-receiver) & (!((TRUE) & ((broadcast) = (broadcast))))) | (((TRUE) & ((!(receiver-received = TRUE)) = TRUE)) & (((receiver-automaton-state) = (0)) & (((TRUE) & ((broadcast) = (broadcast))) & (((next(receiver-received)) = (TRUE = TRUE)) & ((next(receiver-name)) = (receiver-name)) & ((next(receiver-receive)) = (TRUE)) & (falsify-not-receiver-receive) & ((next(receiver-automaton-state)) = (0)))))) | ((!(TRUE)) & (keep-all-receiver)) | ((((broadcast) = (broadcast)) & (!((!(receiver-received = TRUE)) = TRUE))) & (keep-all-receiver))))) | (FALSE);
+	sender-send := ((sender-automaton-state) = (0)) & ((TRUE) & ((((receiver-automaton-state) = (0)) & ((broadcast) = (broadcast)) & (!((TRUE) & ((broadcast) = (broadcast))))) | (((TRUE) & ((!(receiver-received = TRUE)) = TRUE)) & (((receiver-automaton-state) = (0)) & ((TRUE) & ((broadcast) = (broadcast))))) | (!(TRUE)) | (((broadcast) = (broadcast)) & (!((!(receiver-received = TRUE)) = TRUE)))));
+	progress := ((sender-automaton-state) = (0)) & ((TRUE) & ((((receiver-automaton-state) = (0)) & ((broadcast) = (broadcast)) & (!((TRUE) & ((broadcast) = (broadcast))))) | (((TRUE) & ((!(receiver-received = TRUE)) = TRUE)) & (((receiver-automaton-state) = (0)) & ((TRUE) & ((broadcast) = (broadcast))))) | (!(TRUE)) | (((broadcast) = (broadcast)) & (!((!(receiver-received = TRUE)) = TRUE)))));
+CONSTANTS
+	sender, c, broadcast, receiver;
+INIT
+((obs0) = (FALSE)) & ((sender-automaton-state) = (0)) & (!(sender-sent = TRUE)) & ((TRUE = TRUE) & (sender-name = sender)) & ((receiver-automaton-state) = (0)) & (!(receiver-received = TRUE)) & ((TRUE = TRUE) & (receiver-name = receiver)) & ((receiver-receive) = (FALSE))
+TRANS
+	(transition) | ((!(progress)) & (keep-all) & (no-observations))
+LTLSPEC G(((!(X(((obs0) & (TRUE = TRUE))))) | (F(receiver-received = TRUE))))
