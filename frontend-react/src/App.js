@@ -49,7 +49,10 @@ function App() {
   const [bound, setBound] = useState(-1);
   const [vloading, setVLoading] = useState(false);
   const [bloading, setBLoading] = useState(false);
+  const [cancellingBuild, setCancellingBuild] = useState(false);
+  const activeBuild = useRef(null);
   const [mcloading, setMCLoading] = useState(false);
+  const [mcstopping, setMCStopping] = useState(false);
   const [simloading, setSimLoading] = useState(false);
   const [resetsimloading, setResetSimLoading] = useState(false);
   const [symbolicBuild, setSymbolicBuild] = useState(true);
@@ -68,6 +71,10 @@ function App() {
   const [interpreternextindex, setInterpreterNextIndex] = useState(0);
   const [interpreterbadge, setInterpreterBadge] = useState(false);
 
+  const [traceLoading, setTraceLoading] = useState(false);
+  const busy = bloading || mcloading || mcstopping || simloading || interpreterloading
+    || interpreterbacking || traceLoading || vloading;
+
   const [confirmBuild, setConfirmBuild] = useState(false);
 
   const radios = [
@@ -79,6 +86,7 @@ function App() {
   const interpreterTable = useRef(null);
 
   function simulate() {
+    if (busy) return;
     if (built != true) {
       alert("Build model first.");
       return;
@@ -188,6 +196,8 @@ function App() {
   }
 
   function loadTraceIntoInterpreter(output) {
+    if (busy) return;
+    setTraceLoading(true);
     const params = new URLSearchParams();
     params.append("output", output);
     axios
@@ -212,8 +222,8 @@ function App() {
       })
       .catch((err) => {
         alert(err.message);
-        setSimLoading(false);
-      });
+      })
+      .finally(() => setTraceLoading(false));
   }
 
 
@@ -248,6 +258,7 @@ function App() {
   }
 
   function interpret() {
+    if (busy) return;
     if (built != true) buildModel();
     setInterpreterLoading(true);
   }
@@ -328,11 +339,15 @@ function App() {
   }
 
   function modelCheckStop() {
+    setMCStopping(true);
     axios.get(server + "/modelCheckStop")
-      .then((_) => { console.log("Stopped all MC tasks as requested by the user."); });
+      .catch((err) => alert(err.message))
+      .finally(() => setMCStopping(false));
+    // Keep the interface busy until all outstanding check requests have settled.
   }
 
   function modelCheck() {
+    if (busy) return;
     // The "true" parameter forces to build a BDD model if "MC" is selected
     if (built != true) buildModel(true);
 
@@ -362,14 +377,14 @@ function App() {
         }
 
         axios.get(server + "/modelCheck", { params })
-          .then((response) => {
+          .then(async (response) => {
             console.log(response.data);
             if (response.data.error !== undefined) {
               alert(response.data.error);
             }
             else if (response.data !== undefined) {
               setMCResponse(response.data.results);
-              response.data.results.map((x) => modelCheckSingle(x));
+              await Promise.allSettled(response.data.results.map((x) => modelCheckSingle(x)));
             }
             setMCLoading(false);
           })
@@ -382,35 +397,27 @@ function App() {
   }, [built, mcloading]);
 
   function modelCheckSingle(data) {
-    axios.get(server + data.url).then((response) => {
+    return axios.get(server + data.url).then((response) => {
       setMCResponse(oldmcresponse =>
         oldmcresponse.map((x, i) => {
           return (i == data.id) ? response.data : x;
         }));
+    }).catch((err) => {
+      setMCResponse(old => old.map((x, i) => i === data.id ? { error: err.message } : x));
     });
   }
 
   function visualise() {
     setVLoading(true);
-    const params = new URLSearchParams();
-    params.append('script', code);
-
-    axios.get(server + "/setSystem", { params })
+    // The build already selected the model. Selecting it again would discard
+    // any interpreter or model-check session started by the built effect.
+    axios.get(server + "/toDOTSVG")
       .then((response) => {
-        axios.get(server + "/toDOTSVG")
-          .then((response2) => {
-            console.log(response2.data);
-            setDot(response2.data.map(x => {
-              var svg = new DOMParser().parseFromString(x.svg, "image/svg+xml").getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
-              console.log("svg: " + svg);
-              return svg;
-            }));
-            setVLoading(false);
-          })
-          .catch((err) => {
-            alert(err.message);
-            setVLoading(false);
-          })
+        setDot(response.data.map(x => {
+          return new DOMParser().parseFromString(x.svg, "image/svg+xml")
+            .getElementsByTagNameNS("http://www.w3.org/2000/svg", "svg").item(0);
+        }));
+        setVLoading(false);
       })
       .catch((err) => {
         alert(err.message);
@@ -420,52 +427,81 @@ function App() {
 
   const handleClose = () => setConfirmBuild(false);
   function confirmBuildModel() {
-    if (mcresponse.length > 0) {
+    if (busy) return;
+    if (built) {
       setConfirmBuild(true);
     } else {
       buildModel();
     }
   }
 
-  function buildModel(obeyMCpane = false) {
+  function stopBuild(job) {
+    return axios.get(server + "/cancelBuild", { params: { buildId: job.id } })
+      .then(({ data }) => { if (data.error) throw new Error(data.error); })
+      .catch(error => {
+        alert("Could not cancel build: " + error.message);
+        setCancellingBuild(false);
+      });
+  }
+
+  function cancelBuild() {
+    const job = activeBuild.current;
+    if (!job || cancellingBuild) return;
+    job.cancelled = true;
+    setCancellingBuild(true);
+    if (job.id) job.stopRequest = stopBuild(job);
+  }
+
+  async function buildModel(obeyMCpane = false) {
+    if (busy || activeBuild.current) return;
+    const job = { cancelled: false };
+    activeBuild.current = job;
     setBLoading(true);
+    setBuilt(false);
     setConfirmBuild(false);
     setInterpreterBadge(false);
     setMCResponse([]);
     setBound(-1);
     resetInterpreter();
-    const params = new URLSearchParams();
-    params.append('script', code);
-    console.log(server);
-
-    var askSymbolic = obeyMCpane ? radioValue != 1 : symbolicBuild;
-
-
-    axios.get(server + "/setSystem", { params })
-      .then((response) => {
-        console.log("system set");
-        params.append('symbolic', askSymbolic);
-        axios.get(server + "/buildModel", { params })
-          .then((response2) => {
-            if (response2.data.hasOwnProperty("error")) {
-              alert(response2.data.error);
-            } else {
-              setBuilt(true);
-              visualise();
-              alert("Model built successfully");
-            }
-            setBLoading(false);
-          })
-          .catch((err) => {
-            console.log(err.message);
-            setBLoading(false);
-          })
-      })
-      .catch((err) => {
-        console.log(err.message);
-        setBLoading(false);
+    resetSimulate();
+    try {
+      const prepared = await axios.get(server + "/prepareBuild");
+      if (!prepared.data.buildId) throw new Error(prepared.data.error || "Could not start build");
+      job.id = prepared.data.buildId;
+      if (job.cancelled) {
+        job.stopRequest = stopBuild(job);
+        return;
+      }
+      const params = new URLSearchParams({
+        script: code, symbolic: obeyMCpane ? radioValue != 1 : symbolicBuild, buildId: job.id,
       });
+      const { data } = await axios.get(server + "/buildModel", { params });
+      if (job.cancelled) return;
+      if (!data.success) throw new Error(data.error || "Could not build model");
+      setBuilt(true);
+      visualise();
+      alert("Model built successfully");
+    } catch (error) {
+      if (!job.cancelled) alert(error.message);
+      setMCLoading(false);
+      setInterpreterLoading(false);
+    } finally {
+      if (job.cancelled) {
+        await job.stopRequest;
+        setMCLoading(false);
+        setInterpreterLoading(false);
+      }
+      activeBuild.current = null;
+      setCancellingBuild(false);
+      setBLoading(false);
+    }
   }
+
+  const cancelBuildButton = (
+    <Button variant="outline-danger" size="lg" onClick={cancelBuild} disabled={cancellingBuild}>
+      {cancellingBuild ? "Cancelling build…" : "Cancel build"} {spinner}
+    </Button>
+  );
 
   return (
     <div className="App">
@@ -473,12 +509,12 @@ function App() {
         <Modal.Header closeButton>
           <Modal.Title>Warning</Modal.Title>
         </Modal.Header>
-        <Modal.Body>This will reset the Model Checking results. Do you want to proceed?</Modal.Body>
+        <Modal.Body>Building replaces the active model and clears its checking results, simulation, and interpreter trace. Do you want to proceed?</Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleClose}>
             No
           </Button>
-          <Button variant="primary" onClick={buildModel}>
+          <Button variant="primary" onClick={() => buildModel()} disabled={busy}>
             Yes
           </Button>
         </Modal.Footer>
@@ -498,7 +534,7 @@ function App() {
           <Col xs={12} xl={10} xxl={8}>
             <Tabs defaultActiveKey="ed" id="uncontrolled-tab-example" className="mb-3"
               onSelect={(e) => { if (e === "interpreter") setInterpreterBadge(false); }}>
-              <Tab eventKey="ed" title="Editor" style={TabStyle}>
+              <Tab role="tabpanel" eventKey="ed" title="Editor" style={TabStyle}>
                 <AceEditor style={Bg}
                   mode="recipe"
                   theme="tomorrow"
@@ -518,13 +554,12 @@ function App() {
                     <option value="smt">SMT model (allows for infinite-state verification)</option>
                     <option value="bdd">BDD model (only for finite-state verification)</option>
                   </Form.Select>
-                  <Button variant="primary" size="lg" onClick={confirmBuildModel} disabled={bloading}>
+                  {bloading ? cancelBuildButton : <Button variant="primary" size="lg" onClick={confirmBuildModel} disabled={busy}>
                     Build model
-                    {bloading && spinner}
-                  </Button>
+                  </Button>}
                 </InputGroup>
               </Tab>
-              <Tab eventKey="mc" title="Model Checker" style={TabStyle}>
+              <Tab role="tabpanel" eventKey="mc" title="Model Checker" style={TabStyle}>
                 <Container fluid>
                   <Row>
                     <Col xs={12}>
@@ -557,10 +592,10 @@ function App() {
                             onChange={(e) => { setBound(e.currentTarget.value.trim()) }}
                           />
                         }
-                        <Button variant="primary" size="lg" disabled={mcloading} onClick={modelCheck}>
+                        {bloading ? cancelBuildButton : <Button variant="primary" size="lg" disabled={busy} onClick={modelCheck}>
                           Start {mcloading && spinner}
-                        </Button>
-                        <Button variant="danger" size="lg" onClick={modelCheckStop}>
+                        </Button>}
+                        <Button variant="danger" size="lg" disabled={bloading || !mcloading || mcstopping} onClick={modelCheckStop}>
                           Stop
                         </Button>
                       </InputGroup>
@@ -588,12 +623,12 @@ function App() {
                         <Col xs={3} style={{ textAlign: "end" }} className="align-self-center">
                           {/* <div className="d-grid"> */}
                           <Dropdown as={ButtonGroup}>
-                            <Button onClick={() => loadTraceIntoInterpreter(mcresponse[i].output)}>
+                            <Button disabled={busy} onClick={() => loadTraceIntoInterpreter(mcresponse[i].output)}>
                               Load into interpreter
                             </Button>
                             <Dropdown.Toggle split id="dropdown-split-basic" />
                             <Dropdown.Menu>
-                              <Dropdown.Item onClick={() => loadTraceIntoInterpreter(mcresponse[i].output)}>Load into interpreter</Dropdown.Item>
+                              <Dropdown.Item disabled={busy} onClick={() => loadTraceIntoInterpreter(mcresponse[i].output)}>Load into interpreter</Dropdown.Item>
                               <Dropdown.Item onClick={() => exportRaw(mcresponse[i].output)}>Download raw output</Dropdown.Item>
                             </Dropdown.Menu>
                           </Dropdown>
@@ -617,12 +652,12 @@ function App() {
                                   onChange={(e) => setSimCondition(e.currentTarget.value)}
                                 />
                             }
-                            <Button variant="primary" size="lg" disabled={simloading} onClick={simulate}>
+                            <Button variant="primary" size="lg" disabled={busy} onClick={simulate}>
                               {!simstarted && <span>Start</span>}
                               {simstarted && <span>Next</span>}
                               { simloading && spinner}
                             </Button>
-                            <Button variant="secondary" size="lg" disabled={resetsimloading} onClick={resetSimulate}>
+                            <Button variant="secondary" size="lg" disabled={busy || resetsimloading} onClick={resetSimulate}>
                               Reset
                               { resetsimloading && spinner}
                             </Button>
@@ -651,7 +686,7 @@ function App() {
                   </Row>
                 </Container>
               </Tab> */}
-              <Tab eventKey="interpreter" title={
+              <Tab role="tabpanel" eventKey="interpreter" title={
                 <React.Fragment>
                   Interpreter{' '}
                   {interpreterbadge && <Badge pill bg="primary" show="false">!</Badge>}
@@ -661,17 +696,17 @@ function App() {
                   <Row>
                     <Col xs={12}>
                       <InputGroup className="mb-3">
-                        <Button variant="primary" size="lg" disabled={interpreterbacking || interpreterloading || interpreterresponse.length == 0} onClick={backtrackInterpreter}>
+                        <Button variant="primary" size="lg" disabled={busy || interpreterresponse.length == 0} onClick={backtrackInterpreter}>
                           Back
                           {interpreterbacking && spinner}
                         </Button>
-                        <Button variant="primary" size="lg"
-                          disabled={interpreterbacking || interpreterloading || (interpreterstarted && interpretertransitions.length == 0)}
+                        {bloading ? cancelBuildButton : <Button variant="primary" size="lg"
+                          disabled={busy || (interpreterstarted && interpretertransitions.length == 0)}
                           onClick={interpret}>
                           {!interpreterstarted && <span>Start</span>}
                           {interpreterstarted && <span>Next</span>}
                           {interpreterloading && spinner}
-                        </Button>
+                        </Button>}
                         {
                           <Form.Select
                             aria-label="interpreter-next"
@@ -683,7 +718,7 @@ function App() {
                             })}
                           </Form.Select>
                         }
-                        <Button variant="secondary" size="lg" disabled={resetinterpreterloading} onClick={resetInterpreter}>
+                        <Button variant="secondary" size="lg" disabled={busy || resetinterpreterloading} onClick={resetInterpreter}>
                           Reset
                           {resetinterpreterloading && spinner}
                         </Button>

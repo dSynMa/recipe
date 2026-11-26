@@ -131,6 +131,11 @@ public class System{
     }
 
     public static Parser parser(){
+        // Build fresh grammar state and reset declarations on every parse, not on creation.
+        return new LazyParser<>(ignored -> freshParser(), null);
+    }
+
+    private static Parser freshParser(){
         Enum.clear();
         Guard.clear();
         Config.reset();

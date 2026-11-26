@@ -35,6 +35,16 @@ import java.util.logging.Logger;
 
 public class Server {
     NuXmvInteraction nuXmvInteraction;
+
+    // Accessed under the server monitor. Only the matching request can cancel a build.
+    private static class Build {
+        final String id = UUID.randomUUID().toString();
+        Thread worker;
+        boolean started;
+        boolean cancelled;
+    }
+
+    private Build build;
     private final Set<Future<?>> modelCheckWorkers = ConcurrentHashMap.newKeySet();
     private NuXmvModelFile checkModel;
     private List<String> checkFormulas;
@@ -163,15 +173,23 @@ public class Server {
         return "Started";
     }
 
+    private synchronized void discardCurrentSystem() throws IOException {
+        replaceSystem(null);
+        Enum.clear();
+        interpreter = null;
+        mcConfig = null;
+        latestDots.clear();
+        latestDotsInterpreter.clear();
+    }
+
     @Route("/setSystem")
     public synchronized String setSystem(Request req) {
-        Enum.clear();
-        String script = req.getQuery().get("script").trim();
+        if (build != null && build.worker != null) return buildError("A model is building");
+        build = null;
         try {
-            replaceSystem(recipe.lang.System.parser().end().parse(script).get());
-            interpreter = null;
-            latestDots = new HashMap<>();
-            latestDotsInterpreter = new ConcurrentHashMap<>();
+            discardCurrentSystem();
+            String script = req.getQuery().get("script").trim();
+            system = recipe.lang.System.parser().end().parse(script).get();
             return "{\"symbolic\" : " + system.isSymbolic() + "}";
         } catch (ParseError parseError){
             return "{ \"error\" : \"" + parseError.getFailure().toString() + "\"}";
@@ -181,37 +199,81 @@ public class Server {
     }
 
 
-    @Route("/buildModel")
-    public synchronized String buildModel(Request req) {
-        Enum.clear();
-        interpreter = null;
-        latestDots = new HashMap<>();
-        latestDotsInterpreter = new ConcurrentHashMap<>();
+    private static String buildError(String message) {
+        return new JSONObject().put("error", message).toString();
+    }
 
-        String script = req.getQuery().get("script").trim();
-        Boolean buildType = Boolean.valueOf(req.getQuery().get("symbolic").trim());
-        JSONObject response = new JSONObject();
-        try {
-            replaceSystem(recipe.lang.System.parser().end().parse(script).get());
-            nuXmvInteraction = modelFile().openChecker();
-            Pair<Boolean, String> initialise = nuXmvInteraction.initialise(buildType);
+    @Route("/prepareBuild")
+    public synchronized String prepareBuild(Request req) {
+        if (build != null && build.worker != null) return buildError("A model is building");
+        build = new Build();
+        return new JSONObject().put("buildId", build.id).toString();
+    }
 
-            if(initialise.getLeft()){
-                response.put("success", true);
-                // return "{ \"success\" : true}";
-            } else{
-                response.put("error", initialise.getRight());
-            }
-        } catch (ParseError parseError){
-            response.clear();
-            response.put("error", parseError.getFailure());
-            logger.info(response.toString());
-        } catch (Exception e) {
-            response.clear();
-            response.put("error", e.getMessage() );
-            logger.info(response.toString());
+    @Route("/cancelBuild")
+    public synchronized String cancelBuild(Request req) throws IOException {
+        if (build != null && build.id.equals(req.getQuery().get("buildId"))) {
+            build.cancelled = true;
+            if (build.worker != null) build.worker.interrupt();
+            else if (build.started) discardCurrentSystem(); // Completion raced with Cancel.
         }
-        return response.toString();
+        return "{}";
+    }
+
+    @Route("/buildModel")
+    public String buildModel(Request req) {
+        String id = req.getQuery().get("buildId");
+        Build job;
+        synchronized (this) {
+            if (build != null && build.worker != null) return buildError("A model is building");
+            // Older clients can still build directly without reserving an ID.
+            if (id == null) build = new Build();
+            if (build == null || (id != null && !build.id.equals(id)) || build.cancelled || build.started)
+                return buildError("This build is no longer pending");
+            job = build;
+            job.started = true;
+            job.worker = Thread.currentThread();
+        }
+
+        NuXmvModelFile builtModel = null;
+        NuXmvInteraction checker = null;
+        try {
+            discardCurrentSystem();
+            String script = req.getQuery().get("script").trim();
+            boolean symbolic = Boolean.parseBoolean(req.getQuery().get("symbolic").trim());
+            System model = System.parser().end().parse(script).get();
+            if (Thread.currentThread().isInterrupted()) return buildError("Build cancelled");
+            builtModel = new NuXmvModelFile(model);
+            checker = builtModel.openChecker();
+            Pair<Boolean, String> result = checker.initialise(symbolic);
+            synchronized (this) {
+                if (job.cancelled) return buildError("Build cancelled");
+                if (!result.getLeft()) return buildError(result.getRight());
+                system = model;
+                checkModel = builtModel;
+                builtModel = null;
+                nuXmvInteraction = checker;
+                checker = null; // Ownership transfers to the active model.
+                job.worker = null;
+                return new JSONObject().put("success", true).toString();
+            }
+        } catch (Exception e) {
+            return buildError(Objects.toString(e.getMessage(), e.toString()));
+        } finally {
+            try {
+                try {
+                    if (checker != null) checker.close();
+                } finally {
+                    if (builtModel != null) builtModel.close();
+                }
+            } catch (IOException cleanupFailure) {
+                logger.warning(cleanupFailure.toString());
+            }
+            synchronized (this) {
+                if (job.worker != null && job.cancelled) Thread.interrupted();
+                job.worker = null;
+            }
+        }
     }
 
     @Route("/toDOT")
@@ -413,6 +475,7 @@ public class Server {
                     array.put(jo);
                 }
                 jsonObject.put("results", array);
+                resetChecker();
 
                 return jsonObject.toString();
             }

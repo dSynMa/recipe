@@ -21,6 +21,20 @@ public class BoundedIntegerBoundaryTest {
     }
 
     @Test
+    public void onlyTranslationRespondsToBuildCancellation() throws Exception {
+        BoundedInteger type = new BoundedInteger(1, 2);
+        Thread.currentThread().interrupt();
+        try {
+            assertEquals(2, type.getAllValues().size());
+            assertThrows(java.util.concurrent.CancellationException.class, () ->
+                ToNuXmv.specialiseOnAllPossibleValues("x", type, recipe.lang.expressions.predicate.Condition.getTrue()));
+            assertTrue(Thread.currentThread().isInterrupted());
+        } finally {
+            Thread.interrupted();
+        }
+    }
+
+    @Test
     public void valueParserTerminatesAtTheUpperIntegerLimit() throws Exception {
         BoundedInteger type = new BoundedInteger(2147483646, 2147483647);
         org.petitparser.parser.Parser parser = type.valueParser().end();

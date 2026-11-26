@@ -1,6 +1,8 @@
 package recipe.analysis;
 
 
+import static recipe.lang.utils.Cancellation.checkCancellation;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,7 +40,6 @@ import recipe.lang.utils.exceptions.RelabellingTypeException;
 import recipe.lang.utils.exceptions.TypeCreationException;
 
 public class ToNuXmv {
-
     public static Expression<Boolean> specialiseObservationToSendTransition(Map<String, Type> cvs,
                                                                             Expression<Boolean> obs,
                                                                             Expression<Boolean> sendGuard,
@@ -70,37 +71,32 @@ public class ToNuXmv {
                                                                             AttributeTypeException,
                                                                             TypeCreationException,
                                                                             AttributeNotInStoreException {
-        //associate cv with all its possible values
-        //instantiate condition for each value
-
-        //get all cvs and order them
-        List<TypedValue<?>> vals = new ArrayList<>();
-        if(type.getClass().equals(Boolean.class)){
-            vals.add(Condition.getTrue());
-            vals.add(Condition.getFalse());
-        } else if(type.getClass().equals(BoundedInteger.class)){
-            for (TypedValue<?> value : ((BoundedInteger) type).getAllValues()) vals.add(value);
-        } else if(type.getClass().equals(Enum.class)){
-            for (TypedValue<?> value : ((Enum) type).getAllValues()) vals.add(value);
+        Set<Expression<Boolean>> conditions = new HashSet<>();
+        String name = cv.replaceFirst("^@", "");
+        if (type instanceof BoundedInteger range) {
+            // Use long so incrementing past Integer.MAX_VALUE terminates the loop.
+            for (long i = range.getMin(); i <= range.getMax(); i++) {
+                conditions.add(specialiseValue(cond, name, new TypedValue<>(range, Long.toString(i))));
+            }
+        } else if (type instanceof Boolean) {
+            conditions.add(specialiseValue(cond, name, Condition.getTrue()));
+            conditions.add(specialiseValue(cond, name, Condition.getFalse()));
+        } else if (type instanceof Enum enumeration) {
+            for (String literal : enumeration.getValues()) {
+                conditions.add(specialiseValue(cond, name, new TypedValue<>(enumeration, literal)));
+            }
         } else {
             throw new InfiniteValueTypeException("For LTOL analysis communication variables must be of finite type.");
         }
-
-        Set<Expression<Boolean>> conditions = new HashSet<>();
-        final String cv_cleaned = cv.replaceAll("^@", "");
-        for(int j = 0; j < vals.size(); j++){
-            TypedValue<?> val = vals.get(j);
-            conditions.add(cond.relabel((v) -> {
-                String v_cleaned = v.getName().replaceAll("^@", "");
-                if(v_cleaned.equals(cv_cleaned)){
-                    return val;
-                } else{
-                    return v;
-                }
-            }).simplify());
-        }
-
         return conditions;
+    }
+
+    private static Expression<Boolean> specialiseValue(Expression<Boolean> condition, String name, TypedValue<?> value)
+            throws RelabellingTypeException, MismatchingTypeException, AttributeTypeException,
+                   TypeCreationException, AttributeNotInStoreException {
+        checkCancellation();
+        return condition.relabel(variable -> variable.getName().replaceFirst("^@", "").equals(name)
+                ? value : variable).simplify();
     }
 
     public static Expression<Boolean> handleCVsInObservation(Map<String, Type> cvs, Expression<Boolean> obs, Expression<Boolean> sendGuard) throws Exception {
