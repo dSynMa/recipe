@@ -30,7 +30,7 @@ public class InteractiveSmtSetupTest {
             checker.initialise(true);
             commands.append("msat_pick_state -v\nquit\n");
             Files.writeString(script, commands);
-            process = new ProcessBuilder("nuxmv/bin/nuxmv", "-source", script.toString(), checker.path.toString())
+            process = new ProcessBuilder(nuxmvExecutable().toString(), "-source", script.toString(), checker.path.toString())
                 .redirectErrorStream(true).redirectOutput(log.toFile()).start();
             process.getOutputStream().close();
             assertTrue(process.waitFor(20, TimeUnit.SECONDS));

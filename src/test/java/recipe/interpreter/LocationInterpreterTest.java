@@ -2,6 +2,7 @@ package recipe.interpreter;
 
 import org.json.JSONObject;
 import org.junit.Test;
+import recipe.analysis.TranslationTestModels;
 import recipe.lang.System;
 
 import java.io.InputStream;
@@ -24,7 +25,7 @@ public class LocationInterpreterTest {
 
     @Test
     public void twoWayMessagesSwapInOneStep() throws Exception {
-        assumeTrue(Files.isExecutable(Path.of("nuxmv/bin/nuxmv")));
+        assumeTrue(Files.isExecutable(TranslationTestModels.nuxmvExecutable()));
 
         System system = System.deserialize(new JSONObject(resource("twoway.json")));
         Interpreter interpreter = new Interpreter(system);
@@ -41,7 +42,7 @@ public class LocationInterpreterTest {
 
     @Test
     public void locationPairingAndMyselfWorkInTheInterpreter() throws Exception {
-        assumeTrue(Files.isExecutable(Path.of("nuxmv/bin/nuxmv")));
+        assumeTrue(Files.isExecutable(TranslationTestModels.nuxmvExecutable()));
 
         System system = System.deserialize(new JSONObject(resource("location-pair.json")));
         Interpreter interpreter = new Interpreter(system);

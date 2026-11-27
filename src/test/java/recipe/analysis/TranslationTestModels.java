@@ -11,7 +11,7 @@ import recipe.lang.System;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
-final class TranslationTestModels {
+public final class TranslationTestModels {
     static String source(String name) throws Exception {
         try (InputStream input = TranslationTestModels.class.getResourceAsStream(
                 "/recipe/analysis/adversarial/" + name + ".rcp")) {
@@ -55,8 +55,37 @@ final class TranslationTestModels {
             line.startsWith("-- invariant ") && line.endsWith(" is true")));
     }
 
+    /** Resolve the nuXmv executable the same way the engine does, including PATH. */
+    public static Path nuxmvExecutable() {
+        String override = java.lang.System.getenv("RCHECK_NUXMV");
+        if (override != null && !override.trim().isEmpty()) {
+            return Path.of(override.trim());
+        }
+        for (String candidate : new String[]{
+                "nuxmv/bin/nuxmv", "nuxmv/bin/nuxmv.exe",
+                "bin/nuxmv", "bin/nuxmv.exe"}) {
+            if (Files.isExecutable(Path.of(candidate))) {
+                return Path.of(candidate).toAbsolutePath();
+            }
+        }
+        String path = java.lang.System.getenv("PATH");
+        if (path != null) {
+            for (String directory : path.split(java.util.regex.Pattern.quote(java.io.File.pathSeparator))) {
+                String dir = directory.replace("\"", "").trim();
+                if (dir.isEmpty()) continue;
+                for (String name : new String[]{"nuxmv", "nuxmv.exe"}) {
+                    Path candidate = Path.of(dir, name);
+                    if (Files.isRegularFile(candidate) && Files.isExecutable(candidate)) {
+                        return candidate.toAbsolutePath();
+                    }
+                }
+            }
+        }
+        return Path.of("nuxmv");
+    }
+
     static String runNuXmv(String output, String script) throws Exception {
-        Path executable = Path.of("nuxmv/bin/nuxmv").toAbsolutePath();
+        Path executable = nuxmvExecutable().toAbsolutePath();
         assumeTrue("nuXmv executable is required for semantic checks", Files.isExecutable(executable));
         Path directory = Files.createTempDirectory("recipe-ctl-");
         Path model = directory.resolve("model.smv");

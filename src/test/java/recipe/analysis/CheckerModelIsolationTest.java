@@ -8,7 +8,7 @@ import static recipe.analysis.TranslationTestModels.*;
 public class CheckerModelIsolationTest {
     @Test(timeout = 20000)
     public void creatingAnotherCheckerDoesNotReplaceTheFirstModel() throws Exception {
-        org.junit.Assume.assumeTrue(Files.isExecutable(java.nio.file.Path.of("nuxmv/bin/nuxmv")));
+        org.junit.Assume.assumeTrue(Files.isExecutable(nuxmvExecutable()));
         String source = source("supplier-locality");
         NuXmvInteraction first = new NuXmvInteraction(parse(source));
         NuXmvInteraction second = null;
