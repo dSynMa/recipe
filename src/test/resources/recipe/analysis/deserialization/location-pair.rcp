@@ -1,0 +1,22 @@
+enum channel { c }
+message-structure: MSG : location
+
+agent Supplier
+    local: loc : location
+    init: loc == myself
+    receive-guard: true
+    repeat: (
+        send: {true} SUPPLY@(any)(MSG := myself)[]
+    )
+
+agent Receiver
+    local: target : location
+    init: true
+    receive-guard: true
+    repeat: (
+        recv: {true} GET@(target)()[]
+    )
+
+system = Supplier(s, true) || Receiver(r, target == s)
+
+SPEC F r-recv;

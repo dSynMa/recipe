@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static recipe.analysis.TranslationTestModels.assertLtl;
 import static recipe.analysis.TranslationTestModels.assertValid;
 
 public class DeserializationTest {
@@ -40,5 +41,25 @@ public class DeserializationTest {
         assertValid(output);
         assertTrue(output, output.contains("s-send"));
         assertTrue(output, output.contains("g-recv"));
+    }
+
+    @Test
+    public void deserializedNamedLocationEnablesThePairing() throws Exception {
+        System system = System.deserialize(new JSONObject(resource("location-pair.json")));
+        String output = ToNuXmv.transform(system);
+
+        assertValid(output);
+        assertLtl(output, "F r-recv", true);
+    }
+
+    @Test
+    public void deserializedLocationModelProducesAValidModel() throws Exception {
+        System system = System.deserialize(new JSONObject(resource("get-supply.json")));
+        String output = ToNuXmv.transform(system);
+
+        assertValid(output);
+        assertTrue(output, output.contains("one-myself"));
+        assertTrue(output, output.contains("one-splyAtSelf"));
+        assertTrue(output, output.contains("one-getAtX"));
     }
 }

@@ -17,7 +17,12 @@ import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.NamedLocation;
+import recipe.lang.expressions.location.AnyLocation;
+import recipe.lang.expressions.location.Location;
+import recipe.lang.expressions.location.NameLocation;
+import recipe.lang.expressions.location.NamedLocation;
+import recipe.lang.expressions.location.PredicateLocation;
+import recipe.lang.expressions.location.SelfLocation;
 import recipe.lang.ltol.Observation;
 import recipe.lang.process.BasicProcess;
 import recipe.lang.process.BasicProcessWithMessage;
@@ -548,32 +553,45 @@ public class Step {
                             GetProcess getProc = (GetProcess) get.getLabel();
                             boolean getPsiSat = actionEnabled(getProc, instStore);
                             if (!getPsiSat) continue;
-                            // Check if predicates match
-                            Expression<recipe.lang.types.Boolean> splyGuard = splyProc.getMessageGuard();
-                            Expression<recipe.lang.types.Boolean> getGuard = getProc.getMessageGuard();
+                            // Check whether the locations select each other.
+                            Location splyLoc = splyProc.getLocation();
+                            Location getLoc = getProc.getLocation();
+                            TypedValue supplierValue = new TypedValue(Config.getAgentType(), supplier.getLabel());
+                            TypedValue getterValue = new TypedValue(Config.getAgentType(), getter.getLabel());
 
-                            if (splyGuard instanceof NamedLocation) {
-                                boolean isSelf = ((NamedLocation) splyGuard).isSelf();
-                                // SPLY@SELF = Only getters that know the supplier's name will be served
-                                if (isSelf && !getGuard.toString().equals(supplier.getLabel())) continue;
-                                // SPLY@foo = Only getter with name foo will be served
-                                if (!isSelf && !splyGuard.toString().equals(getter.getLabel())) continue;
+                            // SPLY@foo = only getter foo is served
+                            if (splyLoc instanceof NameLocation
+                                    && !((NameLocation) splyLoc).getName().equals(getter.getLabel())) continue;
+                            // GET@foo = only supplier foo is chosen
+                            if (getLoc instanceof NameLocation
+                                    && !((NameLocation) getLoc).getName().equals(supplier.getLabel())) continue;
+                            if (getLoc instanceof SelfLocation) continue; // GET@SELF is not allowed
+                            // SELF supplies only getters that name the supplier
+                            if (splyLoc instanceof SelfLocation) {
+                                boolean getterNamesSupplier = getLoc instanceof NamedLocation
+                                    || (getLoc instanceof NameLocation
+                                        && ((NameLocation) getLoc).getName().equals(supplier.getLabel()));
+                                if (!getterNamesSupplier) continue;
                             }
-                            if (getGuard instanceof NamedLocation) {
-                                boolean isSelf = ((NamedLocation) getGuard).isSelf();
-                                // GET@SELF = Only suppliers that know the getter's name will be chosen
-                                if (isSelf && !splyGuard.toString().equals(getter.getLabel())) continue;
-                                // GET@foo = Only supplier with name foo will be chosen
-                                if (!isSelf && !getGuard.toString().equals(supplier.getLabel())) continue;
-                            }
+
                             CompositeStore supplySelection = new CompositeStore(sys);
                             supplySelection.push(supplierStore);
                             supplySelection.pushReceiverStore(getterStore);
                             CompositeStore getSelection = new CompositeStore(sys);
                             getSelection.push(instStore);
                             getSelection.pushReceiverStore(supplierStore);
-                            if (!(splyGuard instanceof NamedLocation) && !selectionHolds(splyGuard, supplySelection)) continue;
-                            if (!(getGuard instanceof NamedLocation) && !selectionHolds(getGuard, getSelection)) continue;
+
+                            if (splyLoc instanceof NamedLocation) {
+                                TypedValue holds = ((NamedLocation) splyLoc).getPredicate(getterValue).valueIn(supplierStore);
+                                if (!Condition.getTrue().equals(holds)) continue;
+                            } else if (splyLoc instanceof PredicateLocation
+                                    && !selectionHolds(((PredicateLocation) splyLoc).getExpression(), supplySelection)) continue;
+
+                            if (getLoc instanceof NamedLocation) {
+                                TypedValue holds = ((NamedLocation) getLoc).getPredicate(supplierValue).valueIn(instStore);
+                                if (!Condition.getTrue().equals(holds)) continue;
+                            } else if (getLoc instanceof PredicateLocation
+                                    && !selectionHolds(((PredicateLocation) getLoc).getExpression(), getSelection)) continue;
 
                             Transition tr = new SupplyGetTransition();
                             tr.setProducer(supplier, sply);

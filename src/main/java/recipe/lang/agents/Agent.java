@@ -285,6 +285,12 @@ public class Agent {
             context.setAll(parentContext);
         }
 
+        // Every agent knows its own instance name.
+        Type locationEnum = recipe.lang.types.Enum.getEnum(Config.locationLabel);
+        localVars.put(Config.myselfKeyword,
+            new TypedVariable<Type>(locationEnum, Config.myselfKeyword));
+        context.set(Config.myselfKeyword, locationEnum);
+
         if (jAgent.has("locals")) {
             JSONArray jLocals = jAgent.getJSONArray("locals");
             for (int i = 0; i < jLocals.length(); i++) {

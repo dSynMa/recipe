@@ -10,7 +10,7 @@ import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.NamedLocation;
+import recipe.lang.expressions.location.Location;
 import recipe.lang.types.Boolean;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
@@ -21,22 +21,27 @@ import static recipe.Config.commVariableReferences;
 
 public class SupplyProcess extends BasicProcessWithMessage {
 
-    public Expression<Boolean> getMessageGuard() {
-        return messageGuard;
+    private Location location;
+
+    public Location getLocation() {
+        return location;
     }
 
-    public Expression<Boolean> messageGuard;
-
-    public SupplyProcess(String label, Expression<Boolean> psi, Expression<Boolean> messageGuard, Map<String, Expression> message, Map<String, Expression> update) {
+    public SupplyProcess(String label, Expression<Boolean> psi, Location location, Map<String, Expression> message, Map<String, Expression> update) {
         this.label = label;
         this.psi = psi;
-        this.messageGuard = messageGuard;
+        this.location = location;
         this.message = message;
         this.update = update;
     }
 
+    /** Compatibility constructor for code that still has a parsed guard expression. */
+    public SupplyProcess(String label, Expression<Boolean> psi, Expression<Boolean> messageGuard, Map<String, Expression> message, Map<String, Expression> update) {
+        this(label, psi, Location.fromLegacy(messageGuard), message, update);
+    }
+
     public String toString() {
-        return "<" + psi.toString() + ">SUPPLY@(" + messageGuard + ")(" + message + ")[" + update + "]";
+        return "<" + psi.toString() + ">SUPPLY@(" + location + ")(" + message + ")[" + update + "]";
     }
 
     public Set<Transition> asTransitionSystem(State start, State end){
@@ -76,7 +81,7 @@ public class SupplyProcess extends BasicProcessWithMessage {
 
         Parser messageAssignment = Parsing.assignmentListParser(messageContext, localContext);
         Parser localAssignment = Parsing.assignmentListParser(localContext, localContext);
-        Parser namedLocationParser = NamedLocation.parser();
+        Parser namedLocationParser = recipe.lang.expressions.predicate.NamedLocation.parser();
         
         Parser parser = ((CharacterParser.word().plus().trim()).flatten()
                         .seq(CharacterParser.of(':').trim()).flatten()).optional().flatten()
@@ -92,12 +97,12 @@ public class SupplyProcess extends BasicProcessWithMessage {
                         .map((List<Object> values) -> {
                             String label = ((String) values.get(0));
                             Expression<Boolean> psi = (Expression<Boolean>) values.get(1);
-                            Expression channel = (Expression) values.get(3);
+                            Location location = Location.fromLegacy((Expression<Boolean>) values.get(3));
                             Map<String, Expression> message = (Map<String, Expression>) values.get(5);
-                            Map<String, Expression> update = (Map<String, Expression>) values.get(8);                    
+                            Map<String, Expression> update = (Map<String, Expression>) values.get(8);
                             
                             if(label != null) label = recipe.lang.utils.Parsing.declarationName(label.replace(":", "").trim());
-                            SupplyProcess action = new SupplyProcess(label, psi, channel, message, update);
+                            SupplyProcess action = new SupplyProcess(label, psi, location, message, update);
                             return action;
                         });
 
@@ -106,6 +111,6 @@ public class SupplyProcess extends BasicProcessWithMessage {
     
     @Override
     public String prettyPrintLabel() {
-        return ((label == null || label == "") ? getMessageGuard().toString() : label);
+        return ((label == null || label == "") ? getLocation().toString() : label);
     }
 }

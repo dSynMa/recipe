@@ -16,7 +16,7 @@ import recipe.lang.agents.Transition;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.NamedLocation;
+import recipe.lang.expressions.location.Location;
 import recipe.lang.types.Boolean;
 import recipe.lang.utils.Parsing;
 import recipe.lang.utils.TypingContext;
@@ -25,21 +25,26 @@ import static recipe.Config.commVariableReferences;
 
 public class GetProcess extends BasicProcess {
 
-    public Expression<Boolean> messageGuard;
+    private Location location;
 
-    public Expression<Boolean> getMessageGuard() {
-        return messageGuard;
+    public Location getLocation() {
+        return location;
     }
 
-    public GetProcess(String label, Expression<Boolean> psi, Expression<Boolean> messageGuard, Map<String, Expression> update) {
+    public GetProcess(String label, Expression<Boolean> psi, Location location, Map<String, Expression> update) {
         this.label = label;
         this.psi = psi;
-        this.messageGuard = messageGuard;
+        this.location = location;
         this.update = update;
     }
 
+    /** Compatibility constructor for code that still has a parsed guard expression. */
+    public GetProcess(String label, Expression<Boolean> psi, Expression<Boolean> messageGuard, Map<String, Expression> update) {
+        this(label, psi, Location.fromLegacy(messageGuard), update);
+    }
+
     public String toString() {
-        return "<" + psi.toString() + ">GET@(" + messageGuard + ")[" + update + "]";
+        return "<" + psi.toString() + ">GET@(" + location + ")[" + update + "]";
     }
 
     @Override
@@ -68,7 +73,7 @@ public class GetProcess extends BasicProcess {
         Parser localAssignment = Parsing.assignmentListParser(localContext, localAndChannelAndMessageContext);
         Parser localGuard = Condition.typeParser(localAndChannelAndMessageContext);
         Parser messageGuard = Condition.typeParser(localAndChannelAndCommunicationContext);
-        Parser namedLocationParser = NamedLocation.parser();
+        Parser namedLocationParser = recipe.lang.expressions.predicate.NamedLocation.parser();
 
         Parser delimetedCondition =
                 (CharacterParser.of('<').trim())
@@ -90,10 +95,10 @@ public class GetProcess extends BasicProcess {
                         .map((List<Object> values) -> {
                             String label = (String) values.get(0);
                             Expression<Boolean> psi = (Expression<Boolean>) values.get(1);
-                            Expression<Boolean> locationPredicate = (Expression<Boolean>) values.get(3);
+                            Location location = Location.fromLegacy((Expression<Boolean>) values.get(3));
                             Map<String, Expression> update = (Map<String, Expression>) values.get(5);
                             if(label != null) label = recipe.lang.utils.Parsing.declarationName(label.replace(":", "").trim());
-                            GetProcess action = new GetProcess(label, psi, locationPredicate, update);
+                            GetProcess action = new GetProcess(label, psi, location, update);
                             return action;
                         });
         return parser;
@@ -101,6 +106,6 @@ public class GetProcess extends BasicProcess {
 
     @Override
     public String prettyPrintLabel() {
-        return ((label == null || label == "") ? getMessageGuard().toString() : label);// + " [get]";
+        return ((label == null || label == "") ? getLocation().toString() : label);// + " [get]";
     }
 }

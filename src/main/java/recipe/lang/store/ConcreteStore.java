@@ -7,6 +7,7 @@ import javax.management.AttributeNotFoundException;
 
 import org.json.JSONObject;
 
+import recipe.Config;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
@@ -14,6 +15,7 @@ import recipe.lang.agents.State;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.types.Boolean;
+import recipe.lang.types.Enum;
 import recipe.lang.types.Number;
 import recipe.lang.types.Type;
 import recipe.lang.utils.exceptions.AttributeNotInStoreException;
@@ -158,6 +160,15 @@ public class ConcreteStore extends Store {
     public ConcreteStore(JSONObject obj, AgentInstance instance) {
         this.agent = instance.getAgent();
         data = new HashMap<TypedVariable, TypedValue>();
+        if (agent.getStore().getAttributes().containsKey(Config.myselfKeyword)) {
+            try {
+                Enum locationEnum = Enum.getEnum(Config.locationLabel);
+                data.put(new TypedVariable<Type>(locationEnum, Config.myselfKeyword),
+                    new TypedValue<Enum>(locationEnum, instance.getLabel()));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         state = new State<Integer>(
             agent.getName(),
             Integer.valueOf(obj.getString("automaton-state"))

@@ -33,7 +33,12 @@ import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.GuardReference;
-import recipe.lang.expressions.predicate.NamedLocation;
+import recipe.lang.expressions.location.AnyLocation;
+import recipe.lang.expressions.location.Location;
+import recipe.lang.expressions.location.NameLocation;
+import recipe.lang.expressions.location.NamedLocation;
+import recipe.lang.expressions.location.PredicateLocation;
+import recipe.lang.expressions.location.SelfLocation;
 import recipe.lang.ltol.LTOL;
 import recipe.lang.ltol.Observation;
 import recipe.lang.process.BasicProcess;
@@ -297,34 +302,23 @@ final class NuXmvTranslation {
             Expression<?> payload = (Expression<?>) entry.getValue();
             relabelledMessage.put(entry.getKey(), payload.relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v.getName())).simplify());
         }
-        Expression<Boolean> supplyGuardExpr = supplyProcess.getMessageGuard().relabel(v -> {
-            return isCvRef(system, v.getName())
-                ? v
-                : v.sameTypeWithName(sendingAgentName + "-" + v);
-        }).simplify();
+        Location supplyLocation = supplyProcess.getLocation();
+        Expression<Boolean> supplyPredicate = null;
+        if (supplyLocation instanceof PredicateLocation) {
+            supplyPredicate = ((PredicateLocation) supplyLocation).getExpression().relabel(v -> {
+                return isCvRef(system, v.getName())
+                    ? v
+                    : v.sameTypeWithName(sendingAgentName + "-" + v);
+            }).simplify();
+        }
 
-        PreparedSupply preparedSupply = new PreparedSupply(sender, supplyProcess,
-            relabelledMessage, supplyTriggeredIf, supplyEffects);
+        PreparedSupply preparedSupply = new PreparedSupply(sender, supplyProcess, supplyLocation,
+            supplyPredicate, relabelledMessage, supplyTriggeredIf, supplyEffects);
         for (int j = 0; j < agentInstances.size(); j++) {
             if (i == j) continue;
             AgentInstance getterInstance = agentInstances.get(j);
             Agent getterAgent = getterInstance.getAgent();
             String getterName = getterInstance.getLabel();
-
-            Expression<Boolean> supplyGuardExprHere = supplyGuardExpr.relabel(v -> {
-                return v.getName().startsWith("@") ? v.sameTypeWithName(v.getName().substring(1)) : v;
-            });
-
-            supplyGuardExprHere = supplyGuardExprHere.relabel(v -> {
-                try {
-                    return isCvRef(system, v.getName())
-                        ? ((Expression<?>) getterAgent.getRelabel().get(v)).relabel(vv -> vv.sameTypeWithName(getterName + "-" + vv))
-                        : v;
-                } catch (RelabellingTypeException | MismatchingTypeException e) {
-                    e.printStackTrace();
-                }
-                return null;
-            }).simplify();
 
             for (State<?> getterState : getterAgent.getStates()) {
                 Set<ProcessTransition> getTransitions = agentStateGetTransitionMap.get(getterAgent).get(getterState);
@@ -332,7 +326,7 @@ final class NuXmvTranslation {
                 Expr getterStateIsCurrentState = eq(state(getterName), atom(getterState.toString()));
 
                 for (ProcessTransition gt : getTransitions) {
-                    translateSupplyGetPair(preparedSupply, getterInstance, gt, getterStateIsCurrentState, supplyGuardExprHere);
+                    translateSupplyGetPair(preparedSupply, getterInstance, gt, getterStateIsCurrentState);
                 }
             }
         }
@@ -349,6 +343,9 @@ final class NuXmvTranslation {
         module.initially(eq(state(name), atom(agent.getInitialState().toString())));
         module.initially(source(agent.getInit().relabel(v -> v.sameTypeWithName(name + "-" + v))));
         module.initially(source(instance.getInit().relabel(v -> v.sameTypeWithName(name + "-" + v))));
+        if (agent.getStore().getAttributes().containsKey(Config.myselfKeyword)) {
+            module.initially(eq(local(name, Config.myselfKeyword), atom(name)));
+        }
     }
 
     private void translateInteractions() throws Exception {
@@ -672,13 +669,15 @@ final class NuXmvTranslation {
         PreparedSupply supply,
         AgentInstance getterInstance,
         ProcessTransition gt,
-        Expr getterStateIsCurrentState,
-        Expression<Boolean> supplyGuardExprHere) throws Exception {
+        Expr getterStateIsCurrentState) throws Exception {
         Agent sendingAgent = supply.sender.getAgent();
         String sendingAgentName = supply.sender.getLabel();
         Agent getterAgent = getterInstance.getAgent();
         String getterName = getterInstance.getLabel();
         SupplyProcess supplyProcess = supply.process;
+        Location supplyLocation = supply.location;
+        GetProcess getProcess = (GetProcess) gt.getLabel();
+        Location getterLocation = getProcess.getLocation();
         Map<String, Expression<?>> relabelledMessage = supply.message;
         List<Expr> supplyTriggeredIf = supply.triggeredIf;
         List<Expr> supplyEffects = supply.effects;
@@ -688,7 +687,23 @@ final class NuXmvTranslation {
         getTriggeredIf.add(getterStateIsCurrentState);
         List<Expr> getEffects = new ArrayList<>();
         getEffects.add(labelEffects(getterName, gt.getLabel()));
-        GetProcess getProcess = (GetProcess) gt.getLabel();
+
+        // Static location compatibility. The old Java grammar used concrete names
+        // and SELF; the JSON grammar uses location variables.
+        if (supplyLocation instanceof NameLocation
+                && !((NameLocation) supplyLocation).getName().equals(getterName)) return;
+        if (getterLocation instanceof NameLocation) {
+            if (!((NameLocation) getterLocation).getName().equals(sendingAgentName)) return;
+        }
+        if (getterLocation instanceof SelfLocation) {
+            throw new Exception("GET@SELF is not allowed.");
+        }
+        if (supplyLocation instanceof SelfLocation) {
+            boolean getterNamesSupplier = getterLocation instanceof NamedLocation
+                || (getterLocation instanceof NameLocation
+                    && ((NameLocation) getterLocation).getName().equals(sendingAgentName));
+            if (!getterNamesSupplier) return;
+        }
 
         Expression<recipe.lang.types.Boolean> getTransitionGuard = getProcess.getPsi()
             .relabel(v -> supplyProcess.getMessage().containsKey(v.getName())
@@ -701,38 +716,52 @@ final class NuXmvTranslation {
         if (getTransitionGuard.equals(Condition.getFalse())) return;
         else getTriggeredIf.add(source(getTransitionGuard));
 
-        Expression<Boolean> getterGuardExpr = getProcess.getMessageGuard();
-        if (supplyGuardExprHere instanceof NamedLocation) {
-            NamedLocation supplierLocation = (NamedLocation) supplyGuardExprHere;
-            if (supplierLocation.isSelf()) {
-                if (!getterGuardExpr.toString().equals(sendingAgentName)) return;
-            } else if (!supplierLocation.toString().equals(getterName)) return;
-        }
-        if (getterGuardExpr instanceof NamedLocation) {
-            NamedLocation getterLocation = (NamedLocation) getterGuardExpr;
-            if (getterLocation.isSelf()) throw new Exception("GET@SELF is not allowed.");
-            else if (!getterLocation.toString().equals(sendingAgentName)) return;
+        Expr sendSelection = TRUE;
+        if (supplyLocation instanceof PredicateLocation) {
+            Expression<Boolean> supplyGuardExprHere = supply.predicate.relabel(v -> {
+                return v.getName().startsWith("@") ? v.sameTypeWithName(v.getName().substring(1)) : v;
+            });
+            supplyGuardExprHere = supplyGuardExprHere.relabel(v -> {
+                try {
+                    return isCvRef(system, v.getName())
+                        ? ((Expression<?>) getterAgent.getRelabel().get(v)).relabel(vv -> vv.sameTypeWithName(getterName + "-" + vv))
+                        : v;
+                } catch (RelabellingTypeException | MismatchingTypeException e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }).simplify();
+            sendSelection = guard(supplyGuardExprHere);
+        } else if (supplyLocation instanceof NamedLocation) {
+            String var = ((NamedLocation) supplyLocation).getVariable().getName();
+            sendSelection = eq(local(sendingAgentName, var), atom(getterName));
         }
 
-        getterGuardExpr = getterGuardExpr.relabel(v -> {
-            return isCvRef(system, v.getName())
-                ? v
-                : v.sameTypeWithName(getterName + "-" + v);
-        }).simplify();
-        Expression<Boolean> getterGuardExprHere = getterGuardExpr.relabel(v -> {
-            return v.getName().startsWith("@") ? v.sameTypeWithName(v.getName().substring(1)) : v;
-        });
-
-        getterGuardExprHere = getterGuardExprHere.relabel(v -> {
-            try {
-                return isCvRef(system, v.getName())
-                    ? ((Expression<?>) sendingAgent.getRelabel().get(v)).relabel(vv -> vv.sameTypeWithName(sendingAgentName + "-" + vv))
-                    : v;
-            } catch (RelabellingTypeException | MismatchingTypeException e) {
-                e.printStackTrace();
-            }
-            return null;
-        }).simplify();
+        Expr getSelection = TRUE;
+        if (getterLocation instanceof PredicateLocation) {
+            Expression<Boolean> getterGuardExpr = ((PredicateLocation) getterLocation).getExpression()
+                .relabel(v -> isCvRef(system, v.getName())
+                    ? v
+                    : v.sameTypeWithName(getterName + "-" + v))
+                .simplify();
+            Expression<Boolean> getterGuardExprHere = getterGuardExpr.relabel(v -> {
+                return v.getName().startsWith("@") ? v.sameTypeWithName(v.getName().substring(1)) : v;
+            });
+            getterGuardExprHere = getterGuardExprHere.relabel(v -> {
+                try {
+                    return isCvRef(system, v.getName())
+                        ? ((Expression<?>) sendingAgent.getRelabel().get(v)).relabel(vv -> vv.sameTypeWithName(sendingAgentName + "-" + vv))
+                        : v;
+                } catch (RelabellingTypeException | MismatchingTypeException e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }).simplify();
+            getSelection = guard(getterGuardExprHere);
+        } else if (getterLocation instanceof NamedLocation) {
+            String var = ((NamedLocation) getterLocation).getVariable().getName();
+            getSelection = eq(local(getterName, var), atom(sendingAgentName));
+        }
 
         for (Map.Entry<String, ?> entry : getProcess.getUpdate().entrySet()) {
             Expression<?> update = (Expression<?>) entry.getValue();
@@ -776,8 +805,6 @@ final class NuXmvTranslation {
         String lbl = splyLbl + "-" + getLbl;
         while (supplyGetDefinitions.contains(lbl)) lbl += "-" + unlabelledCounter++;
 
-        Expr sendSelection = supplyGuardExprHere instanceof NamedLocation ? TRUE : guard(supplyGuardExprHere);
-        Expr getSelection = getterGuardExprHere instanceof NamedLocation ? TRUE : guard(getterGuardExprHere);
         Expr enabled = and(and(supplyTriggeredIf), sendSelection, and(getTriggeredIf), getSelection);
         module.define(lbl, and(enabled, and(supplyEffects), and(getEffects)));
         supplyGetDefinitions.add(lbl);
@@ -788,15 +815,19 @@ final class NuXmvTranslation {
     private static final class PreparedSupply {
         final AgentInstance sender;
         final SupplyProcess process;
+        final Location location;
+        final Expression<Boolean> predicate;
         final Map<String, Expression<?>> message;
         final List<Expr> triggeredIf;
         final List<Expr> effects;
 
-        PreparedSupply(AgentInstance sender, SupplyProcess process,
-            Map<String, Expression<?>> message, List<Expr> triggeredIf,
-            List<Expr> effects) {
+        PreparedSupply(AgentInstance sender, SupplyProcess process, Location location,
+            Expression<Boolean> predicate, Map<String, Expression<?>> message,
+            List<Expr> triggeredIf, List<Expr> effects) {
             this.sender = sender;
             this.process = process;
+            this.location = location;
+            this.predicate = predicate;
             this.message = message;
             this.triggeredIf = triggeredIf;
             this.effects = effects;

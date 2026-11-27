@@ -2,8 +2,10 @@ package recipe.analysis;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /** Small output syntax tree. Source-language typing and simplification stay in the source AST. */
 final class Smv {
@@ -91,7 +93,7 @@ final class Smv {
         private final List<Variable> variables = new ArrayList<>();
         private final List<Definition> definitions = new ArrayList<>();
         private final List<Expr> initial = new ArrayList<>();
-        private final List<String> constants = new ArrayList<>();
+        private final Set<String> constants = new LinkedHashSet<>();
         private final List<String> specifications = new ArrayList<>();
         private Expr transition;
 

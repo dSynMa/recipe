@@ -238,14 +238,24 @@ public class System{
 
         // INSTANCES
         JSONArray jInstances = obj.getJSONArray("system");
-        List<AgentInstance> instances = new ArrayList<>(jInstances.length());
         for (int i = 0; i < jInstances.length(); i++) {
             JSONObject jInstance = jInstances.getJSONObject(i);
             Agent agent = agents.get(jInstance.getJSONObject("agent").getString("$refText"));
-            String name = jInstance.getString("name");
-            agentsToInstances.get(agent).add(name);
-            ctx.set(name, Config.getAgentType());
+            agentsToInstances.get(agent).add(jInstance.getString("name"));
         }
+
+        // Declare instance names as enum values before deserializing instance
+        // initialisers, so they stay constants instead of becoming variables.
+        for (Agent agent : agentsToInstances.keySet()) {
+            Enum agentEnum = new Enum(agent.getName(), agentsToInstances.get(agent));
+            ctx.set(agent.getName(), agentEnum);
+            for (String instanceName : agentsToInstances.get(agent)) {
+                ctx.set(instanceName, agentEnum);
+            }
+            Config.addAgentTypeName(agent.getName(), agent);
+        }
+
+        List<AgentInstance> instances = new ArrayList<>(jInstances.length());
         for (int i = 0; i < jInstances.length(); i++) {
             JSONObject jInstance = jInstances.getJSONObject(i);
             Agent agent = agents.get(jInstance.getJSONObject("agent").getString("$refText"));
@@ -260,15 +270,11 @@ public class System{
         }
 
         Set<Agent> agentsSet = new HashSet<>(agents.values());
-        for (Agent agent : agentsToInstances.keySet()) {
-            Enum agentEnum = new Enum(agent.getName(), agentsToInstances.get(agent));
-            ctx.set(agent.getName(), agentEnum);
-            Config.addAgentTypeName(agent.getName(), agent);
-        }
-        // Locations are not modelled yet. Keep the type available for
-        // location-typed locals without adding duplicate constants to the SMV.
         List<String> locationValues = new ArrayList<>();
         locationValues.add(Config.noAgentString);
+        for (List<String> instanceNames : agentsToInstances.values()) {
+            locationValues.addAll(instanceNames);
+        }
         locationEnum.setValues(locationValues);
 
         // SPECS

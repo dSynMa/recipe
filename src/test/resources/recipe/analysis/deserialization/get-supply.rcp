@@ -1,0 +1,35 @@
+enum myEnum { foo, bar, baz }
+
+message-structure: MSG : location
+property-variables: c : myEnum
+
+agent Client
+    local: q : myEnum, x : location
+    init: x == myself
+    relabel: c <- q
+    receive-guard: (chan == *)
+
+    repeat: (
+            splyAtSelf: {true} SUPPLY@(myself)()[]
+            +
+            getAtX: {true} GET@(x)()[]
+            +
+            bcastSend: {true} *! true(MSG := myself)[x := myself]
+            + 
+            bcastRecv:  {true} *? [x := MSG]
+            )
+
+system = Client(one,true) || Client(two,true) || Client(three, true)
+
+SPEC X X X false
+// SPEC G F <<p2p>> true
+// SPEC G F <<exists(c=foo)>> true
+// SPEC G F <<supplier-c=foo> true
+// SPEC G F <<getter == three>> true
+// SPEC G F <<initiator == three>> true
+// SPEC G F <<supplier == one>> true
+// SPEC G F <<producer == one>> true
+
+// initiator = either getter or sender (who initiates the transition)
+// producer = either supplier or sender (where message originates from)
+// supplier-x = variable x of supplying agent

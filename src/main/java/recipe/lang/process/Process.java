@@ -15,12 +15,17 @@ import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.expressions.predicate.IsEqualTo;
-import recipe.lang.expressions.predicate.NamedLocation;
+import recipe.lang.expressions.location.AnyLocation;
+import recipe.lang.expressions.location.Location;
+import recipe.lang.expressions.location.NamedLocation;
+import recipe.lang.expressions.location.PredicateLocation;
+import recipe.lang.expressions.location.SelfLocation;
 import recipe.lang.expressions.arithmetic.Floor;
 import recipe.lang.expressions.predicate.IsLessOrEqualThan;
 import recipe.lang.types.BoundedInteger;
 import recipe.lang.types.Enum;
 import recipe.lang.types.Number;
+import recipe.lang.types.Type;
 import recipe.lang.utils.Deserialization;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
 import recipe.lang.utils.exceptions.ParsingException;
@@ -126,8 +131,8 @@ public abstract class Process {
     /**
      * Build a process from the JSON AST produced by the JavaScript parser CLI.
      *
-     * <p>Location predicates and named supply locations are not supported yet;
-     * they are rejected explicitly rather than mis-translated.
+     * <p>GET payloads are not supported yet; they are rejected explicitly
+     * rather than mis-translated.
      */
     public static Process deserialize(JSONObject jProc, TypingContext ctx) throws Exception {
         String type = jProc.getString("$type");
@@ -154,13 +159,13 @@ public abstract class Process {
                 }
             }
 
-            Expression<Boolean> locationGuard = Condition.getTrue();
+            Location location = new AnyLocation();
             JSONObject jWhere = jProc.optJSONObject("where");
             if (jWhere != null) {
                 if (jWhere.has(Config.myselfKeyword)) {
-                    locationGuard = new NamedLocation();
+                    location = new SelfLocation();
                 } else if (jWhere.has("any")) {
-                    locationGuard = Condition.getTrue();
+                    location = new AnyLocation();
                 } else if (jWhere.has("predicate")) {
                     Expression predicate = Deserialization.deserializeExpr(
                         jWhere.getJSONObject("predicate"), ctx);
@@ -168,13 +173,26 @@ public abstract class Process {
                         TypedVariable tv = (TypedVariable) predicate;
                         if (tv.getType() != null
                                 && tv.getType().equals(Enum.getEnum(Config.locationLabel))) {
-                            throw new ParsingException(
-                                "Location predicates are not supported yet: " + predicate);
+                            location = new NamedLocation(tv);
+                        } else {
+                            location = new PredicateLocation((Expression<Boolean>) predicate);
                         }
+                    } else {
+                        location = new PredicateLocation((Expression<Boolean>) predicate);
                     }
-                    locationGuard = (Expression<Boolean>) predicate;
                 } else if (jWhere.has("location")) {
-                    throw new ParsingException("Named supply locations are not supported yet");
+                    String name = jWhere.getJSONObject("location").getString("$refText");
+                    if (name.equals(Config.myselfKeyword)) {
+                        location = new SelfLocation();
+                    } else if (name.equals("any")) {
+                        location = new AnyLocation();
+                    } else {
+                        Type locationType = ctx.get(name);
+                        if (locationType == null) {
+                            throw new ParsingException("Unknown location variable '" + name + "'");
+                        }
+                        location = new NamedLocation(new TypedVariable(locationType, name));
+                    }
                 } else {
                     throw new ParsingException("Unsupported location: " + jWhere);
                 }
@@ -204,9 +222,9 @@ public abstract class Process {
                     throw new ParsingException(
                         "GET payloads require two-way get/supply support");
                 }
-                action = new GetProcess(label, psi, locationGuard, update);
+                action = new GetProcess(label, psi, location, update);
             } else {
-                action = new SupplyProcess(label, psi, locationGuard, message, update);
+                action = new SupplyProcess(label, psi, location, message, update);
             }
             return applyFeasibilityConstraints(action, ctx, ctx);
         }
