@@ -63,6 +63,10 @@ public class Step {
         return parent;
     }
 
+    Map<AgentInstance, ConcreteStore> getStores() {
+        return stores;
+    }
+
     public JSONObject toJSON() {
         JSONObject jStores = new JSONObject();
         for (AgentInstance instance : stores.keySet()) {
@@ -292,6 +296,10 @@ public class Step {
     public Step next(int index, Interpreter interpreter) {
         assert index < transitions.size();
         this.chosenTransition = transitions.get(index);
+
+        if (chosenTransition instanceof SupplyGetTransition) {
+            return ((SupplyGetTransition) chosenTransition).next(interpreter);
+        }
 
         Map<AgentInstance,ConcreteStore> nextStores = new HashMap<AgentInstance,ConcreteStore>(stores);
 
@@ -540,17 +548,19 @@ public class Step {
             for (ProcessTransition sply : splys) {
                 SupplyProcess splyProc = (SupplyProcess) sply.getLabel();
                 try {
-                    boolean psiSat = actionEnabled(splyProc, supplierStore);
-                    if (!psiSat) continue;
                     for (AgentInstance getter : interpreter.sys.getAgentInstances()) {
                         if (getter == supplier) continue;
                         ConcreteStore getterStore = stores.get(getter);
                         Set<ProcessTransition> gets = interpreter.gets.get(getterStore.getState());
                         if (gets == null) continue;
                         for (ProcessTransition get : gets) {
-                            Store msgStore = makeMessageStore(supplierStore, splyProc, sys);
-                            Store instStore = getterStore.push(msgStore);
                             GetProcess getProc = (GetProcess) get.getLabel();
+                            Store getMsgStore = makeMessageStore(getterStore, getProc, sys);
+                            Store supplierEvalStore = supplierStore.push(getMsgStore);
+                            boolean psiSat = actionEnabled(splyProc, supplierEvalStore);
+                            if (!psiSat) continue;
+                            Store splyMsgStore = makeMessageStore(supplierStore, splyProc, sys);
+                            Store instStore = getterStore.push(splyMsgStore);
                             boolean getPsiSat = actionEnabled(getProc, instStore);
                             if (!getPsiSat) continue;
                             // Check whether the locations select each other.

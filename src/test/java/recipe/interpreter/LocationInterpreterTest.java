@@ -23,6 +23,23 @@ public class LocationInterpreterTest {
     }
 
     @Test
+    public void twoWayMessagesSwapInOneStep() throws Exception {
+        assumeTrue(Files.isExecutable(Path.of("nuxmv/bin/nuxmv")));
+
+        System system = System.deserialize(new JSONObject(resource("twoway.json")));
+        Interpreter interpreter = new Interpreter(system);
+        interpreter.init("TRUE");
+
+        assertFalse(interpreter.isDeadlocked());
+        assertEquals(2, interpreter.getCurrentStep().transitions.size());
+        interpreter.next(0);
+
+        JSONObject state = interpreter.getCurrentStep().toJSON().getJSONObject("state");
+        assertEquals("two", state.getJSONObject("one").getString("loc2"));
+        assertEquals("one", state.getJSONObject("two").getString("loc2"));
+    }
+
+    @Test
     public void locationPairingAndMyselfWorkInTheInterpreter() throws Exception {
         assumeTrue(Files.isExecutable(Path.of("nuxmv/bin/nuxmv")));
 

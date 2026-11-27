@@ -58,5 +58,14 @@ public class GetProcessTest {
         r = parser.parse("<v == 5> GET@(agentName)[v := 6]");
         assert r.isSuccess();
         assert r.get() instanceof GetProcess && ((GetProcess) r.get()).getLocation() instanceof NameLocation;
+
+        r = parser.parse("<v == 5> GET@(TRUE)(m := 1)[v := 6]");
+        assert r.isSuccess();
+        assert r.get() instanceof GetProcess
+            && ((GetProcess) r.get()).getMessage().containsKey("m");
+        r = parser.parse("<v == 5> GET@(TRUE)()[v := 6]");
+        assert r.isSuccess();
+        assert r.get() instanceof GetProcess
+            && ((GetProcess) r.get()).getMessage().isEmpty();
     }
 }

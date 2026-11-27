@@ -53,6 +53,15 @@ public class DeserializationTest {
     }
 
     @Test
+    public void deserializedTwoWayMessageSwapWorks() throws Exception {
+        System system = System.deserialize(new JSONObject(resource("twoway.json")));
+        String output = ToNuXmv.transform(system);
+
+        assertValid(output);
+        assertLtl(output, "F (one-loc2 = two & two-loc2 = one)", true);
+    }
+
+    @Test
     public void deserializedLocationModelProducesAValidModel() throws Exception {
         System system = System.deserialize(new JSONObject(resource("get-supply.json")));
         String output = ToNuXmv.transform(system);

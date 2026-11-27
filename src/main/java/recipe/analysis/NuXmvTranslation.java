@@ -273,29 +273,9 @@ final class NuXmvTranslation {
 
     private void translateSupply(int i, State<?> state, ProcessTransition t) throws Exception {
         AgentInstance sender = agentInstances.get(i);
-        Agent sendingAgent = sender.getAgent();
         String sendingAgentName = sender.getLabel();
         Expr supplierStateIsCurrentState = eq(state(sendingAgentName), atom(state.toString()));
-        List<Expr> supplyTriggeredIf = new ArrayList<>();
-        List<Expr> supplyEffects = new ArrayList<>();
         SupplyProcess supplyProcess = (SupplyProcess) t.getLabel();
-        supplyTriggeredIf.add(supplierStateIsCurrentState);
-        supplyTriggeredIf.add(source(supplyProcess.getPsi().relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify()));
-
-        supplyEffects.add(labelEffects(sendingAgentName, supplyProcess));
-        supplyEffects.add(atom("no-observations"));
-        supplyEffects.add(eq(next(state(sendingAgentName)), atom(t.getDestination().toString())));
-
-        for (Map.Entry<String, ?> entry : supplyProcess.getUpdate().entrySet()) {
-            Expression<?> update = (Expression<?>) entry.getValue();
-            supplyEffects.add(eq(next(local(sendingAgentName, entry.getKey())),
-                source(update.relabel(v -> v.sameTypeWithName(sendingAgentName + "-" + v)).simplify())));
-        }
-        for (String var : sendingAgent.getStore().getAttributes().keySet()) {
-            if (!supplyProcess.getUpdate().containsKey(var)) {
-                supplyEffects.add(eq(next(local(sendingAgentName, var)), local(sendingAgentName, var)));
-            }
-        }
 
         Map<String, Expression<?>> relabelledMessage = new HashMap<>();
         for (Map.Entry<String, ?> entry : supplyProcess.getMessage().entrySet()) {
@@ -312,8 +292,8 @@ final class NuXmvTranslation {
             }).simplify();
         }
 
-        PreparedSupply preparedSupply = new PreparedSupply(sender, supplyProcess, supplyLocation,
-            supplyPredicate, relabelledMessage, supplyTriggeredIf, supplyEffects);
+        PreparedSupply preparedSupply = new PreparedSupply(sender, supplyProcess, t.getDestination(),
+            supplierStateIsCurrentState, supplyLocation, supplyPredicate, relabelledMessage);
         for (int j = 0; j < agentInstances.size(); j++) {
             if (i == j) continue;
             AgentInstance getterInstance = agentInstances.get(j);
@@ -679,10 +659,21 @@ final class NuXmvTranslation {
         GetProcess getProcess = (GetProcess) gt.getLabel();
         Location getterLocation = getProcess.getLocation();
         Map<String, Expression<?>> relabelledMessage = supply.message;
-        List<Expr> supplyTriggeredIf = supply.triggeredIf;
-        List<Expr> supplyEffects = supply.effects;
+        Map<String, Expression<?>> relabelledGetMessage = new HashMap<>();
+        for (Map.Entry<String, ?> entry : getProcess.getMessage().entrySet()) {
+            Expression<?> payload = (Expression<?>) entry.getValue();
+            relabelledGetMessage.put(entry.getKey(),
+                payload.relabel(v -> v.sameTypeWithName(getterName + "-" + v)).simplify());
+        }
+
         AtomicReference<java.lang.Boolean> stop = new AtomicReference<>(false);
         Function<Expression<?>, Expression<?>> stopHelper = e -> { stop.set(true); return e; };
+        List<Expr> supplyTriggeredIf = new ArrayList<>();
+        supplyTriggeredIf.add(supply.supplierStateIsCurrentState);
+        List<Expr> supplyEffects = new ArrayList<>();
+        supplyEffects.add(labelEffects(sendingAgentName, supplyProcess));
+        supplyEffects.add(atom("no-observations"));
+        supplyEffects.add(eq(next(state(sendingAgentName)), atom(supply.destination.toString())));
         List<Expr> getTriggeredIf = new ArrayList<>();
         getTriggeredIf.add(getterStateIsCurrentState);
         List<Expr> getEffects = new ArrayList<>();
@@ -705,6 +696,18 @@ final class NuXmvTranslation {
             if (!getterNamesSupplier) return;
         }
 
+        Expression<recipe.lang.types.Boolean> supplyTransitionGuard = supplyProcess.getPsi()
+            .relabel(v -> getProcess.getMessage().containsKey(v.getName())
+            ? relabelledGetMessage.get(v.getName())
+            : (system.getMessageStructure().containsKey(v.getName())
+            ? stopHelper.apply(v)
+            : v.sameTypeWithName(sendingAgentName + "-" + v)))
+            .simplify();
+
+        if (stop.get()) return;
+        if (supplyTransitionGuard.equals(Condition.getFalse())) return;
+        supplyTriggeredIf.add(source(supplyTransitionGuard));
+
         Expression<recipe.lang.types.Boolean> getTransitionGuard = getProcess.getPsi()
             .relabel(v -> supplyProcess.getMessage().containsKey(v.getName())
             ? relabelledMessage.get(v.getName())
@@ -714,7 +717,7 @@ final class NuXmvTranslation {
 
         if (stop.get()) return;
         if (getTransitionGuard.equals(Condition.getFalse())) return;
-        else getTriggeredIf.add(source(getTransitionGuard));
+        getTriggeredIf.add(source(getTransitionGuard));
 
         Expr sendSelection = TRUE;
         if (supplyLocation instanceof PredicateLocation) {
@@ -761,6 +764,25 @@ final class NuXmvTranslation {
         } else if (getterLocation instanceof NamedLocation) {
             String var = ((NamedLocation) getterLocation).getVariable().getName();
             getSelection = eq(local(getterName, var), atom(sendingAgentName));
+        }
+
+        for (Map.Entry<String, ?> entry : supplyProcess.getUpdate().entrySet()) {
+            Expression<?> update = (Expression<?>) entry.getValue();
+            supplyEffects.add(eq(next(local(sendingAgentName, entry.getKey())),
+                source(update.relabel(v ->
+                getProcess.getMessage().containsKey(v.getName())
+                ? relabelledGetMessage.get(v.getName())
+                : (system.getMessageStructure().containsKey(v.getName())
+                ? stopHelper.apply(v)
+                : v.sameTypeWithName(sendingAgentName + "-" + v))).simplify())));
+        }
+
+        if (stop.get()) return;
+
+        for (String var : sendingAgent.getStore().getAttributes().keySet()) {
+            if (!supplyProcess.getUpdate().containsKey(var)) {
+                supplyEffects.add(eq(next(local(sendingAgentName, var)), local(sendingAgentName, var)));
+            }
         }
 
         for (Map.Entry<String, ?> entry : getProcess.getUpdate().entrySet()) {
@@ -815,22 +837,22 @@ final class NuXmvTranslation {
     private static final class PreparedSupply {
         final AgentInstance sender;
         final SupplyProcess process;
+        final State<?> destination;
+        final Expr supplierStateIsCurrentState;
         final Location location;
         final Expression<Boolean> predicate;
         final Map<String, Expression<?>> message;
-        final List<Expr> triggeredIf;
-        final List<Expr> effects;
 
-        PreparedSupply(AgentInstance sender, SupplyProcess process, Location location,
-            Expression<Boolean> predicate, Map<String, Expression<?>> message,
-            List<Expr> triggeredIf, List<Expr> effects) {
+        PreparedSupply(AgentInstance sender, SupplyProcess process, State<?> destination,
+            Expr supplierStateIsCurrentState, Location location, Expression<Boolean> predicate,
+            Map<String, Expression<?>> message) {
             this.sender = sender;
             this.process = process;
+            this.destination = destination;
+            this.supplierStateIsCurrentState = supplierStateIsCurrentState;
             this.location = location;
             this.predicate = predicate;
             this.message = message;
-            this.triggeredIf = triggeredIf;
-            this.effects = effects;
         }
     }
 }

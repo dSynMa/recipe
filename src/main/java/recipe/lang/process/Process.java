@@ -131,8 +131,8 @@ public abstract class Process {
     /**
      * Build a process from the JSON AST produced by the JavaScript parser CLI.
      *
-     * <p>GET payloads are not supported yet; they are rejected explicitly
-     * rather than mis-translated.
+     * <p>Both GET and SUPPLY payloads are deserialized; get/supply therefore
+     * carry message maps in both directions.
      */
     public static Process deserialize(JSONObject jProc, TypingContext ctx) throws Exception {
         String type = jProc.getString("$type");
@@ -218,11 +218,7 @@ public abstract class Process {
             } else if (type.equals("Receive")) {
                 action = new ReceiveProcess(label, psi, chanExpr, update);
             } else if (type.equals("Get")) {
-                if (!message.isEmpty()) {
-                    throw new ParsingException(
-                        "GET payloads require two-way get/supply support");
-                }
-                action = new GetProcess(label, psi, location, update);
+                action = new GetProcess(label, psi, location, update, message);
             } else {
                 action = new SupplyProcess(label, psi, location, message, update);
             }

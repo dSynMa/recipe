@@ -23,7 +23,7 @@ import recipe.lang.utils.TypingContext;
 
 import static recipe.Config.commVariableReferences;
 
-public class GetProcess extends BasicProcess {
+public class GetProcess extends BasicProcessWithMessage {
 
     private Location location;
 
@@ -32,19 +32,25 @@ public class GetProcess extends BasicProcess {
     }
 
     public GetProcess(String label, Expression<Boolean> psi, Location location, Map<String, Expression> update) {
+        this(label, psi, location, update, new HashMap<>());
+    }
+
+    public GetProcess(String label, Expression<Boolean> psi, Location location,
+                      Map<String, Expression> update, Map<String, Expression> message) {
         this.label = label;
         this.psi = psi;
         this.location = location;
         this.update = update;
+        this.message = message;
     }
 
     /** Compatibility constructor for code that still has a parsed guard expression. */
     public GetProcess(String label, Expression<Boolean> psi, Expression<Boolean> messageGuard, Map<String, Expression> update) {
-        this(label, psi, Location.fromLegacy(messageGuard), update);
+        this(label, psi, Location.fromLegacy(messageGuard), update, new HashMap<>());
     }
 
     public String toString() {
-        return "<" + psi.toString() + ">GET@(" + location + ")[" + update + "]";
+        return "<" + psi.toString() + ">GET@(" + location + ")(" + message + ")[" + update + "]";
     }
 
     @Override
@@ -74,6 +80,7 @@ public class GetProcess extends BasicProcess {
         Parser localGuard = Condition.typeParser(localAndChannelAndMessageContext);
         Parser messageGuard = Condition.typeParser(localAndChannelAndCommunicationContext);
         Parser namedLocationParser = recipe.lang.expressions.predicate.NamedLocation.parser();
+        Parser messageAssignment = Parsing.assignmentListParser(messageContext, localAndChannelAndCommunicationContext);
 
         Parser delimetedCondition =
                 (CharacterParser.of('<').trim())
@@ -83,12 +90,19 @@ public class GetProcess extends BasicProcess {
                             return (Expression<Boolean>) values.get(1);
                         });
 
+        Parser data = (CharacterParser.of('(').trim())
+                        .seq(messageAssignment.optional(new HashMap<String, Expression>()))
+                        .seq((CharacterParser.of(')').trim()))
+                        .map((List<Object> values) -> (Map<String, Expression>) values.get(1))
+                        .optional(new HashMap<String, Expression>());
+
         Parser parser = (CharacterParser.word().plus().trim()
                         .seq(CharacterParser.of(':').trim()).flatten()).optional()
                         .seq(delimetedCondition.trim())
                         // .seq((((Enum.getEnum(Config.channelLabel).valueParser()).seq(StringParser.of("?").trim())).or(localChannelVars.variableParser().seq(StringParser.of("?").trim()))))
                         .seq((StringParser.of("GET@").trim()))
                         .seq(messageGuard.trim().or(namedLocationParser))
+                        .seq(data)
                         .seq((CharacterParser.of('[').trim()))
                         .seq(localAssignment.optional(new HashMap<String, Expression>()))
                         .seq((CharacterParser.of(']').trim()))
@@ -96,9 +110,10 @@ public class GetProcess extends BasicProcess {
                             String label = (String) values.get(0);
                             Expression<Boolean> psi = (Expression<Boolean>) values.get(1);
                             Location location = Location.fromLegacy((Expression<Boolean>) values.get(3));
-                            Map<String, Expression> update = (Map<String, Expression>) values.get(5);
+                            Map<String, Expression> message = (Map<String, Expression>) values.get(4);
+                            Map<String, Expression> update = (Map<String, Expression>) values.get(6);
                             if(label != null) label = recipe.lang.utils.Parsing.declarationName(label.replace(":", "").trim());
-                            GetProcess action = new GetProcess(label, psi, location, update);
+                            GetProcess action = new GetProcess(label, psi, location, update, message);
                             return action;
                         });
         return parser;
