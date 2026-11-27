@@ -1,0 +1,21 @@
+message-structure: value: bool
+
+agent Sup
+    local: sent: bool
+    init: !sent
+    receive-guard: true
+    repeat: (
+        send: {true} SUPPLY@(any)(value := true)[sent := true]
+    )
+
+agent Get
+    local: got: bool
+    init: !got
+    receive-guard: true
+    repeat: (
+        recv: {value} GET@(true)() [got := value]
+    )
+
+system = Sup(s, true) || Get(g, true)
+
+SPEC F g-got;

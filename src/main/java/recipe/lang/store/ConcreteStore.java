@@ -7,6 +7,7 @@ import javax.management.AttributeNotFoundException;
 
 import org.json.JSONObject;
 
+import recipe.Config;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
@@ -14,6 +15,7 @@ import recipe.lang.agents.State;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.types.Boolean;
+import recipe.lang.types.Enum;
 import recipe.lang.types.Number;
 import recipe.lang.types.Type;
 import recipe.lang.utils.exceptions.AttributeNotInStoreException;
@@ -99,10 +101,10 @@ public class ConcreteStore extends Store {
                 return value;
             }
         } catch (Exception e) {
-            System.out.println(e);
-            System.out.println(e.getStackTrace());
+            System.err.println(e);
+            System.err.println(e.getStackTrace());
         }
-        // System.out.printf(">>> Lookup failed for %s in %s\n", attribute, this);
+        // System.err.printf(">>> Lookup failed for %s in %s\n", attribute, this);
         return null;
 	}
 
@@ -158,6 +160,15 @@ public class ConcreteStore extends Store {
     public ConcreteStore(JSONObject obj, AgentInstance instance) {
         this.agent = instance.getAgent();
         data = new HashMap<TypedVariable, TypedValue>();
+        if (agent.getStore().getAttributes().containsKey(Config.myselfKeyword)) {
+            try {
+                Enum locationEnum = Enum.getEnum(Config.locationLabel);
+                data.put(new TypedVariable<Type>(locationEnum, Config.myselfKeyword),
+                    new TypedValue<Enum>(locationEnum, instance.getLabel()));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         state = new State<Integer>(
             agent.getName(),
             Integer.valueOf(obj.getString("automaton-state"))
@@ -173,14 +184,14 @@ public class ConcreteStore extends Store {
                             raw = recipe.analysis.NuXmvInteraction.interpreterNumber(instance.getLabel() + "-" + var, raw);
                         TypedValue val = typedValueFactory(v.getType(), raw);
                         this.data.put(v, val);
-                        // System.out.println(v.getName());
-                        // // System.out.println(v.getType());
-                        // System.out.println(var);
-                        // System.out.println(val.getValue());
-                        // System.out.println(val.getType());
+                        // System.err.println(v.getName());
+                        // // System.err.println(v.getType());
+                        // System.err.println(var);
+                        // System.err.println(val.getValue());
+                        // System.err.println(val.getType());
                     }
                 } catch (AttributeNotInStoreException x) {
-                    System.out.println(var + " not found");
+                    System.err.println(var + " not found");
                 } catch (MismatchingTypeException x) {
                     throw new IllegalArgumentException("Cannot load " + instance.getLabel() + "-" + var
                             + " = " + obj.get(var) + ": " + x.getMessage(), x);

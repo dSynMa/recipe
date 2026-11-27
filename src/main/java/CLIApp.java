@@ -15,8 +15,10 @@ import org.json.JSONObject;
 import org.petitparser.context.ParseError;
 import org.petitparser.context.Result;
 import org.petitparser.parser.Parser;
+import recipe.RCheckInterop;
 import recipe.analysis.NuXmvInteraction;
 import recipe.analysis.ToNuXmv;
+import recipe.interpreter.Interpreter;
 import recipe.lang.utils.Pair;
 
 public class CLIApp
@@ -41,22 +43,34 @@ public class CLIApp
         Options options = new Options();
 
         Option input = new Option("i", "input", true, "info: input recipe script file\nargs: <recipe script>");
+        Option inputJson = new Option("j", "json", true, "info: input system as JSON file\nargs: <json file>");
         Option nuxmv = new Option("n", "smv", false, "info: output to smv file");
         Option dot = new Option("d", "dot", false, "info: output agents DOT files");
         Option mc = new Option("mc", "mc", false, "info: model checks input script file");
         Option bmc = new Option("bmc", "bmc", true, "info: bounded model checks input script file\nargs: bound (by default 10)");
         Option simulation = new Option("sim", "simulate", false, "info: opens file in simulation mode");
         Option gui = new Option("g", "gui", false, "info: opens gui");
+        Option api = new Option("a", "api", false, "info: runs api server");
+        Option threads = new Option("t", "threads", true, "info: how many threads to use in model-checking (default=num of hw threads)");
+        Option port = new Option("p", "port", true, "info: port the server will listen to (default 54044, 0 for a free port)");
+        Option tmp = new Option("tmp", false, "info: generate files in $TMPDIR");
+        Option cex = new Option("cex", true, "nuxmv counterexample to be translated\nargs: <text file>");
 
 //        input.setRequired(true);
 
         options.addOption(input);
+        options.addOption(inputJson);
         options.addOption(nuxmv);
         options.addOption(dot);
         options.addOption(mc);
         options.addOption(bmc);
         options.addOption(simulation);
         options.addOption(gui);
+        options.addOption(api);
+        options.addOption(threads);
+        options.addOption(port);
+        options.addOption(tmp);
+        options.addOption(cex);
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -71,6 +85,20 @@ public class CLIApp
             System.exit(1);
         }
 
+        if (cmd.hasOption("api")) {
+            int numThreads = Runtime.getRuntime().availableProcessors();
+            if (cmd.hasOption("t")) {
+                numThreads = Integer.parseInt(cmd.getOptionValue("t"));
+            }
+            int serverPort = 54044;
+            if (cmd.hasOption("p")) {
+                serverPort = Integer.parseInt(cmd.getOptionValue("p"));
+            }
+            Path jsonPath = cmd.hasOption("j") ? Path.of(cmd.getOptionValue("j")) : null;
+            Server.start(numThreads, serverPort, jsonPath);
+            return;
+        }
+
         if(cmd.hasOption("gui")){
             Server.start();
             ProcessBuilder processBuilder = new ProcessBuilder();
@@ -81,28 +109,34 @@ public class CLIApp
             Process exec = processBuilder.start();
 
             exec.getInputStream().transferTo(System.out);
-        } else if(!cmd.hasOption("i")){
+        } else if(!cmd.hasOption("i") && !cmd.hasOption("j")){
             formatter.printHelp("recipe", options);
 
             System.exit(1);
         } else {
 
-            Path inputFilePath = Path.of(cmd.getOptionValue("i"));
-
-            String script = String.join("\n", Files.readAllLines(inputFilePath));
+            Path inputFilePath = cmd.hasOption("i") ? Path.of(cmd.getOptionValue("i")) : null;
+            Path jsonPath = cmd.hasOption("j") ? Path.of(cmd.getOptionValue("j")) : null;
+            String name = (inputFilePath != null ? inputFilePath : jsonPath)
+                .getFileName().toString().split("\\.")[0];
 
             String transform = "";
             recipe.lang.System system = null;
             try {
-                Parser systemParser = recipe.lang.System.parser().end();
-                Result r = systemParser.parse(script);
-                if (r.isFailure()) {
-                    System.out.println(r.getMessage());
-                    System.out.println(r.getPosition());
-                    System.out.println("Could not parse the following: \n" + script.substring(r.getPosition()));
-                    return;
+                if (jsonPath != null) {
+                    system = recipe.lang.System.deserialize(RCheckInterop.parseJson(jsonPath));
+                } else {
+                    String script = String.join("\n", Files.readAllLines(inputFilePath));
+                    Parser systemParser = recipe.lang.System.parser().end();
+                    Result r = systemParser.parse(script);
+                    if (r.isFailure()) {
+                        System.out.println(r.getMessage());
+                        System.out.println(r.getPosition());
+                        System.out.println("Could not parse the following: \n" + script.substring(r.getPosition()));
+                        return;
+                    }
+                    system = r.get();
                 }
-                system = r.get();
 
                 transform = ToNuXmv.transform(system);
             } catch (Exception e) {
@@ -111,19 +145,43 @@ public class CLIApp
             }
 
             if (cmd.hasOption("smv")) {
-                String name = inputFilePath.getFileName().toString().split("\\.")[0] + ".smv";
-                Files.write(Path.of(name), transform.getBytes(StandardCharsets.UTF_8));
+                Path smvPath;
+                if (cmd.hasOption("tmp")) {
+                    File tmpFile = File.createTempFile(name, ".smv");
+                    smvPath = tmpFile.toPath();
+                    System.err.println(smvPath);
+                } else {
+                    smvPath = Path.of(name + ".smv");
+                }
+                Files.write(smvPath, transform.getBytes(StandardCharsets.UTF_8));
             }
             if (cmd.hasOption("dot")) {
-                String filename = inputFilePath.getFileName().toString().split("\\.")[0];
-                if(!Files.exists(Path.of(filename))) {
-                    Files.createDirectory(Path.of(filename));
+                Path directory;
+                if (cmd.hasOption("tmp")) {
+                    directory = Files.createTempDirectory(name);
+                } else if (!Files.exists(Path.of(name))) {
+                    directory = Files.createDirectory(Path.of(name));
+                } else {
+                    directory = Path.of(name);
                 }
                 JSONArray json = new JSONArray(system.toDOT());
                 for(int i = 0; i < json.length(); i++){
                     String agentName = new JSONObject(json.getString(i)).getString("name");
                     String agentDot = new JSONObject(json.getString(i)).getString("graph");
-                    Files.write(Path.of(filename + "/" + agentName + ".dot"), agentDot.getBytes(StandardCharsets.UTF_8));
+                    Path dotPath = directory.resolve(agentName + ".dot");
+                    Files.write(dotPath, agentDot.getBytes(StandardCharsets.UTF_8));
+                    System.err.println(dotPath);
+                }
+            }
+            if (cmd.hasOption("cex")) {
+                try {
+                    String cexText = Files.readString(Path.of(cmd.getOptionValue("cex")));
+                    Interpreter interpreter = Interpreter.ofTrace(system, cexText);
+                    System.out.println(new JSONArray(interpreter.traceToJSON()).toString(2));
+                } catch (Exception e) {
+                    System.err.println("Error translating counterexample:");
+                    System.err.println(e.getMessage());
+                    System.exit(1);
                 }
             }
             Scanner scanner = new Scanner(System.in);

@@ -17,7 +17,12 @@ import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
 import recipe.lang.expressions.predicate.Condition;
-import recipe.lang.expressions.predicate.NamedLocation;
+import recipe.lang.expressions.location.AnyLocation;
+import recipe.lang.expressions.location.Location;
+import recipe.lang.expressions.location.NameLocation;
+import recipe.lang.expressions.location.NamedLocation;
+import recipe.lang.expressions.location.PredicateLocation;
+import recipe.lang.expressions.location.SelfLocation;
 import recipe.lang.ltol.Observation;
 import recipe.lang.process.BasicProcess;
 import recipe.lang.process.BasicProcessWithMessage;
@@ -56,6 +61,10 @@ public class Step {
 
     public Step getParent() {
         return parent;
+    }
+
+    Map<AgentInstance, ConcreteStore> getStores() {
+        return stores;
     }
 
     public JSONObject toJSON() {
@@ -176,10 +185,10 @@ public class Step {
             if (inst == null) {
                 // Skip special fields
                 if (agentInstanceName.startsWith("___")) {
-                    // System.out.printf(">> Found annotation %s : %s\n", agentInstanceName, constraint.get(agentInstanceName));
+                    // System.err.printf(">> Found annotation %s : %s\n", agentInstanceName, constraint.get(agentInstanceName));
                     continue;
                 }
-                System.out.printf(">> Agent instance not found: %s\n", agentInstanceName);
+                System.err.printf(">> Agent instance not found: %s\n", agentInstanceName);
                 return false;
             }
             JSONObject instanceConstraint = constraint.getJSONObject(agentInstanceName);
@@ -193,11 +202,11 @@ public class Step {
                         TypedValue value = instanceStore.getValue(var);
                         TypedValue pastValue = pastInstanceStore.getValue(var);
                         if (!instanceConstraint.has(varName) && !pastValue.equals(value)) {
-                            System.out.printf(">> %s: expected %s (from past state), got %s\n", pastValue, value);
+                            System.err.printf(">> %s: expected %s (from past state), got %s\n", pastValue, value);
                         }
                     } catch (AttributeNotInStoreException e) {
                         // Should never match
-                        System.out.printf(">> Not found: %s\n", varName);
+                        System.err.printf(">> Not found: %s\n", varName);
                     }
                 }
             }
@@ -208,7 +217,7 @@ public class Step {
                         String stateConstraint = instanceConstraint.get(varName).toString();
                         String stateInst = instanceStore.getState().getLabel().toString();
                         if (!stateInst.equals(stateConstraint)) {
-                            System.out.printf(">> Expected %s, got %s\n", stateConstraint, stateInst);
+                            System.err.printf(">> Expected %s, got %s\n", stateConstraint, stateInst);
                             return false;
                         }
                         continue;
@@ -243,7 +252,7 @@ public class Step {
                                 java.math.BigDecimal x = new java.math.BigDecimal(instanceConstraint.get(varName).toString());
                                 java.math.BigDecimal y = new java.math.BigDecimal(value.getValue().toString());
                                 if (x.compareTo(y) != 0) {
-                                    System.out.printf(
+                                    System.err.printf(
                                         ">>%s-%s: Expected %s, got %s\n",
                                         inst.getLabel(), varName, x, y);
                                     return false;
@@ -259,7 +268,7 @@ public class Step {
                             java.lang.Boolean isConstraintTrue = traceBoolean(instanceConstraint.get(varName));
                             if (isConstraintTrue == null) return false;
                             if (!value.getValue().equals(isConstraintTrue)) {
-                                System.out.printf(
+                                System.err.printf(
                                     ">>%s-%s: Expected %s, got %s\n",
                                     inst.getLabel(), varName, isConstraintTrue, value.getValue());
                                 return false;
@@ -267,17 +276,17 @@ public class Step {
                         }
 
                         else if (!value.getValue().toString().equals(instanceConstraint.get(varName).toString())) {
-                            System.out.printf(
+                            System.err.printf(
                                 ">>%s-%s: Expected %s, got %s\n",
                                 inst.getLabel(), varName, instanceConstraint.get(varName), value.getValue());
                             return false;
                         }
                     } else {
-                        // System.out.printf(">> Not found: %s\n", varName);
+                        // System.err.printf(">> Not found: %s\n", varName);
                     }
                 } catch (AttributeNotInStoreException e) {
                     // Other variables that we do not care about
-                    // System.out.printf(">> Not found: %s\n", varName);
+                    // System.err.printf(">> Not found: %s\n", varName);
                 }
             }
         }
@@ -287,6 +296,10 @@ public class Step {
     public Step next(int index, Interpreter interpreter) {
         assert index < transitions.size();
         this.chosenTransition = transitions.get(index);
+
+        if (chosenTransition instanceof SupplyGetTransition) {
+            return ((SupplyGetTransition) chosenTransition).next(interpreter);
+        }
 
         Map<AgentInstance,ConcreteStore> nextStores = new HashMap<AgentInstance,ConcreteStore>(stores);
 
@@ -400,7 +413,7 @@ public class Step {
                     Store s = store.push(interpreter.getChannelTV(), chan);
                     TypedValue evalGuard = instance.getAgent().getReceiveGuard().valueIn(s);
                     boolean isListening = chan.toString().equals(Config.broadcast) || Condition.getTrue().equals(evalGuard);
-                    // System.out.printf("eval %s on store %s ---> %s\n", instance.getAgent().getReceiveGuard(), s, isListening);
+                    // System.err.printf("eval %s on store %s ---> %s\n", instance.getAgent().getReceiveGuard(), s, isListening);
                     if (isListening) {
                         listeners.putIfAbsent(chan, new HashSet<>());
                         listeners.get(chan).add(instance);
@@ -449,8 +462,8 @@ public class Step {
 
                                         TypedValue receiveGuard = inst.getAgent().getReceiveGuard().valueIn(instStore);
                                         boolean receiveGuardOk = chan.toString().equals(Config.broadcast) || Condition.getTrue().equals(receiveGuard);
-                                        // System.out.printf("sendguard: %s (%s)\n", sendGuard, sendGuardOk);
-                                        // System.out.printf("receiveguard: %s (%s)\n", receiveGuard, receiveGuardOk);
+                                        // System.err.printf("sendguard: %s (%s)\n", sendGuard, sendGuardOk);
+                                        // System.err.printf("receiveguard: %s (%s)\n", receiveGuard, receiveGuardOk);
 
                                         if (sendGuardOk && receiveGuardOk) {
                                             receivesMap.put(inst, new HashSet<ProcessTransition>());
@@ -535,45 +548,60 @@ public class Step {
             for (ProcessTransition sply : splys) {
                 SupplyProcess splyProc = (SupplyProcess) sply.getLabel();
                 try {
-                    boolean psiSat = actionEnabled(splyProc, supplierStore);
-                    if (!psiSat) continue;
                     for (AgentInstance getter : interpreter.sys.getAgentInstances()) {
                         if (getter == supplier) continue;
                         ConcreteStore getterStore = stores.get(getter);
                         Set<ProcessTransition> gets = interpreter.gets.get(getterStore.getState());
                         if (gets == null) continue;
                         for (ProcessTransition get : gets) {
-                            Store msgStore = makeMessageStore(supplierStore, splyProc, sys);
-                            Store instStore = getterStore.push(msgStore);
                             GetProcess getProc = (GetProcess) get.getLabel();
+                            Store getMsgStore = makeMessageStore(getterStore, getProc, sys);
+                            Store supplierEvalStore = supplierStore.push(getMsgStore);
+                            boolean psiSat = actionEnabled(splyProc, supplierEvalStore);
+                            if (!psiSat) continue;
+                            Store splyMsgStore = makeMessageStore(supplierStore, splyProc, sys);
+                            Store instStore = getterStore.push(splyMsgStore);
                             boolean getPsiSat = actionEnabled(getProc, instStore);
                             if (!getPsiSat) continue;
-                            // Check if predicates match
-                            Expression<recipe.lang.types.Boolean> splyGuard = splyProc.getMessageGuard();
-                            Expression<recipe.lang.types.Boolean> getGuard = getProc.getMessageGuard();
+                            // Check whether the locations select each other.
+                            Location splyLoc = splyProc.getLocation();
+                            Location getLoc = getProc.getLocation();
+                            TypedValue supplierValue = new TypedValue(Config.getAgentType(), supplier.getLabel());
+                            TypedValue getterValue = new TypedValue(Config.getAgentType(), getter.getLabel());
 
-                            if (splyGuard instanceof NamedLocation) {
-                                boolean isSelf = ((NamedLocation) splyGuard).isSelf();
-                                // SPLY@SELF = Only getters that know the supplier's name will be served
-                                if (isSelf && !getGuard.toString().equals(supplier.getLabel())) continue;
-                                // SPLY@foo = Only getter with name foo will be served
-                                if (!isSelf && !splyGuard.toString().equals(getter.getLabel())) continue;
+                            // SPLY@foo = only getter foo is served
+                            if (splyLoc instanceof NameLocation
+                                    && !((NameLocation) splyLoc).getName().equals(getter.getLabel())) continue;
+                            // GET@foo = only supplier foo is chosen
+                            if (getLoc instanceof NameLocation
+                                    && !((NameLocation) getLoc).getName().equals(supplier.getLabel())) continue;
+                            if (getLoc instanceof SelfLocation) continue; // GET@SELF is not allowed
+                            // SELF supplies only getters that name the supplier
+                            if (splyLoc instanceof SelfLocation) {
+                                boolean getterNamesSupplier = getLoc instanceof NamedLocation
+                                    || (getLoc instanceof NameLocation
+                                        && ((NameLocation) getLoc).getName().equals(supplier.getLabel()));
+                                if (!getterNamesSupplier) continue;
                             }
-                            if (getGuard instanceof NamedLocation) {
-                                boolean isSelf = ((NamedLocation) getGuard).isSelf();
-                                // GET@SELF = Only suppliers that know the getter's name will be chosen
-                                if (isSelf && !splyGuard.toString().equals(getter.getLabel())) continue;
-                                // GET@foo = Only supplier with name foo will be chosen
-                                if (!isSelf && !getGuard.toString().equals(supplier.getLabel())) continue;
-                            }
+
                             CompositeStore supplySelection = new CompositeStore(sys);
                             supplySelection.push(supplierStore);
                             supplySelection.pushReceiverStore(getterStore);
                             CompositeStore getSelection = new CompositeStore(sys);
                             getSelection.push(instStore);
                             getSelection.pushReceiverStore(supplierStore);
-                            if (!(splyGuard instanceof NamedLocation) && !selectionHolds(splyGuard, supplySelection)) continue;
-                            if (!(getGuard instanceof NamedLocation) && !selectionHolds(getGuard, getSelection)) continue;
+
+                            if (splyLoc instanceof NamedLocation) {
+                                TypedValue holds = ((NamedLocation) splyLoc).getPredicate(getterValue).valueIn(supplierStore);
+                                if (!Condition.getTrue().equals(holds)) continue;
+                            } else if (splyLoc instanceof PredicateLocation
+                                    && !selectionHolds(((PredicateLocation) splyLoc).getExpression(), supplySelection)) continue;
+
+                            if (getLoc instanceof NamedLocation) {
+                                TypedValue holds = ((NamedLocation) getLoc).getPredicate(supplierValue).valueIn(instStore);
+                                if (!Condition.getTrue().equals(holds)) continue;
+                            } else if (getLoc instanceof PredicateLocation
+                                    && !selectionHolds(((PredicateLocation) getLoc).getExpression(), getSelection)) continue;
 
                             Transition tr = new SupplyGetTransition();
                             tr.setProducer(supplier, sply);

@@ -1,5 +1,7 @@
 package recipe.lang;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
@@ -8,6 +10,8 @@ import org.petitparser.parser.primitive.StringParser;
 import recipe.Config;
 import recipe.lang.agents.Agent;
 import recipe.lang.agents.AgentInstance;
+import recipe.lang.definitions.GuardDefinition;
+import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.predicate.And;
 import recipe.lang.expressions.predicate.IsEqualTo;
@@ -79,13 +83,7 @@ public class System{
     public System(Map<String, Type> messageStructure, Map<String, Type> communicationVariables,
                   Map<String, Type> guardDefinitions, Set<Agent> agents,
                   List<AgentInstance> agentsInstances, List<LTOL> specs) throws Exception {
-        for (String reserved : new String[]{"sender", Config.channelLabel}) {
-            if (messageStructure.containsKey(reserved) || communicationVariables.containsKey(reserved)
-                    || guardDefinitions.containsKey(reserved)) {
-                throw new IllegalArgumentException("Variable '" + reserved
-                    + "' is reserved for observation metadata; rename the message variable, communication variable, or guard.");
-            }
-        }
+        validateReservedNames(messageStructure, communicationVariables, guardDefinitions);
         if(!validate(messageStructure, communicationVariables, guardDefinitions, agents)){
             throw new Exception("Message and communication variables, and guard definition names need to be disjoint, " +
                     "and they also need to be disjoin with each agent's local variables.");
@@ -96,6 +94,24 @@ public class System{
         this.agents = agents;
         this.agentsInstances = agentsInstances;
         this.specs = specs;
+    }
+
+    /**
+     * Reject declarations that would shadow observation metadata.
+     *
+     * <p>Called by the constructor, so systems built by the parser and by
+     * deserializers are validated identically.
+     */
+    public static void validateReservedNames(Map<String, Type> messageStructure,
+                                             Map<String, Type> communicationVariables,
+                                             Map<String, Type> guardDefinitions) {
+        for (String reserved : new String[]{"sender", Config.channelLabel}) {
+            if (messageStructure.containsKey(reserved) || communicationVariables.containsKey(reserved)
+                    || guardDefinitions.containsKey(reserved)) {
+                throw new IllegalArgumentException("Variable '" + reserved
+                    + "' is reserved for observation metadata; rename the message variable, communication variable, or guard.");
+            }
+        }
     }
 
     public static boolean validate(Map<String, Type> messageStructure, Map<String, Type> communicationVariables,
@@ -130,6 +146,149 @@ public class System{
         return true;
     }
 
+    /**
+     * Build a system from the JSON AST produced by the JavaScript parser CLI.
+     * This is the input path used by the editor extension.
+     */
+    public static System deserialize(JSONObject obj) throws Exception {
+        Enum.clear();
+        Guard.clear();
+        Config.reset();
+        Deserialization.checkType(obj, "Model");
+        TypingContext ctx = new TypingContext();
+
+        // ENUMS
+        if (obj.has("enums")) {
+            JSONArray jEnums = obj.getJSONArray("enums");
+            for (int i = 0; i < jEnums.length(); i++) {
+                JSONObject en = jEnums.getJSONObject(i);
+                List<String> cases = new ArrayList<>();
+                JSONArray jCases = en.getJSONArray("cases");
+                for (int j = 0; j < jCases.length(); j++) {
+                    cases.add(jCases.getJSONObject(j).getString("name"));
+                }
+                String enumName = en.getString("name");
+                if (enumName.equals(Config.channelLabel)) {
+                    cases.add(Config.broadcast);
+                }
+                Enum newEnum = new Enum(enumName, cases);
+                for (String c : cases) {
+                    ctx.set(c, newEnum);
+                }
+            }
+        }
+        if (!Enum.exists(Config.channelLabel)) {
+            List<String> channels = new ArrayList<>();
+            channels.add(Config.broadcast);
+            Enum chanEnum = new Enum(Config.channelLabel, channels);
+            ctx.set(Config.broadcast, chanEnum);
+        }
+
+        Enum locationEnum = Enum.exists(Config.locationLabel)
+            ? Enum.getEnum(Config.locationLabel)
+            : new Enum(Config.locationLabel, new ArrayList<String>());
+
+        // MESSAGE STRUCTURE
+        Map<String, Type> msgStruct = new HashMap<>();
+        if (obj.has("msgStructs")) {
+            JSONArray jMsgStructs = obj.getJSONArray("msgStructs");
+            for (int i = 0; i < jMsgStructs.length(); i++) {
+                JSONObject ms = jMsgStructs.getJSONObject(i);
+                String msgName = ms.getString("name");
+                Type msgType = Deserialization.deserializeType(ms);
+                msgStruct.put(msgName, msgType);
+                ctx.set(msgName, msgType);
+            }
+        }
+
+        // PROPERTY VARIABLES
+        Map<String, Type> propIds = new HashMap<>();
+        if (obj.has("propVars")) {
+            JSONArray jPropIds = obj.getJSONArray("propVars");
+            for (int i = 0; i < jPropIds.length(); i++) {
+                JSONObject jPrId = jPropIds.getJSONObject(i);
+                String name = jPrId.getString("name");
+                Type type = Deserialization.deserializeType(jPrId);
+                propIds.put(name, type);
+                ctx.set(name, type);
+            }
+        }
+
+        // GUARDS
+        Map<String, Type> guardDefinitions = new HashMap<>();
+        if (obj.has("guards")) {
+            JSONArray jGuards = obj.getJSONArray("guards");
+            for (int i = 0; i < jGuards.length(); i++) {
+                GuardDefinition gd = GuardDefinition.deserialize(jGuards.getJSONObject(i), ctx);
+                Guard.setDefinition(gd.getName(), gd);
+                guardDefinitions.put(gd.getName(), gd.getType());
+                ctx.set(gd.getName(), gd.getType());
+            }
+        }
+
+        // AGENTS
+        JSONArray jAgents = obj.getJSONArray("agents");
+        Map<String, Agent> agents = new HashMap<>();
+        Map<Agent, List<String>> agentsToInstances = new HashMap<>();
+        for (int i = 0; i < jAgents.length(); i++) {
+            Agent agent = Agent.deserialize(jAgents.getJSONObject(i), ctx);
+            agents.put(agent.getName(), agent);
+            agentsToInstances.put(agent, new ArrayList<>());
+        }
+
+        // INSTANCES
+        JSONArray jInstances = obj.getJSONArray("system");
+        for (int i = 0; i < jInstances.length(); i++) {
+            JSONObject jInstance = jInstances.getJSONObject(i);
+            Agent agent = agents.get(jInstance.getJSONObject("agent").getString("$refText"));
+            agentsToInstances.get(agent).add(jInstance.getString("name"));
+        }
+
+        // Declare instance names as enum values before deserializing instance
+        // initialisers, so they stay constants instead of becoming variables.
+        for (Agent agent : agentsToInstances.keySet()) {
+            Enum agentEnum = new Enum(agent.getName(), agentsToInstances.get(agent));
+            ctx.set(agent.getName(), agentEnum);
+            for (String instanceName : agentsToInstances.get(agent)) {
+                ctx.set(instanceName, agentEnum);
+            }
+            Config.addAgentTypeName(agent.getName(), agent);
+        }
+
+        List<AgentInstance> instances = new ArrayList<>(jInstances.length());
+        for (int i = 0; i < jInstances.length(); i++) {
+            JSONObject jInstance = jInstances.getJSONObject(i);
+            Agent agent = agents.get(jInstance.getJSONObject("agent").getString("$refText"));
+            String name = jInstance.getString("name");
+            TypingContext instanceCtx = new TypingContext();
+            instanceCtx.setAll(ctx);
+            for (TypedVariable tv : agent.getStore().getAttributes().values()) {
+                instanceCtx.set(tv.getName(), tv.getType());
+            }
+            Expression init = Deserialization.deserializeExpr(jInstance.getJSONObject("init"), instanceCtx);
+            instances.add(new AgentInstance(name, init, agent));
+        }
+
+        Set<Agent> agentsSet = new HashSet<>(agents.values());
+        List<String> locationValues = new ArrayList<>();
+        for (List<String> instanceNames : agentsToInstances.values()) {
+            locationValues.addAll(instanceNames);
+        }
+        locationEnum.setValues(locationValues);
+
+        // SPECS
+        List<LTOL> specs = new ArrayList<>();
+        if (obj.has("specs")) {
+            JSONArray jSpecs = obj.getJSONArray("specs");
+            specs = new ArrayList<>(jSpecs.length());
+            for (int i = 0; i < jSpecs.length(); i++) {
+                specs.add(Deserialization.deserializeLTOL(jSpecs.getJSONObject(i), ctx));
+            }
+        }
+
+        return new System(msgStruct, propIds, guardDefinitions, agentsSet, instances, specs);
+    }
+
     public static Parser parser(){
         // Build fresh grammar state and reset declarations on every parse, not on creation.
         return new LazyParser<>(ignored -> freshParser(), null);
@@ -139,6 +298,12 @@ public class System{
         Enum.clear();
         Guard.clear();
         Config.reset();
+        recipe.lang.types.Enum locationEnum;
+        try {
+            locationEnum = new recipe.lang.types.Enum(Config.locationLabel, new ArrayList<>());
+        } catch (TypeCreationException e) {
+            throw new IllegalArgumentException(e);
+        }
 
         SettableParser parser = SettableParser.undefined();
 
@@ -293,6 +458,12 @@ public class System{
                                         }
                                     }
                                 }
+
+                                List<String> locationValues = new ArrayList<>();
+                                for (AgentInstance instance : agentInstances) {
+                                    locationValues.add(instance.getLabel());
+                                }
+                                locationEnum.setValues(locationValues);
 
                                 List<LTOL> ltolSpecs = new ArrayList<>();
                                 try {

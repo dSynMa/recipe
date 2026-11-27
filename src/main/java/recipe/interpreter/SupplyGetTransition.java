@@ -1,8 +1,10 @@
 package recipe.interpreter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.json.JSONObject;
@@ -11,6 +13,8 @@ import recipe.lang.agents.AgentInstance;
 import recipe.lang.agents.ProcessTransition;
 import recipe.lang.process.BasicProcessWithMessage;
 import recipe.lang.process.GetProcess;
+import recipe.lang.store.ConcreteStore;
+import recipe.lang.store.Store;
 
 class SupplyGetTransition implements Transition {
     private AgentInstance supplier;
@@ -80,6 +84,29 @@ class SupplyGetTransition implements Transition {
         }
         this.getter = instance;
         this.get = transition;
+    }
+
+    public Step next(Interpreter interpreter) {
+        Step currentStep = interpreter.getCurrentStep();
+        Map<AgentInstance, ConcreteStore> stores = currentStep.getStores();
+        Map<AgentInstance, ConcreteStore> nextStores = new HashMap<>(stores);
+
+        ConcreteStore supplierStore = stores.get(supplier);
+        ConcreteStore getterStore = stores.get(getter);
+
+        BasicProcessWithMessage supplyProcess = (BasicProcessWithMessage) supply.getLabel();
+        BasicProcessWithMessage getProcess = (BasicProcessWithMessage) get.getLabel();
+
+        Store supplyMessage = currentStep.makeMessageStore(supplierStore, supplyProcess, interpreter.sys);
+        Store getMessage = currentStep.makeMessageStore(getterStore, getProcess, interpreter.sys);
+
+        try {
+            nextStores.put(supplier, supplierStore.BuildNext(supply, getMessage));
+            nextStores.put(getter, getterStore.BuildNext(get, supplyMessage));
+        } catch (Exception e) {
+            currentStep.handleEvaluationException(e);
+        }
+        return new Step(nextStores, currentStep, interpreter);
     }
 
     @Override

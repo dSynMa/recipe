@@ -10,7 +10,7 @@ import static recipe.analysis.TranslationTestModels.*;
 public class TraceDeadlockMarkerTest {
     @Test(timeout = 20000)
     public void enabledUnchangedBroadcastIsNotMarkedDeadlocked() throws Exception {
-        org.junit.Assume.assumeTrue(Files.isExecutable(Path.of("nuxmv/bin/nuxmv")));
+        org.junit.Assume.assumeTrue(Files.isExecutable(nuxmvExecutable()));
         String model = source("observation-forall-constant")
             .replace("send: ", "").replace("receive: ", "")
             .replace("c! (@ready)", "*! (FALSE)").replace("sent := TRUE", "sent := sent");

@@ -6,6 +6,8 @@ import recipe.lang.types.Type;
 import recipe.lang.types.UnionType;
 import recipe.lang.utils.TypingContext;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -14,12 +16,38 @@ import java.util.List;
 import java.util.Map;
 
 public class Config {
+    public static final String locationLabel = "location";
     public static final String channelLabel = "channel";
+    public static final String chanLabel = "chan";
+    public static final String p2pLabel = "p2p";
+    public static final String myselfKeyword = "myself";
+    public static final String noAgentString = "no-agent";
+    public static String rcheckPath = "rcheck/bin/cli.js";
 
     public static void reset(){
         agentEnumTypeNames.clear();
         agentEnumTypeNamesToAgent.clear();
         agentType = new UnionType();
+    }
+
+    /**
+     * Locate the JavaScript CLI that parses .rcp files into the JSON consumed
+     * by {@code recipe.lang.System.deserialize}. It ships next to the jar.
+     */
+    public static String getRcheckPath() {
+        String path = Config.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+        try {
+            String decodedPath = URLDecoder.decode(path, "UTF-8");
+            String parent = Path.of(decodedPath).getParent().toString();
+            Path file = Path.of(parent, "cli.js");
+            if (Files.exists(file)) {
+                return file.toString();
+            }
+            return rcheckPath;
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            return rcheckPath;
+        }
     }
 
     private static final List<String> agentEnumTypeNames = new ArrayList<>();
@@ -51,17 +79,32 @@ public class Config {
     public static final String broadcast = "*";
     public static final String nuxmvBroadcast = "broadcast";
 
+    /** Environment variable overriding the nuXmv executable. */
+    public static final String nuxmvEnv = "RCHECK_NUXMV";
+
+    /**
+     * Resolve the nuXmv executable.
+     *
+     * <p>Order: {@code RCHECK_NUXMV}, a project-local
+     * {@code ./nuxmv/bin/nuxmv} or {@code ./bin/nuxmv} if it exists, otherwise
+     * the bare command {@code nuxmv}, which the OS resolves through
+     * {@code PATH} when the process starts.
+     */
     public static String getNuxmvPath() {
-        String nuxmvPath = "";
-        if(Files.exists(Path.of("./nuxmv/bin/nuxmv"))||Files.exists(Path.of("./nuxmv/bin/nuxmv.exe"))) {
-            nuxmvPath = "./nuxmv/bin/nuxmv";
-        } else if(Files.exists(Path.of("./bin/nuxmv"))||Files.exists(Path.of("./bin/nuxmv.exe"))) {
-            nuxmvPath = "./bin/nuxmv";
-        } else {
-            nuxmvPath = "nuxmv";
+        String override = java.lang.System.getenv(nuxmvEnv);
+        if (override != null && !override.trim().isEmpty()) {
+            return override.trim();
         }
 
-        return nuxmvPath;
+        for (String candidate : new String[]{
+                "./nuxmv/bin/nuxmv", "./nuxmv/bin/nuxmv.exe",
+                "./bin/nuxmv", "./bin/nuxmv.exe"}) {
+            if (Files.isExecutable(Path.of(candidate))) {
+                return candidate;
+            }
+        }
+
+        return "nuxmv";
     }
 
     public static TypingContext commVariableReferences(TypingContext commVariables){

@@ -4,10 +4,13 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.petitparser.parser.Parser;
 import org.petitparser.parser.combinators.SettableParser;
 import org.petitparser.parser.primitive.FailureParser;
 import org.petitparser.parser.primitive.StringParser;
+import recipe.Config;
 import recipe.lang.expressions.Expression;
 import recipe.lang.expressions.TypedValue;
 import recipe.lang.expressions.TypedVariable;
@@ -17,6 +20,7 @@ import recipe.lang.expressions.predicate.Condition;
 import recipe.lang.process.Process;
 import recipe.lang.store.Store;
 import recipe.lang.types.Boolean;
+import recipe.lang.types.Type;
 import recipe.lang.utils.*;
 import recipe.lang.utils.exceptions.AttributeTypeException;
 import recipe.lang.utils.exceptions.MismatchingTypeException;
@@ -193,6 +197,134 @@ public class Agent {
         this.initialCondition = initialCondition;
     }
 
+    /**
+     * Reject locally declared variables that would shadow a declared channel constant.
+     *
+     * <p>Parsers and deserializers must both apply this check before building
+     * the agent store.
+     */
+    public static void validateLocalDeclarations(Collection<? extends TypedVariable> variables) throws Exception {
+        validateLocalDeclarations(variables, recipe.lang.types.Enum.getEnum(recipe.Config.channelLabel).getValues());
+    }
+
+    public static void validateLocalDeclarations(Collection<? extends TypedVariable> variables,
+                                                 Collection<String> channelNames) {
+        for (TypedVariable variable : variables) {
+            if (channelNames.contains(variable.getName())) {
+                throw new IllegalArgumentException("Local variable '" + variable.getName()
+                    + "' conflicts with a declared channel constant.");
+            }
+        }
+    }
+
+    /**
+     * Build an agent from a repeating process, as deserializers do.
+     */
+    public static Agent ofRepeat(
+            String name, Store store, Expression<Boolean> init, Map<TypedVariable, Expression> relabel,
+            Expression<Boolean> receiveGuardCondition, Process repeat) {
+
+        State startState = new State<Integer>(Integer.valueOf(0));
+        Process.stateSeed = 0;
+        Set<Transition> transitions = repeat.asTransitionSystem(startState, startState);
+        Set<ProcessTransition> sendTransitions = new HashSet<>();
+        Set<ProcessTransition> receiveTransitions = new HashSet<>();
+        Set<ProcessTransition> getTransitions = new HashSet<>();
+        Set<ProcessTransition> supplyTransitions = new HashSet<>();
+
+        Set<Process> actions = new HashSet<>();
+        transitions.forEach(tt -> {
+            if (tt.getClass().equals(ProcessTransition.class)) {
+                ProcessTransition t = (ProcessTransition) tt;
+                if (t.getLabel().getClass().equals(SendProcess.class)) {
+                    sendTransitions.add(t);
+                } else if (t.getLabel().getClass().equals(ReceiveProcess.class)) {
+                    receiveTransitions.add(t);
+                } else if (t.getLabel().getClass().equals(GetProcess.class)) {
+                    getTransitions.add(t);
+                } else if (t.getLabel().getClass().equals(SupplyProcess.class)) {
+                    supplyTransitions.add(t);
+                }
+
+                actions.add(t.getLabel());
+            }
+        });
+        Set<State> states = new HashSet<>();
+        for (Transition tt : transitions) {
+            if (tt.getClass().equals(ProcessTransition.class)) {
+                ProcessTransition t = (ProcessTransition) tt;
+                t.getSource().setAgent(name);
+                t.getDestination().setAgent(name);
+                t.setAgent(name);
+                states.add(t.getSource());
+                states.add(t.getDestination());
+            }
+        }
+        Agent agent = new Agent(name,
+                store,
+                init,
+                states,
+                sendTransitions,
+                receiveTransitions,
+                actions,
+                startState,
+                receiveGuardCondition,
+                getTransitions,
+                supplyTransitions);
+
+        agent.setRelabel(relabel);
+        return agent;
+    }
+
+    public static Agent deserialize(JSONObject jAgent, TypingContext parentContext) throws Exception {
+        Deserialization.checkType(jAgent, "Agent");
+        String name = jAgent.getString("name");
+        Map<String, TypedVariable> localVars = new HashMap<>();
+        TypingContext context = new TypingContext();
+        if (parentContext != null) {
+            context.setAll(parentContext);
+        }
+
+        // Every agent knows its own instance name.
+        Type locationEnum = recipe.lang.types.Enum.getEnum(Config.locationLabel);
+        localVars.put(Config.myselfKeyword,
+            new TypedVariable<Type>(locationEnum, Config.myselfKeyword));
+        context.set(Config.myselfKeyword, locationEnum);
+
+        if (jAgent.has("locals")) {
+            JSONArray jLocals = jAgent.getJSONArray("locals");
+            for (int i = 0; i < jLocals.length(); i++) {
+                JSONObject local = jLocals.getJSONObject(i);
+                String locName = local.getString("name");
+                Type type = Deserialization.deserializeType(local);
+                context.set(locName, type);
+                localVars.put(locName, new TypedVariable<Type>(type, locName));
+            }
+        }
+        validateLocalDeclarations(localVars.values());
+
+        Map<TypedVariable, Expression> relabel = new HashMap<>();
+        if (jAgent.has("relabels")) {
+            JSONArray jRelabels = jAgent.getJSONArray("relabels");
+            for (int i = 0; i < jRelabels.length(); i++) {
+                JSONObject jRelabel = jRelabels.getJSONObject(i);
+                String varName = jRelabel.getJSONObject("var").getString("$refText");
+                Type t = context.get(varName);
+                Expression expr = Deserialization.deserializeExpr(jRelabel.getJSONObject("expr"), context);
+                relabel.put(new TypedVariable<Type>(t, varName), expr);
+            }
+        }
+        Store store = new Store(localVars);
+        Expression init = Deserialization.deserializeExpr(jAgent.getJSONObject("init"), context);
+        Expression recvGuard = Condition.getTrue();
+        if (jAgent.has("recvguard")) {
+            recvGuard = Deserialization.deserializeExpr(jAgent.getJSONObject("recvguard"), context);
+        }
+        Process repeat = Process.deserialize(jAgent.getJSONObject("repeat"), context);
+
+        return Agent.ofRepeat(name, store, init, relabel, recvGuard, repeat);
+    }
+
     public static org.petitparser.parser.Parser parser(TypingContext messageContext,
                                                        TypingContext communicationContext,
                                                        TypingContext guardDefinitionContext) throws Exception {
@@ -222,10 +354,27 @@ public class Agent {
                     .seq(Parsing.labelledParser("local", Parsing.typedVariableList().optional(new ArrayList<>()))
                             .optional(new ArrayList<>())
                             .mapWithSideEffects((List<TypedVariable> values) -> {
-                                for (TypedVariable variable : values) {
-                                    if (channelNames.contains(variable.getName())) {
-                                        throw new IllegalArgumentException("Local variable '" + variable.getName()
-                                            + "' conflicts with a declared channel constant.");
+                                validateLocalDeclarations(values, channelNames);
+                                Type locationType = null;
+                                try {
+                                    locationType = recipe.lang.types.Enum.getEnum(Config.locationLabel);
+                                } catch (Exception ignored) {
+                                }
+                                boolean usesLocation = false;
+                                if (locationType != null) {
+                                    for (TypedVariable variable : values) {
+                                        if (locationType.equals(variable.getType())) usesLocation = true;
+                                    }
+                                    for (Type messageType : messageContext.getVarType().values()) {
+                                        if (locationType.equals(messageType)) usesLocation = true;
+                                    }
+                                }
+                                if (usesLocation) {
+                                    for (TypedVariable variable : values) {
+                                        if (variable.getName().equals(Config.myselfKeyword)) {
+                                            throw new IllegalArgumentException("Local variable '" + Config.myselfKeyword
+                                                + "' is reserved for an agent's own location.");
+                                        }
                                     }
                                 }
                                 localContext.get().clear();
@@ -233,6 +382,11 @@ public class Agent {
                                 Map<String, TypedVariable> vars = new HashMap();
                                 for(TypedVariable var : values){
                                     vars.put(var.getName(), new TypedVariable(var.getType(), var.getName()));
+                                }
+                                if (usesLocation) {
+                                    localContext.get().set(Config.myselfKeyword, locationType);
+                                    vars.put(Config.myselfKeyword,
+                                        new TypedVariable(locationType, Config.myselfKeyword));
                                 }
                                 return vars;
                             }))

@@ -19,7 +19,7 @@ public class InteractiveInitializationFailureTest {
                 Process process = null;
                 try {
                     Files.writeString(script, command + "\nquit\n");
-                    process = new ProcessBuilder("nuxmv/bin/nuxmv", "-source", script.toString(), path.toString())
+                    process = new ProcessBuilder(nuxmvExecutable().toString(), "-source", script.toString(), path.toString())
                         .redirectErrorStream(true).redirectOutput(log.toFile()).start();
                     process.getOutputStream().close();
                     assertTrue(process.waitFor(10, TimeUnit.SECONDS));

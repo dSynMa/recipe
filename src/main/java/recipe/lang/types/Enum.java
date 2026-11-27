@@ -35,6 +35,11 @@ public class Enum extends Type {
         return values;
     }
 
+    /** Used when a declared enum's values are only known after instances are built (e.g. location). */
+    public void setValues(List<String> values) {
+        this.values = values;
+    }
+
     public static Enum getEnum(String name) throws Exception {
         if(existing.containsKey(name)) return existing.get(name);
         else throw new Exception("No such enum: " + name);

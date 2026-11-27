@@ -43,9 +43,13 @@ We assume that the following commands are available from the environment PATH va
 1. `nuxmv` (for analysis and simulation)
 2. `npm' (for frontend)
 
-Or for the case of nuxmv:
+nuXmv is resolved in this order:
 
-The folder you downloaded from nuXmv developer site should be renamed `nuxmv` be placed in `./nuxmv/bin/`
+1. the `RCHECK_NUXMV` environment variable, which may name a command or an absolute path;
+2. `./nuxmv/bin/nuxmv` or `./bin/nuxmv` in the working directory, if present;
+3. otherwise the bare command `nuxmv`, which the operating system resolves through `PATH`.
+
+Alternatively, the folder downloaded from the nuXmv developer site can be renamed `nuxmv` and placed in `./nuxmv/bin/`.
 
 Note also that the executable `/bin/nuXmv` should be renamed in small letters `/bin/nuxmv` to avoid any interruption due to case sensitivity.
 
