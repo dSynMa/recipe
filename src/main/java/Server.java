@@ -63,7 +63,18 @@ public class Server {
     volatile MCConfig mcConfig;
 
     private static Logger logger = Logger.getLogger(Server.class.getName());
-    private final ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+    private final ExecutorService service;
+
+    public Server() {
+        this(Runtime.getRuntime().availableProcessors());
+    }
+
+    public Server(int threads) {
+        threads = Math.max(1, Math.min(threads, Runtime.getRuntime().availableProcessors()));
+        service = threads == 1
+            ? Executors.newSingleThreadExecutor()
+            : Executors.newFixedThreadPool(threads);
+    }
 
     private List<JSONObject> renderSVGs (JSONObject response) {
         List<JSONObject> svgs = new ArrayList<>();
@@ -721,7 +732,7 @@ public class Server {
         }
         java.lang.System.err.println("PORT: " + port);
         app = Flak.createHttpApp(port);
-        Server server = new Server();
+        Server server = new Server(threads);
         if (jsonPath != null) {
             JSONObject jo = RCheckInterop.parseJson(jsonPath);
             server.system = recipe.lang.System.deserialize(jo);
