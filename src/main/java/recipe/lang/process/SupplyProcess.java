@@ -62,7 +62,9 @@ public class SupplyProcess extends BasicProcessWithMessage {
     public static Parser parser(TypingContext messageContext,
                          TypingContext localContext,
                          TypingContext communicationContext) throws Exception {
-        Parser localGuard = Condition.typeParser(localContext);
+        // Supply guards and updates may read the getter's payload.
+        TypingContext localAndMessageContext = TypingContext.union(localContext, messageContext);
+        Parser localGuard = Condition.typeParser(localAndMessageContext);
 
         Parser delimetedCondition =
                 (CharacterParser.of('<').trim())
@@ -80,7 +82,7 @@ public class SupplyProcess extends BasicProcessWithMessage {
         Parser messageGuard = Condition.typeParser(localAndChannelAndCommunicationContext);
 
         Parser messageAssignment = Parsing.assignmentListParser(messageContext, localContext);
-        Parser localAssignment = Parsing.assignmentListParser(localContext, localContext);
+        Parser localAssignment = Parsing.assignmentListParser(localContext, localAndMessageContext);
         Parser namedLocationParser = recipe.lang.expressions.predicate.NamedLocation.parser();
         
         Parser parser = ((CharacterParser.word().plus().trim()).flatten()
