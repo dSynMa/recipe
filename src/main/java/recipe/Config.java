@@ -79,17 +79,32 @@ public class Config {
     public static final String broadcast = "*";
     public static final String nuxmvBroadcast = "broadcast";
 
+    /** Environment variable overriding the nuXmv executable. */
+    public static final String nuxmvEnv = "RCHECK_NUXMV";
+
+    /**
+     * Resolve the nuXmv executable.
+     *
+     * <p>Order: {@code RCHECK_NUXMV}, a project-local
+     * {@code ./nuxmv/bin/nuxmv} or {@code ./bin/nuxmv} if it exists, otherwise
+     * the bare command {@code nuxmv}, which the OS resolves through
+     * {@code PATH} when the process starts.
+     */
     public static String getNuxmvPath() {
-        String nuxmvPath = "";
-        if(Files.exists(Path.of("./nuxmv/bin/nuxmv"))||Files.exists(Path.of("./nuxmv/bin/nuxmv.exe"))) {
-            nuxmvPath = "./nuxmv/bin/nuxmv";
-        } else if(Files.exists(Path.of("./bin/nuxmv"))||Files.exists(Path.of("./bin/nuxmv.exe"))) {
-            nuxmvPath = "./bin/nuxmv";
-        } else {
-            nuxmvPath = "nuxmv";
+        String override = java.lang.System.getenv(nuxmvEnv);
+        if (override != null && !override.trim().isEmpty()) {
+            return override.trim();
         }
 
-        return nuxmvPath;
+        for (String candidate : new String[]{
+                "./nuxmv/bin/nuxmv", "./nuxmv/bin/nuxmv.exe",
+                "./bin/nuxmv", "./bin/nuxmv.exe"}) {
+            if (Files.isExecutable(Path.of(candidate))) {
+                return candidate;
+            }
+        }
+
+        return "nuxmv";
     }
 
     public static TypingContext commVariableReferences(TypingContext commVariables){
