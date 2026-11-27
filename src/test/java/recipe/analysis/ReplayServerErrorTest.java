@@ -36,8 +36,13 @@ public class ReplayServerErrorTest {
         assertTrue(json.getString("error"),json.getString("error").contains("Cannot select an initial state"));
     }
     @Test(timeout=20000)
-    public void validReplayReturnsValidJsonControl() throws Exception {
-        assertEquals(0,new JSONObject(request("[{sender:{sent:false},receiver:{received:false}}]")).length());
+    public void validReplayReturnsTraceAndFinalState() throws Exception {
+        JSONObject response = new JSONObject(request("[{sender:{sent:false},receiver:{received:false}}]"));
+        assertFalse(response.toString(), response.has("error"));
+        assertEquals(1, response.getJSONArray("trace").length());
+        assertTrue(response.has("state"));
+        assertTrue(response.has("transitions"));
+        assertTrue(response.has("svgs"));
     }
     @Test(timeout=20000)
     public void malformedTraceReturnsValidJsonDiagnostic() throws Exception {

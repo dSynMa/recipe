@@ -1,5 +1,6 @@
 
 import flak.*;
+import flak.annotations.Post;
 import flak.annotations.Route;
 import guru.nidi.graphviz.engine.Engine;
 import guru.nidi.graphviz.engine.Format;
@@ -582,8 +583,20 @@ public class Server {
 
     @Route("/interpretBack")
     public String interpretBack(Request req) throws Exception {
+        if (interpreter == null || interpreter.getCurrentStep() == null
+                || interpreter.getCurrentStep().getParent() == null) {
+            return new JSONObject().put("error", "Already at the initial state").toString();
+        }
         interpreter.backtrack();
         JSONObject response = interpreter.getCurrentStep().toJSON();
+        response.put("svgs", renderSVGs(response));
+        return response.toString();
+    }
+
+    /** Current state, transitions, replay history and rendered agents. */
+    private String currentStepWithTrace() throws Exception {
+        JSONObject response = interpreter.getCurrentStep().toJSON();
+        response.put("trace", interpreter.traceToJSON());
         response.put("svgs", renderSVGs(response));
         return response.toString();
     }
@@ -596,31 +609,46 @@ public class Server {
 
     @Route("/interpretLoad")
     public String loadInterpreter(Request req) {
-        // Load trace into interpreter
-        String output = req.getQuery().get("output");
-        JSONObject response = new JSONObject();
-
         try {
-            interpreter = Interpreter.ofTrace(system, output);
-            List<JSONObject> trace = interpreter.traceToJSON();
-            response.put("svgs", renderSVGs(trace.get(trace.size()-1)));
-            response.put("trace", trace);
+            interpreter = Interpreter.ofTrace(system, req.getQuery().get("output"));
+            return currentStepWithTrace();
         } catch (Exception e) {
             e.printStackTrace();
-            response.put("error", e.getMessage());
+            return new JSONObject().put("error", e.getMessage()).toString();
         }
-        return response.toString();
     }
 
 
+    /**
+     * Load a JSON replay. The trace may be sent in the request body with POST
+     * (preferred for large counterexamples) or as the {@code trace} query
+     * parameter for backwards compatibility.
+     */
     @Route("/interpretLoadJSON")
-    public String loadInterpreterJSON(Request req) {
-        String trace = req.getQuery().get("trace");
+    @Post
+    public String loadInterpreterJSON(Request req) throws IOException {
+        String trace;
+        String method = req.getHttpMethod();
+        if (method == null) method = req.getMethod();
+        if ("POST".equalsIgnoreCase(method)) {
+            trace = new String(req.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        } else {
+            trace = req.getQuery().get("trace");
+        }
+        if (trace == null || trace.trim().isEmpty()) {
+            return new JSONObject().put("error", "No trace supplied").toString();
+        }
         try {
             JSONTokener toks = new JSONTokener(trace);
             JSONArray json = new JSONArray(toks);
-            interpreter = Interpreter.ofJSON(system, json);
-            return "{}";
+            // Accept either ["-cex" Step objects] or a bare array of state objects.
+            JSONArray states = new JSONArray();
+            for (int i = 0; i < json.length(); i++) {
+                JSONObject item = json.getJSONObject(i);
+                states.put(item.has("state") ? item.getJSONObject("state") : item);
+            }
+            interpreter = Interpreter.ofJSON(system, states);
+            return currentStepWithTrace();
         } catch (Exception e) {
             return new JSONObject().put("error", e.getMessage()).toString();
         }

@@ -469,7 +469,11 @@ final class NuXmvTranslation {
             module.constants(Enum.getEnum(label).getValues().stream().map(this::constant).collect(java.util.stream.Collectors.toList()));
         module.transition(or(atom("transition"),
             and(not(atom("progress")), atom("keep-all"), atom("no-observations"))));
-        for (LTOL specification : specs) module.specification(specification.toNuXmv());
+        List<LTOL> originalSpecs = system.getSpecs();
+        for (int i = 0; i < specs.size(); i++) {
+            module.comment(originalSpecs.get(i).toString());
+            module.specification(specs.get(i).toNuXmv());
+        }
         return module.render();
     }
 

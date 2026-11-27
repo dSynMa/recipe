@@ -101,7 +101,8 @@ final class Smv {
         void define(String name, Expr expression) { definitions.add(new Definition(name, expression)); }
         void initially(Expr expression) { initial.add(expression); }
         void constants(List<String> values) { constants.addAll(values); }
-        void specification(String expression) { specifications.add(expression); }
+        void comment(String text) { specifications.add("--" + text); }
+        void specification(String expression) { specifications.add("LTLSPEC " + expression); }
         void transition(Expr expression) { transition = expression; }
 
         String render() {
@@ -127,8 +128,7 @@ final class Smv {
                 transition.appendTo(output);
                 output.append('\n');
             }
-            output.append(String.join("\n", specifications.stream()
-                .map(specification -> "LTLSPEC " + specification).toArray(String[]::new)));
+            output.append(String.join("\n", specifications));
             return output.toString();
         }
     }
