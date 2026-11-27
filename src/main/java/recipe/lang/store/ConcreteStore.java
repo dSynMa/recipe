@@ -101,10 +101,10 @@ public class ConcreteStore extends Store {
                 return value;
             }
         } catch (Exception e) {
-            System.out.println(e);
-            System.out.println(e.getStackTrace());
+            System.err.println(e);
+            System.err.println(e.getStackTrace());
         }
-        // System.out.printf(">>> Lookup failed for %s in %s\n", attribute, this);
+        // System.err.printf(">>> Lookup failed for %s in %s\n", attribute, this);
         return null;
 	}
 
@@ -184,14 +184,14 @@ public class ConcreteStore extends Store {
                             raw = recipe.analysis.NuXmvInteraction.interpreterNumber(instance.getLabel() + "-" + var, raw);
                         TypedValue val = typedValueFactory(v.getType(), raw);
                         this.data.put(v, val);
-                        // System.out.println(v.getName());
-                        // // System.out.println(v.getType());
-                        // System.out.println(var);
-                        // System.out.println(val.getValue());
-                        // System.out.println(val.getType());
+                        // System.err.println(v.getName());
+                        // // System.err.println(v.getType());
+                        // System.err.println(var);
+                        // System.err.println(val.getValue());
+                        // System.err.println(val.getType());
                     }
                 } catch (AttributeNotInStoreException x) {
-                    System.out.println(var + " not found");
+                    System.err.println(var + " not found");
                 } catch (MismatchingTypeException x) {
                     throw new IllegalArgumentException("Cannot load " + instance.getLabel() + "-" + var
                             + " = " + obj.get(var) + ": " + x.getMessage(), x);

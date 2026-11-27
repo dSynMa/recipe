@@ -185,10 +185,10 @@ public class Step {
             if (inst == null) {
                 // Skip special fields
                 if (agentInstanceName.startsWith("___")) {
-                    // System.out.printf(">> Found annotation %s : %s\n", agentInstanceName, constraint.get(agentInstanceName));
+                    // System.err.printf(">> Found annotation %s : %s\n", agentInstanceName, constraint.get(agentInstanceName));
                     continue;
                 }
-                System.out.printf(">> Agent instance not found: %s\n", agentInstanceName);
+                System.err.printf(">> Agent instance not found: %s\n", agentInstanceName);
                 return false;
             }
             JSONObject instanceConstraint = constraint.getJSONObject(agentInstanceName);
@@ -202,11 +202,11 @@ public class Step {
                         TypedValue value = instanceStore.getValue(var);
                         TypedValue pastValue = pastInstanceStore.getValue(var);
                         if (!instanceConstraint.has(varName) && !pastValue.equals(value)) {
-                            System.out.printf(">> %s: expected %s (from past state), got %s\n", pastValue, value);
+                            System.err.printf(">> %s: expected %s (from past state), got %s\n", pastValue, value);
                         }
                     } catch (AttributeNotInStoreException e) {
                         // Should never match
-                        System.out.printf(">> Not found: %s\n", varName);
+                        System.err.printf(">> Not found: %s\n", varName);
                     }
                 }
             }
@@ -217,7 +217,7 @@ public class Step {
                         String stateConstraint = instanceConstraint.get(varName).toString();
                         String stateInst = instanceStore.getState().getLabel().toString();
                         if (!stateInst.equals(stateConstraint)) {
-                            System.out.printf(">> Expected %s, got %s\n", stateConstraint, stateInst);
+                            System.err.printf(">> Expected %s, got %s\n", stateConstraint, stateInst);
                             return false;
                         }
                         continue;
@@ -252,7 +252,7 @@ public class Step {
                                 java.math.BigDecimal x = new java.math.BigDecimal(instanceConstraint.get(varName).toString());
                                 java.math.BigDecimal y = new java.math.BigDecimal(value.getValue().toString());
                                 if (x.compareTo(y) != 0) {
-                                    System.out.printf(
+                                    System.err.printf(
                                         ">>%s-%s: Expected %s, got %s\n",
                                         inst.getLabel(), varName, x, y);
                                     return false;
@@ -268,7 +268,7 @@ public class Step {
                             java.lang.Boolean isConstraintTrue = traceBoolean(instanceConstraint.get(varName));
                             if (isConstraintTrue == null) return false;
                             if (!value.getValue().equals(isConstraintTrue)) {
-                                System.out.printf(
+                                System.err.printf(
                                     ">>%s-%s: Expected %s, got %s\n",
                                     inst.getLabel(), varName, isConstraintTrue, value.getValue());
                                 return false;
@@ -276,17 +276,17 @@ public class Step {
                         }
 
                         else if (!value.getValue().toString().equals(instanceConstraint.get(varName).toString())) {
-                            System.out.printf(
+                            System.err.printf(
                                 ">>%s-%s: Expected %s, got %s\n",
                                 inst.getLabel(), varName, instanceConstraint.get(varName), value.getValue());
                             return false;
                         }
                     } else {
-                        // System.out.printf(">> Not found: %s\n", varName);
+                        // System.err.printf(">> Not found: %s\n", varName);
                     }
                 } catch (AttributeNotInStoreException e) {
                     // Other variables that we do not care about
-                    // System.out.printf(">> Not found: %s\n", varName);
+                    // System.err.printf(">> Not found: %s\n", varName);
                 }
             }
         }
@@ -413,7 +413,7 @@ public class Step {
                     Store s = store.push(interpreter.getChannelTV(), chan);
                     TypedValue evalGuard = instance.getAgent().getReceiveGuard().valueIn(s);
                     boolean isListening = chan.toString().equals(Config.broadcast) || Condition.getTrue().equals(evalGuard);
-                    // System.out.printf("eval %s on store %s ---> %s\n", instance.getAgent().getReceiveGuard(), s, isListening);
+                    // System.err.printf("eval %s on store %s ---> %s\n", instance.getAgent().getReceiveGuard(), s, isListening);
                     if (isListening) {
                         listeners.putIfAbsent(chan, new HashSet<>());
                         listeners.get(chan).add(instance);
@@ -462,8 +462,8 @@ public class Step {
 
                                         TypedValue receiveGuard = inst.getAgent().getReceiveGuard().valueIn(instStore);
                                         boolean receiveGuardOk = chan.toString().equals(Config.broadcast) || Condition.getTrue().equals(receiveGuard);
-                                        // System.out.printf("sendguard: %s (%s)\n", sendGuard, sendGuardOk);
-                                        // System.out.printf("receiveguard: %s (%s)\n", receiveGuard, receiveGuardOk);
+                                        // System.err.printf("sendguard: %s (%s)\n", sendGuard, sendGuardOk);
+                                        // System.err.printf("receiveguard: %s (%s)\n", receiveGuard, receiveGuardOk);
 
                                         if (sendGuardOk && receiveGuardOk) {
                                             receivesMap.put(inst, new HashSet<ProcessTransition>());
