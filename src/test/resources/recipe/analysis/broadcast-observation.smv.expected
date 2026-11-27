@@ -27,4 +27,5 @@ INIT
 ((obs0) = (FALSE)) & ((sender-automaton-state) = (0)) & (!(sender-sent = TRUE)) & ((TRUE = TRUE) & (sender-name = sender)) & ((receiver-automaton-state) = (0)) & (!(receiver-received = TRUE)) & ((TRUE = TRUE) & (receiver-name = receiver)) & ((receiver-receive) = (FALSE))
 TRANS
 	(transition) | ((!(progress)) & (keep-all) & (no-observations))
+--G(((!(<(sender = sender) & ((value = TRUE) = (TRUE = TRUE))>(TRUE = TRUE))) | (F(receiver-received = TRUE))))
 LTLSPEC G(((!(X(((obs0) & (TRUE = TRUE))))) | (F(receiver-received = TRUE))))

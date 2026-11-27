@@ -41,11 +41,12 @@ public class SmvTest {
         module.variable("flag", "boolean");
         module.initially(eq(atom("flag"), FALSE));
         module.transition(eq(next(atom("flag")), not(atom("flag"))));
+        module.comment("G F flag");
         module.specification("G F flag");
         String output = module.render();
         assertFalse(output.contains("DEFINE"));
         assertFalse(output.contains("CONSTANTS"));
-        assertTrue(output.contains("LTLSPEC G F flag"));
+        assertTrue(output.contains("--G F flag\nLTLSPEC G F flag"));
         assertValid(output);
         assertLtl(output, "G (flag <-> X !flag)", true);
     }
