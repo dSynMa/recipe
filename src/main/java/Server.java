@@ -758,7 +758,6 @@ public class Server {
         if (port == 0) {
             port = freePort();
         }
-        java.lang.System.err.println("PORT: " + port);
         app = Flak.createHttpApp(port);
         Server server = new Server(threads);
         if (jsonPath != null) {
@@ -769,6 +768,9 @@ public class Server {
         app.scan(server);
         cors();
         app.start();
+        // Print only once the server is actually accepting connections, so
+        // clients that read the port can connect immediately.
+        java.lang.System.err.println("PORT: " + port);
         return app.getRootUrl();
     }
 
