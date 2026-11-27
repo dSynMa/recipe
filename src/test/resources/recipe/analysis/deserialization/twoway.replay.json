@@ -1,0 +1,176 @@
+[
+  {
+    "depth": 0,
+    "___LTOL___": {"no-observations": "TRUE"},
+    "state": {
+      "one": {
+        "loc2": "one",
+        "loc1": "two",
+        "stage": "0",
+        "**state**": "0",
+        "myself": "one"
+      },
+      "two": {
+        "loc2": "two",
+        "loc1": "one",
+        "stage": "0",
+        "**state**": "0",
+        "myself": "two"
+      }
+    },
+    "transitions": [
+      {
+        "sender": "one",
+        "receivers": ["two"],
+        "___get-supply___": true,
+        "send": "<TRUE>SUPPLY@(any)({NAME=myself})[{loc2=NAME}]"
+      },
+      {
+        "sender": "two",
+        "receivers": ["one"],
+        "___get-supply___": true,
+        "send": "<TRUE>SUPPLY@(any)({NAME=myself})[{loc2=NAME}]"
+      }
+    ]
+  },
+  {
+    "___LOOP___": true,
+    "inboundTransition": {
+      "sender": "two",
+      "receivers": ["one"],
+      "___get-supply___": true,
+      "send": "<TRUE>SUPPLY@(any)({NAME=myself})[{loc2=NAME}]"
+    },
+    "depth": 1,
+    "___LTOL___": {"no-observations": "TRUE"},
+    "state": {
+      "one": {
+        "loc2": "two",
+        "loc1": "two",
+        "**from_state**": "0",
+        "stage": "0",
+        "**state**": "0",
+        "myself": "one",
+        "**last_transition**": "<TRUE>GET@(TRUE)({NAME=myself})[{loc2=NAME}]",
+        "**last_label**": "getName"
+      },
+      "two": {
+        "loc2": "one",
+        "loc1": "one",
+        "**from_state**": "0",
+        "stage": "0",
+        "**state**": "0",
+        "myself": "two",
+        "**last_transition**": "<TRUE>SUPPLY@(any)({NAME=myself})[{loc2=NAME}]",
+        "**last_label**": "splyName"
+      }
+    },
+    "transitions": [
+      {
+        "sender": "one",
+        "receivers": ["two"],
+        "___get-supply___": true,
+        "send": "<TRUE>SUPPLY@(any)({NAME=myself})[{loc2=NAME}]"
+      },
+      {
+        "sender": "two",
+        "receivers": ["one"],
+        "___get-supply___": true,
+        "send": "<TRUE>SUPPLY@(any)({NAME=myself})[{loc2=NAME}]"
+      }
+    ]
+  },
+  {
+    "___LOOP___": true,
+    "inboundTransition": {
+      "sender": "two",
+      "receivers": ["one"],
+      "___get-supply___": true,
+      "send": "<TRUE>SUPPLY@(any)({NAME=myself})[{loc2=NAME}]"
+    },
+    "depth": 2,
+    "___LTOL___": {"no-observations": "TRUE"},
+    "state": {
+      "one": {
+        "loc2": "two",
+        "loc1": "two",
+        "**from_state**": "0",
+        "stage": "0",
+        "**state**": "0",
+        "myself": "one",
+        "**last_transition**": "<TRUE>GET@(TRUE)({NAME=myself})[{loc2=NAME}]",
+        "**last_label**": "getName"
+      },
+      "two": {
+        "loc2": "one",
+        "loc1": "one",
+        "**from_state**": "0",
+        "stage": "0",
+        "**state**": "0",
+        "myself": "two",
+        "**last_transition**": "<TRUE>SUPPLY@(any)({NAME=myself})[{loc2=NAME}]",
+        "**last_label**": "splyName"
+      }
+    },
+    "transitions": [
+      {
+        "sender": "one",
+        "receivers": ["two"],
+        "___get-supply___": true,
+        "send": "<TRUE>SUPPLY@(any)({NAME=myself})[{loc2=NAME}]"
+      },
+      {
+        "sender": "two",
+        "receivers": ["one"],
+        "___get-supply___": true,
+        "send": "<TRUE>SUPPLY@(any)({NAME=myself})[{loc2=NAME}]"
+      }
+    ]
+  },
+  {
+    "inboundTransition": {
+      "sender": "two",
+      "receivers": ["one"],
+      "___get-supply___": true,
+      "send": "<TRUE>SUPPLY@(any)({NAME=myself})[{loc2=NAME}]"
+    },
+    "depth": 3,
+    "___LTOL___": {"no-observations": "TRUE"},
+    "state": {
+      "one": {
+        "loc2": "two",
+        "loc1": "two",
+        "**from_state**": "0",
+        "stage": "0",
+        "**state**": "0",
+        "myself": "one",
+        "**last_transition**": "<TRUE>GET@(TRUE)({NAME=myself})[{loc2=NAME}]",
+        "**last_label**": "getName"
+      },
+      "two": {
+        "loc2": "one",
+        "loc1": "one",
+        "**from_state**": "0",
+        "stage": "0",
+        "**state**": "0",
+        "myself": "two",
+        "**last_transition**": "<TRUE>SUPPLY@(any)({NAME=myself})[{loc2=NAME}]",
+        "**last_label**": "splyName"
+      }
+    },
+    "transitions": [
+      {
+        "sender": "one",
+        "receivers": ["two"],
+        "___get-supply___": true,
+        "send": "<TRUE>SUPPLY@(any)({NAME=myself})[{loc2=NAME}]"
+      },
+      {
+        "sender": "two",
+        "receivers": ["one"],
+        "___get-supply___": true,
+        "send": "<TRUE>SUPPLY@(any)({NAME=myself})[{loc2=NAME}]"
+      }
+    ]
+  }
+]
