@@ -141,7 +141,7 @@ public class Deserialization {
                 return new TypedVariable<Type>(type, name);
             case "AutomatonState":
                 return new TypedVariable<Integer>(
-                    Integer.getType(), 
+                    Integer.getType(),
                     jExpr.getJSONObject("instance").getString("$refText") + "-automaton-state");
             case "QualifiedRef":
                 String instance = jExpr.getJSONObject("instance").getString("$refText");
@@ -268,7 +268,7 @@ public class Deserialization {
                     case "forall":
                         result = new BigAnd(quantVars.get(i), result);
                         break;
-                    case "exists": 
+                    case "exists":
                         result = new BigOr(quantVars.get(i), result);
                     default:
                         break;

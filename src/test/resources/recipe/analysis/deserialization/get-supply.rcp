@@ -15,7 +15,7 @@ agent Client
             getAtX: {true} GET@(x)()[]
             +
             bcastSend: {true} *! true(MSG := myself)[x := myself]
-            + 
+            +
             bcastRecv:  {true} *? [x := MSG]
             )
 

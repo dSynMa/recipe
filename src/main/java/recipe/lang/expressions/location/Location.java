@@ -13,11 +13,11 @@ import recipe.lang.utils.TypingContext;
 public abstract class Location {
     public static org.petitparser.parser.Parser parser(TypingContext context) throws Exception {
         Parser predLocParser = PredicateLocation.parser(context);
-        
+
         Parser baseParser = SelfLocation.parser()
             .or(AnyLocation.parser())
             .or(NamedLocation.parser(context));
-        
+
         Parser parser =  predLocParser.or(baseParser).or(
             CharacterParser.of('(')
             .seq(baseParser)

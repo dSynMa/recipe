@@ -15,7 +15,7 @@ public class PredicateLocation extends Location {
     public Expression<recipe.lang.types.Boolean> getExpression() {
         return predicate;
     }
-    
+
     @Override
     public Expression<recipe.lang.types.Boolean> getPredicate(TypedValue supplier) { return predicate; }
 

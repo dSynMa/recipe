@@ -39,7 +39,7 @@ public class NamedLocation extends Location {
         }
     }
 
-    @Override 
+    @Override
     public String toString() { return this.var.getName(); }
 
 

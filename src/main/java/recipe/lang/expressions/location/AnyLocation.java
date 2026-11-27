@@ -15,7 +15,7 @@ public class AnyLocation extends Location {
 
     @Override
     public String toString() { return anyToken; }
-    
+
     public static org.petitparser.parser.Parser parser() throws Exception {
         return StringParser.of(anyToken).map((String result) -> {return new AnyLocation();});
     }
