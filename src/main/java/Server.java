@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.petitparser.context.ParseError;
 
+import recipe.RCheckInterop;
 import recipe.analysis.NuXmvInteraction;
 import recipe.analysis.NuXmvModelFile;
 import recipe.analysis.ToNuXmv;
@@ -21,8 +22,12 @@ import recipe.lang.types.Enum;
 import recipe.lang.utils.Pair;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,6 +40,7 @@ import java.util.logging.Logger;
 
 public class Server {
     NuXmvInteraction nuXmvInteraction;
+    private boolean jsonInput;
 
     // Accessed under the server monitor. Only the matching request can cancel a build.
     private static class Build {
@@ -168,6 +174,23 @@ public class Server {
         }
     }
 
+    /**
+     * Parse a script sent by the GUI through the JavaScript parser CLI, so the
+     * server and the editor use the same grammar and deserializer.
+     */
+    private recipe.lang.System parseSystem(String script) throws Exception {
+        if (!jsonInput) {
+            return recipe.lang.System.parser().end().parse(script).get();
+        }
+        String decoded = script.trim();
+        try {
+            decoded = URLDecoder.decode(decoded, StandardCharsets.UTF_8.name());
+        } catch (UnsupportedEncodingException e) {
+            throw e;
+        }
+        return RCheckInterop.parseAndDeserialize(decoded);
+    }
+
     @Route("/")
     public String index() {
         return "Started";
@@ -189,7 +212,7 @@ public class Server {
         try {
             discardCurrentSystem();
             String script = req.getQuery().get("script").trim();
-            system = recipe.lang.System.parser().end().parse(script).get();
+            system = parseSystem(script);
             return "{\"symbolic\" : " + system.isSymbolic() + "}";
         } catch (ParseError parseError){
             return "{ \"error\" : \"" + parseError.getFailure().toString() + "\"}";
@@ -241,7 +264,7 @@ public class Server {
             discardCurrentSystem();
             String script = req.getQuery().get("script").trim();
             boolean symbolic = Boolean.parseBoolean(req.getQuery().get("symbolic").trim());
-            System model = System.parser().end().parse(script).get();
+            System model = parseSystem(script);
             if (Thread.currentThread().isInterrupted()) return buildError("Build cancelled");
             builtModel = new NuXmvModelFile(model);
             checker = builtModel.openChecker();
@@ -674,10 +697,37 @@ public class Server {
     }
 
     public static String start() throws Exception {
-//        int port = freePort();
-        int port = 54044;
+        return start(1, 54044, null);
+    }
+
+    public static String start(int threads) throws Exception {
+        return start(threads, 54044, null);
+    }
+
+    public static String start(int threads, Path jsonPath) throws Exception {
+        return start(threads, 54044, jsonPath);
+    }
+
+    /**
+     * Start the API server, optionally loading the system from a JSON model
+     * produced by the editor.
+     *
+     * <p>A port of 0 selects a free port and prints {@code PORT: <port>} to
+     * stderr so the extension can connect to it.
+     */
+    public static String start(int threads, int port, Path jsonPath) throws Exception {
+        if (port == 0) {
+            port = freePort();
+        }
+        java.lang.System.err.println("PORT: " + port);
         app = Flak.createHttpApp(port);
-        app.scan(new Server());
+        Server server = new Server();
+        if (jsonPath != null) {
+            JSONObject jo = RCheckInterop.parseJson(jsonPath);
+            server.system = recipe.lang.System.deserialize(jo);
+            server.jsonInput = true;
+        }
+        app.scan(server);
         cors();
         app.start();
         return app.getRootUrl();

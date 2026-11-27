@@ -6,6 +6,8 @@ import recipe.lang.types.Type;
 import recipe.lang.types.UnionType;
 import recipe.lang.utils.TypingContext;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -14,12 +16,38 @@ import java.util.List;
 import java.util.Map;
 
 public class Config {
+    public static final String locationLabel = "location";
     public static final String channelLabel = "channel";
+    public static final String chanLabel = "chan";
+    public static final String p2pLabel = "p2p";
+    public static final String myselfKeyword = "myself";
+    public static final String noAgentString = "no-agent";
+    public static String rcheckPath = "rcheck/bin/cli.js";
 
     public static void reset(){
         agentEnumTypeNames.clear();
         agentEnumTypeNamesToAgent.clear();
         agentType = new UnionType();
+    }
+
+    /**
+     * Locate the JavaScript CLI that parses .rcp files into the JSON consumed
+     * by {@code recipe.lang.System.deserialize}. It ships next to the jar.
+     */
+    public static String getRcheckPath() {
+        String path = Config.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+        try {
+            String decodedPath = URLDecoder.decode(path, "UTF-8");
+            String parent = Path.of(decodedPath).getParent().toString();
+            Path file = Path.of(parent, "cli.js");
+            if (Files.exists(file)) {
+                return file.toString();
+            }
+            return rcheckPath;
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            return rcheckPath;
+        }
     }
 
     private static final List<String> agentEnumTypeNames = new ArrayList<>();

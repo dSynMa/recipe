@@ -1,0 +1,22 @@
+enum channel { c }
+message-structure: A: bool
+
+agent Sender
+    local: x: bool
+    init: x
+    receive-guard: true
+    repeat: (
+        snd: {true} *! (true)(A := false)[x := true]
+    )
+
+agent Receiver
+    local: y: bool
+    init: y
+    receive-guard: true
+    repeat: (
+        rcv: {true} *? [y := A]
+    )
+
+system = Sender(s, true) || Receiver(r, true)
+
+SPEC X false;
