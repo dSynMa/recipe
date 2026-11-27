@@ -271,7 +271,6 @@ public class System{
 
         Set<Agent> agentsSet = new HashSet<>(agents.values());
         List<String> locationValues = new ArrayList<>();
-        locationValues.add(Config.noAgentString);
         for (List<String> instanceNames : agentsToInstances.values()) {
             locationValues.addAll(instanceNames);
         }

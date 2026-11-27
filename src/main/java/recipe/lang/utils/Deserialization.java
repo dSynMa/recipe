@@ -135,9 +135,9 @@ public class Deserialization {
                 return new GuardReference(guardType, values);
             case "PropVarRef":
                 String name = jExpr.getJSONObject("variable").getString("$refText");
-                // Remove @
-                name = name.substring(1);
-                type = context.get(name);
+                // Communication variables are referenced with an @ prefix; keep it
+                // so ConcreteStore can evaluate the agent's relabelling.
+                type = context.get(name.startsWith("@") ? name.substring(1) : name);
                 return new TypedVariable<Type>(type, name);
             case "AutomatonState":
                 return new TypedVariable<Integer>(
