@@ -69,6 +69,49 @@ public abstract class Process {
         return new And(aboveMinimum, belowMaximum);
     }
 
+    /**
+     * Apply the semantic feasibility constraints every action must satisfy.
+     *
+     * <p>This adds definedness conditions (for example, disabling transitions
+     * whose expressions divide by zero) and numeric-domain constraints for
+     * assignments and message payloads to the action's entry condition.
+     *
+     * <p>Both {@link #parser} and deserializers must call this exactly once
+     * after building an action. The type contexts are the same ones used to
+     * build the action: {@code localContext} describes the acting agent's
+     * local variables, {@code messageContext} the message structure.
+     *
+     * @param action the parsed or deserialized action
+     * @param localContext types of the acting agent's local variables
+     * @param messageContext types of the declared message variables
+     * @return the same action, with feasibility conditions added
+     */
+    public static BasicProcess applyFeasibilityConstraints(BasicProcess action,
+                                                           TypingContext localContext,
+                                                           TypingContext messageContext) {
+        try {
+            Expression<Boolean> defined = action.getPsi().definednessCondition();
+            for (Expression<?> update : action.getUpdate().values()) {
+                defined = new And(defined, update.definednessCondition());
+            }
+            if (action instanceof BasicProcessWithMessage messageAction) {
+                for (Expression<?> payload : messageAction.getMessage().values()) {
+                    defined = new And(defined, payload.definednessCondition());
+                }
+                constrainNumericAssignments(action, messageAction.getMessage(), messageContext);
+            }
+            // Feasibility belongs in psi so progress agrees with legal transitions.
+            constrainNumericAssignments(action, action.getUpdate(), localContext);
+            defined = defined.simplify();
+            if (!defined.equals(recipe.lang.expressions.predicate.Condition.getTrue())) {
+                action.addEntryCondition(defined);
+            }
+        } catch (Exception invalidExpression) {
+            throw new IllegalArgumentException("Cannot determine action feasibility", invalidExpression);
+        }
+        return action;
+    }
+
     public static Parser parser(TypingContext messageContext,
                                 TypingContext localContext,
                                 TypingContext communicationContext) throws Exception {
@@ -80,29 +123,8 @@ public abstract class Process {
         ExpressionBuilder builder = new ExpressionBuilder();
         builder.group()
                 .primitive(sendProcess.or(receiveProcess).or(getProcess).or(supplyProcess).trim()
-                        .map((BasicProcess action) -> {
-                            try {
-                                Expression<Boolean> defined = action.getPsi().definednessCondition();
-                                for (Expression<?> update : action.getUpdate().values()) {
-                                    defined = new And(defined, update.definednessCondition());
-                                }
-                                if (action instanceof BasicProcessWithMessage messageAction) {
-                                    for (Expression<?> payload : messageAction.getMessage().values()) {
-                                        defined = new And(defined, payload.definednessCondition());
-                                    }
-                                    constrainNumericAssignments(action, messageAction.getMessage(), messageContext);
-                                }
-                                // Feasibility belongs in psi so progress agrees with legal transitions.
-                                constrainNumericAssignments(action, action.getUpdate(), localContext);
-                                defined = defined.simplify();
-                                if (!defined.equals(recipe.lang.expressions.predicate.Condition.getTrue())) {
-                                    action.addEntryCondition(defined);
-                                }
-                            } catch (Exception invalidExpression) {
-                                throw new IllegalArgumentException("Cannot determine action feasibility", invalidExpression);
-                            }
-                            return action;
-                        }))
+                        .map((BasicProcess action) ->
+                                applyFeasibilityConstraints(action, localContext, messageContext)))
                 .wrapper(of('(').trim(), of(')').trim(),
                         (List<Process> values) -> values.get(1));
         

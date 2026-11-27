@@ -79,13 +79,7 @@ public class System{
     public System(Map<String, Type> messageStructure, Map<String, Type> communicationVariables,
                   Map<String, Type> guardDefinitions, Set<Agent> agents,
                   List<AgentInstance> agentsInstances, List<LTOL> specs) throws Exception {
-        for (String reserved : new String[]{"sender", Config.channelLabel}) {
-            if (messageStructure.containsKey(reserved) || communicationVariables.containsKey(reserved)
-                    || guardDefinitions.containsKey(reserved)) {
-                throw new IllegalArgumentException("Variable '" + reserved
-                    + "' is reserved for observation metadata; rename the message variable, communication variable, or guard.");
-            }
-        }
+        validateReservedNames(messageStructure, communicationVariables, guardDefinitions);
         if(!validate(messageStructure, communicationVariables, guardDefinitions, agents)){
             throw new Exception("Message and communication variables, and guard definition names need to be disjoint, " +
                     "and they also need to be disjoin with each agent's local variables.");
@@ -96,6 +90,24 @@ public class System{
         this.agents = agents;
         this.agentsInstances = agentsInstances;
         this.specs = specs;
+    }
+
+    /**
+     * Reject declarations that would shadow observation metadata.
+     *
+     * <p>Called by the constructor, so systems built by the parser and by
+     * deserializers are validated identically.
+     */
+    public static void validateReservedNames(Map<String, Type> messageStructure,
+                                             Map<String, Type> communicationVariables,
+                                             Map<String, Type> guardDefinitions) {
+        for (String reserved : new String[]{"sender", Config.channelLabel}) {
+            if (messageStructure.containsKey(reserved) || communicationVariables.containsKey(reserved)
+                    || guardDefinitions.containsKey(reserved)) {
+                throw new IllegalArgumentException("Variable '" + reserved
+                    + "' is reserved for observation metadata; rename the message variable, communication variable, or guard.");
+            }
+        }
     }
 
     public static boolean validate(Map<String, Type> messageStructure, Map<String, Type> communicationVariables,

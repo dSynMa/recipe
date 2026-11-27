@@ -193,6 +193,26 @@ public class Agent {
         this.initialCondition = initialCondition;
     }
 
+    /**
+     * Reject locally declared variables that would shadow a declared channel constant.
+     *
+     * <p>Parsers and deserializers must both apply this check before building
+     * the agent store.
+     */
+    public static void validateLocalDeclarations(Collection<? extends TypedVariable> variables) throws Exception {
+        validateLocalDeclarations(variables, recipe.lang.types.Enum.getEnum(recipe.Config.channelLabel).getValues());
+    }
+
+    public static void validateLocalDeclarations(Collection<? extends TypedVariable> variables,
+                                                 Collection<String> channelNames) {
+        for (TypedVariable variable : variables) {
+            if (channelNames.contains(variable.getName())) {
+                throw new IllegalArgumentException("Local variable '" + variable.getName()
+                    + "' conflicts with a declared channel constant.");
+            }
+        }
+    }
+
     public static org.petitparser.parser.Parser parser(TypingContext messageContext,
                                                        TypingContext communicationContext,
                                                        TypingContext guardDefinitionContext) throws Exception {
@@ -222,12 +242,7 @@ public class Agent {
                     .seq(Parsing.labelledParser("local", Parsing.typedVariableList().optional(new ArrayList<>()))
                             .optional(new ArrayList<>())
                             .mapWithSideEffects((List<TypedVariable> values) -> {
-                                for (TypedVariable variable : values) {
-                                    if (channelNames.contains(variable.getName())) {
-                                        throw new IllegalArgumentException("Local variable '" + variable.getName()
-                                            + "' conflicts with a declared channel constant.");
-                                    }
-                                }
+                                validateLocalDeclarations(values, channelNames);
                                 localContext.get().clear();
                                 localContext.get().setAll(new TypingContext(values));
                                 Map<String, TypedVariable> vars = new HashMap();
