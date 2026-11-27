@@ -355,11 +355,38 @@ public class Agent {
                             .optional(new ArrayList<>())
                             .mapWithSideEffects((List<TypedVariable> values) -> {
                                 validateLocalDeclarations(values, channelNames);
+                                Type locationType = null;
+                                try {
+                                    locationType = recipe.lang.types.Enum.getEnum(Config.locationLabel);
+                                } catch (Exception ignored) {
+                                }
+                                boolean usesLocation = false;
+                                if (locationType != null) {
+                                    for (TypedVariable variable : values) {
+                                        if (locationType.equals(variable.getType())) usesLocation = true;
+                                    }
+                                    for (Type messageType : messageContext.getVarType().values()) {
+                                        if (locationType.equals(messageType)) usesLocation = true;
+                                    }
+                                }
+                                if (usesLocation) {
+                                    for (TypedVariable variable : values) {
+                                        if (variable.getName().equals(Config.myselfKeyword)) {
+                                            throw new IllegalArgumentException("Local variable '" + Config.myselfKeyword
+                                                + "' is reserved for an agent's own location.");
+                                        }
+                                    }
+                                }
                                 localContext.get().clear();
                                 localContext.get().setAll(new TypingContext(values));
                                 Map<String, TypedVariable> vars = new HashMap();
                                 for(TypedVariable var : values){
                                     vars.put(var.getName(), new TypedVariable(var.getType(), var.getName()));
+                                }
+                                if (usesLocation) {
+                                    localContext.get().set(Config.myselfKeyword, locationType);
+                                    vars.put(Config.myselfKeyword,
+                                        new TypedVariable(locationType, Config.myselfKeyword));
                                 }
                                 return vars;
                             }))

@@ -81,6 +81,10 @@ public class GetProcess extends BasicProcessWithMessage {
         Parser messageGuard = Condition.typeParser(localAndChannelAndCommunicationContext);
         Parser namedLocationParser = recipe.lang.expressions.predicate.NamedLocation.parser();
         Parser messageAssignment = Parsing.assignmentListParser(messageContext, localAndChannelAndCommunicationContext);
+        Parser locationParser = Location.parser(localAndChannelAndCommunicationContext)
+                        .map((Object value) -> (Location) value)
+                        .or(messageGuard.trim().or(namedLocationParser)
+                            .map((Object value) -> Location.fromLegacy((Expression<Boolean>) value)));
 
         Parser delimetedCondition =
                 (CharacterParser.of('<').trim())
@@ -101,7 +105,7 @@ public class GetProcess extends BasicProcessWithMessage {
                         .seq(delimetedCondition.trim())
                         // .seq((((Enum.getEnum(Config.channelLabel).valueParser()).seq(StringParser.of("?").trim())).or(localChannelVars.variableParser().seq(StringParser.of("?").trim()))))
                         .seq((StringParser.of("GET@").trim()))
-                        .seq(messageGuard.trim().or(namedLocationParser))
+                        .seq(locationParser)
                         .seq(data)
                         .seq((CharacterParser.of('[').trim()))
                         .seq(localAssignment.optional(new HashMap<String, Expression>()))
@@ -109,7 +113,7 @@ public class GetProcess extends BasicProcessWithMessage {
                         .map((List<Object> values) -> {
                             String label = (String) values.get(0);
                             Expression<Boolean> psi = (Expression<Boolean>) values.get(1);
-                            Location location = Location.fromLegacy((Expression<Boolean>) values.get(3));
+                            Location location = (Location) values.get(3);
                             Map<String, Expression> message = (Map<String, Expression>) values.get(4);
                             Map<String, Expression> update = (Map<String, Expression>) values.get(6);
                             if(label != null) label = recipe.lang.utils.Parsing.declarationName(label.replace(":", "").trim());

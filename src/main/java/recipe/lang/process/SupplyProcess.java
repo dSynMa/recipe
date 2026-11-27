@@ -84,12 +84,16 @@ public class SupplyProcess extends BasicProcessWithMessage {
         Parser messageAssignment = Parsing.assignmentListParser(messageContext, localContext);
         Parser localAssignment = Parsing.assignmentListParser(localContext, localAndMessageContext);
         Parser namedLocationParser = recipe.lang.expressions.predicate.NamedLocation.parser();
+        Parser locationParser = Location.parser(localAndChannelAndCommunicationContext)
+                        .map((Object value) -> (Location) value)
+                        .or(messageGuard.trim().or(namedLocationParser)
+                            .map((Object value) -> Location.fromLegacy((Expression<Boolean>) value)));
         
         Parser parser = ((CharacterParser.word().plus().trim()).flatten()
                         .seq(CharacterParser.of(':').trim()).flatten()).optional().flatten()
                         .seq(delimetedCondition.trim())
                         .seq(StringParser.of("SUPPLY@").trim())
-                        .seq(messageGuard.trim().or(namedLocationParser))
+                        .seq(locationParser)
                         .seq((CharacterParser.of('(').trim()))
                         .seq(messageAssignment)
                         .seq((CharacterParser.of(')').trim()))
@@ -99,7 +103,7 @@ public class SupplyProcess extends BasicProcessWithMessage {
                         .map((List<Object> values) -> {
                             String label = ((String) values.get(0));
                             Expression<Boolean> psi = (Expression<Boolean>) values.get(1);
-                            Location location = Location.fromLegacy((Expression<Boolean>) values.get(3));
+                            Location location = (Location) values.get(3);
                             Map<String, Expression> message = (Map<String, Expression>) values.get(5);
                             Map<String, Expression> update = (Map<String, Expression>) values.get(8);
                             

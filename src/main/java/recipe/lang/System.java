@@ -299,6 +299,12 @@ public class System{
         Enum.clear();
         Guard.clear();
         Config.reset();
+        recipe.lang.types.Enum locationEnum;
+        try {
+            locationEnum = new recipe.lang.types.Enum(Config.locationLabel, new ArrayList<>());
+        } catch (TypeCreationException e) {
+            throw new IllegalArgumentException(e);
+        }
 
         SettableParser parser = SettableParser.undefined();
 
@@ -453,6 +459,12 @@ public class System{
                                         }
                                     }
                                 }
+
+                                List<String> locationValues = new ArrayList<>();
+                                for (AgentInstance instance : agentInstances) {
+                                    locationValues.add(instance.getLabel());
+                                }
+                                locationEnum.setValues(locationValues);
 
                                 List<LTOL> ltolSpecs = new ArrayList<>();
                                 try {
